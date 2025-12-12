@@ -1,2 +1,1 @@
-// Moved to app/chefs/page.tsx
-export default function Gone() { return null; }
+// Deprecated. Please delete the pages directory.
