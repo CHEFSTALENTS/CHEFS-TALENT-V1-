@@ -26,35 +26,38 @@ export default function ChefDashboardPage() {
 
   // Calculate Progress
   const p = user.profile || {};
-  const checks = [
-  { 
-    label: 'Identité', 
-    path: '/chef/profile', 
-    done: !!(p.phone && p.profileType && (p.languages?.length ?? 0) > 0) 
+ const checks = [
+  {
+    label: 'Identité',
+    path: '/chef/profile',
+    done: !!(
+      p.phone &&
+      p.profileType &&
+      (p.languages?.length ?? 0) > 0
+    ),
   },
-  { 
-    label: 'Expérience', 
-    path: '/chef/experience', 
-    done: !!(p.yearsExperience && p.bio) 
+  {
+    label: 'Expérience',
+    path: '/chef/experience',
+    done: !!(p.yearsExperience && p.bio),
   },
-  { 
-    label: 'Portfolio', 
-    path: '/chef/portfolio', 
-    done: !!(p.images && p.images.length > 0) 
+  {
+    label: 'Portfolio',
+    path: '/chef/portfolio',
+    done: !!(p.images && p.images.length > 0),
   },
-  { 
-    label: 'Zone & Mobilité', 
-    path: '/chef/coverage', 
-    done: !!(p.baseCity && (p.coverageZones?.length ?? 0) > 0) 
+  {
+    label: 'Zone & Mobilité',
+    path: '/chef/coverage',
+    done: !!(p.baseCity && (p.coverageZones?.length ?? 0) > 0),
   },
-  { 
-    label: 'Disponibilités', 
-    path: '/chef/availability', 
-    done: true 
+  {
+    label: 'Disponibilités',
+    path: '/chef/availability',
+    done: true, // Always "done" as default is open
   },
 ];
-}, // Always "done" as default is open
-  ];
+
 
   const completedCount = checks.filter(c => c.done).length;
   const progress = Math.round((completedCount / checks.length) * 100);
