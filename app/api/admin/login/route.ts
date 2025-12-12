@@ -1,22 +1,25 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-
-const ADMIN_PASSWORD = 'chef2025' // ⬅️ change-le si tu veux
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const { password } = await req.json()
+  const { password } = await req.json();
+
+  // Mot de passe simple (tu peux le changer)
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'chef123';
 
   if (password !== ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  const response = NextResponse.json({ success: true })
+  const res = NextResponse.json({ ok: true });
 
-  response.cookies.set('ct_admin', 'true', {
+  // Cookie simple (7 jours)
+  res.cookies.set('admin_auth', '1', {
     httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
     path: '/',
-    maxAge: 60 * 60 * 24, // 24h
-  })
+    maxAge: 60 * 60 * 24 * 7,
+  });
 
-  return response
+  return res;
 }
