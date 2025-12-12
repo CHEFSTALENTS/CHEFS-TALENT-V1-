@@ -73,7 +73,7 @@ export default function Dashboard() {
               {staleOffers.length > 0 && (
                  <Link href="/admin/missions" className="bg-white px-4 py-2 text-sm text-stone-600 border border-orange-200 hover:border-orange-400 flex items-center gap-2 transition-colors">
                     <span className="w-2 h-2 rounded-full bg-red-500" />
-                  {staleOffers.length} offre(s) en attente (&gt; 3j)
+{staleOffers.length} offre(s) en attente (&gt; 3j)
                  </Link>
               )}
            </div>
