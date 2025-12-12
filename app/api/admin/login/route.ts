@@ -1,21 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export async function POST(req: Request) {
-  const { password } = await req.json();
+const ADMIN_PASSWORD = 'chef2025' // ⬅️ change-le si tu veux
 
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ ok: false }, { status: 401 });
+export async function POST(req: NextRequest) {
+  const { password } = await req.json()
+
+  if (password !== ADMIN_PASSWORD) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const res = NextResponse.json({ ok: true });
+  const response = NextResponse.json({ success: true })
 
-  res.cookies.set('ct_admin', '1', {
+  response.cookies.set('ct_admin', 'true', {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: true,
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
-  });
+    maxAge: 60 * 60 * 24, // 24h
+  })
 
-  return res;
+  return response
 }
