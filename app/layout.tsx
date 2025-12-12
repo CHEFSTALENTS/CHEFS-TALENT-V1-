@@ -1,11 +1,4 @@
-import React from 'react';
 import './globals.css';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: "Chef Talents | L'Excellence Culinaire",
-  description: "Plateforme premium connectant chefs privés, conciergeries de luxe et clients privés.",
-};
 
 export default function RootLayout({
   children,
@@ -14,11 +7,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
-      </head>
       <body>{children}</body>
     </html>
   );
