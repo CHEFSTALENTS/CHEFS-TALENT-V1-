@@ -1,1 +1,2 @@
-// File migrated to app directory
+// Moved to app/chef/dashboard/page.tsx
+export default function Gone() { return null; }
