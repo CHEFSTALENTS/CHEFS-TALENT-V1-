@@ -1,24 +1,29 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-  // On protège toutes les routes /admin/*
-  if (pathname.startsWith('/admin')) {
-    const isLoggedIn = request.cookies.get('ct_admin')?.value
+  // On protège uniquement /admin (et ses sous-pages)
+  if (!pathname.startsWith('/admin')) return NextResponse.next();
 
-    // Si pas connecté, on renvoie vers /admin (page login)
-    if (!isLoggedIn && pathname !== '/admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/admin'
-      return NextResponse.redirect(url)
-    }
+  // On laisse passer la page de login et l'API de login
+  if (pathname === '/admin/login' || pathname.startsWith('/api/admin/login')) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next()
+  const cookie = req.cookies.get('admin_auth')?.value;
+
+  // Si pas authentifié -> redirect vers /admin/login
+  if (cookie !== '1') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/admin/login';
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: ['/admin/:path*'],
-}
+};
