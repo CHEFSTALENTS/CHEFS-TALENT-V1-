@@ -1,18 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get('next') || '/admin';
 
-  const submit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setError('');
 
     const res = await fetch('/api/admin/login', {
       method: 'POST',
@@ -20,33 +18,63 @@ export default function AdminLoginPage() {
       body: JSON.stringify({ password }),
     });
 
-    if (!res.ok) {
+    if (res.ok) {
+      router.push('/admin');
+    } else {
       setError('Accès refusé');
-      return;
     }
-
-    router.push(next);
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <form onSubmit={submit} style={{ width: 360, padding: 24, border: '1px solid #eee' }}>
-        <h1 style={{ fontSize: 22, marginBottom: 12 }}>Admin Portal</h1>
-        <p style={{ color: '#666', marginBottom: 16 }}>Accès sécurisé réservé.</p>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#f5f5f5'
+    }}>
+      <form onSubmit={handleSubmit} style={{
+        background: 'white',
+        padding: '40px',
+        borderRadius: '8px',
+        width: '320px',
+        textAlign: 'center'
+      }}>
+        <h2>Admin Portal</h2>
+        <p style={{ opacity: 0.6 }}>Accès sécurisé réservé</p>
 
         <input
           type="password"
           placeholder="Mot de passe"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ width: '100%', padding: 12, marginBottom: 12 }}
+          onChange={e => setPassword(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px',
+            marginTop: '20px',
+            marginBottom: '10px'
+          }}
         />
 
-        <button type="submit" style={{ width: '100%', padding: 12 }}>
-          Entrer
-        </button>
+        {error && (
+          <p style={{ color: 'red', marginBottom: '10px' }}>
+            {error}
+          </p>
+        )}
 
-        {error && <p style={{ color: 'crimson', marginTop: 12 }}>{error}</p>}
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: '#111',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          ENTRER
+        </button>
       </form>
     </div>
   );
