@@ -1,1 +1,0 @@
-// Deprecated. Please delete the pages directory.
