@@ -118,4 +118,47 @@ const Dashboard = () => {
                    </span>
                 </div>
               ))}
-              {requests.length === 0
+              {requests.length === 0 && <p className="text-sm text-stone-400 italic">Aucune demande récente.</p>}
+            </div>
+         </div>
+
+         {/* Mission Status */}
+         <div className="bg-white border border-stone-200 p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-serif text-xl">Statut Missions</h3>
+              <Link to="/admin/missions" className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900">Gérer</Link>
+            </div>
+            
+            <div className="space-y-6">
+               <div className="flex justify-between items-center">
+                  <span className="text-sm text-stone-600">Propositions en attente</span>
+                  <span className="font-medium">{missions.filter(m => m.status === 'offered').length}</span>
+               </div>
+               <div className="flex justify-between items-center">
+                  <span className="text-sm text-stone-600">Missions confirmées (à venir)</span>
+                  <span className="font-medium text-stone-900">{missions.filter(m => m.status === 'confirmed').length}</span>
+               </div>
+               <div className="flex justify-between items-center">
+                  <span className="text-sm text-stone-600">Missions réalisées</span>
+                  <span className="font-medium text-stone-400">{missions.filter(m => m.status === 'completed').length}</span>
+               </div>
+            </div>
+         </div>
+      </div>
+    </div>
+  );
+};
+
+const KPICard = ({ title, value, icon: Icon, link, alert }: any) => (
+  <Link to={link} className={`block p-6 border transition-all hover:shadow-sm ${alert ? 'bg-orange-50 border-orange-200' : 'bg-white border-stone-200'}`}>
+     <div className="flex justify-between items-start mb-4">
+        <Icon className={`w-5 h-5 ${alert ? 'text-orange-500' : 'text-stone-400'}`} />
+        {alert && <AlertCircle className="w-4 h-4 text-orange-500" />}
+     </div>
+     <div className="text-3xl font-serif text-stone-900 mb-1">{value}</div>
+     <div className={`text-xs uppercase tracking-widest ${alert ? 'text-orange-700' : 'text-stone-500'}`}>{title}</div>
+     {alert && <div className="mt-4 text-xs font-medium text-orange-600 flex items-center gap-1">Action requise <ArrowRight className="w-3 h-3" /></div>}
+  </Link>
+);
+
+export default Dashboard;
