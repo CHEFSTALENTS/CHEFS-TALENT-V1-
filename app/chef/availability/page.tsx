@@ -20,7 +20,7 @@ export default function ChefAvailabilityPage() {
     const user = auth.getCurrentUser();
     if (!user) return;
 
-    let updated = [];
+let updated: string[] = [];
     if (unavailableDates.includes(dateStr)) {
       updated = unavailableDates.filter(d => d !== dateStr);
     } else {
