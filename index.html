@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chef Talents | L'Excellence Culinaire</title>
+    <meta name="description" content="Plateforme premium connectant chefs privés, conciergeries de luxe et clients privés." />
+    
+    <!-- Fonts: Playfair Display (Serif) for headings, Inter (Sans) for body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+            },
+            colors: {
+              // The Warm Editorial Palette
+              paper: "#F7F5F2", // Warm Ivory base
+              
+              // Re-calibrated Stone scale (Warm Greys/Taupe)
+              stone: {
+                50: "#FAFAF9",
+                100: "#EBE9E4", // Surface / Darker Sand
+                200: "#D6D3D1", // Borders
+                300: "#B8B2AC",
+                400: "#A8A29E", // Muted text
+                500: "#78716C",
+                600: "#5C584E", // Olive-grey
+                700: "#454139",
+                800: "#2E2B26",
+                900: "#23211F", // Warm Ink/Graphite
+                950: "#141210",
+              },
+              
+              // Accents
+              bronze: "#9C8666",
+              olive: "#5F5B4C"
+            }
+          }
+        }
+      }
+    </script>
+    <style type="text/tailwindcss">
+      @layer base {
+        body {
+          @apply bg-paper text-stone-900 antialiased font-sans selection:bg-stone-200 selection:text-stone-900;
+        }
+
+        /* Strict Typography System */
+        h1, h2, h3, h4, h5, h6 {
+          @apply font-serif font-normal tracking-tight text-stone-900;
+        }
+
+        p {
+          @apply font-sans font-light leading-relaxed text-stone-600;
+        }
+        
+        /* Remove default bolding to enforce hierarchy via size/spacing */
+        strong, b {
+          @apply font-medium text-stone-900;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.2.0,react-dom@18.2.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
+    "framer-motion": "https://esm.sh/framer-motion@10.16.4?deps=react@18.2.0,react-dom@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
