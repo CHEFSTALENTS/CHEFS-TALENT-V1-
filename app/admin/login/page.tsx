@@ -1,27 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
 
-    if (res.ok) {
-      router.push('/admin');
-    } else {
-      setError('Accès refusé');
+      if (res.ok) {
+        window.location.href = '/admin';
+      } else {
+        setError('Mot de passe incorrect');
+      }
+    } catch (err) {
+      setError('Erreur serveur');
     }
   };
 
@@ -33,21 +35,24 @@ export default function AdminLoginPage() {
       justifyContent: 'center',
       background: '#f5f5f5'
     }}>
-      <form onSubmit={handleSubmit} style={{
-        background: 'white',
-        padding: '40px',
-        borderRadius: '8px',
-        width: '320px',
-        textAlign: 'center'
-      }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          background: 'white',
+          padding: '40px',
+          width: '320px',
+          borderRadius: '8px',
+          textAlign: 'center'
+        }}
+      >
         <h2>Admin Portal</h2>
-        <p style={{ opacity: 0.6 }}>Accès sécurisé réservé</p>
+        <p style={{ color: '#666' }}>Accès sécurisé réservé</p>
 
         <input
           type="password"
           placeholder="Mot de passe"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           style={{
             width: '100%',
             padding: '10px',
@@ -57,16 +62,15 @@ export default function AdminLoginPage() {
         />
 
         {error && (
-          <p style={{ color: 'red', marginBottom: '10px' }}>
-            {error}
-          </p>
+          <p style={{ color: 'red', fontSize: '14px' }}>{error}</p>
         )}
 
         <button
           type="submit"
           style={{
+            marginTop: '20px',
             width: '100%',
-            padding: '12px',
+            padding: '10px',
             background: '#111',
             color: 'white',
             border: 'none',
