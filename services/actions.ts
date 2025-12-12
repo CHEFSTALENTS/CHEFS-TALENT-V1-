@@ -5,8 +5,6 @@ import { api } from './storage';
 // --- PUBLIC ACTIONS ---
 
 export const submitRequest = async (data: RequestForm): Promise<FastMatchResult> => {
-  console.log('[Action] Processing Request:', data.mode);
-  
   // Persist to "Light Backend"
   const entity = await api.createRequest(data);
 

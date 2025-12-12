@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { auth, api } from '../services/storage';
 import { ChefUser } from '../types';
 import { 
@@ -21,8 +24,8 @@ interface ChefLayoutProps {
 }
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<ChefUser | null>(null);
   const [offeredCount, setOfferedCount] = useState(0);
 
@@ -30,7 +33,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     // 1. Check Auth
     const currentUser = auth.getCurrentUser();
     if (!currentUser) {
-      navigate('/chef/login');
+      router.push('/chef/login');
       return;
     }
     setUser(currentUser);
@@ -52,13 +55,16 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     fetchOffers();
 
     return () => {
-      document.head.removeChild(meta);
+      // Safety check if head still exists
+      if (document.head.contains(meta)) {
+        document.head.removeChild(meta);
+      }
     };
-  }, [navigate]);
+  }, [router]);
 
   const handleLogout = () => {
     auth.logout();
-    navigate('/');
+    router.push('/');
   };
 
   if (!user) return null;
@@ -83,13 +89,13 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       {/* Sidebar */}
       <aside className="w-64 bg-stone-900 text-stone-300 flex-shrink-0 flex flex-col fixed h-full z-10">
         <div className="p-8 border-b border-stone-800">
-          <Link to="/" className="font-serif text-xl text-stone-50 tracking-tight">CHEF TALENTS</Link>
+          <Link href="/" className="font-serif text-xl text-stone-50 tracking-tight">CHEF TALENTS</Link>
           <span className="text-[10px] uppercase tracking-widest text-stone-500 block mt-1">Portal</span>
         </div>
         
         <nav className="flex-1 p-6 space-y-1 overflow-y-auto">
           {navItems.map((item, idx) => {
-            const isActive = location.pathname === item.path;
+            const isActive = pathname === item.path;
             const Icon = item.icon;
             
             // Visual separation between Ops and Profile sections
@@ -99,7 +105,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
               <React.Fragment key={item.path}>
                 {isProfileStart && <div className="h-px bg-stone-800 my-4 mx-4" />}
                 <Link 
-                  to={item.path}
+                  href={item.path}
                   className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${isActive ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
                 >
                   <div className="flex items-center gap-3">
