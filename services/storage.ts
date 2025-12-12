@@ -1,16 +1,15 @@
-
 import { RequestEntity, RequestForm, RequestStatus, ChefUser, ChefProfile, SubscriptionPlan, Mission, MissionStatus } from '../types';
 
 const DB_KEY = 'chef_talents_requests_db';
 const CHEF_USERS_KEY = 'chef_talents_users_db';
 const MISSIONS_KEY = 'chef_talents_missions_db';
 
-// Helper to simulate network latency
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- INTERNAL DB HELPERS ---
 
 const getDb = (): RequestEntity[] => {
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(DB_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -21,10 +20,12 @@ const getDb = (): RequestEntity[] => {
 };
 
 const saveDb = (data: RequestEntity[]) => {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(DB_KEY, JSON.stringify(data));
 };
 
 const getChefDb = (): ChefUser[] => {
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(CHEF_USERS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -34,10 +35,12 @@ const getChefDb = (): ChefUser[] => {
 };
 
 const saveChefDb = (data: ChefUser[]) => {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(CHEF_USERS_KEY, JSON.stringify(data));
 };
 
 const getMissionsDb = (): Mission[] => {
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(MISSIONS_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -47,51 +50,33 @@ const getMissionsDb = (): Mission[] => {
 };
 
 const saveMissionsDb = (data: Mission[]) => {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
 };
 
 // --- API LAYER ---
 
 export const api = {
-  /**
-   * POST /api/requests
-   */
   async createRequest(form: RequestForm): Promise<RequestEntity> {
     await delay(600);
     const db = getDb();
-
     const isB2B = form.clientType === 'concierge';
-    
     const entity: RequestEntity = {
       id: crypto.randomUUID(),
       mode: form.mode,
       userType: isB2B ? 'b2b' : 'b2c',
       location: form.location,
-      dates: {
-        start: form.startDate,
-        end: form.endDate,
-        type: form.dateMode
-      },
+      dates: { start: form.startDate, end: form.endDate, type: form.dateMode },
       guestCount: form.guestCount,
       missionType: form.assignmentType,
       serviceLevel: form.serviceExpectations,
-      preferences: {
-        cuisine: form.cuisinePreferences,
-        allergies: form.dietaryRestrictions,
-        languages: form.preferredLanguage
-      },
+      preferences: { cuisine: form.cuisinePreferences, allergies: form.dietaryRestrictions, languages: form.preferredLanguage },
       budgetRange: form.budgetRange,
       notes: form.notes,
-      contact: {
-        name: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        company: form.companyName
-      },
+      contact: { name: form.fullName, email: form.email, phone: form.phone, company: form.companyName },
       createdAt: new Date().toISOString(),
       status: 'new'
     };
-
     db.unshift(entity);
     saveDb(db);
     return entity;
@@ -117,8 +102,6 @@ export const api = {
     }
   },
 
-  // --- MISSION API ---
-
   async getChefMissions(chefId: string): Promise<Mission[]> {
     await delay(300);
     const db = getMissionsDb();
@@ -143,61 +126,25 @@ export const api = {
   async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
     await delay(400);
     const db = getMissionsDb();
-    const newMission: Mission = {
-      ...mission,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString()
-    };
+    const newMission: Mission = { ...mission, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     db.push(newMission);
     saveMissionsDb(db);
     return newMission;
   }
 };
 
-// --- AUTH LAYER (MOCKED) ---
-
 export const auth = {
   async registerChef(data: Pick<ChefUser, 'email' | 'password' | 'firstName' | 'lastName'>): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
     await delay(800);
     const db = getChefDb();
-    
-    if (db.find(u => u.email === data.email)) {
-      return { success: false, error: "Cet email est déjà utilisé." };
-    }
-
+    if (db.find(u => u.email === data.email)) return { success: false, error: "Cet email est déjà utilisé." };
     const newUser: ChefUser = {
-      id: crypto.randomUUID(),
-      email: data.email,
-      password: data.password, // In a real app, hash this!
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: 'chef',
-      status: 'pending_validation',
-      createdAt: new Date().toISOString(),
-      profileCompleted: false,
-      
-      // Default Subscription: Free (Coming Soon)
-      plan: 'free',
-      planStatus: 'coming_soon',
-      planUpdatedAt: new Date().toISOString(),
-
-      profile: {
-        // Init default empty profile
-        images: [],
-        unavailableDates: [],
-        environments: [],
-        specialties: [],
-        coverageZones: [],
-        acceptedMissions: ['dinner'],
-        languages: []
-      }
+      id: crypto.randomUUID(), email: data.email, password: data.password, firstName: data.firstName, lastName: data.lastName, role: 'chef', status: 'pending_validation', createdAt: new Date().toISOString(), profileCompleted: false, plan: 'free', planStatus: 'coming_soon', planUpdatedAt: new Date().toISOString(),
+      profile: { images: [], unavailableDates: [], environments: [], specialties: [], coverageZones: [], acceptedMissions: ['dinner'], languages: [] }
     };
-
     db.push(newUser);
     saveChefDb(db);
-
-    // Mock Session
-    localStorage.setItem('chef_session_user', JSON.stringify(newUser));
+    if (typeof window !== 'undefined') localStorage.setItem('chef_session_user', JSON.stringify(newUser));
     return { success: true, user: newUser };
   },
 
@@ -205,19 +152,10 @@ export const auth = {
     await delay(800);
     const db = getChefDb();
     const user = db.find(u => u.email === email && u.password === password);
-
-    if (!user) {
-      return { success: false, error: "Identifiants invalides." };
-    }
-
-    // Seed Data Check: If no missions exist for this user, create some fake ones for the demo
+    if (!user) return { success: false, error: "Identifiants invalides." };
     const missionsDb = getMissionsDb();
-    const userMissions = missionsDb.filter(m => m.chefId === user.id);
-    if (userMissions.length === 0) {
-      seedChefMissions(user.id);
-    }
-
-    localStorage.setItem('chef_session_user', JSON.stringify(user));
+    if (missionsDb.filter(m => m.chefId === user.id).length === 0) seedChefMissions(user.id);
+    if (typeof window !== 'undefined') localStorage.setItem('chef_session_user', JSON.stringify(user));
     return { success: true, user };
   },
 
@@ -225,36 +163,17 @@ export const auth = {
     await delay(500);
     const db = getChefDb();
     const idx = db.findIndex(u => u.id === userId);
-    
     if (idx === -1) return null;
-
-    // Merge updates
     const currentUser = db[idx];
     const updatedProfile = { ...currentUser.profile, ...updates };
-    
-    // Check completion logic
-    const isComplete = !!(
-      updatedProfile.bio && 
-      updatedProfile.yearsExperience && 
-      updatedProfile.baseCity &&
-      updatedProfile.profileType // profileType is now required for completion
-    );
-
-    const updatedUser = {
-      ...currentUser,
-      profileCompleted: isComplete,
-      profile: updatedProfile
-    };
-
+    const isComplete = !!(updatedProfile.bio && updatedProfile.yearsExperience && updatedProfile.baseCity && updatedProfile.profileType);
+    const updatedUser = { ...currentUser, profileCompleted: isComplete, profile: updatedProfile };
     db[idx] = updatedUser;
     saveChefDb(db);
-    
-    // Update session if it's the current user
     const sessionUser = this.getCurrentUser();
-    if (sessionUser && sessionUser.id === userId) {
+    if (sessionUser && sessionUser.id === userId && typeof window !== 'undefined') {
       localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
     }
-
     return updatedUser;
   },
 
@@ -263,7 +182,6 @@ export const auth = {
     const db = getChefDb();
     const idx = db.findIndex(u => u.id === userId);
     if (idx === -1) return null;
-
     const updatedUser = { ...db[idx], ...updates };
     db[idx] = updatedUser;
     saveChefDb(db);
@@ -271,45 +189,27 @@ export const auth = {
   },
 
   async updateChefSubscription(userId: string, plan: SubscriptionPlan): Promise<ChefUser | null> {
-    // This is essentially placeholder logic now as subscription is "coming soon"
     await delay(600); 
     const db = getChefDb();
     const idx = db.findIndex(u => u.id === userId);
-    
     if (idx === -1) return null;
-
     const currentUser = db[idx];
-    const updatedUser: ChefUser = {
-      ...currentUser,
-      plan: plan,
-      planStatus: 'coming_soon', // Ensure we stick to coming_soon for now
-      planUpdatedAt: new Date().toISOString()
-    };
-
+    const updatedUser: ChefUser = { ...currentUser, plan: plan, planStatus: 'coming_soon', planUpdatedAt: new Date().toISOString() };
     db[idx] = updatedUser;
     saveChefDb(db);
-
-    // Update session
     const sessionUser = this.getCurrentUser();
-    if (sessionUser && sessionUser.id === userId) {
-      localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
-    }
-
+    if (sessionUser && sessionUser.id === userId && typeof window !== 'undefined') localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
     return updatedUser;
   },
 
   async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
-    // Admin only function essentially
     const db = getChefDb();
     const idx = db.findIndex(u => u.id === userId);
     if (idx !== -1) {
       db[idx].status = status;
       saveChefDb(db);
-      
       const sessionUser = this.getCurrentUser();
-      if (sessionUser && sessionUser.id === userId) {
-        localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
-      }
+      if (sessionUser && sessionUser.id === userId && typeof window !== 'undefined') localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
     }
   },
 
@@ -317,7 +217,7 @@ export const auth = {
      const db = getChefDb();
      const newDb = db.filter(u => u.id !== userId);
      saveChefDb(newDb);
-     localStorage.removeItem('chef_session_user');
+     if (typeof window !== 'undefined') localStorage.removeItem('chef_session_user');
   },
 
   async getAllChefs(): Promise<ChefUser[]> {
@@ -326,71 +226,23 @@ export const auth = {
   },
 
   getCurrentUser(): ChefUser | null {
+    if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem('chef_session_user');
     return raw ? JSON.parse(raw) : null;
   },
 
   logout() {
-    localStorage.removeItem('chef_session_user');
+    if (typeof window !== 'undefined') localStorage.removeItem('chef_session_user');
   }
 };
 
-// --- DATA SEEDER ---
 function seedChefMissions(chefId: string) {
   const missions: Mission[] = [
-    {
-      id: crypto.randomUUID(),
-      chefId,
-      title: 'Dîner Privé - Villa K',
-      location: 'Saint-Tropez, FR',
-      startDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], // +3 days
-      guestCount: 8,
-      serviceLevel: 'Chef Seul',
-      estimatedAmount: 850,
-      clientPhone: '33612345678',
-      status: 'offered',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: crypto.randomUUID(),
-      chefId,
-      title: 'Résidence été - Famille B',
-      location: 'Megève, FR',
-      startDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
-      endDate: new Date(Date.now() + 86400000 * 35).toISOString().split('T')[0],
-      guestCount: 12,
-      serviceLevel: 'Chef + Service',
-      estimatedAmount: 12500,
-      clientPhone: '33698765432',
-      status: 'confirmed',
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-    },
-    {
-      id: crypto.randomUUID(),
-      chefId,
-      title: 'Cocktail Dinatoire',
-      location: 'Paris 16, FR',
-      startDate: new Date(Date.now() - 86400000 * 10).toISOString().split('T')[0],
-      guestCount: 30,
-      serviceLevel: 'Brigade',
-      estimatedAmount: 2400,
-      status: 'completed',
-      createdAt: new Date(Date.now() - 86400000 * 20).toISOString()
-    },
-     {
-      id: crypto.randomUUID(),
-      chefId,
-      title: 'Dîner Anniversaire',
-      location: 'Neuilly, FR',
-      startDate: new Date(Date.now() - 86400000 * 45).toISOString().split('T')[0],
-      guestCount: 6,
-      serviceLevel: 'Chef Seul',
-      estimatedAmount: 600,
-      status: 'completed',
-      createdAt: new Date(Date.now() - 86400000 * 50).toISOString()
-    }
+    { id: crypto.randomUUID(), chefId, title: 'Dîner Privé - Villa K', location: 'Saint-Tropez, FR', startDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], guestCount: 8, serviceLevel: 'Chef Seul', estimatedAmount: 850, clientPhone: '33612345678', status: 'offered', createdAt: new Date().toISOString() },
+    { id: crypto.randomUUID(), chefId, title: 'Résidence été - Famille B', location: 'Megève, FR', startDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0], endDate: new Date(Date.now() + 86400000 * 35).toISOString().split('T')[0], guestCount: 12, serviceLevel: 'Chef + Service', estimatedAmount: 12500, clientPhone: '33698765432', status: 'confirmed', createdAt: new Date(Date.now() - 86400000 * 2).toISOString() },
+    { id: crypto.randomUUID(), chefId, title: 'Cocktail Dinatoire', location: 'Paris 16, FR', startDate: new Date(Date.now() - 86400000 * 10).toISOString().split('T')[0], guestCount: 30, serviceLevel: 'Brigade', estimatedAmount: 2400, status: 'completed', createdAt: new Date(Date.now() - 86400000 * 20).toISOString() },
+    { id: crypto.randomUUID(), chefId, title: 'Dîner Anniversaire', location: 'Neuilly, FR', startDate: new Date(Date.now() - 86400000 * 45).toISOString().split('T')[0], guestCount: 6, serviceLevel: 'Chef Seul', estimatedAmount: 600, status: 'completed', createdAt: new Date(Date.now() - 86400000 * 50).toISOString() }
   ];
-
   const db = getMissionsDb();
   db.push(...missions);
   saveMissionsDb(db);

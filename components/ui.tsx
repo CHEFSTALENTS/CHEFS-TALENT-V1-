@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
 
@@ -38,14 +40,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'default', size = 'default', ...props }, ref) => {
     
-    // Design System: Sharp corners, uppercase text for buttons
     const baseStyles = "inline-flex items-center justify-center rounded-none text-xs font-medium uppercase tracking-[0.15em] transition-all duration-500 focus-visible:outline-none disabled:opacity-50 disabled:pointer-events-none";
     
     const variants = {
       default: "bg-stone-900 text-stone-50 hover:bg-stone-800 border border-stone-900", 
       outline: "border border-stone-200 bg-transparent hover:border-stone-900 hover:text-stone-900 text-stone-500",
       ghost: "hover:bg-stone-100 text-stone-600 hover:text-stone-900",
-      link: "text-stone-900 underline-offset-8 hover:underline decoration-stone-300 normal-case tracking-normal", // Link retains casing
+      link: "text-stone-900 underline-offset-8 hover:underline decoration-stone-300 normal-case tracking-normal", 
     };
 
     const sizes = {
@@ -65,7 +66,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-// Inputs: "The Contract" Style (Bottom border only)
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className = '', ...props }, ref) => {
     return (
@@ -92,7 +92,6 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
 );
 Textarea.displayName = "Textarea";
 
-// Cards: Minimalist
 export const Card = ({ className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={`bg-white border border-stone-100 ${className}`} {...props} />
 );
@@ -109,7 +108,6 @@ export const CardContent = ({ className = '', ...props }: React.HTMLAttributes<H
   <div className={`p-8 md:p-10 pt-0 ${className}`} {...props} />
 );
 
-// Badge: Architectural Label
 export const Badge = ({ className = '', variant = 'default', children, ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'secondary' | 'outline' }) => {
   const variants = {
     default: "bg-stone-900 text-white border-transparent",
@@ -123,7 +121,6 @@ export const Badge = ({ className = '', variant = 'default', children, ...props 
   );
 }
 
-// Section: Enforce vertical rhythm
 export const Section = ({ className = '', children, id }: { className?: string, children?: React.ReactNode, id?: string }) => (
   <section id={id} className={`py-32 md:py-48 px-6 md:px-12 max-w-[100rem] mx-auto ${className}`}>
     {children}

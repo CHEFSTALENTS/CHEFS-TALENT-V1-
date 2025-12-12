@@ -1,11 +1,14 @@
+'use client';
+
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Button } from './ui';
 
 export const Layout = ({ children }: { children?: React.ReactNode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
+  const pathname = usePathname();
 
   const navLinks = [
     { href: '/', label: 'Accueil' },
@@ -14,14 +17,14 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
     { href: '/insights', label: 'Journal' },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => pathname === path;
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-stone-900 bg-paper transition-colors duration-500">
       {/* Header - Translucent Warmth */}
       <header className="fixed top-0 z-50 w-full border-b border-stone-200/50 bg-paper/80 backdrop-blur-md transition-all duration-300">
         <div className="max-w-[100rem] mx-auto flex h-24 items-center justify-between px-6 md:px-12">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-3 group">
             <span className="font-serif text-lg tracking-tight font-medium text-stone-900">CHEF TALENTS</span>
           </Link>
 
@@ -30,7 +33,7 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                to={link.href}
+                href={link.href}
                 className={`text-xs font-medium tracking-[0.15em] uppercase transition-all duration-300 hover:text-stone-900 ${
                   isActive(link.href) ? 'text-stone-900 border-b border-stone-900 pb-1' : 'text-stone-500 border-b border-transparent pb-1'
                 }`}
@@ -41,7 +44,7 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
           </nav>
 
           <div className="hidden md:block pl-8">
-             <Link to="/request">
+             <Link href="/request">
               <Button size="sm" className="bg-stone-900 text-paper hover:bg-stone-800">
                 Soumettre une demande
               </Button>
@@ -60,17 +63,17 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                to={link.href}
+                href={link.href}
                 onClick={() => setIsMenuOpen(false)}
                 className="text-3xl font-serif py-4 text-stone-800 border-b border-stone-200"
               >
                 {link.label}
               </Link>
             ))}
-            <Link to="/chefs" onClick={() => setIsMenuOpen(false)} className="text-xl font-serif py-4 text-stone-500">
+            <Link href="/chefs" onClick={() => setIsMenuOpen(false)} className="text-xl font-serif py-4 text-stone-500">
               Espace Chefs
             </Link>
-            <Link to="/request" onClick={() => setIsMenuOpen(false)}>
+            <Link href="/request" onClick={() => setIsMenuOpen(false)}>
               <Button className="w-full h-16 text-lg mt-4">Soumettre une demande</Button>
             </Link>
           </div>
@@ -96,18 +99,18 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div>
             <h4 className="text-stone-300 font-medium mb-8 uppercase text-[10px] tracking-[0.2em]">Plateforme</h4>
             <ul className="space-y-4 text-sm font-light">
-              <li><Link to="/conciergeries" className="hover:text-paper transition-colors">Conciergeries</Link></li>
-              <li><Link to="/private-clients" className="hover:text-paper transition-colors">Clients Privés</Link></li>
-              <li><Link to="/chefs" className="hover:text-paper transition-colors">Espace chef</Link></li>
+              <li><Link href="/conciergeries" className="hover:text-paper transition-colors">Conciergeries</Link></li>
+              <li><Link href="/private-clients" className="hover:text-paper transition-colors">Clients Privés</Link></li>
+              <li><Link href="/chefs" className="hover:text-paper transition-colors">Espace chef</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-stone-300 font-medium mb-8 uppercase text-[10px] tracking-[0.2em]">Légal</h4>
             <ul className="space-y-4 text-sm font-light">
-              <li><Link to="/terms" className="hover:text-paper transition-colors">CGU & CGV</Link></li>
-              <li><Link to="/privacy" className="hover:text-paper transition-colors">Confidentialité</Link></li>
-              <li><Link to="/legal" className="hover:text-paper transition-colors">Mentions Légales</Link></li>
+              <li><Link href="/terms" className="hover:text-paper transition-colors">CGU & CGV</Link></li>
+              <li><Link href="/privacy" className="hover:text-paper transition-colors">Confidentialité</Link></li>
+              <li><Link href="/legal" className="hover:text-paper transition-colors">Mentions Légales</Link></li>
             </ul>
           </div>
 

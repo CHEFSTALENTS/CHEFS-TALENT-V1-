@@ -1,6 +1,9 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Input, Marker, Label } from './ui';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { Button, Input } from './ui';
 import { 
   LayoutDashboard, 
   MessageSquare, 
@@ -13,30 +16,30 @@ import {
   X
 } from 'lucide-react';
 
-const ADMIN_PWD = "chef"; // Hardcoded for demo
+const ADMIN_PWD = "chef"; 
 
-export const AdminLayout = () => {
+export const AdminLayout = ({ children }: { children?: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
-    if (localStorage.getItem('chef_admin_session') === 'true') {
-      setIsAuthenticated(true);
-      if (location.pathname === '/admin') {
-        navigate('/admin/dashboard');
-      }
+    // Client-side check only
+    if (typeof window !== 'undefined') {
+        if (localStorage.getItem('chef_admin_session') === 'true') {
+            setIsAuthenticated(true);
+        }
     }
-  }, [location.pathname, navigate]);
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === ADMIN_PWD) {
       localStorage.setItem('chef_admin_session', 'true');
       setIsAuthenticated(true);
-      navigate('/admin/dashboard');
+      router.push('/admin/dashboard');
     } else {
       alert("Accès refusé");
     }
@@ -45,7 +48,7 @@ export const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem('chef_admin_session');
     setIsAuthenticated(false);
-    navigate('/admin');
+    router.push('/admin');
   };
 
   if (!isAuthenticated) {
@@ -98,12 +101,12 @@ export const AdminLayout = () => {
          
          <nav className="flex-1 p-4 space-y-1">
             {navItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
+              const isActive = pathname?.startsWith(item.path);
               const Icon = item.icon;
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  href={item.path}
                   onClick={() => setIsSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${isActive ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'}`}
                 >
@@ -127,7 +130,7 @@ export const AdminLayout = () => {
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 min-h-screen p-8 lg:p-12 overflow-x-hidden">
         <div className="max-w-[100rem] mx-auto">
-           <Outlet />
+           {children}
         </div>
       </main>
     </div>
