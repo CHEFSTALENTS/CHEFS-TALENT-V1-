@@ -220,7 +220,7 @@ export default function Home() {
                 icon={ShieldCheck}
                 title="Concierge Match"
                 subtitle="DEMANDE COMPLEXE"
-                description="Pour les demandes complexes ou sensibles. Séjours prolongés, résidences, yachts ou exigences particulières sont gérés via un processus accompagné et curaté par notre équipe."
+                description="Pour les demandes complexes. Séjours prolongés, résidences, yachts ou exigences particulières sont gérés via un processus accompagné et curaté par notre équipe."
                 link="/conciergeries"
                 cta="Contacter l'équipe"
               />
