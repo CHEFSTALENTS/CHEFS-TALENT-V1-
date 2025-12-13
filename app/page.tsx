@@ -85,7 +85,7 @@ export default function Home() {
             <Reveal>
               <p className="text-3xl md:text-5xl font-serif text-stone-800 leading-tight">
                 Plus qu’une réservation.<br />
-                <span className="text-stone-400">Une prise en charge maîtrisée.</span>
+                <span className="text-stone-400">Une mise en relation maîtrisée.</span>
               </p>
               <div className="mt-8 mb-16 max-w-3xl">
                 <p className="text-lg text-stone-600 font-light leading-relaxed">
@@ -97,17 +97,17 @@ export default function Home() {
                 <div>
                   <h4 className="font-serif text-xl mb-6">Pourquoi nous ?</h4>
                   <ul className="text-stone-600 font-light space-y-3">
-                    <li>— Des chefs sélectionnés, jamais en libre accès</li>
-                    <li>— Une couverture européenne avec expertise locale</li>
-                    <li>— Gestion de la continuité et des remplacements</li>
-                    <li>— Chefs multilingues, habitués aux standards UHNW</li>
-                    <li>— Un interlocuteur unique pour les missions complexes</li>
+                    <li> Des chefs sélectionnés, </li>
+                    <li> Une couverture européenne avec expertise locale</li>
+                    <li> Gestion de la continuité et des remplacements</li>
+                    <li> Chefs multilingues, habitués aux standards UHNW</li>
+                    <li> Un interlocuteur unique pour les missions complexes</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-serif text-xl mb-6">La discrétion comme principe</h4>
                   <p className="text-stone-600 font-light leading-relaxed">
-                    Nos chefs interviennent dans des villas, chalets et résidences privées à travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics. Les références sont partagées de manière sélective.
+                    Nos chefs interviennent dans less villas, chalets, yachts et résidences privées à travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics. Les références sont partagées de manière sélective.
                   </p>
                 </div>
               </div>
