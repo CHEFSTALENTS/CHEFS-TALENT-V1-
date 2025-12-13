@@ -284,10 +284,7 @@ return (
     </div>
   </div>
 );
-      })}
-    </div>
-
-  </div>
+     
 </div>
 
 {/* Main Form Area */}
