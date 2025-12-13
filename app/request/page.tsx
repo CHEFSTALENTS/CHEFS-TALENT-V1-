@@ -153,7 +153,7 @@ function RequestFormContent() {
     );
   }
 
-  // --- RENDER: MODE SELECTION ---
+    // --- RENDER: MODE SELECTION ---
   if (!mode) {
     return (
       <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 flex items-center justify-center">
@@ -181,12 +181,9 @@ function RequestFormContent() {
               <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">
                 Date unique
               </p>
-              <h3 className="text-3xl font-serif text-stone-900 mb-4">
-                Fast Match
-              </h3>
+              <h3 className="text-3xl font-serif text-stone-900 mb-4">Fast Match</h3>
               <p className="text-stone-500 font-light leading-relaxed">
-                Pour une demande simple sur une date précise. Nous identifions
-                rapidement un chef disponible correspondant à votre brief.
+                Pour une demande simple sur une date précise. Nous identifions rapidement un chef disponible correspondant à votre brief.
               </p>
             </button>
 
@@ -202,12 +199,9 @@ function RequestFormContent() {
               <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">
                 Demande complexe
               </p>
-              <h3 className="text-3xl font-serif text-stone-900 mb-4">
-                Concierge Match
-              </h3>
+              <h3 className="text-3xl font-serif text-stone-900 mb-4">Concierge Match</h3>
               <p className="text-stone-500 font-light leading-relaxed">
-                Missions longues, sensibles ou à forts enjeux. Traitement
-                accompagné par notre équipe dédiée.
+                Missions longues, sensibles ou à forts enjeux. Traitement accompagné par notre équipe dédiée.
               </p>
             </button>
           </div>
@@ -215,26 +209,47 @@ function RequestFormContent() {
       </div>
     );
   }
+
+  // --- RENDER: FORM FLOW ---
+  return (
+    <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 font-sans">
+      <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
         {/* Sidebar: Context & Progress */}
         <div className="md:col-span-3">
           <div className="sticky top-32 space-y-8">
-            <Marker className={mode === 'concierge' ? "bg-stone-900" : "bg-stone-400"} />
-            
+            <Marker className={mode === 'concierge' ? 'bg-stone-900' : 'bg-stone-400'} />
+
             <div className="space-y-2">
-              <Link href="/request" onClick={() => setMode(null)} className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors">
+              <button
+                type="button"
+                onClick={() => setMode(null)}
+                className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors"
+              >
                 ← Changer de mode
-              </Link>
+              </button>
+
               <h1 className="text-2xl font-serif text-stone-900 leading-tight">
-                {mode === 'fast' ? "Fast Match" : "Concierge Match"}
+                {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
               </h1>
+
               <p className="text-xs text-stone-500 font-light leading-relaxed">
-                {mode === 'fast' 
-                  ? "Pour une demande simple, sur une date précise."
-                  : "Pour les demandes complexes ou sensibles."
-                }
+                {mode === 'fast'
+                  ? 'Pour une demande simple, sur une date précise.'
+                  : 'Pour les demandes complexes ou sensibles.'}
               </p>
             </div>
-            
+
+            {/* (la suite de ta sidebar/progress peut continuer ici) */}
+          </div>
+        </div>
+
+        {/* Main Form Area */}
+        <div className="md:col-span-9">
+          {/* ICI tu remets ton formulaire / étapes (tout ce qui venait après) */}
+        </div>
+      </div>
+    </div>
+  );
             {/* Steps Indicator */}
             <div className="flex flex-col gap-3 pt-4">
               {Array.from({ length: getTotalSteps() }).map((_, i) => {
