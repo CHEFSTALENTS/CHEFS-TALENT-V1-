@@ -158,30 +158,47 @@ export default function Home() {
           </div>
         </div>
       </Section>
+    {/* Visual Break – Chalet with CTA */}
+<section className="relative bg-paper">
+  <Reveal>
+    <div className="relative h-[70vh] md:h-[85vh] overflow-hidden flex items-center justify-center">
+      
+      <Image
+        src="/images/editorial/chalet-cuisine.png"
+        alt="Cuisine ouverte dans un chalet avec vue montagne"
+        fill
+        className="object-cover"
+        priority
+      />
 
-      {/* Full Width Visual Break - Final CTA Content */}
-      <section className="relative py-40 md:py-64 bg-stone-900 text-stone-100 overflow-hidden">
-        <div className="absolute inset-0 opacity-40">
-          <img
-            src="https://images.unsplash.com/photo-1595856488371-d820d2919379?q=80&w=2070&auto=format&fit=crop"
-            alt="Warm interior dining"
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="relative z-10 max-w-4xl mx-auto text-center px-6">
-          <Reveal>
-            <h2 className="text-4xl md:text-6xl font-serif italic mb-8">"Présentez-nous votre besoin."</h2>
-            <p className="text-stone-300 text-lg font-light max-w-xl mx-auto mb-12">
-              Nous vous répondrons avec une proposition adaptée à vos attentes et à votre niveau d’exigence.
-            </p>
-            <Link href="/request">
-              <Button className="bg-paper text-stone-900 border-none hover:bg-white px-12 h-16">
-                Soumettre une demande
-              </Button>
-            </Link>
-          </Reveal>
-        </div>
-      </section>
+      {/* Overlay léger */}
+      <div className="absolute inset-0 bg-stone-900/35" />
+
+      {/* Contenu CTA */}
+      <div className="relative z-10 text-center px-6 max-w-2xl">
+        <h2 className="text-3xl md:text-5xl font-serif text-white italic mb-8">
+          Présentez-nous votre besoin.
+        </h2>
+
+        <p className="text-stone-200 text-lg font-light mb-12">
+          Nous vous répondrons avec une proposition adaptée à vos attentes  
+          et à votre niveau d’exigence.
+        </p>
+
+        <Link href="/request">
+          <Button
+            variant="outline"
+            size="lg"
+            className="border-white text-white hover:bg-white hover:text-stone-900 transition-all"
+          >
+            Soumettre une demande
+          </Button>
+        </Link>
+      </div>
+
+    </div>
+  </Reveal>
+</section>
 
       {/* Match Types - Warm Cards */}
       <section className="py-32 px-6 md:px-12 bg-stone-100">
