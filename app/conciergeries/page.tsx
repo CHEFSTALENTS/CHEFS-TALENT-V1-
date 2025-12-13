@@ -81,7 +81,7 @@ export default function ConciergeriesPage() {
             <div className="grid md:grid-cols-1 gap-6 pt-12 border-t border-stone-200">
                <Label className="mb-4 block">Ce que Chef Talents prend en charge pour vous</Label>
                {[
-                 "Accès à une Sélection Select de chefs approuvés",
+                 "Accès à une Sélection  de chefs approuvés par Chefs Talents",
                  "Gestion structurée des séjours, résidences et demandes multi-dates",
                  "Continuité de service et gestion des remplacements",
                  "Chefs multilingues, habitués aux standards UHNW",
@@ -113,13 +113,13 @@ export default function ConciergeriesPage() {
         <div className="max-w-5xl mx-auto">
            <div className="text-center mb-16">
              <Briefcase className="w-8 h-8 text-stone-400 mx-auto mb-6" strokeWidth={1} />
-             <h2 className="text-4xl font-serif font-normal text-stone-900">La Sélection Select</h2>
+             <h2 className="text-4xl font-serif font-normal text-stone-900">Une sélection unique</h2>
              <p className="text-stone-500 mt-4 font-light max-w-2xl mx-auto">
-               La Sélection Select n’est pas publique.
+               La Sélection n’est pas publique.
                Elle est réservée aux conciergeries et propriétés nécessitant des chefs validés pour des contextes complexes et à forts enjeux.
              </p>
              <p className="text-stone-400 text-sm mt-4 font-medium uppercase tracking-wider">
-               * Tous les chefs de Chef Talents ne sont pas éligibles à la Sélection Select.
+               * Tous les chefs de Chef Talents ne sont pas éligibles à la Sélection.
              </p>
            </div>
            
@@ -176,11 +176,11 @@ export default function ConciergeriesPage() {
              </div>
              <div className="grid md:grid-cols-2 gap-6">
                 {[
-                  "Chef saisonnier pour un chalet (Alpes)",
-                  "Résidence multi-semaines en villa (Méditerranée)",
+                  "Chef saisonnier pour un chalet (Megève)",
+                  "Résidence multi-semaines en villa (Ibiza)",
                   "Missions sur yacht avec rotation d’invités",
                   "Séjours familiaux avec attentes récurrentes",
-                  "Demandes sensibles et last-minute à forte exposition"
+                  "Demandes sensibles et last-minute "
                 ].map((item, i) => (
                    <Reveal key={i} className="bg-paper p-8 border border-stone-200">
                       <span className="text-stone-700 font-light text-lg">{item}</span>
