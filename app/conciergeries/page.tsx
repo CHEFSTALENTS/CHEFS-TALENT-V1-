@@ -204,14 +204,14 @@ export default function ConciergeriesPage() {
            
            {/* Final CTA Part */}
            <Reveal className="text-center border-t border-stone-700 pt-24 space-y-8">
-              <h3 className="text-3xl font-serif text-paper">Demander l’accès à la Sélection Select</h3>
+              <h3 className="text-3xl font-serif text-paper">Demander l’accès à la Sélection </h3>
               <p className="text-stone-400 font-light">
 Présentez votre conciergerie. Nous vous recontactons pour valider l’accès et activer la mise en relation.
               </p>
               <div className="pt-4">
               <Link href="/request?mode=concierge&type=concierge_access">
   <Button className="bg-white text-stone-900 hover:bg-stone-100">
-    Demander l’accès à la Sélection Select
+    Demander l’accès à la Sélection
   </Button>
 </Link>
               </div>
