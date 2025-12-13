@@ -149,7 +149,7 @@ export default function Home() {
                 content="Une sélection de chefs privés validés, accessible aux clients particuliers pour des prestations ponctuelles ou récurrentes."
               />
               <ExpandableItem
-                title="Sélection Select"
+                title="Sélection "
                 subtitle="Réservée aux conciergeries"
                 isDefaultOpen
                 content="Une sélection avancée, destinée aux conciergeries et propriétés, regroupant des chefs approuvés pour des missions à forts enjeux, de longue durée ou récurrentes."
