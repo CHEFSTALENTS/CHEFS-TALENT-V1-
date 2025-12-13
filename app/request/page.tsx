@@ -462,81 +462,75 @@ function RequestFormContent() {
                    </div>
 
                    <div className="space-y-4">
-                      <Label>Niveau de staffing</Label>
-                      <div className="grid gap-3">
-                         {{[
-  { id: 'chef_only', title: 'Chef seul', desc: 'Cuisine & dressage simple' },
-  {
-    id: 'chef_service',
-    title: 'Chef + Service',
-    desc: "Avec maître d’hôtel/serveur",
-    disabled: true,
-    note: 'Disponible prochainement',
-  },
-  {
-    id: 'full_team',
-    title: 'Brigade complète',
-    desc: 'Pour grands événements',
-    disabled: true,
-    note: 'Disponible prochainement',
-  },
-].map((l) => (
-<label
-  key={l.id}
-  className={`flex justify-between items-center p-4 border transition-colors
-  ${l.disabled ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}
-  ${formData.serviceExpectations === l.id ? 'border-stone-900' : 'border-stone-200'}
-  `}
-><div>
-                                <span className="block font-medium text-stone-900">{l.title}</span>
-                                <span className="text-xs text-stone-500">{l.desc}</span>
-  {l.disabled && (
-  <span className="mt-1 block text-[11px] italic text-stone-400">
-    {l.note}
-  </span>
-)}
-                              </div>
-<input
-  type="radio"
-  className="hidden"
-  name="service"
-  disabled={l.disabled}
-  checked={!l.disabled && formData.serviceExpectations === l.id}
-  onChange={() => {
-    if (l.disabled) return;
-    setFormData({ ...formData, serviceExpectations: l.id });
-  }}
-/>                              <div className={`w-4 h-4 border flex items-center justify-center rounded-full ${formData.serviceExpectations === l.id ? 'border-stone-900' : 'border-stone-300'}`}>
-                                 {formData.serviceExpectations === l.id && <div className="w-2 h-2 bg-stone-900 rounded-full" />}
-                              </div>
-                           </label>
-                         ))}
-                      </div>
-                   </div>
+    <Label>Niveau de staffing</Label>
 
-                   {formData.dateMode === 'multi' && (
-                     <div className="grid grid-cols-2 gap-8 border-t border-stone-100 pt-8">
-                        <div className="space-y-4">
-                           <Label>Rythme</Label>
-                           <select className="w-full h-12 border-b border-stone-200 bg-transparent" value={formData.serviceRhythm} onChange={(e) => setFormData({...formData, serviceRhythm: e.target.value as any})}>
-                             <option value="daily">3 repas / jour</option>
-                             <option value="occasional">Dîner uniquement</option>
-                             <option value="ondemand">À la carte</option>
-                           </select>
-                        </div>
-                        <div className="space-y-4">
-                           <Label>Logement Chef</Label>
-                           <select className="w-full h-12 border-b border-stone-200 bg-transparent" value={formData.accommodationProvided} onChange={(e) => setFormData({...formData, accommodationProvided: e.target.value as any})}>
-                             <option value="yes">Fourni sur place</option>
-                             <option value="no">Non fourni</option>
-                           </select>
-                        </div>
-                     </div>
-                   )}
-                 </div>
-              </Reveal>
-            )}
+<div className="grid gap-3">
+  {[
+    { id: 'chef_only', title: 'Chef seul', desc: 'Cuisine & dressage simple' },
+    {
+      id: 'chef_service',
+      title: 'Chef + Service',
+      desc: "Avec maître d’hôtel/serveur",
+      disabled: true,
+      note: 'Disponible prochainement',
+    },
+    {
+      id: 'full_team',
+      title: 'Brigade complète',
+      desc: 'Pour grands événements',
+      disabled: true,
+      note: 'Disponible prochainement',
+    },
+  ].map((l) => (
+    <label
+      key={l.id}
+      className={[
+        'flex justify-between items-center p-4 border transition-colors',
+        l.disabled
+          ? 'opacity-40 cursor-not-allowed pointer-events-none'
+          : 'cursor-pointer',
+        formData.serviceExpectations === l.id
+          ? 'border-stone-900'
+          : 'border-stone-200',
+      ].join(' ')}
+    >
+      <div>
+        <span className="block font-medium text-stone-900">{l.title}</span>
+        <span className="text-xs text-stone-500">{l.desc}</span>
 
+        {l.disabled && (
+          <span className="mt-1 block text-[11px] italic text-stone-400">
+            {l.note}
+          </span>
+        )}
+      </div>
+
+      <input
+        type="radio"
+        className="hidden"
+        name="service"
+        disabled={l.disabled}
+        checked={!l.disabled && formData.serviceExpectations === l.id}
+        onChange={() => {
+          if (l.disabled) return;
+          setFormData({ ...formData, serviceExpectations: l.id });
+        }}
+      />
+
+      <div
+        className={`w-4 h-4 border flex items-center justify-center rounded-full ${
+          formData.serviceExpectations === l.id
+            ? 'border-stone-900'
+            : 'border-stone-300'
+        }`}
+      >
+        {formData.serviceExpectations === l.id && (
+          <div className="w-2 h-2 bg-stone-900 rounded-full" />
+        )}
+      </div>
+    </label>
+  ))}
+</div>
             {/* Step 3: Details */}
             {mode === 'concierge' && step === 3 && (
               <Reveal>
