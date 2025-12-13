@@ -44,7 +44,7 @@ export default function ChefsPage() {
              <div className="md:col-span-8">
                <div className="aspect-[21/9] bg-stone-200 w-full overflow-hidden relative">
                  <Image
-  src="/images/editorial/plating.png"
+  src="/images/editorial/Plating.png"
   alt="Chef plating detail"
   fill
   priority
