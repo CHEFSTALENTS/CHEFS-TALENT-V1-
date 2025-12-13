@@ -33,22 +33,21 @@ export default function ConciergeriesPage() {
           
           <Reveal delay={0.2}>
             <p className="text-stone-400 text-xl font-light leading-relaxed max-w-2xl mx-auto">
-              Chef Talents accompagne les conciergeries de luxe, agences de villas et family offices avec une sélection de chefs privés conçue pour la fiabilité, la discrétion et la continuité, partout en Europe.
+              Chefs Talents accompagne les conciergeries de luxe, agences de villas et les charters de Yacht avec une sélection de chefs privés conçue pour la fiabilité, la discrétion et la rapidité, partout en Europe.
             </p>
           </Reveal>
 
           <Reveal delay={0.3}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
-              <Link href="/request?type=concierge">
-                <Button size="lg" className="bg-paper text-stone-900 hover:bg-stone-200 w-full sm:w-auto">
-                  Demander l’accès
-                </Button>
-              </Link>
-              <Link href="/request?type=private">
-                <Button size="lg" variant="outline" className="text-stone-300 border-stone-600 hover:text-white hover:border-white w-full sm:w-auto">
-                  Soumettre une demande
-                </Button>
-              </Link>
+              
+            <Link href="/request">
+  <Button
+    size="lg"
+    className="bg-white text-stone-900 hover:bg-stone-100 w-full sm:w-auto"
+  >
+    Soumettre une demande
+  </Button>
+</Link>
             </div>
           </Reveal>
         </div>
