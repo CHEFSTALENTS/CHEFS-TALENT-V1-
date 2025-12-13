@@ -1,5 +1,5 @@
 'use client';
-
+import Image from "next/image";
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Star, ShieldCheck } from 'lucide-react';
@@ -12,6 +12,15 @@ export default function Home() {
     <Layout>
       {/* Hero Section - Split Layout */}
       <section className="relative min-h-screen grid md:grid-cols-12 pt-24 md:pt-0 bg-paper">
+        <Image
+  src="/images/editorial/chef-dining-01.jpg.png"
+  alt="Chef Talents – expérience de chef privé"
+  fill
+  priority
+  className="object-cover opacity-90"
+/>
+
+<div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-transparent" />
         {/* Left: Text Content */}
         <div className="md:col-span-7 flex flex-col justify-center px-6 md:px-16 lg:px-24 py-20 order-2 md:order-1">
           <div className="max-w-2xl">
