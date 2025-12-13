@@ -97,51 +97,54 @@ function RequestFormContent() {
       setIsSubmitting(false);
     }
   };
+  const getTotalSteps = () => (mode === 'fast' ? 2 : 4);
 
-  const getTotalSteps = () => mode === 'fast' ? 2 : 4;
-
-  const nextStep = () => setStep(prev => Math.min(prev + 1, getTotalSteps()));
-  const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, getTotalSteps()));
+  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   // --- RENDER: SUCCESS SCREEN ---
   if (result) {
-    const isFastMode = result.mode === 'instant_match'; 
+    const isFastMode = result.mode === 'instant_match';
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] px-6">
         <Reveal className="max-w-lg w-full text-center">
           <Marker className="mx-auto mb-8 bg-stone-900" />
-          
+
           <div className="flex justify-center mb-6">
             {isFastMode ? (
-               <CheckCircle2 className="w-16 h-16 text-stone-900" strokeWidth={1} />
+              <CheckCircle2 className="w-16 h-16 text-stone-900" strokeWidth={1} />
             ) : (
-               <Clock className="w-16 h-16 text-stone-400" strokeWidth={1} />
+              <Clock className="w-16 h-16 text-stone-400" strokeWidth={1} />
             )}
           </div>
 
           <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">
-            {isFastMode ? "Demande enregistrée" : "Dossier ouvert"}
+            {isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}
           </h2>
-          
+
           <div className="text-stone-500 mb-12 text-lg font-light space-y-4">
             {isFastMode ? (
               <>
+                <p>Votre demande Fast Match a bien été reçue.</p>
                 <p>
-                  Votre demande Fast Match a bien été reçue.
-                </p>
-                <p>
-                  Nous vérifions la disponibilité immédiate de nos chefs et vous confirmerons l'attribution sous 2h.
+                  Nous vérifions la disponibilité immédiate de nos chefs et vous
+                  confirmerons l’attribution sous 2h.
                 </p>
               </>
             ) : (
               <p>
-                 Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et reviendrons vers vous avec une proposition structurée.
+                Votre demande a été attribuée à notre équipe Concierge. Nous
+                étudions le cahier des charges et reviendrons vers vous avec une
+                proposition structurée.
               </p>
             )}
-            
-            <p className="text-xs uppercase tracking-widest pt-4 text-stone-400">Ref: {result.referenceId}</p>
+
+            <p className="text-xs uppercase tracking-widest pt-4 text-stone-400">
+              Ref: {result.referenceId}
+            </p>
           </div>
+
           <Link href="/">
             <Button variant="link">Retour à l’accueil</Button>
           </Link>
@@ -150,58 +153,68 @@ function RequestFormContent() {
     );
   }
 
-  // --- RENDER: MODE SELECTION (If no mode selected) ---
+  // --- RENDER: MODE SELECTION ---
   if (!mode) {
     return (
-      <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 flex items-center justify-center">
         <Reveal className="max-w-5xl w-full">
           <div className="text-center mb-16">
-            <Marker className="mx-auto" />
-            <h1 className="text-4xl md:text-5xl font-serif text-stone-900 mb-6">Quel est votre besoin ?</h1>
-            <p className="text-stone-500 font-light">Sélectionnez le type d'accompagnement souhaité.</p>
+            <Marker className="mx-auto mb-6" />
+            <h1 className="text-4xl md:text-5xl font-serif text-stone-900 mb-4">
+              Quel est votre besoin ?
+            </h1>
+            <p className="text-stone-500 font-light">
+              Sélectionnez le type d’accompagnement souhaité.
+            </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-8 md:gap-16">
-            {/* Fast Match Card */}
-            <button 
-              onClick={() => selectMode('fast')}
-              className="group text-left p-10 border border-stone-200 bg-white hover:border-stone-900 transition-all duration-500 flex flex-col h-full"
+            {/* FAST MATCH */}
+            <button
+              type="button"
+              onClick={() => {
+                setMode('fast');
+                setStep(1);
+              }}
+              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900"
             >
-              <Star className="w-8 h-8 text-stone-400 group-hover:text-stone-900 mb-8 transition-colors" strokeWidth={1} />
-              <h3 className="text-3xl font-serif text-stone-900 mb-4">Fast Match</h3>
-              <p className="text-stone-500 font-light mb-8 flex-grow">
-                Pour une demande simple, sur une date précise (dîner ou déjeuner).
+              <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">
+                Date unique
               </p>
-              <div className="flex items-center text-xs font-medium uppercase tracking-[0.2em] text-stone-400 group-hover:text-stone-900 mt-auto">
-                Sélectionner <ChevronRight className="w-4 h-4 ml-2" />
-              </div>
+              <h3 className="text-3xl font-serif text-stone-900 mb-4">
+                Fast Match
+              </h3>
+              <p className="text-stone-500 font-light leading-relaxed">
+                Pour une demande simple sur une date précise. Nous identifions
+                rapidement un chef disponible correspondant à votre brief.
+              </p>
             </button>
 
-            {/* Concierge Match Card */}
-            <button 
-              onClick={() => selectMode('concierge')}
-              className="group text-left p-10 bg-stone-900 text-stone-100 hover:bg-stone-800 transition-all duration-500 flex flex-col h-full"
+            {/* CONCIERGE MATCH */}
+            <button
+              type="button"
+              onClick={() => {
+                setMode('concierge');
+                setStep(1);
+              }}
+              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900"
             >
-              <ShieldCheck className="w-8 h-8 text-bronze mb-8" strokeWidth={1} />
-              <h3 className="text-3xl font-serif text-white mb-4">Concierge Match</h3>
-              <p className="text-stone-400 font-light mb-8 flex-grow">
-                Pour les demandes complexes, séjours prolongés, villas ou yachts. Étude manuelle du dossier.
+              <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">
+                Demande complexe
               </p>
-              <div className="flex items-center text-xs font-medium uppercase tracking-[0.2em] text-bronze mt-auto">
-                Sélectionner <ChevronRight className="w-4 h-4 ml-2" />
-              </div>
+              <h3 className="text-3xl font-serif text-stone-900 mb-4">
+                Concierge Match
+              </h3>
+              <p className="text-stone-500 font-light leading-relaxed">
+                Missions longues, sensibles ou à forts enjeux. Traitement
+                accompagné par notre équipe dédiée.
+              </p>
             </button>
           </div>
         </Reveal>
       </div>
     );
   }
-
-  // --- RENDER: FORM FLOW ---
-  return (
-    <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 font-sans">
-      <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
-        
         {/* Sidebar: Context & Progress */}
         <div className="md:col-span-3">
           <div className="sticky top-32 space-y-8">
