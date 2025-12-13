@@ -251,119 +251,66 @@ return (
               const isActive = s === step;
               const isPast = s < step;
 
-              return (
-                <div key={s} className="flex items-center gap-3">
-                  <div
-                    className={`h-px transition-all duration-500 ${
-                      isActive ? 'w-8 bg-stone-900' : isPast ? 'w-4 bg-stone-300' : 'w-2 bg-stone-100'
-                    }`}
-                  />
-                  <span
-                    className={`text-[10px] uppercase tracking-widest transition-colors ${
-                      isActive ? 'text-stone-900' : 'text-stone-300'
-                    }`}
-                  >
-                    {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
-                    {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
-                    {s === 3 && 'Détails'}
-                    {s === 4 && 'Coordonnées'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+            <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
 
-        </div>
-      </div>
+  {/* Sidebar */}
+  <div className="md:col-span-3">
+    <div className="sticky top-32 space-y-8">
 
-      {/* Main Form Area */}
-      <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
-        {/* ✅ COLLE ICI tout ton contenu actuel “Main Form Area / steps” */}
+      {/* Steps Indicator */}
+      <div className="flex flex-col gap-3 pt-4">
+        {Array.from({ length: getTotalSteps() }).map((_, i) => {
+          const s = i + 1;
+          const isActive = s === step;
+          const isPast = s < step;
+
+          return (
+            <div key={s} className="flex items-center gap-3">
+              <div
+                className={`h-px transition-all duration-500 ${
+                  isActive
+                    ? 'w-8 bg-stone-900'
+                    : isPast
+                    ? 'w-4 bg-stone-300'
+                    : 'w-2 bg-stone-100'
+                }`}
+              />
+              <span
+                className={`text-[10px] uppercase tracking-widest ${
+                  isActive ? 'text-stone-900' : 'text-stone-300'
+                }`}
+              >
+                {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
+                {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
+                {s === 3 && 'Détails'}
+                {s === 4 && 'Coordonnées'}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
     </div>
   </div>
-);
-     
+
+  {/* Main Form Area */}
+  <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
+    <div
+      key={step}
+      className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700"
+    >
+
+      {/* === FAST MATCH FLOW === */}
+      {mode === 'fast' && step === 1 && (
+        <Reveal>
+          {/* 👉 ICI tu laisses TOUT ton formulaire existant */}
+        </Reveal>
+      )}
+
+    </div>
+  </div>
+
 </div>
-
-{/* Main Form Area */}
-<div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
-  {/* ⬅️ ICI tu laisses TOUT ton formulaire / steps existant */}
-</div>
-
-{/* Main Form Area */}
-<div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
-  <div key={step} className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            
-            {/* === FAST MATCH FLOW === */}
-            {mode === 'fast' && step === 1 && (
-              <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">Votre demande</h2>
-                  
-                  <div className="space-y-6">
-                    <Label>Vous êtes :</Label>
-                    <div className="flex gap-4">
-                      {[
-                        { val: 'private', label: 'Client Privé' },
-                        { val: 'concierge', label: 'Conciergerie / Agence' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.val}
-                          type="button"
-                          onClick={() => setFormData({...formData, clientType: opt.val as any})}
-                          className={`px-6 py-3 text-sm border transition-colors ${formData.clientType === opt.val ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 text-stone-600 hover:border-stone-900'}`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <Label>Lieu</Label>
-                      <Input 
-                        placeholder="Ville" 
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        autoFocus
-                      />
-                    </div>
-                    <div className="space-y-4">
-                      <Label>Date du dîner</Label>
-                      <Input 
-                        type="date" 
-                        value={formData.startDate}
-                        onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Nombre de convives</Label>
-                    <Input 
-                      type="number" 
-                      min={1}
-                      className="max-w-[100px]"
-                      value={formData.guestCount}
-                      onChange={(e) => setFormData({...formData, guestCount: parseInt(e.target.value)})}
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Préférences (Facultatif)</Label>
-                    <Textarea 
-                      placeholder="Type de cuisine, allergies, ambiance souhaitée..." 
-                      value={formData.cuisinePreferences}
-                      onChange={(e) => setFormData({...formData, cuisinePreferences: e.target.value})}
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                </div>
-              </Reveal>
-            )}
 
             {mode === 'fast' && step === 2 && (
               <Reveal>
