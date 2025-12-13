@@ -66,10 +66,12 @@ function RequestFormContent() {
     router.push('/request');
   };
 
-  // Init from URL
+  // Init from URL (mode / type / step)
   useEffect(() => {
     const modeParam = searchParams?.get('mode');
     const typeParam = searchParams?.get('type');
+    const stepParamRaw = searchParams?.get('step');
+    const stepParam = stepParamRaw ? parseInt(stepParamRaw, 10) : null;
 
     if (typeParam === 'concierge' || typeParam === 'private') {
       setFormData((prev) => ({ ...prev, clientType: typeParam as any }));
@@ -78,7 +80,10 @@ function RequestFormContent() {
     if (modeParam === 'fast' || modeParam === 'concierge') {
       const m = modeParam as RequestMode;
       setMode(m);
-      setStep(1);
+
+      const total = m === 'fast' ? 2 : 4;
+      const desiredStep = stepParam ? Math.max(1, Math.min(stepParam, total)) : 1;
+      setStep(desiredStep);
 
       if (m === 'fast') {
         setFormData((prev) => ({
@@ -172,7 +177,8 @@ function RequestFormContent() {
               <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">Date unique</p>
               <h3 className="text-3xl font-serif text-stone-900 mb-4">Fast Match</h3>
               <p className="text-stone-500 font-light leading-relaxed">
-                Pour une demande simple sur une date précise. Nous identifions rapidement un chef disponible correspondant à votre brief.
+                Pour une demande simple sur une date précise. Nous identifions rapidement un chef disponible correspondant à votre
+                brief.
               </p>
             </button>
 
@@ -211,7 +217,9 @@ function RequestFormContent() {
                 ← Changer de mode
               </button>
 
-              <h1 className="text-2xl font-serif text-stone-900 leading-tight">{mode === 'fast' ? 'Fast Match' : 'Concierge Match'}</h1>
+              <h1 className="text-2xl font-serif text-stone-900 leading-tight">
+                {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
+              </h1>
 
               <p className="text-xs text-stone-500 font-light leading-relaxed">
                 {mode === 'fast' ? 'Pour une demande simple, sur une date précise.' : 'Pour les demandes complexes ou sensibles.'}
@@ -232,7 +240,11 @@ function RequestFormContent() {
                         isActive ? 'w-8 bg-stone-900' : isPast ? 'w-4 bg-stone-300' : 'w-2 bg-stone-100'
                       }`}
                     />
-                    <span className={`text-[10px] uppercase tracking-widest transition-colors ${isActive ? 'text-stone-900' : 'text-stone-300'}`}>
+                    <span
+                      className={`text-[10px] uppercase tracking-widest transition-colors ${
+                        isActive ? 'text-stone-900' : 'text-stone-300'
+                      }`}
+                    >
                       {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
                       {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
                       {s === 3 && 'Détails'}
@@ -289,11 +301,7 @@ function RequestFormContent() {
                     </div>
                     <div className="space-y-4">
                       <Label>Date du dîner</Label>
-                      <Input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      />
+                      <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
                     </div>
                   </div>
 
@@ -376,21 +384,13 @@ function RequestFormContent() {
                   {formData.clientType === 'concierge' && (
                     <div className="space-y-4">
                       <Label>Nom de la structure</Label>
-                      <Input
-                        value={formData.companyName}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        placeholder="Agence, Family Office..."
-                      />
+                      <Input value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Agence, Family Office..." />
                     </div>
                   )}
 
                   <div className="space-y-4">
                     <Label>Lieu de la mission</Label>
-                    <Input
-                      placeholder="Ville, Pays, Station..."
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    />
+                    <Input placeholder="Ville, Pays, Station..." value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
                   </div>
 
                   <div className="space-y-4">
@@ -406,20 +406,13 @@ function RequestFormContent() {
                             {formData.dateMode === m.val && <div className="w-2 h-2 bg-stone-900" />}
                           </div>
                           <span className="text-stone-600">{m.label}</span>
-                          <input
-                            type="radio"
-                            className="hidden"
-                            name="dateMode"
-                            checked={formData.dateMode === m.val}
-                            onChange={() => setFormData({ ...formData, dateMode: m.val as any })}
-                          />
+                          <input type="radio" className="hidden" name="dateMode" checked={formData.dateMode === m.val} onChange={() => setFormData({ ...formData, dateMode: m.val as any })} />
                         </label>
                       ))}
                     </div>
 
                     <div className="grid grid-cols-2 gap-8">
                       <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
-
                       {formData.dateMode === 'multi' && (
                         <Input
                           type="date"
@@ -464,31 +457,18 @@ function RequestFormContent() {
                     <div className="grid grid-cols-2 gap-8 p-6 bg-stone-50 border border-stone-100">
                       <div className="space-y-2">
                         <Label>Zone de navigation</Label>
-                        <Input
-                          value={formData.sailingArea}
-                          onChange={(e) => setFormData({ ...formData, sailingArea: e.target.value })}
-                          placeholder="Ex: Méditerranée"
-                        />
+                        <Input value={formData.sailingArea} onChange={(e) => setFormData({ ...formData, sailingArea: e.target.value })} placeholder="Ex: Méditerranée" />
                       </div>
                       <div className="space-y-2">
                         <Label>Équipage total</Label>
-                        <Input
-                          type="number"
-                          value={formData.crewSize}
-                          onChange={(e) => setFormData({ ...formData, crewSize: parseInt(e.target.value || '0', 10) })}
-                        />
+                        <Input type="number" value={formData.crewSize} onChange={(e) => setFormData({ ...formData, crewSize: parseInt(e.target.value || '0', 10) })} />
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-4">
                     <Label>Convives (principal)</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={formData.guestCount}
-                      onChange={(e) => setFormData({ ...formData, guestCount: parseInt(e.target.value || '0', 10) })}
-                    />
+                    <Input type="number" min={1} value={formData.guestCount} onChange={(e) => setFormData({ ...formData, guestCount: parseInt(e.target.value || '0', 10) })} />
                   </div>
 
                   <div className="space-y-4">
@@ -497,20 +477,8 @@ function RequestFormContent() {
                     <div className="grid gap-3">
                       {[
                         { id: 'chef_only', title: 'Chef seul', desc: 'Cuisine & dressage simple' },
-                        {
-                          id: 'chef_service',
-                          title: 'Chef + Service',
-                          desc: "Avec maître d’hôtel/serveur",
-                          disabled: true,
-                          note: 'Disponible prochainement',
-                        },
-                        {
-                          id: 'full_team',
-                          title: 'Brigade complète',
-                          desc: 'Pour grands événements',
-                          disabled: true,
-                          note: 'Disponible prochainement',
-                        },
+                        { id: 'chef_service', title: 'Chef + Service', desc: "Avec maître d’hôtel/serveur", disabled: true, note: 'Disponible prochainement' },
+                        { id: 'full_team', title: 'Brigade complète', desc: 'Pour grands événements', disabled: true, note: 'Disponible prochainement' },
                       ].map((l) => {
                         const selected = formData.serviceExpectations === l.id;
 
@@ -541,11 +509,7 @@ function RequestFormContent() {
                               }}
                             />
 
-                            <div
-                              className={`w-4 h-4 border flex items-center justify-center rounded-full ${
-                                selected ? 'border-stone-900' : 'border-stone-300'
-                              }`}
-                            >
+                            <div className={`w-4 h-4 border flex items-center justify-center rounded-full ${selected ? 'border-stone-900' : 'border-stone-300'}`}>
                               {selected && <div className="w-2 h-2 bg-stone-900 rounded-full" />}
                             </div>
                           </label>
@@ -604,30 +568,18 @@ function RequestFormContent() {
                   <div className="grid md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <Label>Restrictions / allergies</Label>
-                      <Input
-                        value={formData.dietaryRestrictions}
-                        onChange={(e) => setFormData({ ...formData, dietaryRestrictions: e.target.value })}
-                        placeholder="Sans gluten, etc."
-                      />
+                      <Input value={formData.dietaryRestrictions} onChange={(e) => setFormData({ ...formData, dietaryRestrictions: e.target.value })} placeholder="Sans gluten, etc." />
                     </div>
                     <div className="space-y-4">
                       <Label>Langues parlées</Label>
-                      <Input
-                        value={formData.preferredLanguage}
-                        onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
-                        placeholder="FR, EN..."
-                      />
+                      <Input value={formData.preferredLanguage} onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })} placeholder="FR, EN..." />
                     </div>
                   </div>
 
                   <div className="space-y-4 pt-6 border-t border-stone-100">
                     <Label>Budget estimatif</Label>
                     <p className="text-xs text-stone-400 italic mb-2">Confidentiel. Permet de calibrer le profil du chef.</p>
-                    <Input
-                      value={formData.budgetRange}
-                      onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                      placeholder="Ex: 500–800€ / jour ou budget global"
-                    />
+                    <Input value={formData.budgetRange} onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })} placeholder="Ex: 500–800€ / jour ou budget global" />
                   </div>
                 </div>
               </Reveal>
@@ -651,26 +603,11 @@ function RequestFormContent() {
 
                   <div className="space-y-6 pt-6">
                     <Label>Vos coordonnées</Label>
-                    <Input
-                      value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      placeholder="Nom complet"
-                      autoFocus
-                    />
+                    <Input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} placeholder="Nom complet" autoFocus />
 
                     <div className="grid md:grid-cols-2 gap-8">
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="Email"
-                      />
-                      <Input
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="Téléphone"
-                      />
+                      <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Email" />
+                      <Input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="Téléphone" />
                     </div>
                   </div>
                 </div>
@@ -699,9 +636,7 @@ function RequestFormContent() {
 
           {step === getTotalSteps() && (
             <div className="text-right mt-4">
-              <p className="text-[10px] uppercase tracking-widest text-stone-400">
-                {mode === 'fast' ? 'Réponse sous 24h.' : 'Traitement confidentiel.'}
-              </p>
+              <p className="text-[10px] uppercase tracking-widest text-stone-400">{mode === 'fast' ? 'Réponse sous 24h.' : 'Traitement confidentiel.'}</p>
             </div>
           )}
         </div>
