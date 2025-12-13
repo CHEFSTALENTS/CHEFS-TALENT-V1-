@@ -15,46 +15,63 @@ export default function PrivateClientsPage() {
   return (
     <Layout>
       {/* Hero Section - Full Bleed Background */}
-      <section className="relative min-h-[90vh] flex flex-col justify-end pb-32 px-6 md:px-12 bg-stone-900 text-paper">
-        <div className="absolute inset-0 z-0">
-           <img 
-             src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070&auto=format&fit=crop" 
-             alt="Private Villa Dining"
-             className="w-full h-full object-cover opacity-50 contrast-75 brightness-75"
-           />
-        </div>
+     <section className="relative min-h-[90vh] flex flex-col justify-end pb-32 px-6 md:px-12 bg-stone-900">
+  {/* Background image */}
+  <div className="absolute inset-0 z-0">
+    <img
+      src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2070&auto=format&fit=crop"
+      alt="Private Villa Dining"
+      className="w-full h-full object-cover"
+    />
+    {/* Premium overlay (contrast guarantee) */}
+    <div className="absolute inset-0 bg-stone-950/65" />
+    {/* Subtle vignette for readability */}
+    <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/35 to-transparent" />
+  </div>
 
-        <div className="relative z-10 max-w-7xl w-full mx-auto">
-          <Reveal>
-            <div className="w-[1px] h-16 bg-paper mb-12" />
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-normal leading-[0.9] tracking-tight mb-12">
-              Des chefs privés,<br/>
-              <span className="text-stone-300">pensés pour votre lieu de vie et vos réceptions.</span>
-            </h1>
-          </Reveal>
-          
-          <Reveal delay={0.2} className="flex flex-col md:flex-row gap-12 md:items-end justify-between border-t border-stone-500/30 pt-12">
-            <p className="text-xl md:text-2xl text-stone-200 font-light max-w-2xl leading-relaxed">
-              Chef Talents accompagne des clients privés recherchant des chefs fiables, discrets et expérimentés pour leur domicile, leur villa ou leur résidence, partout en Europe.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6">
-              <Link href="/request?type=private">
-                <Button size="lg" className="bg-paper text-stone-900 hover:bg-stone-200 border-none w-full sm:w-auto">
-                  Soumettre une demande
-                </Button>
-              </Link>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="text-paper border-stone-500 hover:bg-stone-800 hover:text-white hover:border-white w-full sm:w-auto"
-                onClick={() => scrollTo('positioning')}
-              >
-                Comment ça fonctionne
-              </Button>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+  {/* Content */}
+  <div className="relative z-10 max-w-7xl w-full mx-auto">
+    <Reveal>
+      <div className="w-[1px] h-16 bg-white/80 mb-12" />
+
+      <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-normal leading-[0.9] tracking-tight mb-12 text-white">
+        Des chefs privés,
+        <br />
+        <span className="text-white/75">pensés pour votre lieu de vie et vos réceptions.</span>
+      </h1>
+    </Reveal>
+
+    <Reveal
+      delay={0.2}
+      className="flex flex-col md:flex-row gap-12 md:items-end justify-between border-t border-white/15 pt-12"
+    >
+      <p className="text-xl md:text-2xl text-white/80 font-light max-w-2xl leading-relaxed">
+        Chef Talents accompagne des clients privés recherchant des chefs fiables, discrets et expérimentés pour leur domicile,
+        leur villa ou leur résidence, partout en Europe.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-6">
+        <Link href="/request?type=private">
+          <Button
+            size="lg"
+            className="bg-white text-stone-900 hover:bg-stone-100 border-none w-full sm:w-auto"
+          >
+            Soumettre une demande
+          </Button>
+        </Link>
+
+        <Button
+          variant="outline"
+          size="lg"
+          className="text-white border-white/50 hover:bg-white/10 hover:border-white w-full sm:w-auto"
+          onClick={() => scrollTo('positioning')}
+        >
+          Comment ça fonctionne
+        </Button>
+      </div>
+    </Reveal>
+  </div>
+</section>
 
       {/* Positioning & What We Provide - Paper Background */}
       <Section className="bg-paper" id="positioning">
