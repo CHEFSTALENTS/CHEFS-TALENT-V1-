@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { Button, Section, Reveal, Marker, Label } from '../../components/ui';
@@ -42,11 +43,13 @@ export default function ChefsPage() {
           <div className="grid md:grid-cols-12 gap-12 items-center">
              <div className="md:col-span-8">
                <div className="aspect-[21/9] bg-stone-200 w-full overflow-hidden relative">
-                 <img 
-                   src="https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=2070&auto=format&fit=crop" 
-                   alt="Chef plating detail"
-                   className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000" 
-                 />
+                 <Image
+  src="/images/editorial/plating.png"
+  alt="Chef plating detail"
+  fill
+  priority
+  className="object-cover grayscale hover:grayscale-0 transition-all duration-1000"
+/>
                </div>
              </div>
              <div className="md:col-span-4 space-y-6">
