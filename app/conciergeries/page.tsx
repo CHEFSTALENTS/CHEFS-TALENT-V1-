@@ -209,10 +209,10 @@ export default function ConciergeriesPage() {
 Présentez votre conciergerie. Nous vous recontactons pour valider l’accès et activer la mise en relation.
               </p>
               <div className="pt-4">
-              <Link href="/request?mode=concierge&type=concierge_access">
-  <Button className="bg-white text-stone-900 hover:bg-stone-100">
-    Demander l’accès à la Sélection
-  </Button>
+<Link href="/request?mode=concierge&type=concierge">
+ <Button className="bg-white text-stone-900 hover:bg-stone-200 font-medium">
+  Demander l’accès à la Sélection
+</Button>
 </Link>
               </div>
            </Reveal>
