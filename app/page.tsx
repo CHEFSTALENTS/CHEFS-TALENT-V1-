@@ -250,8 +250,13 @@ const InteractiveCard = ({ theme, icon: Icon, title, subtitle, description, link
           <p className={`text-[10px] uppercase tracking-[0.25em] font-medium ${isDark ? 'text-stone-500' : 'text-stone-400'}`}>
             {subtitle}
           </p>
-          <h3 className="text-4xl font-serif font-normal">{title}</h3>
-        </div>
+<h3
+  className={`text-4xl font-serif font-normal ${
+    isDark ? 'text-white' : 'text-stone-900'
+  }`}
+>
+  {title}
+</h3>        </div>
 
         <div className="max-w-md">
           <p className={`text-lg font-light leading-relaxed mb-12 ${isDark ? 'text-stone-400' : 'text-stone-500'}`}>
