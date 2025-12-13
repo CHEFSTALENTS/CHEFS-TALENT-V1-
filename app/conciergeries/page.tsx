@@ -206,14 +206,14 @@ export default function ConciergeriesPage() {
            <Reveal className="text-center border-t border-stone-700 pt-24 space-y-8">
               <h3 className="text-3xl font-serif text-paper">Demander l’accès à la Sélection Select</h3>
               <p className="text-stone-400 font-light">
-                 Présentez-nous votre activité et vos standards. Nous étudierons votre demande et confirmerons l’éligibilité.
+Présentez votre conciergerie. Nous vous recontactons pour valider l’accès et activer la mise en relation.
               </p>
               <div className="pt-4">
-                <Link href="/request?type=concierge">
-                  <Button size="lg" className="bg-paper text-stone-900 hover:bg-stone-200 border-none">
-                    Demander l’accès
-                  </Button>
-                </Link>
+              <Link href="/request?mode=concierge&type=concierge_access">
+  <Button className="bg-white text-stone-900 hover:bg-stone-100">
+    Demander l’accès à la Sélection Select
+  </Button>
+</Link>
               </div>
            </Reveal>
         </div>
