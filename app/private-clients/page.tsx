@@ -29,7 +29,7 @@ export default function PrivateClientsPage() {
             <div className="w-[1px] h-16 bg-paper mb-12" />
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-serif font-normal leading-[0.9] tracking-tight mb-12">
               Des chefs privés,<br/>
-              <span className="text-stone-300">pensés pour votre lieu de vie.</span>
+              <span className="text-stone-300">pensés pour votre lieu de vie et vos réceptions.</span>
             </h1>
           </Reveal>
           
