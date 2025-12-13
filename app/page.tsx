@@ -119,17 +119,18 @@ export default function Home() {
       {/* Roster Section - Paper Background */}
       <Section className="bg-paper">
         <div className="grid md:grid-cols-12 gap-24 items-center">
-          <div className="md:col-span-6 relative">
-            <Reveal>
-              <div className="aspect-[3/4] overflow-hidden relative">
-                <img
-                  src="https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=2070&auto=format&fit=crop"
-                  alt="Kitchen preparation"
-                  className="w-full h-full object-cover grayscale-[20%] hover:grayscale-0 transition-all duration-1000"
-                />
-              </div>
-            </Reveal>
-          </div>
+         <div className="md:col-span-6 relative">
+  <Reveal>
+    <div className="aspect-[3/4] overflow-hidden relative">
+      <Image
+        src="/images/editorial/professional-kitchen-preparation.png"
+        alt="Préparation en cuisine professionnelle"
+        fill
+        className="object-cover grayscale-[20%] hover:grayscale-0 transition-all duration-1000"
+      />
+    </div>
+  </Reveal>
+</div>
 
           <div className="md:col-span-6 space-y-16">
             <Reveal>
