@@ -257,10 +257,11 @@ function RequestFormContent() {
           </div>
         </div>
 
-        {/* Main Form Area */}
-        <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
-          
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 key={step}">
+       </div>
+
+{/* Main Form Area */}
+<div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
+  <div key={step} className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             
             {/* === FAST MATCH FLOW === */}
             {mode === 'fast' && step === 1 && (
