@@ -481,13 +481,32 @@ function RequestFormContent() {
     note: 'Disponible prochainement',
   },
 ].map((l) => (
-                           <label key={l.id} className={`flex justify-between items-center p-4 border cursor-pointer transition-colors ${formData.serviceExpectations === l.id ? 'border-stone-900 bg-stone-50' : 'border-stone-200'}`}>
-                              <div>
+<label
+  key={l.id}
+  className={`flex justify-between items-center p-4 border transition-colors
+  ${l.disabled ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'cursor-pointer'}
+  ${formData.serviceExpectations === l.id ? 'border-stone-900' : 'border-stone-200'}
+  `}
+><div>
                                 <span className="block font-medium text-stone-900">{l.title}</span>
                                 <span className="text-xs text-stone-500">{l.desc}</span>
+  {l.disabled && (
+  <span className="mt-1 block text-[11px] italic text-stone-400">
+    {l.note}
+  </span>
+)}
                               </div>
-                              <input type="radio" className="hidden" name="service" checked={formData.serviceExpectations === l.id} onChange={() => setFormData({...formData, serviceExpectations: l.id as any})} />
-                              <div className={`w-4 h-4 border flex items-center justify-center rounded-full ${formData.serviceExpectations === l.id ? 'border-stone-900' : 'border-stone-300'}`}>
+<input
+  type="radio"
+  className="hidden"
+  name="service"
+  disabled={l.disabled}
+  checked={!l.disabled && formData.serviceExpectations === l.id}
+  onChange={() => {
+    if (l.disabled) return;
+    setFormData({ ...formData, serviceExpectations: l.id });
+  }}
+/>                              <div className={`w-4 h-4 border flex items-center justify-center rounded-full ${formData.serviceExpectations === l.id ? 'border-stone-900' : 'border-stone-300'}`}>
                                  {formData.serviceExpectations === l.id && <div className="w-2 h-2 bg-stone-900 rounded-full" />}
                               </div>
                            </label>
