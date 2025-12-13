@@ -211,89 +211,79 @@ function RequestFormContent() {
   }
 
   // --- RENDER: FORM FLOW ---
-  return (
-    <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 font-sans">
-      <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
-        {/* Sidebar: Context & Progress */}
-        <div className="md:col-span-3">
-          <div className="sticky top-32 space-y-8">
-            <Marker className={mode === 'concierge' ? 'bg-stone-900' : 'bg-stone-400'} />
+return (
+  <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 font-sans">
+    <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
 
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setMode(null)}
-                className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors"
-              >
-                ← Changer de mode
-              </button>
+      {/* Sidebar: Context & Progress */}
+      <div className="md:col-span-3">
+        <div className="sticky top-32 space-y-8">
 
-              <h1 className="text-2xl font-serif text-stone-900 leading-tight">
-                {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
-              </h1>
+          <Marker className={mode === 'concierge' ? 'bg-stone-900' : 'bg-stone-400'} />
 
-              <p className="text-xs text-stone-500 font-light leading-relaxed">
-                {mode === 'fast'
-                  ? 'Pour une demande simple, sur une date précise.'
-                  : 'Pour les demandes complexes ou sensibles.'}
-              </p>
-            </div>
-{/* Sidebar: Context & Progress */}
-<div className="md:col-span-3">
-  <div className="sticky top-32 space-y-8">
-
-    <Marker className={mode === 'concierge' ? 'bg-stone-900' : 'bg-stone-400'} />
-
-    <div className="space-y-2">
-      <Link
-        href="/request"
-        onClick={() => setMode(null)}
-        className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors"
-      >
-        ← Changer de mode
-      </Link>
-
-      <h1 className="text-2xl font-serif text-stone-900 leading-tight">
-        {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
-      </h1>
-
-      <p className="text-xs text-stone-500 font-light leading-relaxed">
-        {mode === 'fast'
-          ? 'Pour une demande simple, sur une date précise.'
-          : 'Pour les demandes complexes ou sensibles.'}
-      </p>
-    </div>
-
-    {/* Steps Indicator */}
-    <div className="flex flex-col gap-3 pt-4">
-      {Array.from({ length: getTotalSteps() }).map((_, i) => {
-        const s = i + 1;
-        const isActive = s === step;
-        const isPast = s < step;
-
-        return (
-          <div key={s} className="flex items-center gap-3">
-            <div
-              className={`h-px transition-all duration-500 ${
-                isActive
-                  ? 'w-8 bg-stone-900'
-                  : isPast
-                  ? 'w-4 bg-stone-300'
-                  : 'w-2 bg-stone-100'
-              }`}
-            />
-            <span
-              className={`text-[10px] uppercase tracking-widest transition-colors ${
-                isActive ? 'text-stone-900' : 'text-stone-300'
-              }`}
+          <div className="space-y-2">
+            <Link
+              href="/request"
+              onClick={(e) => {
+                e.preventDefault();
+                setMode(null);
+              }}
+              className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors"
             >
-              {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
-              {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
-              {s === 3 && 'Détails'}
-              {s === 4 && 'Coordonnées'}
-            </span>
+              ← Changer de mode
+            </Link>
+
+            <h1 className="text-2xl font-serif text-stone-900 leading-tight">
+              {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
+            </h1>
+
+            <p className="text-xs text-stone-500 font-light leading-relaxed">
+              {mode === 'fast'
+                ? 'Pour une demande simple, sur une date précise.'
+                : 'Pour les demandes complexes ou sensibles.'}
+            </p>
           </div>
-        );
+
+          {/* Steps Indicator */}
+          <div className="flex flex-col gap-3 pt-4">
+            {Array.from({ length: getTotalSteps() }).map((_, i) => {
+              const s = i + 1;
+              const isActive = s === step;
+              const isPast = s < step;
+
+              return (
+                <div key={s} className="flex items-center gap-3">
+                  <div
+                    className={`h-px transition-all duration-500 ${
+                      isActive ? 'w-8 bg-stone-900' : isPast ? 'w-4 bg-stone-300' : 'w-2 bg-stone-100'
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] uppercase tracking-widest transition-colors ${
+                      isActive ? 'text-stone-900' : 'text-stone-300'
+                    }`}
+                  >
+                    {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
+                    {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
+                    {s === 3 && 'Détails'}
+                    {s === 4 && 'Coordonnées'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      </div>
+
+      {/* Main Form Area */}
+      <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
+        {/* ✅ COLLE ICI tout ton contenu actuel “Main Form Area / steps” */}
+      </div>
+
+    </div>
+  </div>
+);
       })}
     </div>
 
