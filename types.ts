@@ -1,190 +1,522 @@
+import {
+  RequestEntity,
+  RequestForm,
+  RequestStatus,
+  ChefUser,
+  ChefProfile,
+  SubscriptionPlan,
+  Mission,
+  MissionStatus,
+} from '../types';
 
-export type UserType = 'concierge' | 'private' | 'chef';
-export type RequestMode = 'fast' | 'concierge';
-export type RequestStatus = 'new' | 'in_review' | 'assigned' | 'closed';
-export type ChefStatus = 'pending_validation' | 'approved' | 'active' | 'paused';
+/**
+ * ✅ Proposals types (V1)
+ * Tu peux les déplacer ensuite dans ../types si tu veux,
+ * mais comme tu veux "copier coller", on les garde ici.
+ */
+export type ProposalStatus = 'sent' | 'accepted' | 'declined' | 'expired';
 
-export type ChefProfileType = 'private' | 'residence' | 'yacht' | 'pastry';
-export type ChefSeniority = 'junior' | 'confirmed' | 'senior';
-export type SubscriptionPlan = 'free' | 'pro';
-export type SubscriptionStatus = 'inactive' | 'active' | 'cancelled' | 'coming_soon';
-
-export type MissionStatus = 'offered' | 'accepted' | 'declined' | 'confirmed' | 'completed' | 'cancelled';
-
-export interface Mission {
+export type ChefProposalEntity = {
   id: string;
+  requestId: string;
   chefId: string;
-  requestId?: string; // Optional link to original request
-  title: string;
-  location: string;
-  startDate: string; // ISO Date
-  endDate?: string; // ISO Date
-  guestCount: number;
-  serviceLevel: string;
-  estimatedAmount: number; // For Chef KPI
-  clientPhone?: string; // Contact for confirmed missions
-  status: MissionStatus;
+  priceTotal?: number;
+  pricePerPerson?: number;
+  message?: string;
+  status: ProposalStatus;
   createdAt: string;
-}
+};
 
-export interface ChefProfile {
-  // Identity
-  phone: string;
-  languages: string[];
-  photoUrl?: string;
+// --- LocalStorage Keys ---
+const DB_KEY = 'chef_talents_requests_db';
+const CHEF_USERS_KEY = 'chef_talents_users_db';
+const MISSIONS_KEY = 'chef_talents_missions_db';
+const PROPOSALS_KEY = 'chef_talents_proposals_db';
 
-  // Professional Class
-  profileType?: ChefProfileType;
-  seniorityLevel?: ChefSeniority;
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Experience
-  yearsExperience: number;
-  environments: string[]; // 'yacht', 'villa', 'restaurant', 'hotel'
-  specialties: string[];
-  bio: string;
+// --- INTERNAL DB HELPERS ---
 
-  // Portfolio
-  images: string[];
+const safeParse = <T,>(raw: string | null, fallback: T): T => {
+  try {
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.error('DB Parse Error', e);
+    return fallback;
+  }
+};
 
-  // Coverage
-  baseCity: string;
-  travelRadiusKm: number;
-  internationalMobility: boolean;
-  coverageZones: string[];
+const getDb = (): RequestEntity[] => {
+  if (typeof window === 'undefined') return [];
+  return safeParse<RequestEntity[]>(localStorage.getItem(DB_KEY), []);
+};
 
-  // Preferences
-  minBudgetPerDay?: number;
-  maxGuestCount?: number;
-  acceptedMissions: string[]; // 'dinner', 'long_term', 'permanent'
-  teamAcceptance: 'solo' | 'assistants' | 'brigade';
-  
-  // Availability
-  unavailableDates: string[]; // ISO YYYY-MM-DD
-}
+const saveDb = (data: RequestEntity[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DB_KEY, JSON.stringify(data));
+};
 
-export interface ChefUser {
-  id: string;
-  email: string;
-  password?: string; // In real app, never store plain text
-  firstName: string;
-  lastName: string;
-  role: 'chef';
-  status: ChefStatus;
-  createdAt: string;
-  profileCompleted: boolean;
-  
-  // Subscription (MRR)
-  plan: SubscriptionPlan;
-  planStatus: SubscriptionStatus;
-  planUpdatedAt?: string;
+const getChefDb = (): ChefUser[] => {
+  if (typeof window === 'undefined') return [];
+  return safeParse<ChefUser[]>(localStorage.getItem(CHEF_USERS_KEY), []);
+};
 
-  // Admin CRM
-  adminNotes?: string;
+const saveChefDb = (data: ChefUser[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(CHEF_USERS_KEY, JSON.stringify(data));
+};
 
-  // Extended Profile Data
-  profile?: Partial<ChefProfile>;
-}
+const getMissionsDb = (): Mission[] => {
+  if (typeof window === 'undefined') return [];
+  return safeParse<Mission[]>(localStorage.getItem(MISSIONS_KEY), []);
+};
 
-export interface RequestForm {
-  // Meta
-  mode: RequestMode; // Added to track context
+const saveMissionsDb = (data: Mission[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+};
 
-  // Step 1: Context
-  clientType: 'concierge' | 'private';
-  location: string;
-  dateMode: 'single' | 'multi';
-  startDate: string;
-  endDate?: string;
+const getProposalsDb = (): ChefProposalEntity[] => {
+  if (typeof window === 'undefined') return [];
+  return safeParse<ChefProposalEntity[]>(localStorage.getItem(PROPOSALS_KEY), []);
+};
 
-  // Step 2: Assignment
-  assignmentType: 'dinner' | 'event' | 'daily' | 'residence' | 'yacht';
-  guestCount: number;
-  serviceExpectations: 'chef_only' | 'chef_service' | 'full_team';
-  // Conditionals
-  serviceRhythm?: 'daily' | 'occasional' | 'ondemand'; // If multi
-  accommodationProvided?: 'yes' | 'no'; // If multi
-  sailingArea?: string; // If yacht
-  crewSize?: number; // If yacht
+const saveProposalsDb = (data: ChefProposalEntity[]) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PROPOSALS_KEY, JSON.stringify(data));
+};
 
-  // Step 3: Preferences
-  cuisinePreferences: string;
-  dietaryRestrictions: string;
-  preferredLanguage: string;
+// --- API LAYER ---
 
-  // Step 4: Context
-  budgetRange: string;
-  notes: string;
+export const api = {
+  // --------------------
+  // Requests
+  // --------------------
+  async createRequest(form: RequestForm): Promise<RequestEntity> {
+    await delay(600);
+    const db = getDb();
+    const isB2B = form.clientType === 'concierge';
 
-  // Step 5: Contact
-  fullName: string;
-  email: string;
-  phone: string;
-  companyName?: string; // If concierge
-}
+    const entity: RequestEntity = {
+      id: crypto.randomUUID(),
+      mode: form.mode,
+      userType: isB2B ? 'b2b' : 'b2c',
+      location: form.location,
+      dates: { start: form.startDate, end: form.endDate, type: form.dateMode },
+      guestCount: form.guestCount,
+      missionType: form.assignmentType,
+      serviceLevel: form.serviceExpectations,
+      preferences: {
+        cuisine: form.cuisinePreferences,
+        allergies: form.dietaryRestrictions,
+        languages: form.preferredLanguage,
+      },
+      budgetRange: form.budgetRange,
+      notes: form.notes,
+      contact: {
+        name: form.fullName,
+        email: form.email,
+        phone: form.phone,
+        company: form.companyName,
+      },
+      createdAt: new Date().toISOString(),
+      status: 'new',
+    };
 
-export interface RequestEntity {
-  id: string;
-  mode: RequestMode;
-  userType: 'b2b' | 'b2c';
-  location: string;
-  dates: {
-    start: string;
-    end?: string;
-    type: 'single' | 'multi';
-  };
-  guestCount: number;
-  missionType: string;
-  serviceLevel: string;
-  preferences: {
-    cuisine?: string;
-    allergies?: string;
-    languages?: string;
-  };
-  budgetRange?: string;
-  notes?: string;
-  contact: {
-    name: string;
-    email: string;
-    phone?: string;
-    company?: string;
-  };
-  createdAt: string; // ISO String
-  status: RequestStatus;
-}
+    db.unshift(entity);
+    saveDb(db);
+    return entity;
+  },
 
-export interface ChefApplicationForm {
-  fullName: string;
-  email: string;
-  phone: string;
-  baseCity: string;
-  travelRange: string;
-  languages: string;
-  background: {
-    michelin: boolean;
-    palace: boolean;
-    yacht: boolean;
-    privateHousehold: boolean;
-  };
-  specialties: string;
-  portfolioLink: string;
-  availabilityNotes: string;
-}
+  async getRequests(): Promise<RequestEntity[]> {
+    await delay(400);
+    return getDb();
+  },
 
-export interface BlogPost {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  date: string;
-  category: string;
-}
+  async getRequest(id: string): Promise<RequestEntity | undefined> {
+    await delay(200);
+    return getDb().find(r => r.id === id);
+  },
 
-// --- BACKEND LOGIC TYPES ---
+  async updateStatus(id: string, status: RequestStatus): Promise<void> {
+    await delay(300);
+    const db = getDb();
+    const index = db.findIndex(r => r.id === id);
+    if (index !== -1) {
+      db[index].status = status;
+      saveDb(db);
+    }
+  },
 
-export interface FastMatchResult {
-  success: boolean;
-  mode: 'instant_match' | 'concierge_escalation' | 'concierge_manual';
-  referenceId: string;
-  matchedChef?: string; // Name of chef if instant
-  reason?: string;
+  // --------------------
+  // Proposals (NEW)
+  // --------------------
+  async createProposals(
+    requestId: string,
+    proposals: Array<{ chefId: string; priceTotal?: number; pricePerPerson?: number; message?: string }>
+  ): Promise<ChefProposalEntity[]> {
+    await delay(300);
+
+    const requestDb = getDb();
+    const reqIdx = requestDb.findIndex(r => r.id === requestId);
+    if (reqIdx === -1) throw new Error('Request not found');
+
+    const pDb = getProposalsDb();
+    const createdAt = new Date().toISOString();
+
+    const created: ChefProposalEntity[] = proposals.map(p => ({
+      id: crypto.randomUUID(),
+      requestId,
+      chefId: p.chefId,
+      priceTotal: p.priceTotal,
+      pricePerPerson: p.pricePerPerson,
+      message: p.message,
+      status: 'sent',
+      createdAt,
+    }));
+
+    pDb.unshift(...created);
+    saveProposalsDb(pDb);
+
+    // Dès que des proposals existent, la request passe en review (back-office)
+    requestDb[reqIdx].status = 'in_review';
+    saveDb(requestDb);
+
+    return created;
+  },
+
+  async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
+    await delay(200);
+    return getProposalsDb()
+      .filter(p => p.requestId === requestId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async selectProposal(requestId: string, proposalId: string): Promise<void> {
+    await delay(300);
+
+    // 1) Update proposals statuses
+    const pDb = getProposalsDb();
+    let accepted: ChefProposalEntity | undefined;
+
+    for (const p of pDb) {
+      if (p.requestId !== requestId) continue;
+
+      if (p.id === proposalId) {
+        p.status = 'accepted';
+        accepted = p;
+      } else {
+        // Decline all other proposals for this request
+        p.status = 'declined';
+      }
+    }
+    saveProposalsDb(pDb);
+
+    // 2) Update request status -> assigned
+    const rDb = getDb();
+    const rIdx = rDb.findIndex(r => r.id === requestId);
+    if (rIdx === -1) throw new Error('Request not found');
+
+    const req = rDb[rIdx];
+    rDb[rIdx].status = 'assigned';
+    saveDb(rDb);
+
+    // 3) Create a mission linked to this request (very useful for chef dashboard)
+    if (accepted) {
+      await this.createMission({
+        chefId: accepted.chefId,
+        requestId: req.id,
+        title: req.missionType ? `Mission - ${req.missionType}` : 'Mission Chef Talents',
+        location: req.location,
+        startDate: req.dates.start,
+        endDate: req.dates.end,
+        guestCount: req.guestCount,
+        serviceLevel: req.serviceLevel,
+        estimatedAmount: accepted.priceTotal ?? 0,
+        clientPhone: req.contact?.phone,
+        status: 'offered',
+      });
+    }
+  },
+
+  // (Optionnel) Clôturer une request (quand terminé/annulé)
+  async closeRequest(id: string): Promise<void> {
+    await delay(250);
+    const db = getDb();
+    const idx = db.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      db[idx].status = 'closed';
+      saveDb(db);
+    }
+  },
+
+  // --------------------
+  // Missions
+  // --------------------
+  async getChefMissions(chefId: string): Promise<Mission[]> {
+    await delay(300);
+    const db = getMissionsDb();
+    return db
+      .filter(m => m.chefId === chefId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getAllMissions(): Promise<Mission[]> {
+    await delay(300);
+    return getMissionsDb().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
+    await delay(400);
+    const db = getMissionsDb();
+    const idx = db.findIndex(m => m.id === missionId);
+    if (idx !== -1) {
+      db[idx].status = status;
+      saveMissionsDb(db);
+    }
+  },
+
+  async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
+    await delay(400);
+    const db = getMissionsDb();
+    const newMission: Mission = { ...mission, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    db.push(newMission);
+    saveMissionsDb(db);
+    return newMission;
+  },
+};
+
+// --- CHEF AUTH / PROFILE ---
+
+export const auth = {
+  async registerChef(
+    data: Pick<ChefUser, 'email' | 'password' | 'firstName' | 'lastName'>
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(800);
+    const db = getChefDb();
+
+    if (db.find(u => u.email === data.email)) {
+      return { success: false, error: 'Cet email est déjà utilisé.' };
+    }
+
+    const newUser: ChefUser = {
+      id: crypto.randomUUID(),
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: 'chef',
+      status: 'pending_validation',
+      createdAt: new Date().toISOString(),
+      profileCompleted: false,
+
+      plan: 'free',
+      planStatus: 'coming_soon',
+      planUpdatedAt: new Date().toISOString(),
+
+      adminNotes: '',
+      profile: {
+        images: [],
+        unavailableDates: [],
+        environments: [],
+        specialties: [],
+        coverageZones: [],
+        acceptedMissions: ['dinner'],
+        languages: [],
+      },
+    };
+
+    db.push(newUser);
+    saveChefDb(db);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chef_session_user', JSON.stringify(newUser));
+    }
+
+    return { success: true, user: newUser };
+  },
+
+  async loginChef(email: string, password: string): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(800);
+    const db = getChefDb();
+    const user = db.find(u => u.email === email && u.password === password);
+
+    if (!user) return { success: false, error: 'Identifiants invalides.' };
+
+    const missionsDb = getMissionsDb();
+    if (missionsDb.filter(m => m.chefId === user.id).length === 0) seedChefMissions(user.id);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chef_session_user', JSON.stringify(user));
+    }
+
+    return { success: true, user };
+  },
+
+  async updateChefProfile(userId: string, updates: Partial<ChefProfile>): Promise<ChefUser | null> {
+    await delay(500);
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return null;
+
+    const currentUser = db[idx];
+    const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+
+    // On garde ta logique "profileCompleted" simple :
+    const isComplete = !!(
+      updatedProfile.bio &&
+      updatedProfile.yearsExperience &&
+      updatedProfile.baseCity &&
+      updatedProfile.profileType
+    );
+
+    const updatedUser: ChefUser = { ...currentUser, profileCompleted: isComplete, profile: updatedProfile };
+    db[idx] = updatedUser;
+    saveChefDb(db);
+
+    const sessionUser = this.getCurrentUser();
+    if (sessionUser && sessionUser.id === userId && typeof window !== 'undefined') {
+      localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
+    }
+
+    return updatedUser;
+  },
+
+  async updateChef(userId: string, updates: Partial<ChefUser>): Promise<ChefUser | null> {
+    await delay(400);
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return null;
+
+    const updatedUser = { ...db[idx], ...updates };
+    db[idx] = updatedUser;
+    saveChefDb(db);
+
+    return updatedUser;
+  },
+
+  async updateChefSubscription(userId: string, plan: SubscriptionPlan): Promise<ChefUser | null> {
+    await delay(600);
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return null;
+
+    const currentUser = db[idx];
+    const updatedUser: ChefUser = {
+      ...currentUser,
+      plan,
+      planStatus: 'coming_soon',
+      planUpdatedAt: new Date().toISOString(),
+    };
+
+    db[idx] = updatedUser;
+    saveChefDb(db);
+
+    const sessionUser = this.getCurrentUser();
+    if (sessionUser && sessionUser.id === userId && typeof window !== 'undefined') {
+      localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
+    }
+
+    return updatedUser;
+  },
+
+  async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
+    await delay(250);
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+
+    if (idx !== -1) {
+      db[idx].status = status;
+      saveChefDb(db);
+
+      const sessionUser = this.getCurrentUser();
+      if (sessionUser && sessionUser.id === userId && typeof window !== 'undefined') {
+        localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
+      }
+    }
+  },
+
+  async deleteChefAccount(userId: string): Promise<void> {
+    await delay(250);
+    const db = getChefDb();
+    const newDb = db.filter(u => u.id !== userId);
+    saveChefDb(newDb);
+
+    if (typeof window !== 'undefined') localStorage.removeItem('chef_session_user');
+  },
+
+  async getAllChefs(): Promise<ChefUser[]> {
+    await delay(400);
+    return getChefDb();
+  },
+
+  getCurrentUser(): ChefUser | null {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem('chef_session_user');
+    return raw ? JSON.parse(raw) : null;
+  },
+
+  logout() {
+    if (typeof window !== 'undefined') localStorage.removeItem('chef_session_user');
+  },
+};
+
+function seedChefMissions(chefId: string) {
+  const missions: Mission[] = [
+    {
+      id: crypto.randomUUID(),
+      chefId,
+      title: 'Dîner Privé - Villa K',
+      location: 'Saint-Tropez, FR',
+      startDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+      guestCount: 8,
+      serviceLevel: 'chef_only',
+      estimatedAmount: 850,
+      clientPhone: '33612345678',
+      status: 'offered',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      chefId,
+      title: 'Résidence été - Famille B',
+      location: 'Megève, FR',
+      startDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 86400000 * 35).toISOString().split('T')[0],
+      guestCount: 12,
+      serviceLevel: 'chef_service',
+      estimatedAmount: 12500,
+      clientPhone: '33698765432',
+      status: 'confirmed',
+      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      chefId,
+      title: 'Cocktail Dinatoire',
+      location: 'Paris 16, FR',
+      startDate: new Date(Date.now() - 86400000 * 10).toISOString().split('T')[0],
+      guestCount: 30,
+      serviceLevel: 'full_team',
+      estimatedAmount: 2400,
+      status: 'completed',
+      createdAt: new Date(Date.now() - 86400000 * 20).toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      chefId,
+      title: 'Dîner Anniversaire',
+      location: 'Neuilly, FR',
+      startDate: new Date(Date.now() - 86400000 * 45).toISOString().split('T')[0],
+      guestCount: 6,
+      serviceLevel: 'chef_only',
+      estimatedAmount: 600,
+      status: 'completed',
+      createdAt: new Date(Date.now() - 86400000 * 50).toISOString(),
+    },
+  ];
+
+  const db = getMissionsDb();
+  db.push(...missions);
+  saveMissionsDb(db);
 }
