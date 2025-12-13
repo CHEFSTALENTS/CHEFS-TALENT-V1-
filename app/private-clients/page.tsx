@@ -158,8 +158,18 @@ export default function PrivateClientsPage() {
                   <li className="text-sm uppercase tracking-widest text-stone-500 border-b border-stone-700 pb-2">Suivi dédié</li>
                 </ul>
                 <Link href="/request?type=concierge">
-                  <Button className="bg-paper text-stone-900 border-transparent hover:bg-stone-200">Contact Team</Button>
-                </Link>
+<Button
+  size="lg"
+  className="
+    bg-white 
+    text-stone-900 
+    hover:bg-stone-100 
+    border border-white/20
+    px-10
+  "
+>
+  Contactez nous
+</Button>                </Link>
              </div>
           </div>
         </div>
