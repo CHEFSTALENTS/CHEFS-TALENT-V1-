@@ -464,11 +464,23 @@ function RequestFormContent() {
                    <div className="space-y-4">
                       <Label>Niveau de staffing</Label>
                       <div className="grid gap-3">
-                         {[
-                           {id: 'chef_only', title: 'Chef Seul', desc: 'Cuisine & dressage simple'},
-                           {id: 'chef_service', title: 'Chef + Service', desc: 'Avec maître d’hôtel/serveur'},
-                           {id: 'full_team', title: 'Brigade complète', desc: 'Pour grands événements'}
-                         ].map((l) => (
+                         {{[
+  { id: 'chef_only', title: 'Chef seul', desc: 'Cuisine & dressage simple' },
+  {
+    id: 'chef_service',
+    title: 'Chef + Service',
+    desc: "Avec maître d’hôtel/serveur",
+    disabled: true,
+    note: 'Disponible prochainement',
+  },
+  {
+    id: 'full_team',
+    title: 'Brigade complète',
+    desc: 'Pour grands événements',
+    disabled: true,
+    note: 'Disponible prochainement',
+  },
+].map((l) => (
                            <label key={l.id} className={`flex justify-between items-center p-4 border cursor-pointer transition-colors ${formData.serviceExpectations === l.id ? 'border-stone-900 bg-stone-50' : 'border-stone-200'}`}>
                               <div>
                                 <span className="block font-medium text-stone-900">{l.title}</span>
