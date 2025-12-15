@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth } from '../../../services/storage';
+import * as storage from '@/services/storage';
 import { Label, Marker } from '../../../components/ui';
 
 export default function ChefAvailabilityPage() {
