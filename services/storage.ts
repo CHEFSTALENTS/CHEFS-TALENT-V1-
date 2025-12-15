@@ -421,7 +421,50 @@ export const api = {
     return newMission;
   },
 };
+// =========================================================
+// ADMIN (MVP)
+// =========================================================
 
+// ⚠️ MVP: identifiants hardcodés (à passer en env plus tard)
+const ADMIN_EMAIL = 'thomas@cheftalents.com';
+const ADMIN_PASSWORD = 'Cantine33?';
+
+function ensureAdminSeed() {
+  if (typeof window === 'undefined') return;
+
+  const db = getChefDb();
+  const exists = db.find(u => u.email === ADMIN_EMAIL);
+
+  if (!exists) {
+    const adminUser: ChefUser = {
+      id: crypto.randomUUID(),
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+      firstName: 'Thomas',
+      lastName: 'Admin',
+      role: 'admin',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      profileCompleted: true,
+      plan: 'free',
+      planStatus: 'coming_soon',
+      planUpdatedAt: new Date().toISOString(),
+      adminNotes: 'Admin seeded',
+      profile: {
+        images: [],
+        unavailableDates: [],
+        environments: [],
+        specialties: [],
+        coverageZones: [],
+        acceptedMissions: ['dinner'],
+        languages: [],
+      },
+    };
+
+    db.push(adminUser);
+    saveChefDb(db);
+  }
+}
 /* =========================================================
    AUTH
 ========================================================= */
@@ -478,6 +521,7 @@ export const auth = {
     password: string
   ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
     await delay(200);
+    ensureAdminSeed();
 
     const db = getChefDb();
     const user = db.find(u => u.email === email && u.password === password);
