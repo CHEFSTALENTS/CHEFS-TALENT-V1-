@@ -507,3 +507,33 @@ function seedChefMissions(chefId: string) {
   db.push(...missions);
   saveMissionsDb(db);
 }
+function matchChefsForFastRequest(
+  request: RequestEntity,
+  chefs: ChefUser[]
+): ChefUser[] {
+  return chefs.filter(chef => {
+    if (chef.status !== 'active') return false;
+    if (!chef.profileCompleted || !chef.profile) return false;
+
+    const profile = chef.profile;
+
+    // Ville / zone
+    const locationMatch =
+      profile.baseCity === request.location ||
+      profile.coverageZones?.includes(request.location);
+
+    if (!locationMatch) return false;
+
+    // Guest count
+    if (profile.maxGuestCount && request.guestCount > profile.maxGuestCount) {
+      return false;
+    }
+
+    // Dates indisponibles
+    if (profile.unavailableDates?.includes(request.dates.start)) {
+      return false;
+    }
+
+    return true;
+  });
+}
