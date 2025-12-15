@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 
+const ADMIN_EMAIL = 'thomas@chef-talents.com';
+
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,10 +13,9 @@ export default function AdminChefsPage() {
   const refresh = async () => {
     setLoading(true);
     const list = await auth.getAllChefs();
-    // on masque l’admin dans la liste, optionnel
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-...
-setChefs(list.filter(u => u.email !== ADMIN_EMAIL));
+    setChefs(list.filter(u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()));
+    setLoading(false);
+  };
 
   useEffect(() => {
     refresh();
@@ -37,13 +38,10 @@ setChefs(list.filter(u => u.email !== ADMIN_EMAIL));
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-white border rounded">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold">Admin — Chefs</h1>
-        <button
-          onClick={refresh}
-          className="px-3 py-2 rounded border text-sm"
-        >
+        <button onClick={refresh} className="px-3 py-2 rounded border text-sm">
           Rafraîchir
         </button>
       </div>
@@ -53,7 +51,7 @@ setChefs(list.filter(u => u.email !== ADMIN_EMAIL));
       ) : (
         <div className="overflow-auto rounded border">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-stone-50">
               <tr>
                 <th className="text-left p-3">Nom</th>
                 <th className="text-left p-3">Email</th>
@@ -68,22 +66,13 @@ setChefs(list.filter(u => u.email !== ADMIN_EMAIL));
                   <td className="p-3">{c.email}</td>
                   <td className="p-3">{c.status}</td>
                   <td className="p-3 flex gap-2">
-                    <button
-                      onClick={() => approve(c.id)}
-                      className="px-2 py-1 rounded border"
-                    >
+                    <button onClick={() => approve(c.id)} className="px-2 py-1 rounded border">
                       Approuver
                     </button>
-                    <button
-                      onClick={() => activate(c.id)}
-                      className="px-2 py-1 rounded border"
-                    >
+                    <button onClick={() => activate(c.id)} className="px-2 py-1 rounded border">
                       Activer
                     </button>
-                    <button
-                      onClick={() => remove(c.id)}
-                      className="px-2 py-1 rounded border text-red-600"
-                    >
+                    <button onClick={() => remove(c.id)} className="px-2 py-1 rounded border text-red-600">
                       Supprimer
                     </button>
                   </td>
