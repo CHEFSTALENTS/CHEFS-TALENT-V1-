@@ -498,7 +498,26 @@ export const auth = {
     const raw = localStorage.getItem('chef_session_user');
     return raw ? (JSON.parse(raw) as ChefUser) : null;
   },
+  async deleteChefAccount(userId: string): Promise<void> {
+    await delay(120);
 
+    // 1) Supprime le chef
+    const chefs = getChefDb().filter(u => u.id !== userId);
+    saveChefDb(chefs);
+
+    // 2) Supprime ses proposals (optionnel mais propre)
+    const proposals = getProposalsDb().filter(p => p.chefId !== userId);
+    saveProposalsDb(proposals);
+
+    // 3) Supprime ses missions (optionnel mais propre)
+    const missions = getMissionsDb().filter(m => m.chefId !== userId);
+    saveMissionsDb(missions);
+
+    // 4) Clear session
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('chef_session_user');
+    }
+  },
   logout() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('chef_session_user');
