@@ -304,6 +304,35 @@ export const api = {
     });
   },
 
+    // ✅ Alias utilisé par /chef/offers/[proposalId]
+  async selectProposal(requestId: string, proposalId: string): Promise<void> {
+    await delay(80);
+
+    const proposals = getProposalsDb();
+    const proposal = proposals.find(p => p.id === proposalId);
+    if (!proposal) {
+      throw new Error('PROPOSAL_NOT_FOUND');
+    }
+
+    if (proposal.requestId !== requestId) {
+      throw new Error('PROPOSAL_REQUEST_MISMATCH');
+    }
+
+    const requests = getDb();
+    const req = requests.find(r => r.id === requestId);
+
+    if (!req) {
+      throw new Error('REQUEST_NOT_FOUND');
+    }
+
+    if (req.status === 'assigned' || req.status === 'closed') {
+      throw new Error('REQUEST_ALREADY_ASSIGNED');
+    }
+
+    // On délègue à la logique principale
+    await this.acceptProposal(proposalId);
+  },
+
   // ✅ Le chef refuse -> décline + n’apparaît plus dans sa liste (car on filtre sent)
   async declineProposal(proposalId: string): Promise<void> {
     await delay(100);
