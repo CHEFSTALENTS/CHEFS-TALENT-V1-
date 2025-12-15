@@ -17,7 +17,7 @@ const user = storage.auth.getCurrentUser();
   }, []);
 
   const toggleDate = async (dateStr: string) => {
-    const user = auth.getCurrentUser();
+const user = storage.auth.getCurrentUser();
     if (!user) return;
 
 let updated: string[] = [];
@@ -28,7 +28,7 @@ let updated: string[] = [];
     }
     
     setUnavailableDates(updated);
-    await auth.updateChefProfile(user.id, { unavailableDates: updated });
+    await storage.auth.updateChefProfile(user.id, { unavailableDates: updated });
   };
 
   // Generate next 35 days
