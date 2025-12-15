@@ -257,20 +257,32 @@ async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
 
   // ✅ Pour l’écran “offers” du chef : uniquement les proposals encore “sent”
   // et uniquement si la request n’est pas déjà assigned/closed
-  async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
-    await delay(100);
-    const requests = getDb();
+ async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
+  await delay(80);
+  return getProposalsDb().find(p => p.id === id);
+},
 
-    return getProposalsDb()
-      .filter(p => p.chefId === chefId && p.status === 'sent')
-      .filter(p => {
-        const req = requests.find(r => r.id === p.requestId);
-        return !!req && req.status !== 'assigned' && req.status !== 'closed';
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  },
+async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
+  await delay(100);
+  return getProposalsDb()
+    .filter(p => p.requestId === requestId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}, 
 
-  // ✅ Pour la page détail “/chef/offers/[proposalId]”
+async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
+  await delay(100);
+  const requests = getDb();
+
+  return getProposalsDb()
+    .filter(p => p.chefId === chefId && p.status === 'sent')
+    .filter(p => {
+      const req = requests.find(r => r.id === p.requestId);
+      return !!req && req.status !== 'assigned' && req.status !== 'closed';
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+},
+
+
   async getOfferDetail(proposalId: string): Promise<{
     proposal?: ChefProposalEntity;
     request?: RequestEntity;
@@ -284,7 +296,7 @@ async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
     return { proposal, request };
   },
 
-  // ✅ Le chef accepte -> 1 seul chef accepté, le reste décliné, request assigned, mission créée
+ 
   async acceptProposal(proposalId: string): Promise<void> {
     await delay(120);
 
