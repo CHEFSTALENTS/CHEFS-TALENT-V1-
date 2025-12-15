@@ -94,56 +94,49 @@ export const api = {
   // --------------------
   // Requests
   // --------------------
-  async createRequest(form: RequestForm): Promise<RequestEntity> {
-    await delay(600);
-    const db = getDb();
-    const isB2B = form.clientType === 'concierge';
+ async createRequest(form: RequestForm): Promise<RequestEntity> {
+  await delay(600);
+  const db = getDb();
+  const isB2B = form.clientType === 'concierge';
+
+  const entity: RequestEntity = {
+    id: crypto.randomUUID(),
+    mode: form.mode,
+    userType: isB2B ? 'b2b' : 'b2c',
+    location: form.location,
+    dates: {
+      start: form.startDate,
+      end: form.endDate,
+      type: form.dateMode,
+    },
+    guestCount: form.guestCount,
+    missionType: form.assignmentType,
+    serviceLevel: form.serviceExpectations,
+    preferences: {
+      cuisine: form.cuisinePreferences,
+      allergies: form.dietaryRestrictions,
+      languages: form.preferredLanguage,
+    },
+    budgetRange: form.budgetRange,
+    notes: form.notes,
+    contact: {
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      company: form.companyName,
+    },
+    createdAt: new Date().toISOString(),
+    status: 'new',
+  };
+
+  db.unshift(entity);
+  saveDb(db);
+  return entity;
+},
 async getProposal(proposalId: string): Promise<ChefProposalEntity | undefined> {
   await delay(150);
-return getProposalsDb().filter(p =>
-  p.chefId === chefId &&
-  p.status === 'sent'
-);
-    const entity: RequestEntity = {
-      id: crypto.randomUUID(),
-      mode: form.mode,
-      userType: isB2B ? 'b2b' : 'b2c',
-      location: form.location,
-      dates: { start: form.startDate, end: form.endDate, type: form.dateMode },
-      guestCount: form.guestCount,
-      missionType: form.assignmentType,
-      serviceLevel: form.serviceExpectations,
-      preferences: {
-        cuisine: form.cuisinePreferences,
-        allergies: form.dietaryRestrictions,
-        languages: form.preferredLanguage
-      },
-      budgetRange: form.budgetRange,
-      notes: form.notes,
-      contact: { name: form.fullName, email: form.email, phone: form.phone, company: form.companyName },
-      createdAt: new Date().toISOString(),
-      status: 'new'
-    };
-    async declineProposal(proposalId: string): Promise<void> {
-  await delay(200);
-
-  const pDb = getProposalsDb();
-  const idx = pDb.findIndex(p => p.id === proposalId);
-
-  if (idx !== -1) {
-    pDb[idx].status = 'declined';
-    saveProposalsDb(pDb);
-  }
+  return getProposalsDb().find(p => p.id === proposalId);
 },
-
-    db.unshift(entity);
-    saveDb(db);
-    return entity;
-  },
-  async getProposal(proposalId: string): Promise<ChefProposalEntity | undefined> {
-    await delay(150);
-    return getProposalsDb().find(p => p.id === proposalId);
-  },
   async getRequests(): Promise<RequestEntity[]> {
     await delay(400);
     return getDb();
