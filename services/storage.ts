@@ -104,8 +104,10 @@ export const api = {
     const isB2B = form.clientType === 'concierge';
 async getProposal(proposalId: string): Promise<ChefProposalEntity | undefined> {
   await delay(150);
-  return getProposalsDb().find(p => p.id === proposalId);
-},
+return getProposalsDb().filter(p =>
+  p.chefId === chefId &&
+  p.status === 'sent'
+);
     const entity: RequestEntity = {
       id: crypto.randomUUID(),
       mode: form.mode,
@@ -632,9 +634,17 @@ async function autoProcessFastRequest(request: RequestEntity) {
   }
 
   // Save proposals
-  const pDb = getProposalsDb();
-  pDb.unshift(...proposals);
-  saveProposalsDb(pDb);
+ const proposals = getProposalsDb().filter(p =>
+  p.chefId === chefId &&
+  p.status === 'sent'
+);
+
+const requests = getDb();
+
+return proposals.filter(p => {
+  const req = requests.find(r => r.id === p.requestId);
+  return req && req.status !== 'assigned' && req.status !== 'closed';
+});
 
   // Save notifications
   const nDb = safeParse<any[]>(
