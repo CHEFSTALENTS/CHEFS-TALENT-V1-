@@ -199,31 +199,46 @@ export const api = {
 
   /* ---------- PROPOSALS ---------- */
 
-  async createProposals(requestId: string, chefIds: string[]): Promise<ChefProposalEntity[]> {
-    await delay(120);
+  async createProposals(
+  requestId: string,
+  proposals: Array<{
+    chefId: string;
+    priceTotal?: number;
+    pricePerPerson?: number;
+    message?: string;
+  }>
+): Promise<ChefProposalEntity[]> {
+  await delay(120);
 
-    const created: ChefProposalEntity[] = chefIds.map(chefId => ({
-      id: crypto.randomUUID(),
-      requestId,
-      chefId,
-      status: 'sent',
-      createdAt: new Date().toISOString(),
-    }));
+  const createdAt = new Date().toISOString();
 
-    const db = getProposalsDb();
-    db.unshift(...created);
-    saveProposalsDb(db);
+  const created: ChefProposalEntity[] = proposals.map(p => ({
+    id: crypto.randomUUID(),
+    requestId,
+    chefId: p.chefId,
+    priceTotal: p.priceTotal,
+    // si ton ChefProposalEntity n'a pas pricePerPerson, supprime la ligne suivante
+    // @ts-ignore
+    pricePerPerson: p.pricePerPerson,
+    message: p.message,
+    status: 'sent',
+    createdAt,
+  }));
 
-    // Mettre la request en review si elle existe
-    const rDb = getDb();
-    const idx = rDb.findIndex(r => r.id === requestId);
-    if (idx !== -1 && rDb[idx].status === 'new') {
-      rDb[idx].status = 'in_review';
-      saveDb(rDb);
-    }
+  const db = getProposalsDb();
+  db.unshift(...created);
+  saveProposalsDb(db);
 
-    return created;
-  },
+  // Mettre la request en review si elle existe
+  const rDb = getDb();
+  const idx = rDb.findIndex(r => r.id === requestId);
+  if (idx !== -1 && rDb[idx].status === 'new') {
+    rDb[idx].status = 'in_review';
+    saveDb(rDb);
+  }
+
+  return created;
+},
 
   async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
     await delay(80);
