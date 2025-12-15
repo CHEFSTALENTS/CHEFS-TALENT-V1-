@@ -11,7 +11,7 @@ type FilterKey = 'all' | 'pending' | 'approved' | 'active';
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [loading, setLoading] = useState(true);
-const { score, badges } = auth.computeChefScore(c);
+
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
 
@@ -75,10 +75,17 @@ const { score, badges } = auth.computeChefScore(c);
         return fullName.includes(needle) || email.includes(needle);
       })
       .sort((a, b) => {
+        // 1) statut
         const pa = priority[String(a.status)] ?? 99;
         const pb = priority[String(b.status)] ?? 99;
         if (pa !== pb) return pa - pb;
 
+        // 2) score (desc)
+        const sa = auth.computeChefScore(a).score;
+        const sb = auth.computeChefScore(b).score;
+        if (sa !== sb) return sb - sa;
+
+        // 3) date (desc)
         const da = new Date(a.createdAt || '').getTime() || 0;
         const db = new Date(b.createdAt || '').getTime() || 0;
         return db - da;
@@ -110,26 +117,10 @@ const { score, badges } = auth.computeChefScore(c);
         />
 
         <div className="flex flex-wrap gap-2">
-          <FilterButton
-            active={filter === 'all'}
-            onClick={() => setFilter('all')}
-            label={`Tous (${counts.all})`}
-          />
-          <FilterButton
-            active={filter === 'pending'}
-            onClick={() => setFilter('pending')}
-            label={`À valider (${counts.pending})`}
-          />
-          <FilterButton
-            active={filter === 'approved'}
-            onClick={() => setFilter('approved')}
-            label={`Approuvés (${counts.approved})`}
-          />
-          <FilterButton
-            active={filter === 'active'}
-            onClick={() => setFilter('active')}
-            label={`Actifs (${counts.active})`}
-          />
+          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')} label={`Tous (${counts.all})`} />
+          <FilterButton active={filter === 'pending'} onClick={() => setFilter('pending')} label={`À valider (${counts.pending})`} />
+          <FilterButton active={filter === 'approved'} onClick={() => setFilter('approved')} label={`Approuvés (${counts.approved})`} />
+          <FilterButton active={filter === 'active'} onClick={() => setFilter('active')} label={`Actifs (${counts.active})`} />
         </div>
       </div>
 
@@ -142,56 +133,73 @@ const { score, badges } = auth.computeChefScore(c);
               <tr>
                 <th className="text-left p-3">Nom</th>
                 <th className="text-left p-3">Email</th>
+                <th className="text-left p-3">Score</th>
+                <th className="text-left p-3">Badges</th>
                 <th className="text-left p-3">Statut</th>
                 <th className="text-left p-3">Actions</th>
               </tr>
             </thead>
+
             <tbody>
-              {view.map(c => (
-                <tr key={c.id} className="border-t">
-                  <td className="p-3">
-                    {c.firstName} {c.lastName}
-                  </td>
-                  <td className="p-3">{c.email}</td>
+              {view.map(c => {
+                const { score, badges } = auth.computeChefScore(c);
 
-                  <td className="p-3">
-                    <StatusBadge status={String(c.status)} />
-                  </td>
+                return (
+                  <tr key={c.id} className="border-t">
+                    <td className="p-3">{c.firstName} {c.lastName}</td>
+                    <td className="p-3">{c.email}</td>
 
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-2">
-                      {c.status === 'pending_validation' && (
-                        <button
-                          onClick={() => approve(c.id)}
-                          className="px-2 py-1 rounded border"
-                        >
-                          Approuver
-                        </button>
+                    <td className="p-3">
+                      <div className="font-semibold">{score}/100</div>
+                      <div className="text-xs text-stone-400">
+                        {c.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
+                      </div>
+                    </td>
+
+                    <td className="p-3">
+                      {badges.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {badges.map(b => (
+                            <span key={b} className="inline-flex items-center px-2 py-1 rounded text-xs bg-stone-100 text-stone-700">
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-stone-400">—</span>
                       )}
+                    </td>
 
-                      {c.status === 'approved' && (
-                        <button
-                          onClick={() => activate(c.id)}
-                          className="px-2 py-1 rounded border"
-                        >
-                          Activer
+                    <td className="p-3">
+                      <StatusBadge status={String(c.status)} />
+                    </td>
+
+                    <td className="p-3">
+                      <div className="flex flex-wrap gap-2">
+                        {c.status === 'pending_validation' && (
+                          <button onClick={() => approve(c.id)} className="px-2 py-1 rounded border">
+                            Approuver
+                          </button>
+                        )}
+
+                        {c.status === 'approved' && (
+                          <button onClick={() => activate(c.id)} className="px-2 py-1 rounded border">
+                            Activer
+                          </button>
+                        )}
+
+                        <button onClick={() => remove(c.id)} className="px-2 py-1 rounded border text-red-600">
+                          Supprimer
                         </button>
-                      )}
-
-                      <button
-                        onClick={() => remove(c.id)}
-                        className="px-2 py-1 rounded border text-red-600"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {view.length === 0 && (
                 <tr>
-                  <td className="p-3" colSpan={4}>
+                  <td className="p-3" colSpan={6}>
                     Aucun résultat.
                   </td>
                 </tr>
