@@ -198,89 +198,81 @@ export const api = {
     }
   },
 
-  /* ---------- PROPOSALS ---------- */
+   /* ---------- PROPOSALS ---------- */
 
   async createProposals(
-  requestId: string,
-  proposals: Array<{
-    chefId: string;
-    priceTotal?: number;
-    pricePerPerson?: number;
-    message?: string;
-  }>
-): Promise<ChefProposalEntity[]> {
-  await delay(120);
+    requestId: string,
+    proposals: Array<{
+      chefId: string;
+      priceTotal?: number;
+      pricePerPerson?: number;
+      message?: string;
+    }>
+  ): Promise<ChefProposalEntity[]> {
+    await delay(120);
 
-  const createdAt = new Date().toISOString();
+    const createdAt = new Date().toISOString();
 
-  const created: ChefProposalEntity[] = proposals.map(p => ({
-    id: crypto.randomUUID(),
-    requestId,
-    chefId: p.chefId,
-    priceTotal: p.priceTotal,
-    // si ton ChefProposalEntity n'a pas pricePerPerson, supprime la ligne suivante
-    // @ts-ignore
-    pricePerPerson: p.pricePerPerson,
-    message: p.message,
-    status: 'sent',
-    createdAt,
-  }));
+    const created: ChefProposalEntity[] = proposals.map(p => ({
+      id: crypto.randomUUID(),
+      requestId,
+      chefId: p.chefId,
+      priceTotal: p.priceTotal,
+      // si ton ChefProposalEntity n'a pas pricePerPerson, supprime la ligne suivante
+      // @ts-ignore
+      pricePerPerson: p.pricePerPerson,
+      message: p.message,
+      status: 'sent',
+      createdAt,
+    }));
 
-  const db = getProposalsDb();
-  db.unshift(...created);
-  saveProposalsDb(db);
+    const db = getProposalsDb();
+    db.unshift(...created);
+    saveProposalsDb(db);
 
-  // Mettre la request en review si elle existe
-  const rDb = getDb();
-  const idx = rDb.findIndex(r => r.id === requestId);
-  if (idx !== -1 && rDb[idx].status === 'new') {
-    rDb[idx].status = 'in_review';
-    saveDb(rDb);
-  }
+    // Mettre la request en review si elle existe
+    const rDb = getDb();
+    const idx = rDb.findIndex(r => r.id === requestId);
+    if (idx !== -1 && rDb[idx].status === 'new') {
+      rDb[idx].status = 'in_review';
+      saveDb(rDb);
+    }
 
-  return created;
-},
+    return created;
+  },
 
- async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
+  async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
     await delay(80);
-     return getProposalsDb().find(p => p.id === id);
-   },
-async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
-  await delay(100);
-  return getProposalsDb()
-    .filter(p => p.requestId === requestId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-},
-   
-  
+    return getProposalsDb().find(p => p.id === id);
+  },
+
+  async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
+    await delay(100);
+    return getProposalsDb()
+      .filter(p => p.requestId === requestId)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
   },
 
   // ✅ Pour l’écran “offers” du chef : uniquement les proposals encore “sent”
   // et uniquement si la request n’est pas déjà assigned/closed
- async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
-  await delay(80);
-  return getProposalsDb().find(p => p.id === id);
-},
+  async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
+    await delay(100);
+    const requests = getDb();
 
-async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
-  await delay(100);
-  return getProposalsDb()
-    .filter(p => p.requestId === requestId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}, 
-
-async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
-  await delay(100);
-  const requests = getDb();
-
-  return getProposalsDb()
-    .filter(p => p.chefId === chefId && p.status === 'sent')
-    .filter(p => {
-      const req = requests.find(r => r.id === p.requestId);
-      return !!req && req.status !== 'assigned' && req.status !== 'closed';
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-},
+    return getProposalsDb()
+      .filter(p => p.chefId === chefId && p.status === 'sent')
+      .filter(p => {
+        const req = requests.find(r => r.id === p.requestId);
+        return !!req && req.status !== 'assigned' && req.status !== 'closed';
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  },
 
 
   async getOfferDetail(proposalId: string): Promise<{
