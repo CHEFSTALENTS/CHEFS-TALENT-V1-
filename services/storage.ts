@@ -518,23 +518,6 @@ async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void
   }
 },
 
-// ✅ ADMIN — delete chef account
-async deleteChefAccount(userId: string): Promise<void> {
-  await delay(120);
-  const db = getChefDb();
-  const newDb = db.filter(u => u.id !== userId);
-  saveChefDb(newDb);
-
-  if (typeof window !== 'undefined') {
-    const raw = localStorage.getItem('chef_session_user');
-    if (raw) {
-      const session = JSON.parse(raw) as ChefUser;
-      if (session?.id === userId) {
-        localStorage.removeItem('chef_session_user');
-      }
-    }
-  }
-},
 
  async updateChefProfile(
   userId: string,
