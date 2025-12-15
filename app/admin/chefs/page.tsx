@@ -140,71 +140,74 @@ export default function AdminChefsPage() {
               </tr>
             </thead>
 
-            <tbody>
-              {view.map(c => {
-                const { score, badges } = auth.computeChefScore(c);
+           <tbody>
+  {view.map(c => {
+    const sc = auth.computeChefScore(c);
 
-                return (
-                  <tr key={c.id} className="border-t">
-                    <td className="p-3">{c.firstName} {c.lastName}</td>
-                    <td className="p-3">{c.email}</td>
+    return (
+      <tr key={c.id} className="border-t">
+        <td className="p-3">
+          <div className="font-medium">
+            {c.firstName} {c.lastName}
+          </div>
+          <div className="text-xs text-stone-500">
+            {sc.badges.join(' • ')}
+          </div>
+        </td>
 
-                    <td className="p-3">
-                      <div className="font-semibold">{score}/100</div>
-                      <div className="text-xs text-stone-400">
-                        {c.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
-                      </div>
-                    </td>
+        <td className="p-3">{c.email}</td>
 
-                    <td className="p-3">
-                      {badges.length ? (
-                        <div className="flex flex-wrap gap-2">
-                          {badges.map(b => (
-                            <span key={b} className="inline-flex items-center px-2 py-1 rounded text-xs bg-stone-100 text-stone-700">
-                              {b}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-stone-400">—</span>
-                      )}
-                    </td>
+        <td className="p-3">
+          <StatusBadge status={String(c.status)} />
+        </td>
 
-                    <td className="p-3">
-                      <StatusBadge status={String(c.status)} />
-                    </td>
+        <td className="p-3">
+          <div className="flex items-center gap-3">
+            <div className="text-sm">
+              <span className="font-semibold">{sc.score}</span>
+              <span className="text-stone-400"> / 100</span>
+            </div>
 
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-2">
-                        {c.status === 'pending_validation' && (
-                          <button onClick={() => approve(c.id)} className="px-2 py-1 rounded border">
-                            Approuver
-                          </button>
-                        )}
-
-                        {c.status === 'approved' && (
-                          <button onClick={() => activate(c.id)} className="px-2 py-1 rounded border">
-                            Activer
-                          </button>
-                        )}
-
-                        <button onClick={() => remove(c.id)} className="px-2 py-1 rounded border text-red-600">
-                          Supprimer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {view.length === 0 && (
-                <tr>
-                  <td className="p-3" colSpan={6}>
-                    Aucun résultat.
-                  </td>
-                </tr>
+            <div className="flex flex-wrap gap-2">
+              {c.status === 'pending_validation' && (
+                <button
+                  onClick={() => approve(c.id)}
+                  className="px-2 py-1 rounded border"
+                >
+                  Approuver
+                </button>
               )}
-            </tbody>
+
+              {c.status === 'approved' && (
+                <button
+                  onClick={() => activate(c.id)}
+                  className="px-2 py-1 rounded border"
+                >
+                  Activer
+                </button>
+              )}
+
+              <button
+                onClick={() => remove(c.id)}
+                className="px-2 py-1 rounded border text-red-600"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+
+  {view.length === 0 && (
+    <tr>
+      <td className="p-3" colSpan={4}>
+        Aucun résultat.
+      </td>
+    </tr>
+  )}
+</tbody>
           </table>
         </div>
       )}
