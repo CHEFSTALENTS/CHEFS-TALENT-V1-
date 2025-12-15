@@ -177,6 +177,10 @@ function ensureAdminSeed() {
 /* ---------- MISSIONS (ADMIN) ---------- */
   /* ---------- MISSIONS (ADMIN) ---------- */
 
+
+export const api = {
+  async createRequest(form: RequestForm): Promise<RequestEntity> {
+    await delay(200);
   async getAllMissions(): Promise<Mission[]> {
     await delay(120);
     return getMissionsDb().sort(
@@ -185,10 +189,6 @@ function ensureAdminSeed() {
         new Date(a.createdAt).getTime()
     );
   },
-export const api = {
-  async createRequest(form: RequestForm): Promise<RequestEntity> {
-    await delay(200);
-
     const isB2B = form.clientType === 'concierge';
 
     const entity: RequestEntity = {
