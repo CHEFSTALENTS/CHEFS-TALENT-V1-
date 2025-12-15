@@ -13,7 +13,9 @@ import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
 /**
  * ⚠️ SOURCE DE VÉRITÉ FRONT
  * Toute méthode utilisée dans app/* ou actions.ts
- * DOIT être ici (api / auth)
+ * DOIT être ici (api / auth).
+ *
+ * Ne jamais ajouter de méthodes en dehors de api/auth.
  */
 
 /* =========================================================
@@ -21,6 +23,7 @@ import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
 ========================================================= */
 
 export const ADMIN_EMAIL = 'thomas@chef-talents.com';
+// ⚠️ MVP uniquement : à sortir du repo plus tard (env var)
 const ADMIN_PASSWORD = 'Cantine33?';
 
 export function isAdminUser(user: { email?: string } | null | undefined) {
@@ -62,7 +65,7 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   try {
-    return raw ? JSON.parse(raw) : fallback;
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
@@ -135,13 +138,19 @@ const clearSessionUser = () => {
   }
 };
 
+/**
+ * Seed admin (MVP)
+ * NOTE: role = 'chef' car ton type n’accepte pas 'admin'
+ * => l’admin est détecté via l’email (isAdminUser)
+ */
 function ensureAdminSeed() {
   if (typeof window === 'undefined') return;
 
   const db = getChefDb();
-  if (db.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase())) return;
+  const exists = db.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  if (exists) return;
 
-  db.push({
+  const admin: ChefUser = {
     id: crypto.randomUUID(),
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
@@ -163,10 +172,11 @@ function ensureAdminSeed() {
       coverageZones: [],
       acceptedMissions: ['dinner'],
       languages: [],
-      interviewed: true,
-    },
-  } as ChefUser);
+      interviewed: true, // badge
+    } as any,
+  };
 
+  db.push(admin);
   saveChefDb(db);
 }
 
@@ -175,6 +185,8 @@ function ensureAdminSeed() {
 ========================================================= */
 
 export const api = {
+  /* ---------- REQUESTS ---------- */
+
   async createRequest(form: RequestForm): Promise<RequestEntity> {
     await delay(200);
 
@@ -216,10 +228,11 @@ export const api = {
 
     // ✅ FAST MATCH AUTO — B2C uniquement (B2B = veto humain)
     if (entity.mode === 'fast' && entity.userType === 'b2c') {
-      const activeChefs = getChefDb().filter(isChefActive);
+      const activeChefs = getChefDb().filter(c => isChefActive(c));
 
       let matched = matchChefsForFastRequest(entity, activeChefs);
 
+      // tri par score (desc) + top 5
       matched = matched
         .map(c => ({ c, s: auth.computeChefScore(c).score }))
         .sort((a, b) => b.s - a.s)
@@ -227,17 +240,20 @@ export const api = {
         .slice(0, 5);
 
       if (matched.length) {
-        // Ajoute les proposals en tête
-        saveProposalsDb([
-          ...buildFastMatchProposals(entity, matched),
-          ...getProposalsDb(),
-        ]);
+        const proposalsToCreate = buildFastMatchProposals(entity, matched);
 
-        // Passe la request en review
+        // remplace d’éventuelles proposals existantes sur cette request (sécurité)
+        const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
+        pDb.unshift(...proposalsToCreate);
+        saveProposalsDb(pDb);
+
+        // passe la request en review
         const fresh = getDb();
         const i = fresh.findIndex(r => r.id === entity.id);
-        if (i !== -1) fresh[i].status = 'in_review';
-        saveDb(fresh);
+        if (i !== -1) {
+          fresh[i].status = 'in_review';
+          saveDb(fresh);
+        }
       }
     }
 
@@ -263,41 +279,220 @@ export const api = {
       saveDb(db);
     }
   },
-  // ---------- PROPOSALS ----------
 
-  async getProposal(
-    proposalId: string
-  ): Promise<ChefProposalEntity | undefined> {
+  async closeRequest(id: string): Promise<void> {
     await delay(120);
-    return getProposalsDb().find(p => p.id === proposalId);
+    const db = getDb();
+    const i = db.findIndex(r => r.id === id);
+    if (i !== -1) {
+      db[i].status = 'closed';
+      saveDb(db);
+    }
   },
 
-  async getProposalsByChef(
-    chefId: string
+  /* ---------- PROPOSALS ---------- */
+
+  async createProposals(
+    requestId: string,
+    proposals: Array<{
+      chefId: string;
+      priceTotal?: number;
+      pricePerPerson?: number;
+      message?: string;
+    }>
   ): Promise<ChefProposalEntity[]> {
     await delay(120);
-    return getProposalsDb()
-      .filter(p => p.chefId === chefId)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() -
-          new Date(a.createdAt).getTime()
-      );
+
+    // 🔒 garde uniquement chefs actifs
+    const allowed = proposals.filter(p => isChefActive(getChefById(p.chefId)));
+    if (allowed.length === 0) return [];
+
+    const createdAt = new Date().toISOString();
+
+    const created: ChefProposalEntity[] = allowed.map(p => ({
+      id: crypto.randomUUID(),
+      requestId,
+      chefId: p.chefId,
+      priceTotal: p.priceTotal,
+      pricePerPerson: p.pricePerPerson,
+      message: p.message,
+      status: 'sent',
+      createdAt,
+    }));
+
+    const db = getProposalsDb();
+    db.unshift(...created);
+    saveProposalsDb(db);
+
+    // met la request en review si new
+    const rDb = getDb();
+    const idx = rDb.findIndex(r => r.id === requestId);
+    if (idx !== -1 && rDb[idx].status === 'new') {
+      rDb[idx].status = 'in_review';
+      saveDb(rDb);
+    }
+
+    return created;
   },
-  // ---------- MISSIONS ----------
+
+  async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
+    await delay(80);
+    return getProposalsDb().find(p => p.id === id);
+  },
+
+  async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
+    await delay(100);
+    return getProposalsDb()
+      .filter(p => p.requestId === requestId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  // Pour l’écran offers : uniquement sent, et request pas assigned/closed
+  async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
+    await delay(100);
+
+    // 🔒 un chef non actif ne voit aucune offer
+    if (!isChefActive(getChefById(chefId))) return [];
+
+    const requests = getDb();
+    return getProposalsDb()
+      .filter(p => p.chefId === chefId && p.status === 'sent')
+      .filter(p => {
+        const req = requests.find(r => r.id === p.requestId);
+        return !!req && req.status !== 'assigned' && req.status !== 'closed';
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getOfferDetail(proposalId: string): Promise<{
+    proposal?: ChefProposalEntity;
+    request?: RequestEntity;
+  }> {
+    await delay(120);
+
+    const proposal = getProposalsDb().find(p => p.id === proposalId);
+    if (!proposal) return {};
+
+    const request = getDb().find(r => r.id === proposal.requestId);
+    return { proposal, request };
+  },
+
+  async declineProposal(proposalId: string): Promise<void> {
+    await delay(100);
+    const proposals = getProposalsDb();
+    const p = proposals.find(x => x.id === proposalId);
+    if (p) {
+      p.status = 'declined';
+      saveProposalsDb(proposals);
+    }
+  },
+
+  async acceptProposal(proposalId: string): Promise<void> {
+    await delay(120);
+
+    const proposals = getProposalsDb();
+    const target = proposals.find(p => p.id === proposalId);
+    if (!target) return;
+
+    // 🔒 chef doit être actif
+    const chef = getChefById(target.chefId);
+    if (!isChefActive(chef)) throw new Error('CHEF_NOT_ACTIVE');
+
+    const requests = getDb();
+    const reqIdx = requests.findIndex(r => r.id === target.requestId);
+    if (reqIdx === -1) return;
+
+    const req = requests[reqIdx];
+    if (req.status === 'assigned' || req.status === 'closed') return;
+
+    // accepte celle-ci, décline les autres
+    for (const p of proposals) {
+      if (p.requestId !== target.requestId) continue;
+      p.status = p.id === proposalId ? 'accepted' : 'declined';
+    }
+
+    req.status = 'assigned';
+
+    saveProposalsDb(proposals);
+    saveDb(requests);
+
+    await this.createMission({
+      chefId: target.chefId,
+      requestId: req.id,
+      title: req.missionType ? `Mission - ${req.missionType}` : 'Mission Chef Talents',
+      location: req.location,
+      startDate: req.dates.start,
+      endDate: req.dates.end,
+      guestCount: req.guestCount,
+      serviceLevel: req.serviceLevel,
+      estimatedAmount: target.priceTotal ?? 0,
+      clientPhone: (req as any)?.contact?.phone,
+      status: 'offered' as any,
+    });
+  },
+
+  // ✅ utilisé par /chef/offers/[proposalId]
+  async selectProposal(requestId: string, proposalId: string): Promise<void> {
+    await delay(120);
+
+    const proposals = getProposalsDb();
+    const proposal = proposals.find(p => p.id === proposalId);
+    if (!proposal) throw new Error('PROPOSAL_NOT_FOUND');
+
+    if (proposal.requestId !== requestId) {
+      throw new Error('PROPOSAL_REQUEST_MISMATCH');
+    }
+
+    const requests = getDb();
+    const reqIdx = requests.findIndex(r => r.id === requestId);
+    if (reqIdx === -1) throw new Error('REQUEST_NOT_FOUND');
+
+    const req = requests[reqIdx];
+    if (req.status === 'assigned' || req.status === 'closed') {
+      throw new Error('REQUEST_ALREADY_ASSIGNED');
+    }
+
+    // 🔒 chef doit être actif
+    const chef = getChefById(proposal.chefId);
+    if (!isChefActive(chef)) throw new Error('CHEF_NOT_ACTIVE');
+
+    // accepte celle-ci, décline les autres
+    for (const p of proposals) {
+      if (p.requestId !== requestId) continue;
+      p.status = p.id === proposalId ? 'accepted' : 'declined';
+    }
+
+    req.status = 'assigned';
+
+    saveProposalsDb(proposals);
+    saveDb(requests);
+
+    await this.createMission({
+      chefId: proposal.chefId,
+      requestId: req.id,
+      title: req.missionType ? `Mission - ${req.missionType}` : 'Mission Chef Talents',
+      location: req.location,
+      startDate: req.dates.start,
+      endDate: req.dates.end,
+      guestCount: req.guestCount,
+      serviceLevel: req.serviceLevel,
+      estimatedAmount: proposal.priceTotal ?? 0,
+      clientPhone: (req as any)?.contact?.phone,
+      status: 'offered' as any,
+    });
+  },
+
+  /* ---------- MISSIONS ---------- */
 
   async getChefMissions(chefId: string): Promise<Mission[]> {
     await delay(120);
 
-    // 🔒 Optionnel : empêche un chef non actif de voir ses missions
-    // (si tu veux ça, décommente)
-    // if (!isChefActive(getChefById(chefId))) return [];
+    // 🔒 un chef non actif ne voit aucune mission
+    if (!isChefActive(getChefById(chefId))) return [];
 
     return getMissionsDb()
       .filter(m => m.chefId === chefId)
-      .sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   async getAllMissions(): Promise<Mission[]> {
@@ -307,10 +502,7 @@ export const api = {
     );
   },
 
-  async updateMissionStatus(
-    missionId: string,
-    status: MissionStatus
-  ): Promise<void> {
+  async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
     await delay(120);
     const db = getMissionsDb();
     const idx = db.findIndex(m => m.id === missionId);
@@ -320,14 +512,12 @@ export const api = {
     }
   },
 
-  async createMission(
-    mission: Omit<Mission, 'id' | 'createdAt'>
-  ): Promise<Mission> {
+  async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
     await delay(120);
 
-    // 🔒 Sécurité (tu peux garder si tu veux forcer "active" uniquement)
-    // const chef = getChefById(mission.chefId);
-    // if (!isChefActive(chef)) throw new Error('CHEF_NOT_ACTIVE');
+    // 🔒 sécurité finale : pas de mission si chef non actif
+    const chef = getChefById(mission.chefId);
+    if (!isChefActive(chef)) throw new Error('CHEF_NOT_ACTIVE');
 
     const db = getMissionsDb();
     const newMission: Mission = {
@@ -339,7 +529,7 @@ export const api = {
     saveMissionsDb(db);
     return newMission;
   },
-}; // ✅ IMPORTANT : ce "};" doit être JUSTE avant AUTH
+};
 
 /* =========================================================
    AUTH
@@ -352,11 +542,13 @@ export const auth = {
     const badges: string[] = [];
     const profile: any = (chef as any).profile ?? {};
 
+    // Profil de base
     if (profile.bio) score += 10;
     if (profile.yearsExperience) score += 10;
     if (profile.baseCity) score += 8;
     if (profile.profileType) score += 7;
 
+    // Qualité du profil
     const images = Array.isArray(profile.images) ? profile.images.length : 0;
     if (images >= 1) score += 5;
     if (images >= 3) score += 10;
@@ -372,6 +564,7 @@ export const auth = {
     if (langs >= 1) score += 5;
     if (langs >= 2) score += 8;
 
+    // Bonus interview
     if (profile.interviewed === true) {
       score += 15;
       badges.push('Interviewé');
@@ -388,15 +581,18 @@ export const auth = {
 
     const db = getChefDb();
 
-    if (db.find(u => u.email === data.email)) {
+    if (db.find(u => (u.email || '').toLowerCase() === data.email.toLowerCase())) {
       return { success: false, error: 'Cet email est déjà utilisé.' };
     }
 
     const user: ChefUser = {
       id: crypto.randomUUID(),
-      ...data,
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
       role: 'chef',
-      status: 'pending_validation',
+      status: 'pending_validation' as any,
       createdAt: new Date().toISOString(),
       profileCompleted: false,
       plan: 'free',
@@ -411,7 +607,7 @@ export const auth = {
         coverageZones: [],
         acceptedMissions: ['dinner'],
         languages: [],
-      },
+      } as any,
     };
 
     db.push(user);
@@ -419,6 +615,54 @@ export const auth = {
     setSessionUser(user);
 
     return { success: true, user };
+  },
+
+  async loginChef(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(200);
+    ensureAdminSeed();
+
+    const user = getChefDb().find(
+      u => (u.email || '').toLowerCase() === email.toLowerCase() && u.password === password
+    );
+
+    if (!user) return { success: false, error: 'Identifiants invalides' };
+
+    // 🔒 Si ce n’est pas l’admin, on bloque tant que pas active
+    if (!isAdminUser(user) && user.role === 'chef' && user.status !== 'active') {
+      return {
+        success: false,
+        error: "Ton compte est en attente de validation par l'équipe Chef Talents.",
+      };
+    }
+
+    setSessionUser(user);
+    return { success: true, user };
+  },
+
+  getCurrentUser(): ChefUser | null {
+    return getSessionUser();
+  },
+
+  async getAllChefs(): Promise<ChefUser[]> {
+    await delay(120);
+    return getChefDb().filter(u => u.role === 'chef');
+  },
+
+  async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
+    await delay(120);
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      db[idx].status = status;
+      saveChefDb(db);
+
+      // sync session si c’est lui
+      const session = getSessionUser();
+      if (session?.id === userId) setSessionUser(db[idx]);
+    }
   },
 
   async updateChefProfile(
@@ -450,16 +694,13 @@ export const auth = {
     db[idx] = updatedUser;
     saveChefDb(db);
 
-    // sync session si c’est le user connecté
+    // sync session
     const session = getSessionUser();
-    if (session?.id === userId) {
-      setSessionUser(updatedUser);
-    }
+    if (session?.id === userId) setSessionUser(updatedUser);
 
     return updatedUser;
   },
 
-  // ✅ ADMIN — suppression complète d’un chef
   async deleteChefAccount(userId: string): Promise<void> {
     await delay(120);
 
@@ -474,51 +715,7 @@ export const auth = {
 
     // 4) Clear session si besoin
     const session = getSessionUser();
-    if (session?.id === userId) {
-      clearSessionUser();
-    }
-  },
-
-  async loginChef(
-    email: string,
-    password: string
-  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
-    await delay(200);
-    ensureAdminSeed();
-
-    const user = getChefDb().find(u => u.email === email && u.password === password);
-    if (!user) return { success: false, error: 'Identifiants invalides' };
-
-    if (!isAdminUser(user) && user.status !== 'active') {
-      return { success: false, error: 'Compte en attente de validation' };
-    }
-
-    setSessionUser(user);
-    return { success: true, user };
-  },
-
-  async getAllChefs(): Promise<ChefUser[]> {
-    await delay(100);
-    return getChefDb();
-  },
-
-  async updateChefStatus(id: string, status: ChefUser['status']): Promise<void> {
-    await delay(120);
-    const db = getChefDb();
-    const i = db.findIndex(c => c.id === id);
-    if (i !== -1) {
-      db[i].status = status;
-      saveChefDb(db);
-
-      const session = getSessionUser();
-      if (session?.id === id) {
-        setSessionUser(db[i]);
-      }
-    }
-  },
-
-  getCurrentUser(): ChefUser | null {
-    return getSessionUser();
+    if (session?.id === userId) clearSessionUser();
   },
 
   logout() {
