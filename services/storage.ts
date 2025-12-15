@@ -36,7 +36,6 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- INTERNAL DB HELPERS ---
 
-const safeParse = <T,>(raw: string | null, fallback: T): T => {
  function safeParse<T>(raw: string | null, fallback: T): T {
   try {
     return raw ? JSON.parse(raw) : fallback;
