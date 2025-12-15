@@ -11,7 +11,7 @@ type FilterKey = 'all' | 'pending' | 'approved' | 'active';
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [loading, setLoading] = useState(true);
-
+const { score, badges } = auth.computeChefScore(c);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
 
