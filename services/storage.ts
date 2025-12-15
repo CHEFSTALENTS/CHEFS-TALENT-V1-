@@ -483,6 +483,26 @@ export const auth = {
   async getAllChefs(): Promise<ChefUser[]> {
     await delay(120);
     return getChefDb();
+  },  async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
+    await delay(120);
+
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return;
+
+    db[idx].status = status;
+    saveChefDb(db);
+
+    // sync session si c’est le user connecté
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('chef_session_user');
+      if (raw) {
+        const session = JSON.parse(raw) as ChefUser;
+        if (session?.id === userId) {
+          localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
+        }
+      }
+    }
   },
   async updateChefProfile(userId: string, updates: Partial<ChefProfile>): Promise<ChefUser | null> {
     await delay(200);
