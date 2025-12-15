@@ -1,3 +1,13 @@
+/**
+ * ⚠️ ATTENTION
+ * Ce fichier est la source de vérité du front.
+ * Toute méthode utilisée dans actions.ts ou app/*
+ * DOIT être déclarée ici, dans api ou auth.
+ *
+ * Ne jamais ajouter de méthodes en dehors de api/auth.
+ */
+
+
 import {
   RequestEntity,
   RequestForm,
