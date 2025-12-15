@@ -21,17 +21,17 @@ export default function ChefLoginPage() {
   const res = await auth.loginChef(formData.email, formData.password);
   setLoading(false);
 
-  if (res.success && res.user) {
-    if (isAdminUser(res.user)) {
-      router.replace('/admin/chefs');
-    } else {
-      router.replace('/chef/dashboard');
-    }
+if (res.success) {
+  // si ton auth.loginChef renvoie user
+  const user = res.user;
+  if (user?.email?.toLowerCase() === "thomas@chef-talents.com") {
+    router.push("/admin");
   } else {
-    setError(res.error || "Identifiants invalides");
+    router.push("/chef/dashboard");
   }
-};
-
+} else {
+  setError(res.error || "Identifiants invalides");
+}
   return (
     <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
       <div className="w-full max-w-md bg-white p-12 border border-stone-200 shadow-sm space-y-8">
