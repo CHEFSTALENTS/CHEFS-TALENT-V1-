@@ -251,7 +251,16 @@ export const api = {
   },
   async getChefMissions(chefId: string): Promise<Mission[]> {
   await delay(120);
+async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
+  await delay(120);
 
+  const db = getMissionsDb();
+  const idx = db.findIndex(m => m.id === missionId);
+  if (idx !== -1) {
+    db[idx].status = status;
+    saveMissionsDb(db);
+  }
+},
   // 🔒 Un chef non actif ne voit aucune mission
   const chef = getChefDb().find(c => c.id === chefId);
   if (!chef || chef.role !== 'chef' || chef.status !== 'active') return [];
