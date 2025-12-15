@@ -202,23 +202,58 @@ async closeRequest(id: string): Promise<void> {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
-  async selectProposal(requestId: string, proposalId: string): Promise<void> {
-    await delay(300);
+async selectProposal(requestId: string, proposalId: string): Promise<void> {
+  await delay(300);
 
-    // 1) Mark accepted/declined in proposals
-    const pDb = getProposalsDb();
-    let accepted: ChefProposalEntity | undefined;
+  // 0) Vérifier que la request existe + pas déjà assignée/fermée
+  const rDb = getDb();
+  const rIdx = rDb.findIndex(r => r.id === requestId);
+  if (rIdx === -1) throw new Error('Request not found');
 
-    for (const p of pDb) {
-      if (p.requestId !== requestId) continue;
-      if (p.id === proposalId) {
-        p.status = 'accepted';
-        accepted = p;
-      } else {
-        // decline all other proposals of this request
-        if (p.status !== 'declined') p.status = 'declined';
-      }
+  const req = rDb[rIdx];
+
+  // 🔒 VERROUILLAGE : si déjà assignée ou fermée, impossible d’accepter
+  if (req.status === 'assigned' || req.status === 'closed') {
+    throw new Error('REQUEST_ALREADY_ASSIGNED');
+  }
+
+  // 1) Update proposals statuses
+  const pDb = getProposalsDb();
+  let accepted: ChefProposalEntity | undefined;
+
+  for (const p of pDb) {
+    if (p.requestId !== requestId) continue;
+
+    if (p.id === proposalId) {
+      p.status = 'accepted';
+      accepted = p;
+    } else {
+      p.status = 'declined';
     }
+  }
+  saveProposalsDb(pDb);
+
+  // 2) Update request status -> assigned
+  rDb[rIdx].status = 'assigned';
+  saveDb(rDb);
+
+  // 3) Create a mission linked to this request
+  if (accepted) {
+    await this.createMission({
+      chefId: accepted.chefId,
+      requestId: req.id,
+      title: req.missionType ? `Mission - ${req.missionType}` : 'Mission Chef Talents',
+      location: req.location,
+      startDate: req.dates.start,
+      endDate: req.dates.end,
+      guestCount: req.guestCount,
+      serviceLevel: req.serviceLevel,
+      estimatedAmount: accepted.priceTotal ?? 0,
+      clientPhone: req.contact?.phone,
+      status: 'offered',
+    });
+  }
+},
     saveProposalsDb(pDb);
 
     // 2) Update request status (confirmed if your RequestStatus supports it)
