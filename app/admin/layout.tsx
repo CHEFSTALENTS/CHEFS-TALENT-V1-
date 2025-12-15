@@ -9,10 +9,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const user = auth.getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      router.replace('/chef/login'); // adapte si ton chemin login est différent
-    }
-  }, [router]);
+const ADMIN_EMAIL = 'thomas@chef-talents.com'; // TON email admin
+
+useEffect(() => {
+  const user = auth.getCurrentUser();
+
+  if (!user || user.email !== ADMIN_EMAIL) {
+    router.replace('/chef/login');
+  }
+}, [router]);
 
   return <div className="min-h-screen">{children}</div>;
 }
