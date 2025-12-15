@@ -37,16 +37,13 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // --- INTERNAL DB HELPERS ---
 
 const safeParse = <T,>(raw: string | null, fallback: T): T => {
- try {
-  await api.selectProposal(requestId, proposalId);
-} catch (e: any) {
-  if (String(e?.message).includes('REQUEST_ALREADY_ASSIGNED')) {
-    alert("Trop tard — cette mission a déjà été acceptée par un autre chef.");
-  } else {
-    alert("Erreur lors de l’acceptation.");
+ function safeParse<T>(raw: string | null, fallback: T): T {
+  try {
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
   }
 }
-
 const getDb = (): RequestEntity[] => {
   if (typeof window === 'undefined') return [];
   const raw = localStorage.getItem(DB_KEY);
