@@ -137,13 +137,16 @@ export const api = {
   },
 
   async updateStatus(id: string, status: RequestStatus): Promise<void> {
-    await delay(300);
-    const db = getDb();
-    const index = db.findIndex(r => r.id === id);
-    if (index !== -1) {
-      db[index].status = status;
-      saveDb(db);
-    }async closeRequest(id: string): Promise<void> {
+  await delay(300);
+  const db = getDb();
+  const index = db.findIndex(r => r.id === id);
+  if (index !== -1) {
+    db[index].status = status;
+    saveDb(db);
+  }
+},
+
+async closeRequest(id: string): Promise<void> {
   await delay(250);
   const db = getDb();
   const idx = db.findIndex(r => r.id === id);
@@ -153,7 +156,6 @@ export const api = {
   }
 },
 
-  },
 
   // --------------------
   // Proposals (NEW)
