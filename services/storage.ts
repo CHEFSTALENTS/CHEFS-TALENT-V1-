@@ -8,7 +8,7 @@ import {
   Mission,
   MissionStatus
 } from '../types';
-
+import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
 /* =========================================================
    TYPES
 ========================================================= */
@@ -99,41 +99,73 @@ const saveProposalsDb = (data: ChefProposalEntity[]) => {
 export const api = {
   /* ---------- REQUESTS ---------- */
 
-  async createRequest(form: RequestForm): Promise<RequestEntity> {
-    await delay(300);
-    const db = getDb();
+ async createRequest(form: RequestForm): Promise<RequestEntity> {
+  await delay(600);
 
-    const entity: RequestEntity = {
-      id: crypto.randomUUID(),
-      mode: form.mode,
-      userType: form.clientType === 'concierge' ? 'b2b' : 'b2c',
-      location: form.location,
-      dates: { start: form.startDate, end: form.endDate, type: form.dateMode },
-      guestCount: form.guestCount,
-      missionType: form.assignmentType,
-      serviceLevel: form.serviceExpectations,
-      preferences: {
-        cuisine: form.cuisinePreferences,
-        allergies: form.dietaryRestrictions,
-        languages: form.preferredLanguage
-      },
-      budgetRange: form.budgetRange,
-      notes: form.notes,
-      contact: {
-        name: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        company: form.companyName
-      },
-      createdAt: new Date().toISOString(),
-      status: 'new'
-    };
+  // 1) Create request entity
+  const db = getDb();
+  const isB2B = form.clientType === 'concierge';
 
-    db.unshift(entity);
-    saveDb(db);
-    return entity;
-  },
+  const entity: RequestEntity = {
+    id: crypto.randomUUID(),
+    mode: form.mode,
+    userType: isB2B ? 'b2b' : 'b2c',
+    location: form.location,
+    dates: {
+      start: form.startDate,
+      end: form.endDate,
+      type: form.dateMode,
+    },
+    guestCount: form.guestCount,
+    missionType: form.assignmentType,
+    serviceLevel: form.serviceExpectations,
+    preferences: {
+      cuisine: form.cuisinePreferences,
+      allergies: form.dietaryRestrictions,
+      languages: form.preferredLanguage,
+    },
+    budgetRange: form.budgetRange,
+    notes: form.notes,
+    contact: {
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      company: form.companyName,
+    },
+    createdAt: new Date().toISOString(),
+    status: 'new',
+  };
 
+  db.unshift(entity);
+  saveDb(db);
+
+  // 2) FAST MATCH AUTO (uniquement B2C + fast)
+  if (entity.mode === 'fast' && entity.userType === 'b2c') {
+    const chefs = getChefDb();
+
+    const matchedChefs = matchChefsForFastRequest(entity, chefs);
+
+    if (matchedChefs.length > 0) {
+      // Build proposals (max 5)
+      const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
+
+      // Save proposals (remove any existing proposals for this request just in case)
+      const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
+      pDb.unshift(...proposalsToCreate);
+      saveProposalsDb(pDb);
+
+      // Put request in review
+      const freshDb = getDb();
+      const idx = freshDb.findIndex(r => r.id === entity.id);
+      if (idx !== -1) {
+        freshDb[idx].status = 'in_review';
+        saveDb(freshDb);
+      }
+    }
+  }
+
+  return entity;
+},
   async getRequests() {
     await delay(200);
     return getDb();
