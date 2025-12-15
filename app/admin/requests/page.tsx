@@ -1,28 +1,32 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/services/storage';
 import type { RequestEntity } from '@/types';
 
 export default function AdminRequestsPage() {
+  const router = useRouter();
   const [requests, setRequests] = useState<RequestEntity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getRequests().then(data => {
-      setRequests(data);
-      setLoading(false);
-    });
+    api.getRequests()
+      .then(data => {
+        setRequests(data);
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.error(e);
+        setError('Erreur chargement requests');
+        setLoading(false);
+      });
   }, []);
 
-  if (loading) {
-    return <p>Chargement des requests…</p>;
-  }
-
-  if (requests.length === 0) {
-    return <p>Aucune request pour le moment.</p>;
-  }
+  if (loading) return <p>Chargement des requests…</p>;
+  if (error) return <p>{error}</p>;
+  if (requests.length === 0) return <p>Aucune request pour le moment.</p>;
 
   return (
     <div>
@@ -40,29 +44,27 @@ export default function AdminRequestsPage() {
         </thead>
 
         <tbody>
-          {requests.map(req => (
-            <Link
+          {requests.map((req) => (
+            <tr
               key={req.id}
-              href={`/admin/requests/${req.id}`}
-              className="contents"
+              className="border-b hover:bg-gray-50 cursor-pointer"
+              onClick={() => router.push(`/admin/requests/${req.id}`)}
             >
-              <tr className="border-b hover:bg-gray-50 cursor-pointer">
-                <td className="py-2">
-                  {new Date(req.createdAt).toLocaleDateString()}
-                </td>
-                <td className="py-2">{req.location}</td>
-                <td className="py-2">{req.missionType}</td>
-                <td className="py-2">{req.guestCount}</td>
-                <td className="py-2">
-                  <span className="px-2 py-1 text-sm rounded bg-gray-100">
-                    {req.status}
-                  </span>
-                </td>
-              </tr>
-            </Link>
+              <td className="py-2">{new Date(req.createdAt).toLocaleDateString()}</td>
+              <td className="py-2">{req.location}</td>
+              <td className="py-2">{req.missionType}</td>
+              <td className="py-2">{req.guestCount}</td>
+              <td className="py-2">
+                <span className="px-2 py-1 text-sm rounded bg-gray-100">{req.status}</span>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
+
+      <p className="text-xs text-gray-400 mt-4">
+        Tip: clique sur une ligne pour ouvrir le détail.
+      </p>
     </div>
   );
 }
