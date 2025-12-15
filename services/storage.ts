@@ -250,14 +250,13 @@ export const api = {
     return getDb();
   },
 
-export const api = {
   // ... tes méthodes requests/proposals/etc
 
-  // ---------- MISSIONS ----------
+    // ---------- MISSIONS ----------
+
   async getChefMissions(chefId: string): Promise<Mission[]> {
     await delay(120);
-    const db = getMissionsDb();
-    return db
+    return getMissionsDb()
       .filter(m => m.chefId === chefId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
