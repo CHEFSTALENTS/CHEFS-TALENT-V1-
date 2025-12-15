@@ -250,35 +250,27 @@ export const api = {
     return getDb();
   },
 
+export const api = {
+  // ... tes méthodes requests/proposals/etc
 
-  /* ---------- MISSIONS ---------- */
-
+  // ---------- MISSIONS ----------
   async getChefMissions(chefId: string): Promise<Mission[]> {
     await delay(120);
-
-    // 🔒 un chef non actif ne voit aucune mission
-    if (!isChefActive(getChefById(chefId))) return [];
-
     const db = getMissionsDb();
     return db
       .filter(m => m.chefId === chefId)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   async getAllMissions(): Promise<Mission[]> {
     await delay(120);
     return getMissionsDb().sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   },
 
   async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
     await delay(120);
-
     const db = getMissionsDb();
     const idx = db.findIndex(m => m.id === missionId);
     if (idx !== -1) {
@@ -289,13 +281,6 @@ export const api = {
 
   async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
     await delay(120);
-
-    // 🔒 sécurité finale : pas de mission si chef non actif
-    const chef = getChefById(mission.chefId);
-    if (!isChefActive(chef)) {
-      throw new Error('CHEF_NOT_ACTIVE');
-    }
-
     const db = getMissionsDb();
     const newMission: Mission = {
       ...mission,
@@ -306,6 +291,7 @@ export const api = {
     saveMissionsDb(db);
     return newMission;
   },
+}; // ✅ IMPORTANT : ce "};" doit être JUSTE avant AUTH
 
 /* =========================================================
    AUTH
@@ -313,29 +299,41 @@ export const api = {
 
 export const auth = {
   // ✅ SCORING — UNIQUE VERSION
-  computeChefScore(chef: ChefUser) {
+  computeChefScore(chef: ChefUser): { score: number; badges: string[] } {
     let score = 0;
     const badges: string[] = [];
-    const p: any = chef.profile ?? {};
+    const profile: any = (chef as any).profile ?? {};
 
-    if (chef.status === 'active') { score += 10; badges.push('✅ Actif'); }
-    if (chef.profileCompleted) { score += 20; badges.push('🧾 Profil complet'); }
-    if ((p.images?.length ?? 0) >= 3) score += 10;
-    if ((p.coverageZones?.length ?? 0) >= 1) score += 10;
-    if ((p.languages?.length ?? 0) >= 1) score += 5;
-    if ((p.specialties?.length ?? 0) >= 2) score += 5;
-    if (p.interviewed === true) { score += 15; badges.push('🎥 Interview'); }
+    if (profile.bio) score += 10;
+    if (profile.yearsExperience) score += 10;
+    if (profile.baseCity) score += 8;
+    if (profile.profileType) score += 7;
 
-    return { score: Math.min(100, score), badges };
+    const images = Array.isArray(profile.images) ? profile.images.length : 0;
+    if (images >= 1) score += 5;
+    if (images >= 3) score += 10;
+
+    const specialties = Array.isArray(profile.specialties) ? profile.specialties.length : 0;
+    if (specialties >= 1) score += 8;
+    if (specialties >= 3) score += 12;
+
+    const coverage = Array.isArray(profile.coverageZones) ? profile.coverageZones.length : 0;
+    if (coverage >= 1) score += 10;
+
+    const langs = Array.isArray(profile.languages) ? profile.languages.length : 0;
+    if (langs >= 1) score += 5;
+    if (langs >= 2) score += 8;
+
+    if (profile.interviewed === true) {
+      score += 15;
+      badges.push('Interviewé');
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    return { score, badges };
   },
 
-  async registerChef(data: Pick<ChefUser, 'email' | 'password' | 'firstName' | 'lastName'>) {
-    await delay(200);
-
-    const db = getChefDb();
-    if (db.find(u => u.email === data.email)) {
-      return { success: false, error: 'Email déjà utilisé' };
-    }
+};
 
     const user: ChefUser = {
       id: crypto.randomUUID(),
