@@ -71,7 +71,7 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 const getDb = (): RequestEntity[] =>
   typeof window === 'undefined'
     ? []
-    : safeParse(localStorage.getItem(DB_KEY), []);
+    : safeParse<RequestEntity[]>(localStorage.getItem(DB_KEY), []);
 
 const saveDb = (data: RequestEntity[]) => {
   if (typeof window !== 'undefined') {
@@ -82,7 +82,7 @@ const saveDb = (data: RequestEntity[]) => {
 const getChefDb = (): ChefUser[] =>
   typeof window === 'undefined'
     ? []
-    : safeParse(localStorage.getItem(CHEF_USERS_KEY), []);
+    : safeParse<ChefUser[]>(localStorage.getItem(CHEF_USERS_KEY), []);
 
 const saveChefDb = (data: ChefUser[]) => {
   if (typeof window !== 'undefined') {
@@ -93,7 +93,7 @@ const saveChefDb = (data: ChefUser[]) => {
 const getMissionsDb = (): Mission[] =>
   typeof window === 'undefined'
     ? []
-    : safeParse(localStorage.getItem(MISSIONS_KEY), []);
+    : safeParse<Mission[]>(localStorage.getItem(MISSIONS_KEY), []);
 
 const saveMissionsDb = (data: Mission[]) => {
   if (typeof window !== 'undefined') {
@@ -104,7 +104,7 @@ const saveMissionsDb = (data: Mission[]) => {
 const getProposalsDb = (): ChefProposalEntity[] =>
   typeof window === 'undefined'
     ? []
-    : safeParse(localStorage.getItem(PROPOSALS_KEY), []);
+    : safeParse<ChefProposalEntity[]>(localStorage.getItem(PROPOSALS_KEY), []);
 
 const saveProposalsDb = (data: ChefProposalEntity[]) => {
   if (typeof window !== 'undefined') {
@@ -112,8 +112,7 @@ const saveProposalsDb = (data: ChefProposalEntity[]) => {
   }
 };
 
-const getChefById = (id: string) =>
-  getChefDb().find(c => c.id === id);
+const getChefById = (id: string) => getChefDb().find(c => c.id === id);
 
 const isChefActive = (chef?: ChefUser | null) =>
   !!chef && chef.role === 'chef' && chef.status === 'active';
@@ -127,7 +126,7 @@ const setSessionUser = (u: ChefUser) => {
 const getSessionUser = (): ChefUser | null => {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(SESSION_KEY);
-  return raw ? JSON.parse(raw) : null;
+  return raw ? (JSON.parse(raw) as ChefUser) : null;
 };
 
 const clearSessionUser = () => {
@@ -140,7 +139,7 @@ function ensureAdminSeed() {
   if (typeof window === 'undefined') return;
 
   const db = getChefDb();
-  if (db.find(u => u.email === ADMIN_EMAIL)) return;
+  if (db.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase())) return;
 
   db.push({
     id: crypto.randomUUID(),
@@ -166,7 +165,7 @@ function ensureAdminSeed() {
       languages: [],
       interviewed: true,
     },
-  });
+  } as ChefUser);
 
   saveChefDb(db);
 }
@@ -250,15 +249,35 @@ export const api = {
     return getDb();
   },
 
-  // ... tes méthodes requests/proposals/etc
+  async getRequest(id: string): Promise<RequestEntity | undefined> {
+    await delay(120);
+    return getDb().find(r => r.id === id);
+  },
 
-    // ---------- MISSIONS ----------
+  async updateStatus(id: string, status: RequestStatus): Promise<void> {
+    await delay(120);
+    const db = getDb();
+    const i = db.findIndex(r => r.id === id);
+    if (i !== -1) {
+      db[i].status = status;
+      saveDb(db);
+    }
+  },
+
+  // ---------- MISSIONS ----------
 
   async getChefMissions(chefId: string): Promise<Mission[]> {
     await delay(120);
+
+    // 🔒 Optionnel : empêche un chef non actif de voir ses missions
+    // (si tu veux ça, décommente)
+    // if (!isChefActive(getChefById(chefId))) return [];
+
     return getMissionsDb()
       .filter(m => m.chefId === chefId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
   },
 
   async getAllMissions(): Promise<Mission[]> {
@@ -268,7 +287,10 @@ export const api = {
     );
   },
 
-  async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
+  async updateMissionStatus(
+    missionId: string,
+    status: MissionStatus
+  ): Promise<void> {
     await delay(120);
     const db = getMissionsDb();
     const idx = db.findIndex(m => m.id === missionId);
@@ -278,8 +300,15 @@ export const api = {
     }
   },
 
-  async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
+  async createMission(
+    mission: Omit<Mission, 'id' | 'createdAt'>
+  ): Promise<Mission> {
     await delay(120);
+
+    // 🔒 Sécurité (tu peux garder si tu veux forcer "active" uniquement)
+    // const chef = getChefById(mission.chefId);
+    // if (!isChefActive(chef)) throw new Error('CHEF_NOT_ACTIVE');
+
     const db = getMissionsDb();
     const newMission: Mission = {
       ...mission,
@@ -332,7 +361,16 @@ export const auth = {
     return { score, badges };
   },
 
-};
+  async registerChef(
+    data: Pick<ChefUser, 'email' | 'password' | 'firstName' | 'lastName'>
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(200);
+
+    const db = getChefDb();
+
+    if (db.find(u => u.email === data.email)) {
+      return { success: false, error: 'Cet email est déjà utilisé.' };
+    }
 
     const user: ChefUser = {
       id: crypto.randomUUID(),
@@ -362,69 +400,69 @@ export const auth = {
 
     return { success: true, user };
   },
+
   async updateChefProfile(
-  userId: string,
-  updates: Partial<ChefProfile>
-): Promise<ChefUser | null> {
-  await delay(200);
+    userId: string,
+    updates: Partial<ChefProfile>
+  ): Promise<ChefUser | null> {
+    await delay(200);
 
-  const db = getChefDb();
-  const idx = db.findIndex(u => u.id === userId);
-  if (idx === -1) return null;
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return null;
 
-  const currentUser = db[idx];
-  const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+    const currentUser = db[idx];
+    const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
 
-  const isComplete = !!(
-    (updatedProfile as any).bio &&
-    (updatedProfile as any).yearsExperience &&
-    (updatedProfile as any).baseCity &&
-    (updatedProfile as any).profileType
-  );
+    const isComplete = !!(
+      (updatedProfile as any).bio &&
+      (updatedProfile as any).yearsExperience &&
+      (updatedProfile as any).baseCity &&
+      (updatedProfile as any).profileType
+    );
 
-  const updatedUser: ChefUser = {
-    ...currentUser,
-    profile: updatedProfile,
-    profileCompleted: isComplete,
-  };
+    const updatedUser: ChefUser = {
+      ...currentUser,
+      profile: updatedProfile,
+      profileCompleted: isComplete,
+    };
 
-  db[idx] = updatedUser;
-  saveChefDb(db);
+    db[idx] = updatedUser;
+    saveChefDb(db);
 
-  // sync session si c’est le user connecté
-  if (typeof window !== 'undefined') {
-    const raw = localStorage.getItem('chef_session_user');
-    if (raw) {
-      const session = JSON.parse(raw) as ChefUser;
-      if (session?.id === userId) {
-        localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
-      }
+    // sync session si c’est le user connecté
+    const session = getSessionUser();
+    if (session?.id === userId) {
+      setSessionUser(updatedUser);
     }
-  }
 
-  return updatedUser;
-},
-  
-// ✅ ADMIN — suppression complète d’un chef
-async deleteChefAccount(userId: string): Promise<void> {
-  await delay(120);
+    return updatedUser;
+  },
 
-  // 1) Supprime le chef
-  saveChefDb(getChefDb().filter(u => u.id !== userId));
+  // ✅ ADMIN — suppression complète d’un chef
+  async deleteChefAccount(userId: string): Promise<void> {
+    await delay(120);
 
-  // 2) Supprime ses proposals
-  saveProposalsDb(getProposalsDb().filter(p => p.chefId !== userId));
+    // 1) Supprime le chef
+    saveChefDb(getChefDb().filter(u => u.id !== userId));
 
-  // 3) Supprime ses missions
-  saveMissionsDb(getMissionsDb().filter(m => m.chefId !== userId));
+    // 2) Supprime ses proposals
+    saveProposalsDb(getProposalsDb().filter(p => p.chefId !== userId));
 
-  // 4) Clear session si besoin
-  const session = getSessionUser();
-  if (session?.id === userId) {
-    clearSessionUser();
-  }
-},
-  async loginChef(email: string, password: string) {
+    // 3) Supprime ses missions
+    saveMissionsDb(getMissionsDb().filter(m => m.chefId !== userId));
+
+    // 4) Clear session si besoin
+    const session = getSessionUser();
+    if (session?.id === userId) {
+      clearSessionUser();
+    }
+  },
+
+  async loginChef(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
     await delay(200);
     ensureAdminSeed();
 
@@ -439,21 +477,27 @@ async deleteChefAccount(userId: string): Promise<void> {
     return { success: true, user };
   },
 
-  async getAllChefs() {
+  async getAllChefs(): Promise<ChefUser[]> {
     await delay(100);
     return getChefDb();
   },
 
-  async updateChefStatus(id: string, status: ChefUser['status']) {
+  async updateChefStatus(id: string, status: ChefUser['status']): Promise<void> {
+    await delay(120);
     const db = getChefDb();
     const i = db.findIndex(c => c.id === id);
     if (i !== -1) {
       db[i].status = status;
       saveChefDb(db);
+
+      const session = getSessionUser();
+      if (session?.id === id) {
+        setSessionUser(db[i]);
+      }
     }
   },
 
-  getCurrentUser() {
+  getCurrentUser(): ChefUser | null {
     return getSessionUser();
   },
 
