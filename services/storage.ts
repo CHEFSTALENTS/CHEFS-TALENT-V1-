@@ -547,47 +547,48 @@ async deleteChefAccount(userId: string): Promise<void> {
       }
     }
   },
-  async updateChefProfile(userId: string, updates: Partial<ChefProfile>): Promise<ChefUser | null> {
-    await delay(200);
+ async updateChefProfile(
+  userId: string,
+  updates: Partial<ChefProfile>
+): Promise<ChefUser | null> {
+  await delay(200);
 
-    const db = getChefDb();
-    const idx = db.findIndex(u => u.id === userId);
-    if (idx === -1) return null;
+  const db = getChefDb();
+  const idx = db.findIndex(u => u.id === userId);
+  if (idx === -1) return null;
 
-    const currentUser = db[idx];
-    const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+  const currentUser = db[idx];
+  const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
 
-    // logique simple "profil complet"
-    const isComplete = !!(
-      updatedProfile.bio &&
-      updatedProfile.yearsExperience &&
-      updatedProfile.baseCity &&
-      updatedProfile.profileType
-    );
+  const isComplete = !!(
+    updatedProfile.bio &&
+    updatedProfile.yearsExperience &&
+    updatedProfile.baseCity &&
+    updatedProfile.profileType
+  );
 
-    const updatedUser: ChefUser = {
-      ...currentUser,
-      profile: updatedProfile,
-      profileCompleted: isComplete,
-    };
+  const updatedUser: ChefUser = {
+    ...currentUser,
+    profile: updatedProfile,
+    profileCompleted: isComplete,
+  };
 
-    db[idx] = updatedUser;
-    saveChefDb(db);
+  db[idx] = updatedUser;
+  saveChefDb(db);
 
-    // sync session
-    if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('chef_session_user');
-      if (raw) {
-        const session = JSON.parse(raw) as ChefUser;
-        if (session?.id === userId) {
-          localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
-        }
+  // ✅ sync session si c’est le user connecté
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem('chef_session_user');
+    if (raw) {
+      const session = JSON.parse(raw) as ChefUser;
+      if (session?.id === userId) {
+        localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
       }
     }
+  }
 
-    return updatedUser;
-  },
-
+  return updatedUser;
+},
   getCurrentUser(): ChefUser | null {
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem('chef_session_user');
