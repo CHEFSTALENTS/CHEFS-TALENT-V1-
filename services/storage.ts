@@ -372,4 +372,42 @@ export const auth = {
       localStorage.removeItem('chef_session_user');
     }
   },
+  // --------------------
+  // Missions
+  // --------------------
+  async getChefMissions(chefId: string): Promise<Mission[]> {
+    await delay(300);
+    const db = getMissionsDb();
+    return db
+      .filter(m => m.chefId === chefId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getAllMissions(): Promise<Mission[]> {
+    await delay(300);
+    return getMissionsDb().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
+    await delay(300);
+    const db = getMissionsDb();
+    const idx = db.findIndex(m => m.id === missionId);
+    if (idx !== -1) {
+      db[idx].status = status;
+      saveMissionsDb(db);
+    }
+  },
+
+  async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
+    await delay(300);
+    const db = getMissionsDb();
+    const newMission: Mission = {
+      ...mission,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    db.push(newMission);
+    saveMissionsDb(db);
+    return newMission;
+  },
 };
