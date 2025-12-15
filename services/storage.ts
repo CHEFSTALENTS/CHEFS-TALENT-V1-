@@ -174,8 +174,6 @@ function ensureAdminSeed() {
 /* =========================================================
    API
 ========================================================= */
-/* ---------- MISSIONS (ADMIN) ---------- */
-
 
 export const api = {
   async createRequest(form: RequestForm): Promise<RequestEntity> {
@@ -217,7 +215,7 @@ export const api = {
     db.unshift(entity);
     saveDb(db);
 
-    // ✅ FAST MATCH AUTO — B2C uniquement
+    // ✅ FAST MATCH AUTO — B2C uniquement (B2B = veto humain)
     if (entity.mode === 'fast' && entity.userType === 'b2c') {
       const activeChefs = getChefDb().filter(isChefActive);
 
@@ -230,11 +228,13 @@ export const api = {
         .slice(0, 5);
 
       if (matched.length) {
+        // Ajoute les proposals en tête
         saveProposalsDb([
           ...buildFastMatchProposals(entity, matched),
           ...getProposalsDb(),
         ]);
 
+        // Passe la request en review
         const fresh = getDb();
         const i = fresh.findIndex(r => r.id === entity.id);
         if (i !== -1) fresh[i].status = 'in_review';
@@ -245,23 +245,12 @@ export const api = {
     return entity;
   },
 
-  // ✅ BIEN AU MÊME NIVEAU (PAS DANS createRequest)
-  async getAllMissions(): Promise<Mission[]> {
-    await delay(120);
-    return getMissionsDb().sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-    );
-  },
-};
-
-  async getRequests() {
+  async getRequests(): Promise<RequestEntity[]> {
     await delay(120);
     return getDb();
   },
 
-  async updateStatus(id: string, status: RequestStatus) {
+  async updateStatus(id: string, status: RequestStatus): Promise<void> {
     await delay(100);
     const db = getDb();
     const i = db.findIndex(r => r.id === id);
@@ -269,6 +258,14 @@ export const api = {
       db[i].status = status;
       saveDb(db);
     }
+  },
+
+  /* ---------- MISSIONS (ADMIN) ---------- */
+  async getAllMissions(): Promise<Mission[]> {
+    await delay(120);
+    return getMissionsDb().sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   },
 };
 
