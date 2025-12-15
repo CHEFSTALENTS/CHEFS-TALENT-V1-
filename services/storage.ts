@@ -175,20 +175,12 @@ function ensureAdminSeed() {
    API
 ========================================================= */
 /* ---------- MISSIONS (ADMIN) ---------- */
-  /* ---------- MISSIONS (ADMIN) ---------- */
 
 
 export const api = {
   async createRequest(form: RequestForm): Promise<RequestEntity> {
     await delay(200);
-  async getAllMissions(): Promise<Mission[]> {
-    await delay(120);
-    return getMissionsDb().sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-    );
-  },
+
     const isB2B = form.clientType === 'concierge';
 
     const entity: RequestEntity = {
@@ -196,7 +188,11 @@ export const api = {
       mode: form.mode,
       userType: isB2B ? 'b2b' : 'b2c',
       location: form.location,
-      dates: { start: form.startDate, end: form.endDate, type: form.dateMode },
+      dates: {
+        start: form.startDate,
+        end: form.endDate,
+        type: form.dateMode,
+      },
       guestCount: form.guestCount,
       missionType: form.assignmentType,
       serviceLevel: form.serviceExpectations,
@@ -248,6 +244,17 @@ export const api = {
 
     return entity;
   },
+
+  // ✅ BIEN AU MÊME NIVEAU (PAS DANS createRequest)
+  async getAllMissions(): Promise<Mission[]> {
+    await delay(120);
+    return getMissionsDb().sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() -
+        new Date(a.createdAt).getTime()
+    );
+  },
+};
 
   async getRequests() {
     await delay(120);
