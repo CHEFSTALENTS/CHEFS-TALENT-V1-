@@ -159,9 +159,9 @@ export const api = {
 
     // ✅ FAST MATCH AUTO (uniquement B2C + fast)
     if (entity.mode === 'fast' && entity.userType === 'b2c') {
-      const chefs = getChefDb();
-      const matchedChefs = matchChefsForFastRequest(entity, chefs);
-
+      const chefs = getChefDb().filter(
+  c => c.role === 'chef' && c.status === 'active'
+);
       if (matchedChefs.length > 0) {
         // Proposals max 5
         const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
@@ -529,11 +529,16 @@ export const auth = {
   const db = getChefDb();
   const user = db.find(u => u.email === email && u.password === password);
 
-  if (!user) return { success: false, error: 'Identifiants invalides.' };
+  if (!user) {
+  return { success: false, error: 'Identifiants invalides' };
+}
 
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('chef_session_user', JSON.stringify(user));
-  }
+if (user.role === 'chef' && user.status !== 'active') {
+  return {
+    success: false,
+    error: "Ton compte est en attente de validation par l'équipe Chef Talents."
+  };
+}
 
   return { success: true, user };
 },
