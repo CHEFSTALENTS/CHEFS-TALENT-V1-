@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/services/storage';
 import type { RequestEntity } from '@/types';
@@ -40,19 +41,25 @@ export default function AdminRequestsPage() {
 
         <tbody>
           {requests.map(req => (
-            <tr key={req.id} className="border-b">
-              <td className="py-2">
-                {new Date(req.createdAt).toLocaleDateString()}
-              </td>
-              <td className="py-2">{req.location}</td>
-              <td className="py-2">{req.missionType}</td>
-              <td className="py-2">{req.guestCount}</td>
-              <td className="py-2">
-                <span className="px-2 py-1 text-sm rounded bg-gray-100">
-                  {req.status}
-                </span>
-              </td>
-            </tr>
+            <Link
+              key={req.id}
+              href={`/admin/requests/${req.id}`}
+              className="contents"
+            >
+              <tr className="border-b hover:bg-gray-50 cursor-pointer">
+                <td className="py-2">
+                  {new Date(req.createdAt).toLocaleDateString()}
+                </td>
+                <td className="py-2">{req.location}</td>
+                <td className="py-2">{req.missionType}</td>
+                <td className="py-2">{req.guestCount}</td>
+                <td className="py-2">
+                  <span className="px-2 py-1 text-sm rounded bg-gray-100">
+                    {req.status}
+                  </span>
+                </td>
+              </tr>
+            </Link>
           ))}
         </tbody>
       </table>
