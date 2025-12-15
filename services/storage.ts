@@ -262,29 +262,75 @@ export const api = {
 export const auth = {
   async registerChef(
     data: Pick<ChefUser, 'email' | 'password' | 'firstName' | 'lastName'>
-  ) {
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(800);
     const db = getChefDb();
 
     if (db.find(u => u.email === data.email)) {
-      return { success: false };
+      return { success: false, error: 'Cet email est déjà utilisé.' };
     }
 
-    const chef: ChefUser = {
+    const newUser: ChefUser = {
       id: crypto.randomUUID(),
       email: data.email,
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
       role: 'chef',
-      status: 'active',
+      status: 'pending_validation',
       createdAt: new Date().toISOString(),
       profileCompleted: false,
       plan: 'free',
-      planStatus: 'coming_soon'
+      planStatus: 'coming_soon',
+      planUpdatedAt: new Date().toISOString(),
+      adminNotes: '',
+      profile: {
+        images: [],
+        unavailableDates: [],
+        environments: [],
+        specialties: [],
+        coverageZones: [],
+        acceptedMissions: ['dinner'],
+        languages: [],
+      },
     };
 
-    db.push(chef);
+    db.push(newUser);
     saveChefDb(db);
-    return { success: true, user: chef };
-  }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chef_session_user', JSON.stringify(newUser));
+    }
+
+    return { success: true, user: newUser };
+  },
+
+  async loginChef(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(800);
+    const db = getChefDb();
+    const user = db.find(u => u.email === email && u.password === password);
+
+    if (!user) return { success: false, error: 'Identifiants invalides.' };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chef_session_user', JSON.stringify(user));
+    }
+
+    return { success: true, user };
+  },
+
+  getCurrentUser(): ChefUser | null {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem('chef_session_user');
+    return raw ? (JSON.parse(raw) as ChefUser) : null;
+  },
+
+  logout() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('chef_session_user');
+    }
+  },
 };
