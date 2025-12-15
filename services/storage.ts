@@ -536,17 +536,6 @@ async deleteChefAccount(userId: string): Promise<void> {
   }
 },
 
-    // sync session si c’est le user connecté
-    if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('chef_session_user');
-      if (raw) {
-        const session = JSON.parse(raw) as ChefUser;
-        if (session?.id === userId) {
-          localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
-        }
-      }
-    }
-  },
  async updateChefProfile(
   userId: string,
   updates: Partial<ChefProfile>
