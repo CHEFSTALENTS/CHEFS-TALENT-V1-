@@ -29,7 +29,7 @@ export default function AdminRequestsPage() {
       .filter(r => (status ? r.status === status : true));
   }, [requests, type, status]);
 
-  cconst setStatus = async (id: string, next: RequestStatus) => {
+ const setStatus = async (id: string, next: RequestStatus) => {
   await api.updateStatus(id, next);
   await refresh();
 };
