@@ -542,6 +542,45 @@ export const auth = {
         languages: [],
       },
     };
+    // ✅ SCORE — simple & stable
+computeChefScore(user: ChefUser): { score: number; badges: string[] } {
+  const p: any = user.profile || {};
+  let score = 0;
+  const badges: string[] = [];
+
+  // Profil
+  if (p.bio) score += 10;
+  if (p.yearsExperience) score += 10;
+  if (p.baseCity) score += 8;
+  if (p.profileType) score += 7;
+
+  // Qualité du profil
+  const images = Array.isArray(p.images) ? p.images.length : 0;
+  if (images >= 1) score += 5;
+  if (images >= 3) score += 10;
+
+  const specialties = Array.isArray(p.specialties) ? p.specialties.length : 0;
+  if (specialties >= 1) score += 8;
+  if (specialties >= 3) score += 12;
+
+  const coverage = Array.isArray(p.coverageZones) ? p.coverageZones.length : 0;
+  if (coverage >= 1) score += 10;
+
+  const langs = Array.isArray(p.languages) ? p.languages.length : 0;
+  if (langs >= 1) score += 5;
+  if (langs >= 2) score += 8;
+
+  // Bonus “interview”
+  if (p.interviewed === true) {
+    score += 15;
+    badges.push('Interviewé');
+  }
+
+  // Clamp 0–100
+  score = Math.max(0, Math.min(100, score));
+
+  return { score, badges };
+},
 
     db.push(newUser);
     saveChefDb(db);
