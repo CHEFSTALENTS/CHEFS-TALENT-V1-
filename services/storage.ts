@@ -6,9 +6,11 @@ import {
   ChefProfile,
   SubscriptionPlan,
   Mission,
-  MissionStatus
+  MissionStatus,
 } from '../types';
+
 import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
+
 /* =========================================================
    TYPES
 ========================================================= */
@@ -48,7 +50,7 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
-const getDb = () =>
+const getDb = (): RequestEntity[] =>
   typeof window === 'undefined'
     ? []
     : safeParse<RequestEntity[]>(localStorage.getItem(DB_KEY), []);
@@ -59,7 +61,7 @@ const saveDb = (data: RequestEntity[]) => {
   }
 };
 
-const getChefDb = () =>
+const getChefDb = (): ChefUser[] =>
   typeof window === 'undefined'
     ? []
     : safeParse<ChefUser[]>(localStorage.getItem(CHEF_USERS_KEY), []);
@@ -70,7 +72,7 @@ const saveChefDb = (data: ChefUser[]) => {
   }
 };
 
-const getMissionsDb = () =>
+const getMissionsDb = (): Mission[] =>
   typeof window === 'undefined'
     ? []
     : safeParse<Mission[]>(localStorage.getItem(MISSIONS_KEY), []);
@@ -81,7 +83,7 @@ const saveMissionsDb = (data: Mission[]) => {
   }
 };
 
-const getProposalsDb = () =>
+const getProposalsDb = (): ChefProposalEntity[] =>
   typeof window === 'undefined'
     ? []
     : safeParse<ChefProposalEntity[]>(localStorage.getItem(PROPOSALS_KEY), []);
@@ -99,84 +101,94 @@ const saveProposalsDb = (data: ChefProposalEntity[]) => {
 export const api = {
   /* ---------- REQUESTS ---------- */
 
- async createRequest(form: RequestForm): Promise<RequestEntity> {
-  await delay(600);
+  async createRequest(form: RequestForm): Promise<RequestEntity> {
+    await delay(200);
 
-  // 1) Create request entity
-  const db = getDb();
-  const isB2B = form.clientType === 'concierge';
+    const db = getDb();
+    const isB2B = form.clientType === 'concierge';
 
-  const entity: RequestEntity = {
-    id: crypto.randomUUID(),
-    mode: form.mode,
-    userType: isB2B ? 'b2b' : 'b2c',
-    location: form.location,
-    dates: {
-      start: form.startDate,
-      end: form.endDate,
-      type: form.dateMode,
-    },
-    guestCount: form.guestCount,
-    missionType: form.assignmentType,
-    serviceLevel: form.serviceExpectations,
-    preferences: {
-      cuisine: form.cuisinePreferences,
-      allergies: form.dietaryRestrictions,
-      languages: form.preferredLanguage,
-    },
-    budgetRange: form.budgetRange,
-    notes: form.notes,
-    contact: {
-      name: form.fullName,
-      email: form.email,
-      phone: form.phone,
-      company: form.companyName,
-    },
-    createdAt: new Date().toISOString(),
-    status: 'new',
-  };
+    const entity: RequestEntity = {
+      id: crypto.randomUUID(),
+      mode: form.mode,
+      userType: isB2B ? 'b2b' : 'b2c',
+      location: form.location,
+      dates: {
+        start: form.startDate,
+        end: form.endDate,
+        type: form.dateMode,
+      },
+      guestCount: form.guestCount,
+      missionType: form.assignmentType,
+      serviceLevel: form.serviceExpectations,
+      preferences: {
+        cuisine: form.cuisinePreferences,
+        allergies: form.dietaryRestrictions,
+        languages: form.preferredLanguage,
+      },
+      budgetRange: form.budgetRange,
+      notes: form.notes,
+      contact: {
+        name: form.fullName,
+        email: form.email,
+        phone: form.phone,
+        company: form.companyName,
+      },
+      createdAt: new Date().toISOString(),
+      status: 'new',
+    };
 
-  db.unshift(entity);
-  saveDb(db);
+    db.unshift(entity);
+    saveDb(db);
 
-  // 2) FAST MATCH AUTO (uniquement B2C + fast)
-  if (entity.mode === 'fast' && entity.userType === 'b2c') {
-    const chefs = getChefDb();
+    // ✅ FAST MATCH AUTO (uniquement B2C + fast)
+    if (entity.mode === 'fast' && entity.userType === 'b2c') {
+      const chefs = getChefDb();
+      const matchedChefs = matchChefsForFastRequest(entity, chefs);
 
-    const matchedChefs = matchChefsForFastRequest(entity, chefs);
+      if (matchedChefs.length > 0) {
+        // Proposals max 5
+        const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
 
-    if (matchedChefs.length > 0) {
-      // Build proposals (max 5)
-      const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
+        // Remplace d'éventuelles proposals existantes sur cette request (sécurité)
+        const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
+        pDb.unshift(...proposalsToCreate);
+        saveProposalsDb(pDb);
 
-      // Save proposals (remove any existing proposals for this request just in case)
-      const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
-      pDb.unshift(...proposalsToCreate);
-      saveProposalsDb(pDb);
-
-      // Put request in review
-      const freshDb = getDb();
-      const idx = freshDb.findIndex(r => r.id === entity.id);
-      if (idx !== -1) {
-        freshDb[idx].status = 'in_review';
-        saveDb(freshDb);
+        // Met la request en review
+        const freshDb = getDb();
+        const idx = freshDb.findIndex(r => r.id === entity.id);
+        if (idx !== -1) {
+          freshDb[idx].status = 'in_review';
+          saveDb(freshDb);
+        }
       }
     }
-  }
 
-  return entity;
-},
-  async getRequests() {
-    await delay(200);
+    return entity;
+  },
+
+  async getRequests(): Promise<RequestEntity[]> {
+    await delay(120);
     return getDb();
   },
 
-  async getRequest(id: string) {
-    await delay(150);
+  async getRequest(id: string): Promise<RequestEntity | undefined> {
+    await delay(120);
     return getDb().find(r => r.id === id);
   },
 
-  async closeRequest(id: string) {
+  async updateStatus(id: string, status: RequestStatus): Promise<void> {
+    await delay(120);
+    const db = getDb();
+    const i = db.findIndex(r => r.id === id);
+    if (i !== -1) {
+      db[i].status = status;
+      saveDb(db);
+    }
+  },
+
+  async closeRequest(id: string): Promise<void> {
+    await delay(120);
     const db = getDb();
     const i = db.findIndex(r => r.id === id);
     if (i !== -1) {
@@ -187,72 +199,159 @@ export const api = {
 
   /* ---------- PROPOSALS ---------- */
 
-  async createProposals(
-    requestId: string,
-    chefIds: string[]
-  ): Promise<ChefProposalEntity[]> {
-    await delay(200);
+  async createProposals(requestId: string, chefIds: string[]): Promise<ChefProposalEntity[]> {
+    await delay(120);
 
-    const created = chefIds.map(chefId => ({
+    const created: ChefProposalEntity[] = chefIds.map(chefId => ({
       id: crypto.randomUUID(),
       requestId,
       chefId,
-      status: 'sent' as ProposalStatus,
-      createdAt: new Date().toISOString()
+      status: 'sent',
+      createdAt: new Date().toISOString(),
     }));
 
     const db = getProposalsDb();
     db.unshift(...created);
     saveProposalsDb(db);
 
+    // Mettre la request en review si elle existe
+    const rDb = getDb();
+    const idx = rDb.findIndex(r => r.id === requestId);
+    if (idx !== -1 && rDb[idx].status === 'new') {
+      rDb[idx].status = 'in_review';
+      saveDb(rDb);
+    }
+
     return created;
   },
 
-  async getProposal(id: string) {
-    await delay(100);
+  async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
+    await delay(80);
     return getProposalsDb().find(p => p.id === id);
   },
 
-  async getChefProposals(chefId: string) {
+  // ✅ Pour l’écran “offers” du chef : uniquement les proposals encore “sent”
+  // et uniquement si la request n’est pas déjà assigned/closed
+  async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
     await delay(100);
     const requests = getDb();
 
-    return getProposalsDb().filter(p => {
-      if (p.chefId !== chefId) return false;
-      const req = requests.find(r => r.id === p.requestId);
-      return req && req.status !== 'assigned' && req.status !== 'closed';
-    });
+    return getProposalsDb()
+      .filter(p => p.chefId === chefId && p.status === 'sent')
+      .filter(p => {
+        const req = requests.find(r => r.id === p.requestId);
+        return !!req && req.status !== 'assigned' && req.status !== 'closed';
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
-  async acceptProposal(proposalId: string) {
+  // ✅ Pour la page détail “/chef/offers/[proposalId]”
+  async getOfferDetail(proposalId: string): Promise<{
+    proposal?: ChefProposalEntity;
+    request?: RequestEntity;
+  }> {
+    await delay(120);
+
+    const proposal = getProposalsDb().find(p => p.id === proposalId);
+    if (!proposal) return {};
+
+    const request = getDb().find(r => r.id === proposal.requestId);
+    return { proposal, request };
+  },
+
+  // ✅ Le chef accepte -> 1 seul chef accepté, le reste décliné, request assigned, mission créée
+  async acceptProposal(proposalId: string): Promise<void> {
+    await delay(120);
+
     const proposals = getProposalsDb();
     const target = proposals.find(p => p.id === proposalId);
     if (!target) return;
 
     const requests = getDb();
-    const req = requests.find(r => r.id === target.requestId);
-    if (!req || req.status === 'assigned') return;
+    const reqIdx = requests.findIndex(r => r.id === target.requestId);
+    if (reqIdx === -1) return;
 
-    proposals.forEach(p => {
-      if (p.requestId === target.requestId) {
-        p.status = p.id === proposalId ? 'accepted' : 'declined';
-      }
-    });
+    const req = requests[reqIdx];
 
+    // Si déjà assignée/close -> on empêche
+    if (req.status === 'assigned' || req.status === 'closed') return;
+
+    // 1) Proposals : accepte celle-ci, décline les autres de la même request
+    for (const p of proposals) {
+      if (p.requestId !== target.requestId) continue;
+      p.status = p.id === proposalId ? 'accepted' : 'declined';
+    }
+
+    // 2) Request : assigned
     req.status = 'assigned';
 
     saveProposalsDb(proposals);
     saveDb(requests);
+
+    // 3) Mission : créée pour le chef accepté
+    await this.createMission({
+      chefId: target.chefId,
+      requestId: req.id,
+      title: req.missionType ? `Mission - ${req.missionType}` : 'Mission Chef Talents',
+      location: req.location,
+      startDate: req.dates.start,
+      endDate: req.dates.end,
+      guestCount: req.guestCount,
+      serviceLevel: req.serviceLevel,
+      estimatedAmount: target.priceTotal ?? 0,
+      clientPhone: req.contact?.phone,
+      status: 'offered',
+    });
   },
 
-  async declineProposal(proposalId: string) {
+  // ✅ Le chef refuse -> décline + n’apparaît plus dans sa liste (car on filtre sent)
+  async declineProposal(proposalId: string): Promise<void> {
+    await delay(100);
     const proposals = getProposalsDb();
-    const p = proposals.find(p => p.id === proposalId);
+    const p = proposals.find(x => x.id === proposalId);
     if (p) {
       p.status = 'declined';
       saveProposalsDb(proposals);
     }
-  }
+  },
+
+  /* ---------- MISSIONS ---------- */
+
+  async getChefMissions(chefId: string): Promise<Mission[]> {
+    await delay(120);
+    const db = getMissionsDb();
+    return db
+      .filter(m => m.chefId === chefId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getAllMissions(): Promise<Mission[]> {
+    await delay(120);
+    return getMissionsDb().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
+    await delay(120);
+    const db = getMissionsDb();
+    const idx = db.findIndex(m => m.id === missionId);
+    if (idx !== -1) {
+      db[idx].status = status;
+      saveMissionsDb(db);
+    }
+  },
+
+  async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
+    await delay(120);
+    const db = getMissionsDb();
+    const newMission: Mission = {
+      ...mission,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    db.push(newMission);
+    saveMissionsDb(db);
+    return newMission;
+  },
 };
 
 /* =========================================================
@@ -263,7 +362,8 @@ export const auth = {
   async registerChef(
     data: Pick<ChefUser, 'email' | 'password' | 'firstName' | 'lastName'>
   ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
-    await delay(800);
+    await delay(200);
+
     const db = getChefDb();
 
     if (db.find(u => u.email === data.email)) {
@@ -309,7 +409,8 @@ export const auth = {
     email: string,
     password: string
   ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
-    await delay(800);
+    await delay(200);
+
     const db = getChefDb();
     const user = db.find(u => u.email === email && u.password === password);
 
@@ -321,8 +422,9 @@ export const auth = {
 
     return { success: true, user };
   },
+
   async updateChefProfile(userId: string, updates: Partial<ChefProfile>): Promise<ChefUser | null> {
-    await delay(400);
+    await delay(200);
 
     const db = getChefDb();
     const idx = db.findIndex(u => u.id === userId);
@@ -331,7 +433,7 @@ export const auth = {
     const currentUser = db[idx];
     const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
 
-    // (optionnel) logique simple "profil complet"
+    // logique simple "profil complet"
     const isComplete = !!(
       updatedProfile.bio &&
       updatedProfile.yearsExperience &&
@@ -348,7 +450,7 @@ export const auth = {
     db[idx] = updatedUser;
     saveChefDb(db);
 
-    // Sync session si c’est lui
+    // sync session
     if (typeof window !== 'undefined') {
       const raw = localStorage.getItem('chef_session_user');
       if (raw) {
@@ -361,6 +463,7 @@ export const auth = {
 
     return updatedUser;
   },
+
   getCurrentUser(): ChefUser | null {
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem('chef_session_user');
@@ -371,43 +474,5 @@ export const auth = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('chef_session_user');
     }
-  },
-  // --------------------
-  // Missions
-  // --------------------
-  async getChefMissions(chefId: string): Promise<Mission[]> {
-    await delay(300);
-    const db = getMissionsDb();
-    return db
-      .filter(m => m.chefId === chefId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  },
-
-  async getAllMissions(): Promise<Mission[]> {
-    await delay(300);
-    return getMissionsDb().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  },
-
-  async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
-    await delay(300);
-    const db = getMissionsDb();
-    const idx = db.findIndex(m => m.id === missionId);
-    if (idx !== -1) {
-      db[idx].status = status;
-      saveMissionsDb(db);
-    }
-  },
-
-  async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
-    await delay(300);
-    const db = getMissionsDb();
-    const newMission: Mission = {
-      ...mission,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    db.push(newMission);
-    saveMissionsDb(db);
-    return newMission;
   },
 };
