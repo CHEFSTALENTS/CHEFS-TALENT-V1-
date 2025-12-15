@@ -480,7 +480,10 @@ export const auth = {
 
     return { success: true, user };
   },
-
+  async getAllChefs(): Promise<ChefUser[]> {
+    await delay(120);
+    return getChefDb();
+  },
   async updateChefProfile(userId: string, updates: Partial<ChefProfile>): Promise<ChefUser | null> {
     await delay(200);
 
