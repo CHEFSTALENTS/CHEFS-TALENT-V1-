@@ -102,7 +102,10 @@ export const api = {
     await delay(600);
     const db = getDb();
     const isB2B = form.clientType === 'concierge';
-
+async getProposal(proposalId: string): Promise<ChefProposalEntity | undefined> {
+  await delay(150);
+  return getProposalsDb().find(p => p.id === proposalId);
+},
     const entity: RequestEntity = {
       id: crypto.randomUUID(),
       mode: form.mode,
