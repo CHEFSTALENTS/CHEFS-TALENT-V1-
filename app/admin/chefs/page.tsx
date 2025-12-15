@@ -11,17 +11,15 @@ type FilterKey = 'all' | 'pending' | 'approved' | 'active';
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
 
   const refresh = async () => {
     setLoading(true);
     const list = await auth.getAllChefs();
-    const filtered = list.filter(
-      u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
+    setChefs(
+      list.filter(c => (c.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase())
     );
-    setChefs(filtered);
     setLoading(false);
   };
 
@@ -31,37 +29,33 @@ export default function AdminChefsPage() {
 
   const approve = async (id: string) => {
     await auth.updateChefStatus(id, 'approved' as any);
-    await refresh();
+    refresh();
   };
 
   const activate = async (id: string) => {
     await auth.updateChefStatus(id, 'active' as any);
-    await refresh();
+    refresh();
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Supprimer ce compte chef ?')) return;
+    if (!confirm('Supprimer définitivement ce chef ?')) return;
     await auth.deleteChefAccount(id);
-    await refresh();
+    refresh();
   };
 
   const counts = useMemo(() => {
-    const pending = chefs.filter(c => c.status === 'pending_validation').length;
-    const approved = chefs.filter(c => c.status === 'approved').length;
-    const active = chefs.filter(c => c.status === 'active').length;
-    return { pending, approved, active, all: chefs.length };
+    return {
+      all: chefs.length,
+      pending: chefs.filter(c => c.status === 'pending_validation').length,
+      approved: chefs.filter(c => c.status === 'approved').length,
+      active: chefs.filter(c => c.status === 'active').length,
+    };
   }, [chefs]);
 
   const view = useMemo(() => {
-    const priority: Record<string, number> = {
-      pending_validation: 0,
-      approved: 1,
-      active: 2,
-    };
+    const needle = q.toLowerCase().trim();
 
-    const needle = q.trim().toLowerCase();
-
-    return [...chefs]
+    return chefs
       .filter(c => {
         if (filter === 'pending') return c.status === 'pending_validation';
         if (filter === 'approved') return c.status === 'approved';
@@ -70,166 +64,138 @@ export default function AdminChefsPage() {
       })
       .filter(c => {
         if (!needle) return true;
-        const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
-        const email = (c.email || '').toLowerCase();
-        return fullName.includes(needle) || email.includes(needle);
+        return (
+          `${c.firstName} ${c.lastName}`.toLowerCase().includes(needle) ||
+          (c.email || '').toLowerCase().includes(needle)
+        );
       })
       .sort((a, b) => {
-        // 1) statut
-        const pa = priority[String(a.status)] ?? 99;
-        const pb = priority[String(b.status)] ?? 99;
-        if (pa !== pb) return pa - pb;
-
-        // 2) score (desc)
         const sa = auth.computeChefScore(a).score;
         const sb = auth.computeChefScore(b).score;
-        if (sa !== sb) return sb - sa;
-
-        // 3) date (desc)
-        const da = new Date(a.createdAt || '').getTime() || 0;
-        const db = new Date(b.createdAt || '').getTime() || 0;
-        return db - da;
+        return sb - sa;
       });
   }, [chefs, q, filter]);
 
   return (
-    <div className="p-6 bg-white border rounded">
-      <div className="flex items-start justify-between mb-6 gap-4">
+    <div className="p-6 space-y-6">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Admin — Chefs</h1>
+          <h1 className="text-xl font-semibold">Chefs</h1>
           <p className="text-sm text-stone-500">
-            Validation obligatoire avant réception de missions.
+            Validation & activation des profils chefs
           </p>
         </div>
-
-        <button onClick={refresh} className="px-3 py-2 rounded border text-sm">
+        <button
+          onClick={refresh}
+          className="px-3 py-2 rounded border text-sm hover:bg-stone-50"
+        >
           Rafraîchir
         </button>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-        <input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Rechercher (nom ou email)…"
-          className="w-full md:max-w-sm px-3 py-2 rounded border text-sm"
-        />
-
-        <div className="flex flex-wrap gap-2">
-          <FilterButton active={filter === 'all'} onClick={() => setFilter('all')} label={`Tous (${counts.all})`} />
-          <FilterButton active={filter === 'pending'} onClick={() => setFilter('pending')} label={`À valider (${counts.pending})`} />
-          <FilterButton active={filter === 'approved'} onClick={() => setFilter('approved')} label={`Approuvés (${counts.approved})`} />
-          <FilterButton active={filter === 'active'} onClick={() => setFilter('active')} label={`Actifs (${counts.active})`} />
-        </div>
+      {/* FILTERS */}
+      <div className="flex flex-wrap gap-2">
+        <Filter label={`Tous (${counts.all})`} active={filter === 'all'} onClick={() => setFilter('all')} />
+        <Filter label={`À valider (${counts.pending})`} active={filter === 'pending'} onClick={() => setFilter('pending')} />
+        <Filter label={`Approuvés (${counts.approved})`} active={filter === 'approved'} onClick={() => setFilter('approved')} />
+        <Filter label={`Actifs (${counts.active})`} active={filter === 'active'} onClick={() => setFilter('active')} />
       </div>
+
+      {/* SEARCH */}
+      <input
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        placeholder="Rechercher un chef (nom ou email)…"
+        className="w-full max-w-md px-3 py-2 rounded border text-sm"
+      />
 
       {loading ? (
         <div className="text-sm text-stone-500">Chargement…</div>
+      ) : view.length === 0 ? (
+        <div className="text-sm text-stone-500">Aucun chef trouvé.</div>
       ) : (
-        <div className="overflow-auto rounded border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-stone-50">
-              <tr>
-                <th className="text-left p-3">Nom</th>
-                <th className="text-left p-3">Email</th>
-                <th className="text-left p-3">Score</th>
-                <th className="text-left p-3">Badges</th>
-                <th className="text-left p-3">Statut</th>
-                <th className="text-left p-3">Actions</th>
-              </tr>
-            </thead>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {view.map(c => {
+            const sc = auth.computeChefScore(c);
 
-           <tbody>
-  {view.map(c => {
-    const sc = auth.computeChefScore(c);
-
-    return (
-      <tr key={c.id} className="border-t">
-        <td className="p-3">
-          <div className="font-medium">
-            {c.firstName} {c.lastName}
-          </div>
-          <div className="text-xs text-stone-500">
-            {sc.badges.join(' • ')}
-          </div>
-        </td>
-
-        <td className="p-3">{c.email}</td>
-
-        <td className="p-3">
-          <StatusBadge status={String(c.status)} />
-        </td>
-
-        <td className="p-3">
-          <div className="flex items-center gap-3">
-            <div className="text-sm">
-              <span className="font-semibold">{sc.score}</span>
-              <span className="text-stone-400"> / 100</span>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {c.status === 'pending_validation' && (
-                <button
-                  onClick={() => approve(c.id)}
-                  className="px-2 py-1 rounded border"
-                >
-                  Approuver
-                </button>
-              )}
-
-              {c.status === 'approved' && (
-                <button
-                  onClick={() => activate(c.id)}
-                  className="px-2 py-1 rounded border"
-                >
-                  Activer
-                </button>
-              )}
-
-              <button
-                onClick={() => remove(c.id)}
-                className="px-2 py-1 rounded border text-red-600"
+            return (
+              <div
+                key={c.id}
+                className="border rounded-xl bg-white p-4 hover:shadow-sm transition"
               >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  })}
+                {/* TOP */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold">
+                      {c.firstName} {c.lastName}
+                    </div>
+                    <div className="text-xs text-stone-500">{c.email}</div>
+                  </div>
+                  <StatusBadge status={String(c.status)} />
+                </div>
 
-  {view.length === 0 && (
-    <tr>
-      <td className="p-3" colSpan={4}>
-        Aucun résultat.
-      </td>
-    </tr>
-  )}
-</tbody>
-          </table>
+                {/* SCORE */}
+                <div className="mt-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-stone-500">Matching score</div>
+                    <div className="text-3xl font-semibold">
+                      {sc.score}
+                      <span className="text-sm text-stone-400"> /100</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {sc.badges.map(b => (
+                      <span
+                        key={b}
+                        className="text-[11px] px-2 py-1 rounded-full bg-stone-100 text-stone-700"
+                      >
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ACTIONS */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {c.status === 'pending_validation' && (
+                    <Action onClick={() => approve(c.id)}>Approuver</Action>
+                  )}
+                  {c.status === 'approved' && (
+                    <Action onClick={() => activate(c.id)}>Activer</Action>
+                  )}
+                  <Action danger onClick={() => remove(c.id)}>
+                    Supprimer
+                  </Action>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function FilterButton({
+/* ================= UI ================= */
+
+function Filter({
+  label,
   active,
   onClick,
-  label,
 }: {
+  label: string;
   active: boolean;
   onClick: () => void;
-  label: string;
 }) {
   return (
     <button
       onClick={onClick}
       className={[
         'px-3 py-2 rounded border text-sm',
-        active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50',
+        active
+          ? 'bg-stone-900 text-white border-stone-900'
+          : 'bg-white hover:bg-stone-50',
       ].join(' ')}
     >
       {label}
@@ -237,21 +203,43 @@ function FilterButton({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const s = status || 'unknown';
+function Action({
+  children,
+  onClick,
+  danger,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'px-3 py-2 rounded text-sm border',
+        danger
+          ? 'text-red-600 border-red-200 hover:bg-red-50'
+          : 'hover:bg-stone-50',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
 
+function StatusBadge({ status }: { status: string }) {
   const cls =
-    s === 'pending_validation'
+    status === 'pending_validation'
       ? 'bg-yellow-100 text-yellow-800'
-      : s === 'approved'
+      : status === 'approved'
       ? 'bg-blue-100 text-blue-800'
-      : s === 'active'
+      : status === 'active'
       ? 'bg-green-100 text-green-800'
       : 'bg-stone-100 text-stone-700';
 
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${cls}`}>
-      {s}
+    <span className={`text-xs px-2 py-1 rounded-full ${cls}`}>
+      {status}
     </span>
   );
 }
