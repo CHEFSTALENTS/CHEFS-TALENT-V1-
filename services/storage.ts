@@ -313,7 +313,25 @@ export const auth = {
 
     return { success: true, user };
   },
+// ✅ ADMIN — suppression complète d’un chef
+async deleteChefAccount(userId: string): Promise<void> {
+  await delay(120);
 
+  // 1) Supprime le chef
+  saveChefDb(getChefDb().filter(u => u.id !== userId));
+
+  // 2) Supprime ses proposals
+  saveProposalsDb(getProposalsDb().filter(p => p.chefId !== userId));
+
+  // 3) Supprime ses missions
+  saveMissionsDb(getMissionsDb().filter(m => m.chefId !== userId));
+
+  // 4) Clear session si besoin
+  const session = getSessionUser();
+  if (session?.id === userId) {
+    clearSessionUser();
+  }
+},
   async loginChef(email: string, password: string) {
     await delay(200);
     ensureAdminSeed();
