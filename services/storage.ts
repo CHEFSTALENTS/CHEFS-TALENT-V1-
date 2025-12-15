@@ -236,8 +236,17 @@ export const api = {
     // ❌ B2B => veto humain (donc pas d’auto-match)
     if (entity.mode === 'fast' && entity.userType === 'b2c') {
       const activeChefs = getChefDb().filter(c => c.role === 'chef' && c.status === 'active');
-      const matchedChefs = matchChefsForFastRequest(entity, activeChefs);
+     let matchedChefs = matchChefsForFastRequest(entity, chefs);
 
+// ✅ tri par score (desc)
+matchedChefs = matchedChefs
+  .map(c => ({ c, s: auth.computeChefScore(c).score }))
+  .sort((a, b) => b.s - a.s)
+  .map(x => x.c);
+
+// ✅ top 5
+matchedChefs = matchedChefs.slice(0, 5);
+      
       if (matchedChefs.length > 0) {
         const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
 
