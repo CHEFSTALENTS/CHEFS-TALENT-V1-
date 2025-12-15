@@ -514,17 +514,24 @@ export const auth = {
     return { success: true, user: newUser };
   },
 
-  async loginChef(email: string, password: string) {
+ async loginChef(
+  email: string,
+  password: string
+): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
   await delay(200);
   ensureAdminSeed();
 
   const db = getChefDb();
   const user = db.find(u => u.email === email && u.password === password);
-  ...
-}
 
-    return { success: true, user };
-  },
+  if (!user) return { success: false, error: 'Identifiants invalides.' };
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('chef_session_user', JSON.stringify(user));
+  }
+
+  return { success: true, user };
+},
  // ✅ ADMIN — list all chefs
 async getAllChefs(): Promise<ChefUser[]> {
   await delay(120);
