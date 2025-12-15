@@ -216,19 +216,16 @@ async closeRequest(id: string): Promise<void> {
 async selectProposal(requestId: string, proposalId: string): Promise<void> {
   await delay(300);
 
-  // 0) Load & lock request
   const rDb = getDb();
   const rIdx = rDb.findIndex(r => r.id === requestId);
   if (rIdx === -1) throw new Error('Request not found');
 
   const req = rDb[rIdx];
 
-  // 🔒 prevent double accept
   if (req.status === 'assigned' || req.status === 'closed') {
     throw new Error('REQUEST_ALREADY_ASSIGNED');
   }
 
-  // 1) Update proposals statuses
   const pDb = getProposalsDb();
   let accepted: ChefProposalEntity | undefined;
 
@@ -244,11 +241,9 @@ async selectProposal(requestId: string, proposalId: string): Promise<void> {
   }
   saveProposalsDb(pDb);
 
-  // 2) Update request status -> assigned
   rDb[rIdx].status = 'assigned';
   saveDb(rDb);
 
-  // 3) Create mission for accepted chef
   if (accepted) {
     await this.createMission({
       chefId: accepted.chefId,
