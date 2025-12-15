@@ -242,18 +242,17 @@ export const api = {
 },
 
  async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
-  await delay(80);
-  return getProposalsDb().find(p => p.id === id);
-},
-
+    await delay(80);
+     return getProposalsDb().find(p => p.id === id);
+   },
 async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
   await delay(100);
   return getProposalsDb()
     .filter(p => p.requestId === requestId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 },
-    await delay(80);
-    return getProposalsDb().find(p => p.id === id);
+   
+  
   },
 
   // ✅ Pour l’écran “offers” du chef : uniquement les proposals encore “sent”
