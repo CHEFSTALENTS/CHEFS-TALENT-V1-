@@ -7,9 +7,11 @@
  * Ne jamais ajouter de méthodes en dehors de api/auth.
  */
 
-export const ADMIN_EMAIL = "thomas@chef-talents.com"; // fixe
+export const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
-export function isAdminUser(user: { email?: string } | null | undefined) {
+export function isAdminUser(
+  user: { email?: string } | null | undefined
+) {
   return !!user?.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
 import {
