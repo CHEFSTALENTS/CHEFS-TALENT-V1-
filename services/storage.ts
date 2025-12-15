@@ -249,42 +249,7 @@ export const api = {
     await delay(120);
     return getDb();
   },
-  async getChefMissions(chefId: string): Promise<Mission[]> {
-  await delay(120);
-async updateMissionStatus(missionId: string, status: MissionStatus): Promise<void> {
-  await delay(120);
 
-  const db = getMissionsDb();
-  const idx = db.findIndex(m => m.id === missionId);
-  if (idx !== -1) {
-    db[idx].status = status;
-    saveMissionsDb(db);
-  }
-},
-  // 🔒 Un chef non actif ne voit aucune mission
-  const chef = getChefDb().find(c => c.id === chefId);
-  if (!chef || chef.role !== 'chef' || chef.status !== 'active') return [];
-
-  return getMissionsDb()
-    .filter(m => m.chefId === chefId)
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-},
-async getRequest(id: string): Promise<RequestEntity | undefined> {
-  await delay(120);
-  return getDb().find(r => r.id === id);
-},
-  async updateStatus(id: string, status: RequestStatus): Promise<void> {
-    await delay(100);
-    const db = getDb();
-    const i = db.findIndex(r => r.id === id);
-    if (i !== -1) {
-      db[i].status = status;
-      saveDb(db);
-    }
-  },
 
   /* ---------- MISSIONS ---------- */
 
