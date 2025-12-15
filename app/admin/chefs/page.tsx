@@ -6,9 +6,14 @@ import type { ChefUser } from '@/types';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
+type FilterKey = 'all' | 'pending' | 'approved' | 'active';
+
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState<FilterKey>('all');
 
   const refresh = async () => {
     setLoading(true);
@@ -40,36 +45,92 @@ export default function AdminChefsPage() {
     await refresh();
   };
 
-  const sortedChefs = useMemo(() => {
+  const counts = useMemo(() => {
+    const pending = chefs.filter(c => c.status === 'pending_validation').length;
+    const approved = chefs.filter(c => c.status === 'approved').length;
+    const active = chefs.filter(c => c.status === 'active').length;
+    return { pending, approved, active, all: chefs.length };
+  }, [chefs]);
+
+  const view = useMemo(() => {
     const priority: Record<string, number> = {
       pending_validation: 0,
       approved: 1,
       active: 2,
     };
 
-    return [...chefs].sort((a, b) => {
-      const pa = priority[String(a.status)] ?? 99;
-      const pb = priority[String(b.status)] ?? 99;
-      if (pa !== pb) return pa - pb;
+    const needle = q.trim().toLowerCase();
 
-      const da = new Date(a.createdAt || '').getTime() || 0;
-      const db = new Date(b.createdAt || '').getTime() || 0;
-      return db - da;
-    });
-  }, [chefs]);
+    return [...chefs]
+      .filter(c => {
+        if (filter === 'pending') return c.status === 'pending_validation';
+        if (filter === 'approved') return c.status === 'approved';
+        if (filter === 'active') return c.status === 'active';
+        return true;
+      })
+      .filter(c => {
+        if (!needle) return true;
+        const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        return fullName.includes(needle) || email.includes(needle);
+      })
+      .sort((a, b) => {
+        const pa = priority[String(a.status)] ?? 99;
+        const pb = priority[String(b.status)] ?? 99;
+        if (pa !== pb) return pa - pb;
+
+        const da = new Date(a.createdAt || '').getTime() || 0;
+        const db = new Date(b.createdAt || '').getTime() || 0;
+        return db - da;
+      });
+  }, [chefs, q, filter]);
 
   return (
     <div className="p-6 bg-white border rounded">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-4">
         <div>
           <h1 className="text-xl font-semibold">Admin — Chefs</h1>
           <p className="text-sm text-stone-500">
             Validation obligatoire avant réception de missions.
           </p>
         </div>
+
         <button onClick={refresh} className="px-3 py-2 rounded border text-sm">
           Rafraîchir
         </button>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Rechercher (nom ou email)…"
+          className="w-full md:max-w-sm px-3 py-2 rounded border text-sm"
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <FilterButton
+            active={filter === 'all'}
+            onClick={() => setFilter('all')}
+            label={`Tous (${counts.all})`}
+          />
+          <FilterButton
+            active={filter === 'pending'}
+            onClick={() => setFilter('pending')}
+            label={`À valider (${counts.pending})`}
+          />
+          <FilterButton
+            active={filter === 'approved'}
+            onClick={() => setFilter('approved')}
+            label={`Approuvés (${counts.approved})`}
+          />
+          <FilterButton
+            active={filter === 'active'}
+            onClick={() => setFilter('active')}
+            label={`Actifs (${counts.active})`}
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -86,7 +147,7 @@ export default function AdminChefsPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedChefs.map(c => (
+              {view.map(c => (
                 <tr key={c.id} className="border-t">
                   <td className="p-3">
                     {c.firstName} {c.lastName}
@@ -128,10 +189,10 @@ export default function AdminChefsPage() {
                 </tr>
               ))}
 
-              {sortedChefs.length === 0 && (
+              {view.length === 0 && (
                 <tr>
                   <td className="p-3" colSpan={4}>
-                    Aucun chef.
+                    Aucun résultat.
                   </td>
                 </tr>
               )}
@@ -140,6 +201,28 @@ export default function AdminChefsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'px-3 py-2 rounded border text-sm',
+        active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50',
+      ].join(' ')}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -155,18 +238,9 @@ function StatusBadge({ status }: { status: string }) {
       ? 'bg-green-100 text-green-800'
       : 'bg-stone-100 text-stone-700';
 
-  const label =
-    s === 'pending_validation'
-      ? 'pending_validation'
-      : s === 'approved'
-      ? 'approved'
-      : s === 'active'
-      ? 'active'
-      : s;
-
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${cls}`}>
-      {label}
+      {s}
     </span>
   );
 }
