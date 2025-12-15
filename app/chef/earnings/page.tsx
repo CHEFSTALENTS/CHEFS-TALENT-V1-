@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth, api } from '../../../services/storage';
-import type { Mission } from '../../../types';
+import type { Mission } from '@/types';
 import { Marker, Label } from '../../../components/ui';
 import { Euro, TrendingUp, CalendarCheck, BarChart3, Loader2 } from 'lucide-react';
 
