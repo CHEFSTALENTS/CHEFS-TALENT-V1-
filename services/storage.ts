@@ -249,7 +249,10 @@ export const api = {
     await delay(120);
     return getDb();
   },
-
+async getRequest(id: string): Promise<RequestEntity | undefined> {
+  await delay(120);
+  return getDb().find(r => r.id === id);
+},
   async updateStatus(id: string, status: RequestStatus): Promise<void> {
     await delay(100);
     const db = getDb();
