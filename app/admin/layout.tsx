@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const user = auth.getCurrentUser();
-
+if (!user || user.email !== 'thomas@chef-talents.com') router.replace('/chef/login');
     // admin = email fixe (pas un role)
     if (!user || user.email !== ADMIN_EMAIL) {
       router.replace('/chef/login');
