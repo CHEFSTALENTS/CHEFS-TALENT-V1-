@@ -330,6 +330,49 @@ export const auth = {
 
     return { success: true, user };
   },
+  async updateChefProfile(
+  userId: string,
+  updates: Partial<ChefProfile>
+): Promise<ChefUser | null> {
+  await delay(200);
+
+  const db = getChefDb();
+  const idx = db.findIndex(u => u.id === userId);
+  if (idx === -1) return null;
+
+  const currentUser = db[idx];
+  const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+
+  const isComplete = !!(
+    (updatedProfile as any).bio &&
+    (updatedProfile as any).yearsExperience &&
+    (updatedProfile as any).baseCity &&
+    (updatedProfile as any).profileType
+  );
+
+  const updatedUser: ChefUser = {
+    ...currentUser,
+    profile: updatedProfile,
+    profileCompleted: isComplete,
+  };
+
+  db[idx] = updatedUser;
+  saveChefDb(db);
+
+  // sync session si c’est le user connecté
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem('chef_session_user');
+    if (raw) {
+      const session = JSON.parse(raw) as ChefUser;
+      if (session?.id === userId) {
+        localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
+      }
+    }
+  }
+
+  return updatedUser;
+},
+  
 // ✅ ADMIN — suppression complète d’un chef
 async deleteChefAccount(userId: string): Promise<void> {
   await delay(120);
