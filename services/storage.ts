@@ -172,40 +172,40 @@ async closeRequest(id: string): Promise<void> {
   // Proposals (NEW)
   // --------------------
   async createProposals(
-    requestId: string,
-    proposals: Array<{ chefId: string; priceTotal?: number; pricePerPerson?: number; message?: string }>
-  ): Promise<ChefProposalEntity[]> {
-    await delay(300);
-    const pDb = getProposalsDb();
+  requestId: string,
+  proposals: Array<{ chefId: string; priceTotal?: number; pricePerPerson?: number; message?: string }>
+): Promise<ChefProposalEntity[]> {
+  await delay(300);
 
-    const created: ChefProposalEntity[] = proposals.map(p => ({
-      id: crypto.randomUUID(),
-      requestId,
-      chefId: p.chefId,
-      priceTotal: p.priceTotal,
-      pricePerPerson: p.pricePerPerson,
-      message: p.message,
-      status: 'sent',
-      createdAt: new Date().toISOString()
-    }));
+  const pDb = getProposalsDb();
 
-    // newest first
-    pDb.unshift(...created);
-    saveProposalsDb(pDb);
+  const createdAt = new Date().toISOString();
+  const created: ChefProposalEntity[] = proposals.map(p => ({
+    id: crypto.randomUUID(),
+    requestId,
+    chefId: p.chefId,
+    priceTotal: p.priceTotal,
+    pricePerPerson: p.pricePerPerson,
+    message: p.message,
+    status: 'sent',
+    createdAt,
+  }));
 
-    // optional: update request status to "proposed" if your RequestStatus supports it
-    // Otherwise keep as-is.
-    const rDb = getDb();
-    const idx = rDb.findIndex(r => r.id === requestId);
-    if (idx !== -1) {
-      // @ts-ignore (au cas où 'proposed' n’existe pas dans ton union RequestStatus)
-      if (rDb[idx].status === 'new') rDb[idx].status = rDb[idx].status;
-      saveDb(rDb);
-    }
+  // newest first
+  pDb.unshift(...created);
+  saveProposalsDb(pDb);
 
-    return created;
-  },
+  // Mettre la request en "in_review" quand on a envoyé des proposals
+  const rDb = getDb();
+  const idx = rDb.findIndex(r => r.id === requestId);
+  if (idx !== -1) {
+    rDb[idx].status = 'in_review';
+    saveDb(rDb);
+  }
 
+  return created;
+},
+  
   async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
     await delay(200);
     return getProposalsDb()
