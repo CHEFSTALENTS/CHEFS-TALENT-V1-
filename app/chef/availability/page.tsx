@@ -10,7 +10,7 @@ export default function ChefAvailabilityPage() {
   const today = new Date();
 
   useEffect(() => {
-    const user = auth.getCurrentUser();
+const user = storage.auth.getCurrentUser();
     if (user && user.profile?.unavailableDates) {
       setUnavailableDates(user.profile.unavailableDates);
     }
