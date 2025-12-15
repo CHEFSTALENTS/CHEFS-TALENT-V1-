@@ -157,30 +157,32 @@ export const api = {
     db.unshift(entity);
     saveDb(db);
 
-    // ✅ FAST MATCH AUTO (uniquement B2C + fast)
-    if (entity.mode === 'fast' && entity.userType === 'b2c') {
-      const chefs = getChefDb().filter(
-  c => c.role === 'chef' && c.status === 'active'
-);
-      if (matchedChefs.length > 0) {
-        // Proposals max 5
-        const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
+  // ✅ FAST MATCH AUTO (uniquement B2C + fast)
+if (entity.mode === 'fast' && entity.userType === 'b2c') {
+  const chefs = getChefDb().filter(
+    c => c.role === 'chef' && c.status === 'active'
+  );
 
-        // Remplace d'éventuelles proposals existantes sur cette request (sécurité)
-        const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
-        pDb.unshift(...proposalsToCreate);
-        saveProposalsDb(pDb);
+  const matchedChefs = matchChefsForFastRequest(entity, chefs);
 
-        // Met la request en review
-        const freshDb = getDb();
-        const idx = freshDb.findIndex(r => r.id === entity.id);
-        if (idx !== -1) {
-          freshDb[idx].status = 'in_review';
-          saveDb(freshDb);
-        }
-      }
+  if (matchedChefs.length > 0) {
+    // Proposals max 5
+    const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
+
+    // Remplace d'éventuelles proposals existantes sur cette request (sécurité)
+    const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
+    pDb.unshift(...proposalsToCreate);
+    saveProposalsDb(pDb);
+
+    // Met la request en review
+    const freshDb = getDb();
+    const idx = freshDb.findIndex(r => r.id === entity.id);
+    if (idx !== -1) {
+      freshDb[idx].status = 'in_review';
+      saveDb(freshDb);
     }
-
+  }
+}
     return entity;
   },
 
