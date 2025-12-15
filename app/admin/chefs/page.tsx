@@ -12,8 +12,9 @@ export default function AdminChefsPage() {
     setLoading(true);
     const list = await auth.getAllChefs();
     // on masque l’admin dans la liste, optionnel
-    setChefs(list.filter(u => u.role !== 'admin'));
-    setLoading(false);
+const ADMIN_EMAIL = 'thomas@chef-talents.com'; // mets le tien
+
+setChefs(list.filter(u => u.email !== ADMIN_EMAIL));    setLoading(false);
   };
 
   useEffect(() => {
