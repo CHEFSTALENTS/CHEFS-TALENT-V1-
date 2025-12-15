@@ -140,7 +140,10 @@ return getProposalsDb().filter(p =>
     saveDb(db);
     return entity;
   },
-
+  async getProposal(proposalId: string): Promise<ChefProposalEntity | undefined> {
+    await delay(150);
+    return getProposalsDb().find(p => p.id === proposalId);
+  },
   async getRequests(): Promise<RequestEntity[]> {
     await delay(400);
     return getDb();
