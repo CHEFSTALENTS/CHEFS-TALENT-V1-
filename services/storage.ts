@@ -430,7 +430,6 @@ export const api = {
 // =========================================================
 // ADMIN (MVP) - seed account
 // =========================================================
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 const ADMIN_PASSWORD = 'Cantine33?';
 
 function ensureAdminSeed() {
