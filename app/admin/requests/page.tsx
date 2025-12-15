@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/services/storage';
+import type { RequestStatus } from '@/types';
 
 export default function AdminRequestsPage() {
   const sp = useSearchParams();
@@ -28,10 +29,10 @@ export default function AdminRequestsPage() {
       .filter(r => (status ? r.status === status : true));
   }, [requests, type, status]);
 
-  const setStatus = async (id: string, next: string) => {
-    await api.updateStatus?.(id, next);
-    await refresh();
-  };
+  cconst setStatus = async (id: string, next: RequestStatus) => {
+  await api.updateStatus(id, next);
+  await refresh();
+};
 
   return (
     <div className="bg-white border rounded p-6">
