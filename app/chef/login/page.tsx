@@ -15,26 +15,23 @@ export default function ChefLoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    const res = await auth.loginChef(formData.email, formData.password);
-    setLoading(false);
+  const res = await auth.loginChef(formData.email, formData.password);
+  setLoading(false);
 
-    if (res.success && res.user) {
-  if (isAdminUser(res.user)) {
-    router.replace('/admin/chefs'); // ou /admin
-  } else {
-    router.replace('/chef/dashboard');
-  }
-} else {
-  setError(res.error || "Identifiants invalides");
-}
-    else {
-      setError(res.error || "Identifiants invalides");
+  if (res.success && res.user) {
+    if (isAdminUser(res.user)) {
+      router.replace('/admin/chefs');
+    } else {
+      router.replace('/chef/dashboard');
     }
-  };
+  } else {
+    setError(res.error || "Identifiants invalides");
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
