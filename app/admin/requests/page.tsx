@@ -5,7 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/services/storage';
 import type { RequestStatus } from '@/types';
+import { Suspense } from 'react';
+import RequestsClient from './RequestsClient';
 
+export default function AdminRequestsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Chargement…</div>}>
+      <RequestsClient />
+    </Suspense>
+  );
+}
 export default function AdminRequestsPage() {
   const sp = useSearchParams();
   const type = sp.get('type');     // b2b / b2c
