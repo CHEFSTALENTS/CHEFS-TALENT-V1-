@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
 import { auth } from '../../../services/storage';
 import { Loader2 } from 'lucide-react';
+import { auth, isAdminUser } from '../../../services/storage';
 
 export default function ChefLoginPage() {
   const router = useRouter();
@@ -21,9 +22,16 @@ export default function ChefLoginPage() {
     const res = await auth.loginChef(formData.email, formData.password);
     setLoading(false);
 
-    if (res.success) {
-      router.push('/chef/dashboard');
-    } else {
+    if (res.success && res.user) {
+  if (isAdminUser(res.user)) {
+    router.replace('/admin/chefs'); // ou /admin
+  } else {
+    router.replace('/chef/dashboard');
+  }
+} else {
+  setError(res.error || "Identifiants invalides");
+}
+    else {
       setError(res.error || "Identifiants invalides");
     }
   };
