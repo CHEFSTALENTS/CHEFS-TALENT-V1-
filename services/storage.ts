@@ -1,3 +1,15 @@
+import {
+  RequestEntity,
+  RequestForm,
+  RequestStatus,
+  ChefUser,
+  ChefProfile,
+  Mission,
+  MissionStatus,
+} from '../types';
+
+import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
+
 /**
  * ⚠️ ATTENTION
  * Ce fichier est la source de vérité du front.
@@ -7,25 +19,17 @@
  * Ne jamais ajouter de méthodes en dehors de api/auth.
  */
 
-export const ADMIN_EMAIL = 'thomas@chef-talents.com';
+/* =========================================================
+   ADMIN
+========================================================= */
 
-export function isAdminUser(
-  user: { email?: string } | null | undefined
-) {
+export const ADMIN_EMAIL = 'thomas@chef-talents.com';
+// ⚠️ MVP uniquement : idéalement à sortir du repo (env var) plus tard
+const ADMIN_PASSWORD = 'Cantine33?';
+
+export function isAdminUser(user: { email?: string } | null | undefined) {
   return !!user?.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
-import {
-  RequestEntity,
-  RequestForm,
-  RequestStatus,
-  ChefUser,
-  ChefProfile,
-  SubscriptionPlan,
-  Mission,
-  MissionStatus,
-} from '../types';
-
-import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
 
 /* =========================================================
    TYPES
@@ -52,6 +56,8 @@ const DB_KEY = 'chef_talents_requests_db';
 const CHEF_USERS_KEY = 'chef_talents_users_db';
 const MISSIONS_KEY = 'chef_talents_missions_db';
 const PROPOSALS_KEY = 'chef_talents_proposals_db';
+
+const SESSION_KEY = 'chef_session_user';
 
 /* =========================================================
    HELPERS
@@ -111,6 +117,74 @@ const saveProposalsDb = (data: ChefProposalEntity[]) => {
   }
 };
 
+function getChefById(id: string): ChefUser | undefined {
+  return getChefDb().find(c => c.id === id);
+}
+
+function isChefActive(chef: ChefUser | undefined | null): boolean {
+  return !!chef && chef.role === 'chef' && chef.status === 'active';
+}
+
+function setSessionUser(user: ChefUser) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  }
+}
+
+function getSessionUser(): ChefUser | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(SESSION_KEY);
+  return raw ? (JSON.parse(raw) as ChefUser) : null;
+}
+
+function clearSessionUser() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(SESSION_KEY);
+  }
+}
+
+/**
+ * Seed admin en localStorage (MVP)
+ * NOTE: on le met en role 'chef' car ton type ne permet pas 'admin'
+ * => L’admin est détecté via l’email (isAdminUser)
+ */
+function ensureAdminSeed() {
+  if (typeof window === 'undefined') return;
+
+  const db = getChefDb();
+  const exists = db.find(u => u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+
+  if (!exists) {
+    const adminUser: ChefUser = {
+      id: crypto.randomUUID(),
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+      firstName: 'Thomas',
+      lastName: 'Admin',
+      role: 'chef', // ✅ admin détecté par email
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      profileCompleted: true,
+      plan: 'free',
+      planStatus: 'coming_soon',
+      planUpdatedAt: new Date().toISOString(),
+      adminNotes: 'Admin seeded',
+      profile: {
+        images: [],
+        unavailableDates: [],
+        environments: [],
+        specialties: [],
+        coverageZones: [],
+        acceptedMissions: ['dinner'],
+        languages: [],
+      },
+    };
+
+    db.push(adminUser);
+    saveChefDb(db);
+  }
+}
+
 /* =========================================================
    API
 ========================================================= */
@@ -157,32 +231,30 @@ export const api = {
     db.unshift(entity);
     saveDb(db);
 
-  // ✅ FAST MATCH AUTO (uniquement B2C + fast)
-if (entity.mode === 'fast' && entity.userType === 'b2c') {
-  const chefs = getChefDb().filter(
-    c => c.role === 'chef' && c.status === 'active'
-  );
+    // ✅ FAST MATCH AUTO (uniquement B2C + fast)
+    // ✅ uniquement sur des chefs actifs (validés)
+    // ❌ B2B => veto humain (donc pas d’auto-match)
+    if (entity.mode === 'fast' && entity.userType === 'b2c') {
+      const activeChefs = getChefDb().filter(c => c.role === 'chef' && c.status === 'active');
+      const matchedChefs = matchChefsForFastRequest(entity, activeChefs);
 
-  const matchedChefs = matchChefsForFastRequest(entity, chefs);
+      if (matchedChefs.length > 0) {
+        const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
 
-  if (matchedChefs.length > 0) {
-    // Proposals max 5
-    const proposalsToCreate = buildFastMatchProposals(entity, matchedChefs);
+        const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
+        pDb.unshift(...proposalsToCreate);
+        saveProposalsDb(pDb);
 
-    // Remplace d'éventuelles proposals existantes sur cette request (sécurité)
-    const pDb = getProposalsDb().filter(p => p.requestId !== entity.id);
-    pDb.unshift(...proposalsToCreate);
-    saveProposalsDb(pDb);
-
-    // Met la request en review
-    const freshDb = getDb();
-    const idx = freshDb.findIndex(r => r.id === entity.id);
-    if (idx !== -1) {
-      freshDb[idx].status = 'in_review';
-      saveDb(freshDb);
+        // passe la request en review
+        const freshDb = getDb();
+        const idx = freshDb.findIndex(r => r.id === entity.id);
+        if (idx !== -1) {
+          freshDb[idx].status = 'in_review';
+          saveDb(freshDb);
+        }
+      }
     }
-  }
-}
+
     return entity;
   },
 
@@ -216,8 +288,12 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     }
   },
 
-   /* ---------- PROPOSALS ---------- */
+  /* ---------- PROPOSALS ---------- */
 
+  /**
+   * ✅ Admin crée des proposals manuellement
+   * 🔒 IMPORTANT: on refuse tout chef non-validé (status !== active)
+   */
   async createProposals(
     requestId: string,
     proposals: Array<{
@@ -229,15 +305,18 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
   ): Promise<ChefProposalEntity[]> {
     await delay(120);
 
+    // garde uniquement les chefs actifs (validés)
+    const allowed = proposals.filter(p => isChefActive(getChefById(p.chefId)));
+    if (allowed.length === 0) return [];
+
     const createdAt = new Date().toISOString();
 
-    const created: ChefProposalEntity[] = proposals.map(p => ({
+    const created: ChefProposalEntity[] = allowed.map(p => ({
       id: crypto.randomUUID(),
       requestId,
       chefId: p.chefId,
       priceTotal: p.priceTotal,
-      // si ton ChefProposalEntity n'a pas pricePerPerson, supprime la ligne suivante
-      // @ts-ignore
+      // @ts-ignore (si besoin selon ton type)
       pricePerPerson: p.pricePerPerson,
       message: p.message,
       status: 'sent',
@@ -248,7 +327,7 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     db.unshift(...created);
     saveProposalsDb(db);
 
-    // Mettre la request en review si elle existe
+    // met la request en review si new
     const rDb = getDb();
     const idx = rDb.findIndex(r => r.id === requestId);
     if (idx !== -1 && rDb[idx].status === 'new') {
@@ -268,30 +347,24 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     await delay(100);
     return getProposalsDb()
       .filter(p => p.requestId === requestId)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
-  // ✅ Pour l’écran “offers” du chef : uniquement les proposals encore “sent”
-  // et uniquement si la request n’est pas déjà assigned/closed
   async getChefProposals(chefId: string): Promise<ChefProposalEntity[]> {
     await delay(100);
-    const requests = getDb();
 
+    // 🔒 un chef non actif ne voit aucune offer
+    if (!isChefActive(getChefById(chefId))) return [];
+
+    const requests = getDb();
     return getProposalsDb()
       .filter(p => p.chefId === chefId && p.status === 'sent')
       .filter(p => {
         const req = requests.find(r => r.id === p.requestId);
         return !!req && req.status !== 'assigned' && req.status !== 'closed';
       })
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
-
 
   async getOfferDetail(proposalId: string): Promise<{
     proposal?: ChefProposalEntity;
@@ -306,7 +379,10 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     return { proposal, request };
   },
 
- 
+  /**
+   * 🔒 IMPORTANT: même si quelqu’un “force”, on ne crée pas de mission
+   * si le chef n’est pas validé (active).
+   */
   async acceptProposal(proposalId: string): Promise<void> {
     await delay(120);
 
@@ -314,28 +390,29 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     const target = proposals.find(p => p.id === proposalId);
     if (!target) return;
 
+    const chef = getChefById(target.chefId);
+    if (!isChefActive(chef)) {
+      throw new Error('CHEF_NOT_ACTIVE');
+    }
+
     const requests = getDb();
     const reqIdx = requests.findIndex(r => r.id === target.requestId);
     if (reqIdx === -1) return;
 
     const req = requests[reqIdx];
-
-    // Si déjà assignée/close -> on empêche
     if (req.status === 'assigned' || req.status === 'closed') return;
 
-    // 1) Proposals : accepte celle-ci, décline les autres de la même request
+    // accepte celle-ci, décline les autres
     for (const p of proposals) {
       if (p.requestId !== target.requestId) continue;
       p.status = p.id === proposalId ? 'accepted' : 'declined';
     }
 
-    // 2) Request : assigned
     req.status = 'assigned';
 
     saveProposalsDb(proposals);
     saveDb(requests);
 
-    // 3) Mission : créée pour le chef accepté
     await this.createMission({
       chefId: target.chefId,
       requestId: req.id,
@@ -351,36 +428,21 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     });
   },
 
-    // ✅ Alias utilisé par /chef/offers/[proposalId]
   async selectProposal(requestId: string, proposalId: string): Promise<void> {
     await delay(80);
 
     const proposals = getProposalsDb();
     const proposal = proposals.find(p => p.id === proposalId);
-    if (!proposal) {
-      throw new Error('PROPOSAL_NOT_FOUND');
-    }
+    if (!proposal) throw new Error('PROPOSAL_NOT_FOUND');
+    if (proposal.requestId !== requestId) throw new Error('PROPOSAL_REQUEST_MISMATCH');
 
-    if (proposal.requestId !== requestId) {
-      throw new Error('PROPOSAL_REQUEST_MISMATCH');
-    }
+    const req = getDb().find(r => r.id === requestId);
+    if (!req) throw new Error('REQUEST_NOT_FOUND');
+    if (req.status === 'assigned' || req.status === 'closed') throw new Error('REQUEST_ALREADY_ASSIGNED');
 
-    const requests = getDb();
-    const req = requests.find(r => r.id === requestId);
-
-    if (!req) {
-      throw new Error('REQUEST_NOT_FOUND');
-    }
-
-    if (req.status === 'assigned' || req.status === 'closed') {
-      throw new Error('REQUEST_ALREADY_ASSIGNED');
-    }
-
-    // On délègue à la logique principale
     await this.acceptProposal(proposalId);
   },
 
-  // ✅ Le chef refuse -> décline + n’apparaît plus dans sa liste (car on filtre sent)
   async declineProposal(proposalId: string): Promise<void> {
     await delay(100);
     const proposals = getProposalsDb();
@@ -395,6 +457,10 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
 
   async getChefMissions(chefId: string): Promise<Mission[]> {
     await delay(120);
+
+    // 🔒 un chef non actif ne voit aucune mission
+    if (!isChefActive(getChefById(chefId))) return [];
+
     const db = getMissionsDb();
     return db
       .filter(m => m.chefId === chefId)
@@ -418,6 +484,13 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
 
   async createMission(mission: Omit<Mission, 'id' | 'createdAt'>): Promise<Mission> {
     await delay(120);
+
+    // 🔒 sécurité finale : pas de mission si chef non actif
+    const chef = getChefById(mission.chefId);
+    if (!isChefActive(chef)) {
+      throw new Error('CHEF_NOT_ACTIVE');
+    }
+
     const db = getMissionsDb();
     const newMission: Mission = {
       ...mission,
@@ -429,47 +502,7 @@ if (entity.mode === 'fast' && entity.userType === 'b2c') {
     return newMission;
   },
 };
-// =========================================================
-// ADMIN (MVP) - seed account
-// =========================================================
-const ADMIN_PASSWORD = 'Cantine33?';
 
-function ensureAdminSeed() {
-  if (typeof window === 'undefined') return;
-
-  const db = getChefDb();
-  const exists = db.find(u => u.email === ADMIN_EMAIL);
-
-  if (!exists) {
-    const adminUser: ChefUser = {
-      id: crypto.randomUUID(),
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-      firstName: 'Thomas',
-      lastName: 'Admin',
-      role: 'chef', // ✅ IMPORTANT : ton type n'accepte que "chef"
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      profileCompleted: true,
-      plan: 'free',
-      planStatus: 'coming_soon',
-      planUpdatedAt: new Date().toISOString(),
-      adminNotes: 'Admin seeded',
-      profile: {
-        images: [],
-        unavailableDates: [],
-        environments: [],
-        specialties: [],
-        coverageZones: [],
-        acceptedMissions: ['dinner'],
-        languages: [],
-      },
-    };
-
-    db.push(adminUser);
-    saveChefDb(db);
-  }
-}
 /* =========================================================
    AUTH
 ========================================================= */
@@ -481,7 +514,6 @@ export const auth = {
     await delay(200);
 
     const db = getChefDb();
-
     if (db.find(u => u.email === data.email)) {
       return { success: false, error: 'Cet email est déjà utilisé.' };
     }
@@ -513,136 +545,107 @@ export const auth = {
 
     db.push(newUser);
     saveChefDb(db);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chef_session_user', JSON.stringify(newUser));
-    }
+    setSessionUser(newUser);
 
     return { success: true, user: newUser };
   },
 
- async loginChef(
-  email: string,
-  password: string
-): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
-  await delay(200);
-  ensureAdminSeed();
+  async loginChef(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+    await delay(200);
+    ensureAdminSeed();
 
-  const db = getChefDb();
-  const user = db.find(u => u.email === email && u.password === password);
+    const db = getChefDb();
+    const user = db.find(u => u.email === email && u.password === password);
 
-  if (!user) {
-  return { success: false, error: 'Identifiants invalides' };
-}
+    if (!user) return { success: false, error: 'Identifiants invalides' };
 
-if (user.role === 'chef' && user.status !== 'active') {
-  return {
-    success: false,
-    error: "Ton compte est en attente de validation par l'équipe Chef Talents."
-  };
-}
+    // 🔒 Si ce n’est pas l’admin, on bloque tant que pas active
+    if (!isAdminUser(user) && user.role === 'chef' && user.status !== 'active') {
+      return {
+        success: false,
+        error: "Ton compte est en attente de validation par l'équipe Chef Talents.",
+      };
+    }
 
-  return { success: true, user };
-},
- // ✅ ADMIN — list all chefs
-async getAllChefs(): Promise<ChefUser[]> {
-  await delay(120);
-  return getChefDb().filter(u => u.role === 'chef');
-},
+    setSessionUser(user);
+    return { success: true, user };
+  },
 
-// ✅ ADMIN — update chef status (pending_validation | approved | active | paused...)
-async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
-  await delay(120);
-  const db = getChefDb();
-  const idx = db.findIndex(u => u.id === userId);
-  if (idx !== -1) {
-    db[idx].status = status;
+  // ✅ ADMIN — list all chefs
+  async getAllChefs(): Promise<ChefUser[]> {
+    await delay(120);
+    return getChefDb().filter(u => u.role === 'chef');
+  },
+
+  // ✅ ADMIN — update chef status
+  async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
+    await delay(120);
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx !== -1) {
+      db[idx].status = status;
+      saveChefDb(db);
+
+      // sync session si c’est lui
+      const session = getSessionUser();
+      if (session?.id === userId) setSessionUser(db[idx]);
+    }
+  },
+
+  async updateChefProfile(
+    userId: string,
+    updates: Partial<ChefProfile>
+  ): Promise<ChefUser | null> {
+    await delay(200);
+
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return null;
+
+    const currentUser = db[idx];
+    const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+
+    const isComplete = !!(
+      updatedProfile.bio &&
+      updatedProfile.yearsExperience &&
+      updatedProfile.baseCity &&
+      updatedProfile.profileType
+    );
+
+    const updatedUser: ChefUser = {
+      ...currentUser,
+      profile: updatedProfile,
+      profileCompleted: isComplete,
+    };
+
+    db[idx] = updatedUser;
     saveChefDb(db);
 
-    // Sync session si c’est lui
-    if (typeof window !== 'undefined') {
-      const raw = localStorage.getItem('chef_session_user');
-      if (raw) {
-        const session = JSON.parse(raw) as ChefUser;
-        if (session?.id === userId) {
-          localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
-        }
-      }
-    }
-  }
-},
+    const session = getSessionUser();
+    if (session?.id === userId) setSessionUser(updatedUser);
 
-
- async updateChefProfile(
-  userId: string,
-  updates: Partial<ChefProfile>
-): Promise<ChefUser | null> {
-  await delay(200);
-
-  const db = getChefDb();
-  const idx = db.findIndex(u => u.id === userId);
-  if (idx === -1) return null;
-
-  const currentUser = db[idx];
-  const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
-
-  const isComplete = !!(
-    updatedProfile.bio &&
-    updatedProfile.yearsExperience &&
-    updatedProfile.baseCity &&
-    updatedProfile.profileType
-  );
-
-  const updatedUser: ChefUser = {
-    ...currentUser,
-    profile: updatedProfile,
-    profileCompleted: isComplete,
-  };
-
-  db[idx] = updatedUser;
-  saveChefDb(db);
-
-  // ✅ sync session si c’est le user connecté
-  if (typeof window !== 'undefined') {
-    const raw = localStorage.getItem('chef_session_user');
-    if (raw) {
-      const session = JSON.parse(raw) as ChefUser;
-      if (session?.id === userId) {
-        localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
-      }
-    }
-  }
-
-  return updatedUser;
-},
-  getCurrentUser(): ChefUser | null {
-    if (typeof window === 'undefined') return null;
-    const raw = localStorage.getItem('chef_session_user');
-    return raw ? (JSON.parse(raw) as ChefUser) : null;
+    return updatedUser;
   },
+
+  getCurrentUser(): ChefUser | null {
+    return getSessionUser();
+  },
+
   async deleteChefAccount(userId: string): Promise<void> {
     await delay(120);
 
-    // 1) Supprime le chef
-    const chefs = getChefDb().filter(u => u.id !== userId);
-    saveChefDb(chefs);
+    saveChefDb(getChefDb().filter(u => u.id !== userId));
+    saveProposalsDb(getProposalsDb().filter(p => p.chefId !== userId));
+    saveMissionsDb(getMissionsDb().filter(m => m.chefId !== userId));
 
-    // 2) Supprime ses proposals (optionnel mais propre)
-    const proposals = getProposalsDb().filter(p => p.chefId !== userId);
-    saveProposalsDb(proposals);
-
-    // 3) Supprime ses missions (optionnel mais propre)
-    const missions = getMissionsDb().filter(m => m.chefId !== userId);
-    saveMissionsDb(missions);
-
-    // 4) Clear session
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('chef_session_user');
-    }
+    const session = getSessionUser();
+    if (session?.id === userId) clearSessionUser();
   },
+
   logout() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('chef_session_user');
-    }
+    clearSessionUser();
   },
 };
