@@ -126,6 +126,17 @@ async getProposal(proposalId: string): Promise<ChefProposalEntity | undefined> {
       createdAt: new Date().toISOString(),
       status: 'new'
     };
+    async declineProposal(proposalId: string): Promise<void> {
+  await delay(200);
+
+  const pDb = getProposalsDb();
+  const idx = pDb.findIndex(p => p.id === proposalId);
+
+  if (idx !== -1) {
+    pDb[idx].status = 'declined';
+    saveProposalsDb(pDb);
+  }
+},
 
     db.unshift(entity);
     saveDb(db);
