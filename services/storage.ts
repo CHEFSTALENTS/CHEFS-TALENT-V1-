@@ -321,7 +321,46 @@ export const auth = {
 
     return { success: true, user };
   },
+  async updateChefProfile(userId: string, updates: Partial<ChefProfile>): Promise<ChefUser | null> {
+    await delay(400);
 
+    const db = getChefDb();
+    const idx = db.findIndex(u => u.id === userId);
+    if (idx === -1) return null;
+
+    const currentUser = db[idx];
+    const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+
+    // (optionnel) logique simple "profil complet"
+    const isComplete = !!(
+      updatedProfile.bio &&
+      updatedProfile.yearsExperience &&
+      updatedProfile.baseCity &&
+      updatedProfile.profileType
+    );
+
+    const updatedUser: ChefUser = {
+      ...currentUser,
+      profile: updatedProfile,
+      profileCompleted: isComplete,
+    };
+
+    db[idx] = updatedUser;
+    saveChefDb(db);
+
+    // Sync session si c’est lui
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('chef_session_user');
+      if (raw) {
+        const session = JSON.parse(raw) as ChefUser;
+        if (session?.id === userId) {
+          localStorage.setItem('chef_session_user', JSON.stringify(updatedUser));
+        }
+      }
+    }
+
+    return updatedUser;
+  },
   getCurrentUser(): ChefUser | null {
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem('chef_session_user');
