@@ -26,31 +26,23 @@ export default function AdminDashboardPage() {
   }, []);
 
   const counts = useMemo(() => {
-    const chefsApproved = chefs.filter(c => c.role === 'chef' && c.status === 'approved').length;
-const chefsActive = chefs.filter(c => c.role === 'chef' && c.status === 'active').length;
     const b2bNew = requests.filter(r => r.userType === 'b2b' && r.status === 'new').length;
     const b2cNew = requests.filter(r => r.userType !== 'b2b' && r.status === 'new').length;
     const newAll = requests.filter(r => r.status === 'new').length;
     const inReview = requests.filter(r => r.status === 'in_review').length;
 
-    // Chefs à valider : adapte si tes statuts sont "pending"/"submitted"/"approved"
-    const chefsToValidate = chefs.filter(c =>
-  c.role === 'chef' && (c.status === 'pending_validation' || c.status === 'approved')
-).length;
-return { b2bNew, b2cNew, newAll, inReview, chefsToValidate, chefsApproved, chefsActive };
+    // chefs
+    const chefsApproved = chefs.filter(c => c.role === 'chef' && c.status === 'approved').length;
+    const chefsActive = chefs.filter(c => c.role === 'chef' && c.status === 'active').length;
+
+    // "à valider" = pending_validation + approved (pas encore actif)
+    const chefsToValidate = chefs.filter(
+      c => c.role === 'chef' && (c.status === 'pending_validation' || c.status === 'approved')
+    ).length;
+
+    return { b2bNew, b2cNew, newAll, inReview, chefsToValidate, chefsApproved, chefsActive };
   }, [requests, chefs]);
-<KpiCard
-  title="Chefs approuvés"
-  value={counts.chefsApproved}
-  subtitle="Prêts à activer"
-  href="/admin/chefs"
-/>
-<KpiCard
-  title="Chefs actifs"
-  value={counts.chefsActive}
-  subtitle="Peuvent recevoir des missions"
-  href="/admin/chefs"
-/>
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -91,12 +83,26 @@ return { b2bNew, b2cNew, newAll, inReview, chefsToValidate, chefsApproved, chefs
             subtitle="À traiter / matcher"
             href="/admin/requests?status=in_review"
           />
+
           <KpiCard
             title="Chefs à valider"
             value={counts.chefsToValidate}
             subtitle="Inscriptions à approuver"
             href="/admin/chefs"
           />
+          <KpiCard
+            title="Chefs approuvés"
+            value={counts.chefsApproved}
+            subtitle="Prêts à activer"
+            href="/admin/chefs"
+          />
+          <KpiCard
+            title="Chefs actifs"
+            value={counts.chefsActive}
+            subtitle="Peuvent recevoir des missions"
+            href="/admin/chefs"
+          />
+
           <KpiCard
             title="Proposals / Missions"
             value="→"
