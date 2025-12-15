@@ -490,18 +490,51 @@ export const auth = {
 
     return { success: true, user };
   },
-  async getAllChefs(): Promise<ChefUser[]> {
-    await delay(120);
-    return getChefDb();
-  },  async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
-    await delay(120);
+ // ✅ ADMIN — list all chefs
+async getAllChefs(): Promise<ChefUser[]> {
+  await delay(120);
+  return getChefDb().filter(u => u.role === 'chef');
+},
 
-    const db = getChefDb();
-    const idx = db.findIndex(u => u.id === userId);
-    if (idx === -1) return;
-
+// ✅ ADMIN — update chef status (pending_validation | approved | active | paused...)
+async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
+  await delay(120);
+  const db = getChefDb();
+  const idx = db.findIndex(u => u.id === userId);
+  if (idx !== -1) {
     db[idx].status = status;
     saveChefDb(db);
+
+    // Sync session si c’est lui
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('chef_session_user');
+      if (raw) {
+        const session = JSON.parse(raw) as ChefUser;
+        if (session?.id === userId) {
+          localStorage.setItem('chef_session_user', JSON.stringify(db[idx]));
+        }
+      }
+    }
+  }
+},
+
+// ✅ ADMIN — delete chef account
+async deleteChefAccount(userId: string): Promise<void> {
+  await delay(120);
+  const db = getChefDb();
+  const newDb = db.filter(u => u.id !== userId);
+  saveChefDb(newDb);
+
+  if (typeof window !== 'undefined') {
+    const raw = localStorage.getItem('chef_session_user');
+    if (raw) {
+      const session = JSON.parse(raw) as ChefUser;
+      if (session?.id === userId) {
+        localStorage.removeItem('chef_session_user');
+      }
+    }
+  }
+},
 
     // sync session si c’est le user connecté
     if (typeof window !== 'undefined') {
