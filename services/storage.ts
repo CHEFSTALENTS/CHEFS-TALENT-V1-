@@ -25,6 +25,7 @@ export interface ChefProposalEntity {
   message?: string;
   status: ProposalStatus;
   createdAt: string;
+  pricePerPerson?: number;
 }
 
 /* =========================================================
