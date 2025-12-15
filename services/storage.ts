@@ -627,6 +627,70 @@ computeChefScore(user: ChefUser): { score: number; badges: string[] } {
     await delay(120);
     return getChefDb().filter(u => u.role === 'chef');
   },
+  // ✅ SCORING (MVP) — simple, lisible, scalable
+computeChefScore(chef: ChefUser): {
+  score: number;
+  badges: string[];
+  breakdown: Array<{ label: string; points: number }>;
+} {
+  let score = 0;
+  const badges: string[] = [];
+  const breakdown: Array<{ label: string; points: number }> = [];
+
+  const add = (label: string, points: number, badge?: string) => {
+    if (!points) return;
+    score += points;
+    breakdown.push({ label, points });
+    if (badge) badges.push(badge);
+  };
+
+  const profile = (chef as any).profile ?? {};
+
+  // 1) Statuts & sécurité (ceux qui reçoivent des missions = active, mais le score peut s’afficher pour tous)
+  if (chef.status === 'active') add('Chef actif', 10, '✅ Actif');
+  if (chef.status === 'approved') add('Chef approuvé', 5, '🟦 Approuvé');
+  if (chef.status === 'pending_validation') add('En attente de validation', 0, '🟨 À valider');
+
+  // 2) Profil complété
+  if (chef.profileCompleted) add('Profil complété', 20, '🧾 Profil complet');
+
+  // 3) Signaux simples de qualité/fit (basés sur ce que tu as déjà dans profile)
+  const imagesCount = Array.isArray(profile.images) ? profile.images.length : 0;
+  if (imagesCount >= 3) add('Photos (≥ 3)', 10);
+
+  const zonesCount = Array.isArray(profile.coverageZones) ? profile.coverageZones.length : 0;
+  if (zonesCount >= 1) add('Zone de couverture renseignée', 10);
+
+  const langsCount = Array.isArray(profile.languages) ? profile.languages.length : 0;
+  if (langsCount >= 1) add('Langues renseignées', 5);
+
+  const specsCount = Array.isArray(profile.specialties) ? profile.specialties.length : 0;
+  if (specsCount >= 2) add('Spécialités (≥ 2)', 5);
+
+  const envCount = Array.isArray(profile.environments) ? profile.environments.length : 0;
+  if (envCount >= 1) add('Environnements', 3);
+
+  // yearsExperience / baseCity / bio / profileType (si présents dans ton type)
+  const years = Number(profile.yearsExperience ?? 0);
+  if (years >= 5) add('Expérience (≥ 5 ans)', 10);
+  else if (years >= 2) add('Expérience (≥ 2 ans)', 5);
+
+  if (profile.baseCity) add('Ville de base', 3);
+  if (profile.bio) add('Bio', 3);
+  if (profile.profileType) add('Type de profil', 3);
+
+  // 4) Badge “interviewé” (tu peux stocker ça dans profile.interviewed = true)
+  // -> plus tard, tu coches ce champ depuis l’admin
+  if (profile.interviewed === true) add('Interview validée', 15, '🎥 Interview');
+
+  // 5) Bonus “premium” futur (désactivé pour l’instant)
+  // if (chef.plan === 'pro' && chef.planStatus === 'active') add('Abonnement Pro', 10, '💎 Pro');
+
+  // Garde-fou : limite le score
+  if (score > 100) score = 100;
+
+  return { score, badges, breakdown };
+},
 
   // ✅ ADMIN — update chef status
   async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
