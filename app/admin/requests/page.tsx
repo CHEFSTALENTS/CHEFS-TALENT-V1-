@@ -1,70 +1,108 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/services/storage';
-import type { RequestEntity } from '@/types';
 
 export default function AdminRequestsPage() {
-  const router = useRouter();
-  const [requests, setRequests] = useState<RequestEntity[]>([]);
+  const sp = useSearchParams();
+  const type = sp.get('type');     // b2b / b2c
+  const status = sp.get('status'); // new / in_review / assigned / closed
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [requests, setRequests] = useState<any[]>([]);
 
-  useEffect(() => {
-    api.getRequests()
-      .then(data => {
-        setRequests(data);
-        setLoading(false);
-      })
-      .catch((e) => {
-        console.error(e);
-        setError('Erreur chargement requests');
-        setLoading(false);
-      });
-  }, []);
+  const refresh = async () => {
+    setLoading(true);
+    const list = (await api.getRequests?.()) ?? [];
+    setRequests(list);
+    setLoading(false);
+  };
 
-  if (loading) return <p>Chargement des requests…</p>;
-  if (error) return <p>{error}</p>;
-  if (requests.length === 0) return <p>Aucune request pour le moment.</p>;
+  useEffect(() => { refresh(); }, []);
+
+  const filtered = useMemo(() => {
+    return requests
+      .filter(r => (type === 'b2b' ? r.userType === 'b2b' : type === 'b2c' ? r.userType !== 'b2b' : true))
+      .filter(r => (status ? r.status === status : true));
+  }, [requests, type, status]);
+
+  const setStatus = async (id: string, next: string) => {
+    await api.updateStatus?.(id, next);
+    await refresh();
+  };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Requests</h1>
+    <div className="bg-white border rounded p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-xl font-semibold">Demandes entrantes</h1>
+          <p className="text-sm text-stone-500">B2B conciergeries + B2C clients privés</p>
+        </div>
+        <button onClick={refresh} className="px-3 py-2 rounded border text-sm">Rafraîchir</button>
+      </div>
 
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="border-b">
-            <th className="text-left py-2">Date</th>
-            <th className="text-left py-2">Lieu</th>
-            <th className="text-left py-2">Type</th>
-            <th className="text-left py-2">Guests</th>
-            <th className="text-left py-2">Statut</th>
-          </tr>
-        </thead>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Filter href="/admin/requests" label="Toutes" />
+        <Filter href="/admin/requests?type=b2b" label="B2B" />
+        <Filter href="/admin/requests?type=b2c" label="B2C" />
+        <span className="mx-2 text-stone-300">|</span>
+        <Filter href="/admin/requests?status=new" label="New" />
+        <Filter href="/admin/requests?status=in_review" label="In review" />
+        <Filter href="/admin/requests?status=assigned" label="Assigned" />
+        <Filter href="/admin/requests?status=closed" label="Closed" />
+      </div>
 
-        <tbody>
-          {requests.map((req) => (
-            <tr
-              key={req.id}
-              className="border-b hover:bg-gray-50 cursor-pointer"
-              onClick={() => router.push(`/admin/requests/${req.id}`)}
-            >
-              <td className="py-2">{new Date(req.createdAt).toLocaleDateString()}</td>
-              <td className="py-2">{req.location}</td>
-              <td className="py-2">{req.missionType}</td>
-              <td className="py-2">{req.guestCount}</td>
-              <td className="py-2">
-                <span className="px-2 py-1 text-sm rounded bg-gray-100">{req.status}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <p className="text-xs text-gray-400 mt-4">
-        Tip: clique sur une ligne pour ouvrir le détail.
-      </p>
+      {loading ? (
+        <div className="text-sm text-stone-500">Chargement…</div>
+      ) : (
+        <div className="overflow-auto rounded border">
+          <table className="min-w-full text-sm">
+            <thead className="bg-stone-50">
+              <tr>
+                <th className="text-left p-3">Type</th>
+                <th className="text-left p-3">Client</th>
+                <th className="text-left p-3">Lieu</th>
+                <th className="text-left p-3">Dates</th>
+                <th className="text-left p-3">Statut</th>
+                <th className="text-left p-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(r => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-3">{r.userType === 'b2b' ? 'B2B' : 'B2C'}</td>
+                  <td className="p-3">{r.contact?.name || '—'}<div className="text-xs text-stone-400">{r.contact?.email || ''}</div></td>
+                  <td className="p-3">{r.location || '—'}</td>
+                  <td className="p-3">
+                    {r.dates?.start || '—'} → {r.dates?.end || '—'}
+                  </td>
+                  <td className="p-3">{r.status}</td>
+                  <td className="p-3 flex flex-wrap gap-2">
+                    <button onClick={() => setStatus(r.id, 'in_review')} className="px-2 py-1 rounded border">Review</button>
+                    <button onClick={() => setStatus(r.id, 'assigned')} className="px-2 py-1 rounded border">Assign</button>
+                    <button onClick={() => setStatus(r.id, 'closed')} className="px-2 py-1 rounded border">Close</button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td className="p-3" colSpan={6}>Aucune demande.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Filter({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="px-3 py-1.5 rounded border text-sm bg-white hover:bg-stone-50">
+      {label}
+    </Link>
   );
 }
