@@ -241,7 +241,12 @@ export const api = {
   return created;
 },
 
-  async getProposal(id: string): Promise<ChefProposalEntity | undefined> {async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
+ async getProposal(id: string): Promise<ChefProposalEntity | undefined> {
+  await delay(80);
+  return getProposalsDb().find(p => p.id === id);
+},
+
+async listProposalsByRequest(requestId: string): Promise<ChefProposalEntity[]> {
   await delay(100);
   return getProposalsDb()
     .filter(p => p.requestId === requestId)
