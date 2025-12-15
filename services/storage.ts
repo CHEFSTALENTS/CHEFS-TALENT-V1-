@@ -175,14 +175,16 @@ function ensureAdminSeed() {
    API
 ========================================================= */
 /* ---------- MISSIONS (ADMIN) ---------- */
+  /* ---------- MISSIONS (ADMIN) ---------- */
 
-async getAllMissions(): Promise<Mission[]> {
-  await delay(120);
-  return getMissionsDb().sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-},
+  async getAllMissions(): Promise<Mission[]> {
+    await delay(120);
+    return getMissionsDb().sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() -
+        new Date(a.createdAt).getTime()
+    );
+  },
 export const api = {
   async createRequest(form: RequestForm): Promise<RequestEntity> {
     await delay(200);
