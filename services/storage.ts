@@ -263,7 +263,27 @@ export const api = {
       saveDb(db);
     }
   },
+  // ---------- PROPOSALS ----------
 
+  async getProposal(
+    proposalId: string
+  ): Promise<ChefProposalEntity | undefined> {
+    await delay(120);
+    return getProposalsDb().find(p => p.id === proposalId);
+  },
+
+  async getProposalsByChef(
+    chefId: string
+  ): Promise<ChefProposalEntity[]> {
+    await delay(120);
+    return getProposalsDb()
+      .filter(p => p.chefId === chefId)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() -
+          new Date(a.createdAt).getTime()
+      );
+  },
   // ---------- MISSIONS ----------
 
   async getChefMissions(chefId: string): Promise<Mission[]> {
