@@ -537,3 +537,69 @@ function matchChefsForFastRequest(
     return true;
   });
 }
+async function autoProcessFastRequest(request: RequestEntity) {
+  const chefs = getChefDb();
+
+  const matchedChefs = matchChefsForFastRequest(request, chefs);
+
+  if (matchedChefs.length === 0) {
+    console.warn('No chefs matched – escalate to concierge');
+    return;
+  }
+
+  // On limite à 5 chefs max (important)
+  const selectedChefs = matchedChefs.slice(0, 5);
+
+  const proposals: ChefProposalEntity[] = [];
+  const notifications: any[] = [];
+
+  const createdAt = new Date().toISOString();
+
+  for (const chef of selectedChefs) {
+    const proposalId = crypto.randomUUID();
+
+    proposals.push({
+      id: proposalId,
+      requestId: request.id,
+      chefId: chef.id,
+      status: 'sent',
+      createdAt
+    });
+
+    notifications.push({
+      id: crypto.randomUUID(),
+      chefId: chef.id,
+      type: 'mission_offer',
+      requestId: request.id,
+      proposalId,
+      title: 'Nouvelle mission disponible',
+      message: `Prestation à ${request.location} – ${request.guestCount} convives`,
+      status: 'unread',
+      createdAt
+    });
+  }
+
+  // Save proposals
+  const pDb = getProposalsDb();
+  pDb.unshift(...proposals);
+  saveProposalsDb(pDb);
+
+  // Save notifications
+  const nDb = safeParse<any[]>(
+    localStorage.getItem('chef_talents_notifications_db'),
+    []
+  );
+  nDb.unshift(...notifications);
+  localStorage.setItem(
+    'chef_talents_notifications_db',
+    JSON.stringify(nDb)
+  );
+
+  // Update request status
+  const rDb = getDb();
+  const idx = rDb.findIndex(r => r.id === request.id);
+  if (idx !== -1) {
+    rDb[idx].status = 'in_review';
+    saveDb(rDb);
+  }
+}
