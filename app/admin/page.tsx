@@ -39,7 +39,7 @@ setMissions(m ?? []);
     refresh();
   }, []);
 
-  cconst revenue = useMemo(() => {
+  const revenue = useMemo(() => {
   const amountOf = (m: any) =>
     Number(m?.priceTotal ?? m?.totalPrice ?? m?.amount ?? m?.total ?? 0) || 0;
 
