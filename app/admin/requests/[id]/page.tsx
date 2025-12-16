@@ -165,12 +165,7 @@ export default function AdminRequestDetailPage() {
         </div>
       </div>
 
-      {/* Mini CA */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Kpi title="CA jour" value={money(revenue.daySum)} hint="missions créées aujourd’hui" />
-        <Kpi title="CA semaine" value={money(revenue.weekSum)} hint="depuis lundi" />
-        <Kpi title="CA mois" value={money(revenue.monthSum)} hint="depuis le 1er" />
-      </div>
+      
 
       {/* Content */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
