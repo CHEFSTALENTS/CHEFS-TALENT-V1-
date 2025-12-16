@@ -203,42 +203,70 @@ const quickLists = useMemo(() => {
   };
 }, [requests, chefs]);
   
-          {/* ✅ KPI GRID (c’était ça qui manquait chez toi) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <StatCard
-              title="Demandes B2B"
-              value={counts.b2bNew}
-              subtitle="Traitement manuel obligatoire"
-              href="/admin/requests?type=b2b&status=new"
-              tone="amber"
-              icon={<IconBuilding />}
-            />
-            <StatCard
-              title="Demandes B2C"
-              value={counts.b2cNew}
-              subtitle="Nouveaux clients privés"
-              href="/admin/requests?type=b2c&status=new"
-              tone="blue"
-              icon={<IconUser />}
-            />
-            <StatCard
-              title="En review"
-              value={counts.inReview}
-              subtitle="À matcher / traiter"
-              href="/admin/requests?status=in_review"
-              tone="violet"
-              icon={<IconSpark />}
-            />
-            <StatCard
-              title="Chefs à valider"
-              value={counts.chefsToValidate}
-              subtitle="Pending + approuvés"
-              href="/admin/chefs"
-              tone="stone"
-              icon={<IconShield />}
-            />
-          </div>
+        <>
+  {/* KPI / CA */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="border rounded-xl bg-white p-4">
+      <div className="text-xs text-stone-500">CA jour</div>
+      <div className="text-2xl font-semibold mt-1">{money(revenue.day)}</div>
+      <div className="text-xs text-stone-500 mt-2">depuis minuit</div>
+    </div>
 
+    <div className="border rounded-xl bg-white p-4">
+      <div className="text-xs text-stone-500">CA semaine</div>
+      <div className="text-2xl font-semibold mt-1">{money(revenue.week)}</div>
+      <div className="text-xs text-stone-500 mt-2">depuis lundi</div>
+    </div>
+
+    <div className="border rounded-xl bg-white p-4">
+      <div className="text-xs text-stone-500">CA mois</div>
+      <div className="text-2xl font-semibold mt-1">{money(revenue.month)}</div>
+      <div className="text-xs text-stone-500 mt-2">depuis le 1er</div>
+    </div>
+  </div>
+
+  {/* Stats cards */}
+  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <StatCard
+      title="Demandes B2B"
+      value={counts.b2bNew}
+      subtitle="Traitement manuel obligatoire"
+      href="/admin/requests?type=b2b&status=new"
+      tone="amber"
+      icon={<IconBriefcase />}
+    />
+    <StatCard
+      title="Demandes B2C"
+      value={counts.b2cNew}
+      subtitle="Nouveaux clients privés"
+      href="/admin/requests?type=b2c&status=new"
+      tone="blue"
+      icon={<IconUser />}
+    />
+    <StatCard
+      title="En review"
+      value={counts.inReview}
+      subtitle="À matcher / traiter"
+      href="/admin/requests?status=in_review"
+      tone="violet"
+      icon={<IconSpark />}
+    />
+    <StatCard
+      title="Chefs à valider"
+      value={counts.chefsToValidate}
+      subtitle="Pending + approuvés"
+      href="/admin/chefs"
+      tone="stone"
+      icon={<IconShield />}
+    />
+  </div>
+
+  {/* 2 colonnes */}
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+    {/* À traiter maintenant */}
+    ...
+  </div>
+</>
           {/* 2 colonnes */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
             {/* À traiter maintenant */}
