@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { api, auth } from '@/services/storage';
 import type { ChefUser, RequestEntity } from '@/types';
+import type { Mission } from '@/types';
 
 type QuickItem = {
   id: string;
