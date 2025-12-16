@@ -19,7 +19,7 @@ export default function AdminMissionsPage() {
   const refresh = async () => {
     setLoading(true);
     // TODO: adapte la méthode
-    const list = await (api.getMissions?.() ?? Promise.resolve([]));
+const list = await api.getAllMissions();
     setItems(list ?? []);
     setLoading(false);
   };
