@@ -1,61 +1,65 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { auth, isAdminUser } from '@/services/storage';
+import { usePathname } from 'next/navigation';
 
-const NavItem = ({ href, label }: { href: string; label: string }) => {
-  const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(href + '/');
-  return (
-    <Link
-      href={href}
-      className={`block px-3 py-2 rounded text-sm border ${
-        active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50'
-      }`}
-    >
-      {label}
-    </Link>
-  );
+type NavItem = {
+  label: string;
+  href: string;
+  badge?: string | number;
 };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+export function AdminSidebar({ badges }: { badges?: Record<string, string | number> }) {
+  const pathname = usePathname();
 
-  useEffect(() => {
-    const u = auth.getCurrentUser?.() || null;
-    if (!isAdminUser?.(u)) router.replace('/chef/login');
-  }, [router]);
+  const nav: NavItem[] = [
+    { label: 'Dashboard', href: '/admin' },
+    { label: 'Demandes', href: '/admin/requests', badge: badges?.requestsNew },
+    { label: 'Chefs', href: '/admin/chefs', badge: badges?.chefsPending },
+    { label: 'Proposals', href: '/admin/proposals' },
+    { label: 'Missions', href: '/admin/missions' },
+  ];
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="max-w-7xl mx-auto p-6 grid grid-cols-12 gap-6">
-        <aside className="col-span-12 md:col-span-3">
-          <div className="bg-white border rounded p-4 space-y-3">
-            <div className="text-sm font-semibold">Chef Talents — Admin</div>
-            <div className="space-y-2">
-              <NavItem href="/admin" label="Dashboard" />
-              <NavItem href="/admin/requests" label="Demandes (B2C/B2B)" />
-              <NavItem href="/admin/chefs" label="Chefs" />
-              <NavItem href="/admin/proposals" label="Proposals" />
-              <NavItem href="/admin/missions" label="Missions" />
-            </div>
+    <aside className="w-[240px] border-r bg-white p-3 space-y-2">
+      <div className="px-2 py-2 font-semibold">Chef Talents — Admin</div>
 
-            <button
-              onClick={() => {
-                auth.logout?.();
-                router.replace('/chef/login');
-              }}
-              className="w-full mt-3 px-3 py-2 rounded border text-sm bg-white hover:bg-stone-50"
+      <nav className="space-y-1">
+        {nav.map(item => {
+          const active =
+            pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={[
+                'flex items-center justify-between px-3 py-2 rounded-lg text-sm border',
+                active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50',
+              ].join(' ')}
             >
-              Se déconnecter
-            </button>
-          </div>
-        </aside>
+              <span>{item.label}</span>
 
-        <main className="col-span-12 md:col-span-9">{children}</main>
+              {item.badge !== undefined && item.badge !== 0 && (
+                <span
+                  className={[
+                    'text-[11px] px-2 py-0.5 rounded-full',
+                    active ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-700',
+                  ].join(' ')}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="pt-3">
+        <button className="w-full px-3 py-2 rounded-lg border text-sm hover:bg-stone-50">
+          Se déconnecter
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }
