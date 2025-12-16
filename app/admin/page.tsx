@@ -357,7 +357,6 @@ const quickLists = useMemo(() => {
 /* =========================
    UI Components
 ========================= */
-
 function Panel({
   title,
   subtitle,
@@ -366,8 +365,8 @@ function Panel({
 }: {
   title: string;
   subtitle?: string;
-  right?: ReactNode;
-  children: ReactNode;
+  right?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <div className="border rounded-xl bg-white">
@@ -395,7 +394,7 @@ function StatCard({
   value: number | string;
   subtitle: string;
   href: string;
-  icon?: ReactNode;
+  icon?: React.ReactNode;
   tone?: 'stone' | 'blue' | 'violet' | 'amber' | 'green';
 }) {
   const toneCls =
@@ -470,7 +469,9 @@ function MiniList({
               className="block rounded-lg border hover:bg-stone-50 transition p-2"
             >
               <div className="text-sm font-medium truncate">{it.title}</div>
-              {it.subtitle && <div className="text-xs text-stone-500 truncate mt-0.5">{it.subtitle}</div>}
+              {it.subtitle && (
+                <div className="text-xs text-stone-500 truncate mt-0.5">{it.subtitle}</div>
+              )}
               {it.meta && <div className="text-[11px] text-stone-400 mt-1">{it.meta}</div>}
             </Link>
           ))
@@ -495,7 +496,7 @@ function BigLink({
   href: string;
   title: string;
   desc: string;
-  icon?: ReactNode;
+  icon?: React.ReactNode;
 }) {
   return (
     <Link href={href} className="border rounded-xl bg-white hover:bg-stone-50 transition p-4">
@@ -520,8 +521,8 @@ function Row({ label, value }: { label: string; value: string }) {
       <div className="font-medium text-stone-900">{value}</div>
     </div>
   );
-}
-
+      }
+      
 /* =========================
    Icons (inline SVG)
 ========================= */
