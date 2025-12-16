@@ -366,7 +366,6 @@ const quickLists = useMemo(() => {
                   )}
                 </div>
               </Panel>
-
               <Panel title="État système" subtitle="Sécurité & cohérence">
                 <div className="space-y-2 text-sm">
                   <Row label="Source" value="LocalStorage (MVP)" />
@@ -376,12 +375,11 @@ const quickLists = useMemo(() => {
               </Panel>
             </div>
           </div>
-        
+        </>
       )}
     </div>
   );
-}
-
+      }
 /* =========================
    UI Components
 ========================= */
