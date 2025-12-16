@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 
@@ -11,15 +12,17 @@ type FilterKey = 'all' | 'pending' | 'approved' | 'active';
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
 
   const refresh = async () => {
     setLoading(true);
     const list = await auth.getAllChefs();
-    setChefs(
-      list.filter(c => (c.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase())
+    const filtered = (list ?? []).filter(
+      u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
     );
+    setChefs(filtered);
     setLoading(false);
   };
 
@@ -29,33 +32,37 @@ export default function AdminChefsPage() {
 
   const approve = async (id: string) => {
     await auth.updateChefStatus(id, 'approved' as any);
-    refresh();
+    await refresh();
   };
 
   const activate = async (id: string) => {
     await auth.updateChefStatus(id, 'active' as any);
-    refresh();
+    await refresh();
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Supprimer définitivement ce chef ?')) return;
+    if (!confirm('Supprimer ce compte chef ?')) return;
     await auth.deleteChefAccount(id);
-    refresh();
+    await refresh();
   };
 
   const counts = useMemo(() => {
-    return {
-      all: chefs.length,
-      pending: chefs.filter(c => c.status === 'pending_validation').length,
-      approved: chefs.filter(c => c.status === 'approved').length,
-      active: chefs.filter(c => c.status === 'active').length,
-    };
+    const pending = chefs.filter(c => c.status === 'pending_validation').length;
+    const approved = chefs.filter(c => c.status === 'approved').length;
+    const active = chefs.filter(c => c.status === 'active').length;
+    return { pending, approved, active, all: chefs.length };
   }, [chefs]);
 
   const view = useMemo(() => {
-    const needle = q.toLowerCase().trim();
+    const priority: Record<string, number> = {
+      pending_validation: 0,
+      approved: 1,
+      active: 2,
+    };
 
-    return chefs
+    const needle = q.trim().toLowerCase();
+
+    return [...chefs]
       .filter(c => {
         if (filter === 'pending') return c.status === 'pending_validation';
         if (filter === 'approved') return c.status === 'approved';
@@ -64,182 +71,249 @@ export default function AdminChefsPage() {
       })
       .filter(c => {
         if (!needle) return true;
-        return (
-          `${c.firstName} ${c.lastName}`.toLowerCase().includes(needle) ||
-          (c.email || '').toLowerCase().includes(needle)
-        );
+        const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        return fullName.includes(needle) || email.includes(needle);
       })
       .sort((a, b) => {
+        const pa = priority[String(a.status)] ?? 99;
+        const pb = priority[String(b.status)] ?? 99;
+        if (pa !== pb) return pa - pb;
+
         const sa = auth.computeChefScore(a).score;
         const sb = auth.computeChefScore(b).score;
-        return sb - sa;
+        if (sa !== sb) return sb - sa;
+
+        const da = new Date(a.createdAt || '').getTime() || 0;
+        const db = new Date(b.createdAt || '').getTime() || 0;
+        return db - da;
       });
   }, [chefs, q, filter]);
 
   return (
-    <div className="p-6 space-y-6">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-4">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Chefs</h1>
+          <h1 className="text-xl font-semibold">Admin — Chefs</h1>
           <p className="text-sm text-stone-500">
-            Validation & activation des profils chefs
+            Pipeline de validation : À valider → Approuvé → Actif.
           </p>
         </div>
-        <button
-          onClick={refresh}
-          className="px-3 py-2 rounded border text-sm hover:bg-stone-50"
-        >
-          Rafraîchir
-        </button>
-      </div>
 
-      {/* FILTERS */}
-      <div className="flex flex-wrap gap-2">
-        <Filter label={`Tous (${counts.all})`} active={filter === 'all'} onClick={() => setFilter('all')} />
-        <Filter label={`À valider (${counts.pending})`} active={filter === 'pending'} onClick={() => setFilter('pending')} />
-        <Filter label={`Approuvés (${counts.approved})`} active={filter === 'approved'} onClick={() => setFilter('approved')} />
-        <Filter label={`Actifs (${counts.active})`} active={filter === 'active'} onClick={() => setFilter('active')} />
-      </div>
-
-      {/* SEARCH */}
-      <input
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        placeholder="Rechercher un chef (nom ou email)…"
-        className="w-full max-w-md px-3 py-2 rounded border text-sm"
-      />
-
-      {loading ? (
-        <div className="text-sm text-stone-500">Chargement…</div>
-      ) : view.length === 0 ? (
-        <div className="text-sm text-stone-500">Aucun chef trouvé.</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {view.map(c => {
-            const sc = auth.computeChefScore(c);
-
-            return (
-              <div
-                key={c.id}
-                className="border rounded-xl bg-white p-4 hover:shadow-sm transition"
-              >
-                {/* TOP */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-semibold">
-                      {c.firstName} {c.lastName}
-                    </div>
-                    <div className="text-xs text-stone-500">{c.email}</div>
-                  </div>
-                  <StatusBadge status={String(c.status)} />
-                </div>
-
-                {/* SCORE */}
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-stone-500">Matching score</div>
-                    <div className="text-3xl font-semibold">
-                      {sc.score}
-                      <span className="text-sm text-stone-400"> /100</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {sc.badges.map(b => (
-                      <span
-                        key={b}
-                        className="text-[11px] px-2 py-1 rounded-full bg-stone-100 text-stone-700"
-                      >
-                        {b}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ACTIONS */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {c.status === 'pending_validation' && (
-                    <Action onClick={() => approve(c.id)}>Approuver</Action>
-                  )}
-                  {c.status === 'approved' && (
-                    <Action onClick={() => activate(c.id)}>Activer</Action>
-                  )}
-                  <Action danger onClick={() => remove(c.id)}>
-                    Supprimer
-                  </Action>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={refresh}
+            className="px-3 py-2 rounded border text-sm bg-white hover:bg-stone-50"
+          >
+            Rafraîchir
+          </button>
+          <Link
+            href="/admin"
+            className="px-3 py-2 rounded border text-sm bg-white hover:bg-stone-50"
+          >
+            ← Dashboard
+          </Link>
         </div>
-      )}
+      </div>
+
+      {/* KPI / Pipeline */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <PipelineCard
+          title="Tous"
+          value={counts.all}
+          active={filter === 'all'}
+          onClick={() => setFilter('all')}
+          tone="stone"
+        />
+        <PipelineCard
+          title="À valider"
+          value={counts.pending}
+          active={filter === 'pending'}
+          onClick={() => setFilter('pending')}
+          tone="yellow"
+        />
+        <PipelineCard
+          title="Approuvés"
+          value={counts.approved}
+          active={filter === 'approved'}
+          onClick={() => setFilter('approved')}
+          tone="blue"
+        />
+        <PipelineCard
+          title="Actifs"
+          value={counts.active}
+          active={filter === 'active'}
+          onClick={() => setFilter('active')}
+          tone="green"
+        />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3">
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Rechercher (nom ou email)…"
+          className="w-full md:max-w-md px-3 py-2 rounded border text-sm bg-white"
+        />
+
+        <div className="text-xs text-stone-500">
+          Tri : statut → score → date d’inscription
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="bg-white border rounded overflow-hidden">
+        <div className="px-4 py-3 border-b bg-stone-50 flex items-center justify-between">
+          <div className="text-sm font-medium">Chefs</div>
+          <div className="text-xs text-stone-500">{view.length} résultat(s)</div>
+        </div>
+
+        {loading ? (
+          <div className="p-4 text-sm text-stone-500">Chargement…</div>
+        ) : view.length === 0 ? (
+          <div className="p-4 text-sm text-stone-500">Aucun résultat.</div>
+        ) : (
+          <div className="divide-y">
+            {view.map(c => {
+              const sc = auth.computeChefScore(c);
+
+              return (
+                <div key={c.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
+                  {/* Identity */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium truncate">
+                        {c.firstName} {c.lastName}
+                      </div>
+                      <StatusBadge status={String(c.status)} />
+                      <ScorePill score={sc.score} />
+                    </div>
+
+                    <div className="text-sm text-stone-500 truncate">{c.email}</div>
+
+                    {sc.badges?.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {sc.badges.map(b => (
+                          <span
+                            key={b}
+                            className="inline-flex items-center px-2 py-1 rounded text-xs bg-stone-100 text-stone-700"
+                          >
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    {c.status === 'pending_validation' && (
+                      <button
+                        onClick={() => approve(c.id)}
+                        className="px-3 py-2 rounded border text-sm bg-yellow-50 hover:bg-yellow-100"
+                      >
+                        Approuver →
+                      </button>
+                    )}
+
+                    {c.status === 'approved' && (
+                      <button
+                        onClick={() => activate(c.id)}
+                        className="px-3 py-2 rounded border text-sm bg-blue-50 hover:bg-blue-100"
+                      >
+                        Activer →
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => remove(c.id)}
+                      className="px-3 py-2 rounded border text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ================= UI ================= */
+/* ---------------- UI helpers ---------------- */
 
-function Filter({
-  label,
+function PipelineCard({
+  title,
+  value,
   active,
   onClick,
+  tone,
 }: {
-  label: string;
+  title: string;
+  value: number;
   active: boolean;
   onClick: () => void;
+  tone: 'stone' | 'yellow' | 'blue' | 'green';
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        'px-3 py-2 rounded border text-sm',
-        active
-          ? 'bg-stone-900 text-white border-stone-900'
-          : 'bg-white hover:bg-stone-50',
-      ].join(' ')}
-    >
-      {label}
-    </button>
-  );
-}
+  const toneCls =
+    tone === 'yellow'
+      ? 'border-yellow-200 bg-yellow-50'
+      : tone === 'blue'
+      ? 'border-blue-200 bg-blue-50'
+      : tone === 'green'
+      ? 'border-green-200 bg-green-50'
+      : 'border-stone-200 bg-white';
 
-function Action({
-  children,
-  onClick,
-  danger,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  danger?: boolean;
-}) {
+  const activeCls = active ? 'ring-2 ring-stone-900 border-stone-900' : 'hover:bg-stone-50';
+
   return (
     <button
       onClick={onClick}
-      className={[
-        'px-3 py-2 rounded text-sm border',
-        danger
-          ? 'text-red-600 border-red-200 hover:bg-red-50'
-          : 'hover:bg-stone-50',
-      ].join(' ')}
+      className={`text-left p-4 rounded border transition ${toneCls} ${activeCls}`}
     >
-      {children}
+      <div className="text-sm text-stone-600">{title}</div>
+      <div className="text-2xl font-semibold mt-1">{value}</div>
+      <div className="text-xs text-stone-500 mt-1">Ouvrir</div>
     </button>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const s = status || 'unknown';
+
   const cls =
-    status === 'pending_validation'
+    s === 'pending_validation'
       ? 'bg-yellow-100 text-yellow-800'
-      : status === 'approved'
+      : s === 'approved'
       ? 'bg-blue-100 text-blue-800'
-      : status === 'active'
+      : s === 'active'
       ? 'bg-green-100 text-green-800'
       : 'bg-stone-100 text-stone-700';
 
+  const label =
+    s === 'pending_validation' ? 'À valider' : s === 'approved' ? 'Approuvé' : s === 'active' ? 'Actif' : s;
+
   return (
-    <span className={`text-xs px-2 py-1 rounded-full ${cls}`}>
-      {status}
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function ScorePill({ score }: { score: number }) {
+  const cls =
+    score >= 80 ? 'bg-green-100 text-green-800'
+    : score >= 60 ? 'bg-blue-100 text-blue-800'
+    : score >= 40 ? 'bg-yellow-100 text-yellow-800'
+    : 'bg-stone-100 text-stone-700';
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${cls}`}>
+      Score {score}/100
     </span>
   );
 }
