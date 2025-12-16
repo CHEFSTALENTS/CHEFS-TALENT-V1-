@@ -1,20 +1,19 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/services/storage';
 import type { RequestEntity } from '@/types';
 
 type TypeFilter = 'all' | 'b2b' | 'b2c';
-type StatusFilter = 'all' | 'new' | 'in_review' | 'assigned' | 'closed';
+type StatusGroup = 'todo' | 'active' | 'closed';
 
 export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<RequestEntity[]>([]);
-
   const [q, setQ] = useState('');
-  const [type, setType] = useState<TypeFilter>('all');
-  const [status, setStatus] = useState<StatusFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [statusGroup, setStatusGroup] = useState<StatusGroup>('todo');
 
   const refresh = async () => {
     setLoading(true);
@@ -27,198 +26,355 @@ export default function AdminRequestsPage() {
     refresh();
   }, []);
 
+  const counts = useMemo(() => {
+    const isTodo = (r: RequestEntity) => r.status === 'new' || r.status === 'in_review';
+    const isActive = (r: RequestEntity) => r.status === 'assigned';
+    const isClosed = (r: RequestEntity) => r.status === 'closed';
+
+    const filteredType = (r: RequestEntity) => {
+      if (typeFilter === 'b2b') return r.userType === 'b2b';
+      if (typeFilter === 'b2c') return r.userType !== 'b2b';
+      return true;
+    };
+
+    const base = requests.filter(filteredType);
+
+    return {
+      todo: base.filter(isTodo).length,
+      active: base.filter(isActive).length,
+      closed: base.filter(isClosed).length,
+      all: base.length,
+    };
+  }, [requests, typeFilter]);
+
   const view = useMemo(() => {
     const needle = q.trim().toLowerCase();
 
+    const matchType = (r: RequestEntity) => {
+      if (typeFilter === 'b2b') return r.userType === 'b2b';
+      if (typeFilter === 'b2c') return r.userType !== 'b2b';
+      return true;
+    };
+
+    const matchStatusGroup = (r: RequestEntity) => {
+      if (statusGroup === 'todo') return r.status === 'new' || r.status === 'in_review';
+      if (statusGroup === 'active') return r.status === 'assigned';
+      return r.status === 'closed';
+    };
+
+    const matchSearch = (r: RequestEntity) => {
+      if (!needle) return true;
+
+      const client = (r.contact?.company || r.contact?.name || '').toLowerCase();
+      const email = (r.contact?.email || '').toLowerCase();
+      const location = (r.location || '').toLowerCase();
+      const mission = String(r.missionType || '').toLowerCase();
+      const mode = String(r.mode || '').toLowerCase();
+      const userType = String(r.userType || '').toLowerCase();
+
+      const blob = `${client} ${email} ${location} ${mission} ${mode} ${userType}`;
+      return blob.includes(needle);
+    };
+
+    // Priorité: À traiter en haut + plus récent en premier
+    const priority = (r: RequestEntity) => {
+      if (r.status === 'new') return 0;
+      if (r.status === 'in_review') return 1;
+      if (r.status === 'assigned') return 2;
+      return 3; // closed
+    };
+
     return [...requests]
-      .filter(r => {
-        if (type === 'b2b') return r.userType === 'b2b';
-        if (type === 'b2c') return r.userType !== 'b2b';
-        return true;
-      })
-      .filter(r => {
-        if (status === 'all') return true;
-        return String(r.status) === status;
-      })
-      .filter(r => {
-        if (!needle) return true;
-        const hay = [
-          r.location,
-          r.contact?.name,
-          r.contact?.company,
-          r.contact?.email,
-          r.missionType,
-          r.mode,
-          r.userType,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        return hay.includes(needle);
-      })
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [requests, q, type, status]);
+      .filter(matchType)
+      .filter(matchStatusGroup)
+      .filter(matchSearch)
+      .sort((a, b) => {
+        const pa = priority(a);
+        const pb = priority(b);
+        if (pa !== pb) return pa - pb;
+
+        const da = new Date(a.createdAt || '').getTime() || 0;
+        const db = new Date(b.createdAt || '').getTime() || 0;
+        return db - da;
+      });
+  }, [requests, q, typeFilter, statusGroup]);
 
   return (
-    <div className="p-6">
-      <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="p-6 space-y-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Demandes</h1>
-          <p className="text-sm text-stone-500">
-            Vue simple : lieu • pax • budget. Clique pour matcher.
+          <h1 className="text-xl font-semibold">Demandes entrantes</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            Vue simple : <span className="font-medium text-stone-700">lieu</span> •{' '}
+            <span className="font-medium text-stone-700">pax</span> •{' '}
+            <span className="font-medium text-stone-700">budget</span>. Clique pour matcher.
           </p>
         </div>
 
-        <button
-          onClick={refresh}
-          className="px-3 py-2 rounded-lg border text-sm bg-white hover:bg-stone-50"
-        >
-          Rafraîchir
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={refresh}
+            className="px-3 py-2 rounded-lg border text-sm bg-white hover:bg-stone-50 transition"
+          >
+            Rafraîchir
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-        <input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Recherche (lieu, client, email, type)…"
-          className="w-full md:max-w-md px-3 py-2 rounded-lg border text-sm"
-        />
+      <div className="border rounded-xl bg-white p-4 space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <input
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Recherche (lieu, client, email, type)..."
+            className="w-full lg:max-w-md px-3 py-2 rounded-lg border text-sm"
+          />
 
-        <div className="flex flex-wrap gap-2">
-          <Pill active={type === 'all'} onClick={() => setType('all')}>Toutes</Pill>
-          <Pill active={type === 'b2b'} onClick={() => setType('b2b')}>B2B</Pill>
-          <Pill active={type === 'b2c'} onClick={() => setType('b2c')}>B2C</Pill>
+          <div className="flex flex-wrap gap-2">
+            {/* Type */}
+            <Segment
+              label={`Tous`}
+              active={typeFilter === 'all'}
+              onClick={() => setTypeFilter('all')}
+              badge={counts.all}
+            />
+            <Segment
+              label={`B2B`}
+              active={typeFilter === 'b2b'}
+              onClick={() => setTypeFilter('b2b')}
+              badge={requests.filter(r => r.userType === 'b2b').length}
+            />
+            <Segment
+              label={`B2C`}
+              active={typeFilter === 'b2c'}
+              onClick={() => setTypeFilter('b2c')}
+              badge={requests.filter(r => r.userType !== 'b2b').length}
+            />
+
+            <div className="w-px bg-stone-200 mx-1 hidden md:block" />
+
+            {/* Status group */}
+            <Segment
+              label={`À traiter`}
+              active={statusGroup === 'todo'}
+              onClick={() => setStatusGroup('todo')}
+              badge={counts.todo}
+            />
+            <Segment
+              label={`En cours`}
+              active={statusGroup === 'active'}
+              onClick={() => setStatusGroup('active')}
+              badge={counts.active}
+            />
+            <Segment
+              label={`Clos`}
+              active={statusGroup === 'closed'}
+              onClick={() => setStatusGroup('closed')}
+              badge={counts.closed}
+            />
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Pill active={status === 'all'} onClick={() => setStatus('all')}>Tous statuts</Pill>
-          <Pill active={status === 'new'} onClick={() => setStatus('new')}>New</Pill>
-          <Pill active={status === 'in_review'} onClick={() => setStatus('in_review')}>In review</Pill>
-          <Pill active={status === 'assigned'} onClick={() => setStatus('assigned')}>Assigned</Pill>
-          <Pill active={status === 'closed'} onClick={() => setStatus('closed')}>Closed</Pill>
+        <div className="text-xs text-stone-500">
+          “À traiter” = <span className="font-medium">new</span> +{' '}
+          <span className="font-medium">in_review</span>. “En cours” ={' '}
+          <span className="font-medium">assigned</span>.
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-sm text-stone-500">Chargement…</div>
-      ) : (
-        <div className="overflow-auto rounded-xl border bg-white">
+      {/* Table */}
+      <div className="border rounded-xl bg-white overflow-hidden">
+        <div className="overflow-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-stone-50">
               <tr>
-                <th className="text-left p-3">Type</th>
-                <th className="text-left p-3">Client</th>
+                <th className="text-left p-3">Demande</th>
                 <th className="text-left p-3">Lieu</th>
                 <th className="text-left p-3">Pax</th>
                 <th className="text-left p-3">Budget</th>
-                <th className="text-left p-3">Dates</th>
-                <th className="text-left p-3">Statut</th>
-                <th className="text-left p-3">Action</th>
+                <th className="text-left p-3">Type</th>
+                <th className="text-right p-3">Action</th>
               </tr>
             </thead>
+
             <tbody>
-              {view.map(r => (
-                <tr key={r.id} className="border-t">
-                  <td className="p-3">
-                    <div className="font-medium">{r.userType === 'b2b' ? 'B2B' : 'B2C'}</div>
-                    <div className="text-xs text-stone-500">{r.mode === 'fast' ? 'Fast' : 'Standard'}</div>
-                  </td>
-
-                  <td className="p-3">
-                    <div className="font-medium">
-                      {r.contact?.company || r.contact?.name || '—'}
-                    </div>
-                    <div className="text-xs text-stone-500">{r.contact?.email || ''}</div>
-                  </td>
-
-                  <td className="p-3">{r.location || '—'}</td>
-                  <td className="p-3">{r.guestCount ?? '—'}</td>
-                  <td className="p-3">{formatBudget(r.budgetRange)}</td>
-                  <td className="p-3">{formatDates(r)}</td>
-
-                  <td className="p-3">
-                    <StatusBadge status={String(r.status)} />
-                  </td>
-
-                  <td className="p-3">
-                    <Link
-                      href={`/admin/requests/${r.id}`}
-                      className="px-3 py-2 rounded-lg border text-sm hover:bg-stone-50"
-                    >
-                      Ouvrir & matcher →
-                    </Link>
+              {loading ? (
+                <tr>
+                  <td className="p-4 text-stone-500" colSpan={6}>
+                    Chargement…
                   </td>
                 </tr>
-              ))}
-
-              {view.length === 0 && (
+              ) : view.length === 0 ? (
                 <tr>
-                  <td className="p-3 text-stone-500" colSpan={8}>
+                  <td className="p-4 text-stone-500" colSpan={6}>
                     Aucune demande.
                   </td>
                 </tr>
+              ) : (
+                view.map(r => (
+                  <tr key={r.id} className="border-t hover:bg-stone-50/50 transition">
+                    {/* Demande */}
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">
+                          {r.userType === 'b2b' ? 'B2B' : 'B2C'}
+                        </span>
+                        <span className="text-stone-400">•</span>
+                        <span className="text-stone-700">
+                          {r.mode === 'fast' ? 'Fast' : 'Standard'}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-stone-500 mt-1">
+                        {shortText(r.contact?.company || r.contact?.name || 'Client', 34)}
+                        {r.contact?.email ? (
+                          <>
+                            <span className="text-stone-300"> • </span>
+                            {shortText(r.contact.email, 38)}
+                          </>
+                        ) : null}
+                      </div>
+                    </td>
+
+                    {/* Lieu */}
+                    <td className="p-3">{r.location || '—'}</td>
+
+                    {/* Pax */}
+                    <td className="p-3">{r.guestCount ?? '—'}</td>
+
+                    {/* Budget */}
+                    <td className="p-3">{formatBudget(r.budgetRange)}</td>
+
+                    {/* Type badges */}
+                    <td className="p-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge tone={r.userType === 'b2b' ? 'dark' : 'stone'}>
+                          {r.userType === 'b2b' ? 'B2B' : 'B2C'}
+                        </Badge>
+                        <Badge tone={r.mode === 'fast' ? 'violet' : 'stone'}>
+                          {r.mode === 'fast' ? 'Fast' : 'Standard'}
+                        </Badge>
+                        {r.status ? (
+                          <Badge
+                            tone={
+                              r.status === 'new'
+                                ? 'amber'
+                                : r.status === 'in_review'
+                                ? 'blue'
+                                : r.status === 'assigned'
+                                ? 'green'
+                                : 'stone'
+                            }
+                          >
+                            {r.status}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </td>
+
+                    {/* Action */}
+                    <td className="p-3 text-right">
+                      <Link
+                        href={`/admin/requests/${encodeURIComponent(r.id)}`}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm bg-stone-900 text-white hover:bg-stone-800 transition"
+                      >
+                        Voir & matcher <span aria-hidden>→</span>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
-      )}
+
+        <div className="p-3 border-t text-xs text-stone-500">
+          Conseil : traite d’abord <span className="font-medium">new</span>, puis{' '}
+          <span className="font-medium">in_review</span>.
+        </div>
+      </div>
     </div>
   );
 }
 
-function Pill({
+/* ---------------- UI components ---------------- */
+
+function Segment({
+  label,
   active,
   onClick,
-  children,
+  badge,
 }: {
+  label: string;
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  badge?: number;
 }) {
   return (
     <button
       onClick={onClick}
       className={[
-        'px-3 py-2 rounded-full border text-sm',
+        'inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition',
         active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50',
       ].join(' ')}
     >
-      {children}
+      <span>{label}</span>
+      {badge !== undefined ? (
+        <span
+          className={[
+            'text-[11px] px-2 py-0.5 rounded-full',
+            active ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-700',
+          ].join(' ')}
+        >
+          {badge}
+        </span>
+      ) : null}
     </button>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const s = status || 'unknown';
+function Badge({
+  children,
+  tone = 'stone',
+}: {
+  children: React.ReactNode;
+  tone?: 'stone' | 'dark' | 'violet' | 'amber' | 'blue' | 'green';
+}) {
   const cls =
-    s === 'new'
-      ? 'bg-amber-100 text-amber-900'
-      : s === 'in_review'
+    tone === 'dark'
+      ? 'bg-stone-900 text-white'
+      : tone === 'violet'
       ? 'bg-violet-100 text-violet-900'
-      : s === 'assigned'
+      : tone === 'amber'
+      ? 'bg-amber-100 text-amber-900'
+      : tone === 'blue'
       ? 'bg-blue-100 text-blue-900'
-      : s === 'closed'
-      ? 'bg-stone-200 text-stone-800'
+      : tone === 'green'
+      ? 'bg-green-100 text-green-900'
       : 'bg-stone-100 text-stone-700';
 
-  return <span className={`inline-flex px-2 py-1 rounded text-xs ${cls}`}>{s}</span>;
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${cls}`}>{children}</span>;
 }
 
-function formatDates(r: RequestEntity) {
-  const start = r.dates?.start ? new Date(r.dates.start).toLocaleDateString('fr-FR') : '—';
-  const end = r.dates?.end ? new Date(r.dates.end).toLocaleDateString('fr-FR') : '';
-  return end ? `${start} → ${end}` : start;
-}
+/* ---------------- Helpers ---------------- */
 
 function formatBudget(b: any) {
   if (!b) return '—';
   if (typeof b === 'string') return b;
+
   const min = b?.min ?? b?.from;
   const max = b?.max ?? b?.to;
+
   if (min && max) return `${min}–${max}`;
   if (min) return `≥ ${min}`;
   if (max) return `≤ ${max}`;
   return '—';
+}
+
+function shortText(s: string, max: number) {
+  if (!s) return '';
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + '…';
 }
