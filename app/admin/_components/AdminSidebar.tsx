@@ -21,10 +21,15 @@ export function AdminSidebar({ badges }: { badges?: Record<string, string | numb
   ];
 
   return (
-    <aside className="w-[240px] border-r bg-white p-3 space-y-2">
-      <div className="px-2 py-2 font-semibold">Chef Talents — Admin</div>
+    <aside className="w-[260px] shrink-0 border-r border-white/10 bg-neutral-950/70 backdrop-blur">
+      <div className="p-4">
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+          <div className="text-sm font-semibold tracking-wide">Chef Talents</div>
+          <div className="text-xs text-white/60 mt-0.5">Back-office Admin</div>
+        </div>
+      </div>
 
-      <nav className="space-y-1">
+      <nav className="px-3 space-y-2">
         {nav.map(item => {
           const active =
             pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
@@ -34,17 +39,21 @@ export function AdminSidebar({ badges }: { badges?: Record<string, string | numb
               key={item.href}
               href={item.href}
               className={[
-                'flex items-center justify-between px-3 py-2 rounded-lg text-sm border',
-                active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50',
+                'group flex items-center justify-between px-3 py-2.5 rounded-xl text-sm border transition',
+                active
+                  ? 'bg-white/10 border-white/15 text-white'
+                  : 'bg-transparent border-transparent text-white/75 hover:bg-white/5 hover:border-white/10 hover:text-white',
               ].join(' ')}
             >
-              <span>{item.label}</span>
+              <span className="font-medium">{item.label}</span>
 
               {item.badge !== undefined && item.badge !== 0 && (
                 <span
                   className={[
-                    'text-[11px] px-2 py-0.5 rounded-full',
-                    active ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-700',
+                    'text-[11px] px-2 py-0.5 rounded-full border',
+                    active
+                      ? 'bg-white/10 text-white border-white/15'
+                      : 'bg-white/5 text-white/70 border-white/10 group-hover:text-white',
                   ].join(' ')}
                 >
                   {item.badge}
@@ -55,8 +64,8 @@ export function AdminSidebar({ badges }: { badges?: Record<string, string | numb
         })}
       </nav>
 
-      <div className="pt-3">
-        <button className="w-full px-3 py-2 rounded-lg border text-sm hover:bg-stone-50">
+      <div className="p-4 mt-4">
+        <button className="w-full px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition">
           Se déconnecter
         </button>
       </div>
