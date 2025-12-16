@@ -76,12 +76,11 @@ export default function AdminRequestsPage() {
       return blob.includes(needle);
     };
 
-    // Priorité: À traiter en haut + plus récent en premier
     const priority = (r: RequestEntity) => {
       if (r.status === 'new') return 0;
       if (r.status === 'in_review') return 1;
       if (r.status === 'assigned') return 2;
-      return 3; // closed
+      return 3;
     };
 
     return [...requests]
@@ -100,187 +99,177 @@ export default function AdminRequestsPage() {
   }, [requests, q, typeFilter, statusGroup]);
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Demandes entrantes</h1>
-          <p className="text-sm text-stone-500 mt-1">
-            Vue simple : <span className="font-medium text-stone-700">lieu</span> •{' '}
-            <span className="font-medium text-stone-700">pax</span> •{' '}
-            <span className="font-medium text-stone-700">budget</span>. Clique pour matcher.
+          <h1 className="text-xl font-semibold text-white">Demandes</h1>
+          <p className="text-sm text-white/60 mt-1">
+            Vue simple : <span className="text-white/80 font-medium">lieu</span> •{' '}
+            <span className="text-white/80 font-medium">pax</span> •{' '}
+            <span className="text-white/80 font-medium">budget</span>. Clique pour matcher.
           </p>
         </div>
 
         <div className="flex gap-2">
           <button
             onClick={refresh}
-            className="px-3 py-2 rounded-lg border text-sm bg-white hover:bg-stone-50 transition"
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
           >
             Rafraîchir
           </button>
         </div>
       </div>
 
+      {/* KPI quick */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Kpi
+          title="À traiter"
+          value={counts.todo}
+          hint="new + in_review"
+          active={statusGroup === 'todo'}
+          onClick={() => setStatusGroup('todo')}
+        />
+        <Kpi
+          title="En cours"
+          value={counts.active}
+          hint="assigned"
+          active={statusGroup === 'active'}
+          onClick={() => setStatusGroup('active')}
+        />
+        <Kpi
+          title="Clos"
+          value={counts.closed}
+          hint="closed"
+          active={statusGroup === 'closed'}
+          onClick={() => setStatusGroup('closed')}
+        />
+      </div>
+
       {/* Toolbar */}
-      <div className="border rounded-xl bg-white p-4 space-y-3">
+      <div className="border border-white/10 rounded-2xl bg-white/5 backdrop-blur p-4 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="Recherche (lieu, client, email, type)..."
-            className="w-full lg:max-w-md px-3 py-2 rounded-lg border text-sm"
-          />
+          <div className="flex-1">
+            <input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Recherche (lieu, client, email, type)..."
+              className="w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
+            />
+          </div>
 
           <div className="flex flex-wrap gap-2">
-            {/* Type */}
             <Segment
-              label={`Tous`}
+              label="Tous"
               active={typeFilter === 'all'}
               onClick={() => setTypeFilter('all')}
               badge={counts.all}
             />
             <Segment
-              label={`B2B`}
+              label="B2B"
               active={typeFilter === 'b2b'}
               onClick={() => setTypeFilter('b2b')}
               badge={requests.filter(r => r.userType === 'b2b').length}
             />
             <Segment
-              label={`B2C`}
+              label="B2C"
               active={typeFilter === 'b2c'}
               onClick={() => setTypeFilter('b2c')}
               badge={requests.filter(r => r.userType !== 'b2b').length}
             />
-
-            <div className="w-px bg-stone-200 mx-1 hidden md:block" />
-
-            {/* Status group */}
-            <Segment
-              label={`À traiter`}
-              active={statusGroup === 'todo'}
-              onClick={() => setStatusGroup('todo')}
-              badge={counts.todo}
-            />
-            <Segment
-              label={`En cours`}
-              active={statusGroup === 'active'}
-              onClick={() => setStatusGroup('active')}
-              badge={counts.active}
-            />
-            <Segment
-              label={`Clos`}
-              active={statusGroup === 'closed'}
-              onClick={() => setStatusGroup('closed')}
-              badge={counts.closed}
-            />
           </div>
         </div>
 
-        <div className="text-xs text-stone-500">
-          “À traiter” = <span className="font-medium">new</span> +{' '}
-          <span className="font-medium">in_review</span>. “En cours” ={' '}
-          <span className="font-medium">assigned</span>.
+        <div className="text-xs text-white/45">
+          Astuce : traite d’abord <span className="text-white/70 font-medium">new</span>, puis{' '}
+          <span className="text-white/70 font-medium">in_review</span>.
         </div>
       </div>
 
       {/* Table */}
-      <div className="border rounded-xl bg-white overflow-hidden">
+      <div className="border border-white/10 rounded-2xl bg-white/5 overflow-hidden">
         <div className="overflow-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-stone-50">
-              <tr>
-                <th className="text-left p-3">Demande</th>
-                <th className="text-left p-3">Lieu</th>
-                <th className="text-left p-3">Pax</th>
-                <th className="text-left p-3">Budget</th>
-                <th className="text-left p-3">Type</th>
-                <th className="text-right p-3">Action</th>
+            <thead className="bg-white/5">
+              <tr className="text-white/70">
+                <th className="text-left p-3 font-medium">Client</th>
+                <th className="text-left p-3 font-medium">Lieu</th>
+                <th className="text-left p-3 font-medium">Pax</th>
+                <th className="text-left p-3 font-medium">Budget</th>
+                <th className="text-left p-3 font-medium">Dates</th>
+                <th className="text-left p-3 font-medium">Statut</th>
+                <th className="text-right p-3 font-medium">Action</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="p-4 text-stone-500" colSpan={6}>
+                  <td className="p-4 text-white/60" colSpan={7}>
                     Chargement…
                   </td>
                 </tr>
               ) : view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-stone-500" colSpan={6}>
+                  <td className="p-4 text-white/60" colSpan={7}>
                     Aucune demande.
                   </td>
                 </tr>
               ) : (
                 view.map(r => (
-                  <tr key={r.id} className="border-t hover:bg-stone-50/50 transition">
-                    {/* Demande */}
+                  <tr
+                    key={r.id}
+                    className="border-t border-white/10 hover:bg-white/5 transition"
+                  >
+                    {/* Client */}
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">
-                          {r.userType === 'b2b' ? 'B2B' : 'B2C'}
-                        </span>
-                        <span className="text-stone-400">•</span>
-                        <span className="text-stone-700">
-                          {r.mode === 'fast' ? 'Fast' : 'Standard'}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-stone-500 mt-1">
-                        {shortText(r.contact?.company || r.contact?.name || 'Client', 34)}
-                        {r.contact?.email ? (
-                          <>
-                            <span className="text-stone-300"> • </span>
-                            {shortText(r.contact.email, 38)}
-                          </>
-                        ) : null}
-                      </div>
-                    </td>
-
-                    {/* Lieu */}
-                    <td className="p-3">{r.location || '—'}</td>
-
-                    {/* Pax */}
-                    <td className="p-3">{r.guestCount ?? '—'}</td>
-
-                    {/* Budget */}
-                    <td className="p-3">{formatBudget(r.budgetRange)}</td>
-
-                    {/* Type badges */}
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-2">
                         <Badge tone={r.userType === 'b2b' ? 'dark' : 'stone'}>
                           {r.userType === 'b2b' ? 'B2B' : 'B2C'}
                         </Badge>
                         <Badge tone={r.mode === 'fast' ? 'violet' : 'stone'}>
                           {r.mode === 'fast' ? 'Fast' : 'Standard'}
                         </Badge>
-                        {r.status ? (
-                          <Badge
-                            tone={
-                              r.status === 'new'
-                                ? 'amber'
-                                : r.status === 'in_review'
-                                ? 'blue'
-                                : r.status === 'assigned'
-                                ? 'green'
-                                : 'stone'
-                            }
-                          >
-                            {r.status}
-                          </Badge>
+                      </div>
+
+                      <div className="mt-2">
+                        <div className="text-white font-medium leading-tight">
+                          {shortText(r.contact?.company || r.contact?.name || 'Client', 40)}
+                        </div>
+                        {r.contact?.email ? (
+                          <div className="text-xs text-white/45 mt-0.5">
+                            {shortText(r.contact.email, 50)}
+                          </div>
                         ) : null}
                       </div>
+                    </td>
+
+                    {/* Lieu */}
+                    <td className="p-3 text-white/85">{r.location || '—'}</td>
+
+                    {/* Pax */}
+                    <td className="p-3 text-white/85">{r.guestCount ?? '—'}</td>
+
+                    {/* Budget */}
+                    <td className="p-3 text-white/85">{formatBudget(r.budgetRange)}</td>
+
+                    {/* Dates */}
+                    <td className="p-3 text-white/70 whitespace-nowrap">
+                      {formatDates(r)}
+                    </td>
+
+                    {/* Statut */}
+                    <td className="p-3">
+                      <StatusBadge status={String(r.status || '')} />
                     </td>
 
                     {/* Action */}
                     <td className="p-3 text-right">
                       <Link
                         href={`/admin/requests/${encodeURIComponent(r.id)}`}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm bg-stone-900 text-white hover:bg-stone-800 transition"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
                       >
-                        Voir & matcher <span aria-hidden>→</span>
+                        Ouvrir & matcher <span aria-hidden>→</span>
                       </Link>
                     </td>
                   </tr>
@@ -290,9 +279,8 @@ export default function AdminRequestsPage() {
           </table>
         </div>
 
-        <div className="p-3 border-t text-xs text-stone-500">
-          Conseil : traite d’abord <span className="font-medium">new</span>, puis{' '}
-          <span className="font-medium">in_review</span>.
+        <div className="p-3 border-t border-white/10 text-xs text-white/45">
+          {view.length} résultat(s) • source : localStorage (MVP)
         </div>
       </div>
     </div>
@@ -300,6 +288,35 @@ export default function AdminRequestsPage() {
 }
 
 /* ---------------- UI components ---------------- */
+
+function Kpi({
+  title,
+  value,
+  hint,
+  active,
+  onClick,
+}: {
+  title: string;
+  value: number;
+  hint?: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'text-left border rounded-2xl p-4 transition w-full',
+        'border-white/10 bg-white/5 hover:bg-white/10',
+        active ? 'ring-2 ring-white/10' : '',
+      ].join(' ')}
+    >
+      <div className="text-sm text-white/70">{title}</div>
+      <div className="text-3xl font-semibold text-white mt-1">{value}</div>
+      {hint ? <div className="text-xs text-white/40 mt-1">{hint}</div> : null}
+    </button>
+  );
+}
 
 function Segment({
   label,
@@ -316,16 +333,18 @@ function Segment({
     <button
       onClick={onClick}
       className={[
-        'inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition',
-        active ? 'bg-stone-900 text-white border-stone-900' : 'bg-white hover:bg-stone-50',
+        'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
+        active
+          ? 'bg-white/15 text-white border-white/15'
+          : 'bg-white/5 text-white/75 border-white/10 hover:bg-white/10 hover:text-white',
       ].join(' ')}
     >
-      <span>{label}</span>
+      <span className="font-medium">{label}</span>
       {badge !== undefined ? (
         <span
           className={[
-            'text-[11px] px-2 py-0.5 rounded-full',
-            active ? 'bg-white/15 text-white' : 'bg-stone-100 text-stone-700',
+            'text-[11px] px-2 py-0.5 rounded-full border',
+            active ? 'bg-white/10 border-white/15 text-white' : 'bg-white/5 border-white/10 text-white/70',
           ].join(' ')}
         >
           {badge}
@@ -340,22 +359,41 @@ function Badge({
   tone = 'stone',
 }: {
   children: React.ReactNode;
-  tone?: 'stone' | 'dark' | 'violet' | 'amber' | 'blue' | 'green';
+  tone?: 'stone' | 'dark' | 'violet';
 }) {
   const cls =
     tone === 'dark'
-      ? 'bg-stone-900 text-white'
+      ? 'bg-white/15 text-white border-white/15'
       : tone === 'violet'
-      ? 'bg-violet-100 text-violet-900'
-      : tone === 'amber'
-      ? 'bg-amber-100 text-amber-900'
-      : tone === 'blue'
-      ? 'bg-blue-100 text-blue-900'
-      : tone === 'green'
-      ? 'bg-green-100 text-green-900'
-      : 'bg-stone-100 text-stone-700';
+      ? 'bg-violet-500/15 text-violet-200 border-violet-500/20'
+      : 'bg-white/10 text-white/75 border-white/10';
 
-  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${cls}`}>{children}</span>;
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const s = (status || '').toLowerCase();
+
+  const cls =
+    s === 'new'
+      ? 'bg-amber-500/15 text-amber-200 border-amber-500/20'
+      : s === 'in_review'
+      ? 'bg-sky-500/15 text-sky-200 border-sky-500/20'
+      : s === 'assigned'
+      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20'
+      : s === 'closed'
+      ? 'bg-white/10 text-white/60 border-white/10'
+      : 'bg-white/10 text-white/60 border-white/10';
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {s || '—'}
+    </span>
+  );
 }
 
 /* ---------------- Helpers ---------------- */
@@ -371,6 +409,12 @@ function formatBudget(b: any) {
   if (min) return `≥ ${min}`;
   if (max) return `≤ ${max}`;
   return '—';
+}
+
+function formatDates(r: RequestEntity) {
+  const start = r.dates?.start ? new Date(r.dates.start).toLocaleDateString('fr-FR') : '—';
+  const end = r.dates?.end ? new Date(r.dates.end).toLocaleDateString('fr-FR') : '';
+  return end ? `${start} → ${end}` : start;
 }
 
 function shortText(s: string, max: number) {
