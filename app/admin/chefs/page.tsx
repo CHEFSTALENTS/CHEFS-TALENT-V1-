@@ -4,7 +4,23 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
+import { PageTitle, GhostButton, Card } from '@/app/admin/_components/ui';
 
+export default function AdminChefsPage() {
+  return (
+    <div className="space-y-4">
+      <PageTitle
+        title="Chefs"
+        subtitle="Validation, profils, statut"
+        right={<GhostButton href="/admin">Retour Dashboard</GhostButton>}
+      />
+
+      <Card>
+        <div className="p-4 text-white/70">Contenu à venir…</div>
+      </Card>
+    </div>
+  );
+}
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 type FilterKey = 'all' | 'pending' | 'approved' | 'active';
