@@ -21,39 +21,58 @@ export default function AdminDashboardPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
 
-  const refresh = async () => {
-    setLoading(true);
-    const [r, c, m] = await Promise.all([
-  (api.getRequests?.() ?? Promise.resolve([])) as Promise<RequestEntity[]>,
-  (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
-  (api.getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
-]);
+const refresh = async () => {
+  setLoading(true);
 
-setRequests(r ?? []);
-setChefs(c ?? []);
-setMissions(m ?? []);
-    setLoading(false);
-  };
+  const [r, c, m] = await Promise.all([
+    (api.getRequests?.() ?? Promise.resolve([])) as Promise<RequestEntity[]>,
+    (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
+    (api.getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
+  ]);
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  setRequests(r ?? []);
+  setChefs(c ?? []);
+  setMissions(m ?? []);
+  setLoading(false);
+};
+
+useEffect(() => {
+  refresh();
+}, []);
+
 function byDateDesc<T extends { createdAt?: string }>(arr: T[]) {
   return [...arr].sort(
     (a, b) =>
-      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      new Date(b.createdAt || 0).getTime() -
+      new Date(a.createdAt || 0).getTime()
   );
 }
-  const revenue = useMemo(() => {
+
+const revenue = useMemo(() => {
   const amountOf = (m: any) =>
-    Number(m?.priceTotal ?? m?.totalPrice ?? m?.amount ?? m?.total ?? 0) || 0;
+    Number(
+      m?.priceTotal ??
+        m?.totalPrice ??
+        m?.amount ??
+        m?.total ??
+        0
+    ) || 0;
 
   const now = new Date();
 
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfDay = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
 
-  // Lundi
+  const startOfMonth = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  );
+
+  // semaine = lundi
   const day = now.getDay(); // 0 dimanche
   const diffToMonday = (day + 6) % 7;
   const startOfWeek = new Date(now);
@@ -63,7 +82,9 @@ function byDateDesc<T extends { createdAt?: string }>(arr: T[]) {
   const sumSince = (from: Date) =>
     missions.reduce((acc, m: any) => {
       const d = new Date(m?.createdAt || 0);
-      if (!Number.isNaN(d.getTime()) && d >= from) acc += amountOf(m);
+      if (!Number.isNaN(d.getTime()) && d >= from) {
+        acc += amountOf(m);
+      }
       return acc;
     }, 0);
 
@@ -75,128 +96,113 @@ function byDateDesc<T extends { createdAt?: string }>(arr: T[]) {
 }, [missions]);
 
 const money = (n: number) =>
-  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n || 0);
+  new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(n || 0);
 
-    const chefsPending = byDateDesc(
-      chefs.filter(c => c.role === 'chef' && c.status === 'pending_validation')
+const quickLists = useMemo(() => {
+  const chefsPending = byDateDesc(
+    chefs.filter(
+      c => c.role === 'chef' && c.status === 'pending_validation'
     )
-      .slice(0, 5)
-      .map<QuickItem>(c => ({
-        id: c.id,
-        title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef',
-        subtitle: c.email || '',
-        href: '/admin/chefs',
-        meta: `Inscrit ${formatDate(c.createdAt)}`,
-        createdAt: c.createdAt,
-      }));
+  )
+    .slice(0, 5)
+    .map<QuickItem>(c => ({
+      id: c.id,
+      title:
+        `${c.firstName || ''} ${c.lastName || ''}`.trim() ||
+        'Chef',
+      subtitle: c.email || '',
+      href: '/admin/chefs',
+      meta: `Inscrit ${formatDate(c.createdAt)}`,
+      createdAt: c.createdAt,
+    }));
 
-    const b2bUrgent = byDateDesc(
-      requests.filter(r => r.userType === 'b2b' && r.status === 'new')
+  const b2bUrgent = byDateDesc(
+    requests.filter(
+      r => r.userType === 'b2b' && r.status === 'new'
     )
-      .slice(0, 5)
-      .map<QuickItem>(r => ({
-        id: r.id,
-        title: `B2B — ${r.location || 'Lieu non précisé'}`,
-        subtitle: r.contact?.company ? r.contact.company : (r.contact?.name || 'Concierge'),
-        href: `/admin/requests?type=b2b&status=new`,
-        meta: `Créée ${formatDate(r.createdAt)}`,
-        createdAt: r.createdAt,
-      }));
+  )
+    .slice(0, 5)
+    .map<QuickItem>(r => ({
+      id: r.id,
+      title: `B2B — ${r.location || 'Lieu non précisé'}`,
+      subtitle:
+        r.contact?.company ??
+        r.contact?.name ??
+        'Concierge',
+      href: '/admin/requests?type=b2b&status=new',
+      meta: `Créée ${formatDate(r.createdAt)}`,
+      createdAt: r.createdAt,
+    }));
 
-    const fastInReview = byDateDesc(
-      requests.filter(r => r.userType !== 'b2b' && r.status === 'in_review' && r.mode === 'fast')
+  const fastInReview = byDateDesc(
+    requests.filter(
+      r =>
+        r.userType !== 'b2b' &&
+        r.status === 'in_review' &&
+        r.mode === 'fast'
     )
-      .slice(0, 5)
-      .map<QuickItem>(r => ({
-        id: r.id,
-        title: `Fast — ${r.location || 'Lieu non précisé'}`,
-        subtitle: `${r.guestCount ?? '—'} pers • ${r.missionType || 'mission'}`,
-        href: `/admin/requests?status=in_review`,
-        meta: `Créée ${formatDate(r.createdAt)}`,
-        createdAt: r.createdAt,
-      }));
+  )
+    .slice(0, 5)
+    .map<QuickItem>(r => ({
+      id: r.id,
+      title: `Fast — ${r.location || 'Lieu non précisé'}`,
+      subtitle: `${r.guestCount ?? '—'} pers • ${
+        r.missionType || 'mission'
+      }`,
+      href: '/admin/requests?status=in_review',
+      meta: `Créée ${formatDate(r.createdAt)}`,
+      createdAt: r.createdAt,
+    }));
 
-    const recentActivity: QuickItem[] = [
-      ...byDateDesc(requests).slice(0, 4).map(r => ({
+  const recentActivity: QuickItem[] = [
+    ...byDateDesc(requests)
+      .slice(0, 4)
+      .map(r => ({
         id: r.id,
-        title: `Demande ${r.userType === 'b2b' ? 'B2B' : 'B2C'} — ${r.location || 'Lieu'}`,
-        subtitle: `${String(r.status)} • ${String(r.mode || 'standard')}`,
-        href: `/admin/requests?status=${encodeURIComponent(String(r.status))}`,
+        title: `Demande ${
+          r.userType === 'b2b' ? 'B2B' : 'B2C'
+        } — ${r.location || 'Lieu'}`,
+        subtitle: `${String(r.status)} • ${String(
+          r.mode || 'standard'
+        )}`,
+        href: `/admin/requests?status=${encodeURIComponent(
+          String(r.status)
+        )}`,
         meta: formatDate(r.createdAt),
         createdAt: r.createdAt,
       })),
-      ...byDateDesc(chefs).slice(0, 4).map(c => ({
+    ...byDateDesc(chefs)
+      .slice(0, 4)
+      .map(c => ({
         id: c.id,
-        title: `Chef — ${(c.firstName || '')} ${(c.lastName || '')}`.trim() || 'Chef',
+        title:
+          `Chef — ${c.firstName || ''} ${
+            c.lastName || ''
+          }`.trim() || 'Chef',
         subtitle: `${String(c.status)} • ${c.email || ''}`,
-        href: `/admin/chefs`,
+        href: '/admin/chefs',
         meta: formatDate(c.createdAt),
         createdAt: c.createdAt,
       })),
-    ]
-      .sort(
-        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-      )
-      .slice(0, 8);
+  ]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime()
+    )
+    .slice(0, 8);
 
-    return { chefsPending, b2bUrgent, fastInReview, recentActivity };
-  }, [requests, chefs]);
-
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border bg-white">
-              <IconGrid />
-            </span>
-            <h1 className="text-xl font-semibold">Bureau Admin</h1>
-          </div>
-          <p className="text-sm text-stone-500 mt-1">
-            Cockpit Chef Talents — demandes, chefs, missions.
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <Link
-            href="/admin/requests?status=new"
-            className="px-3 py-2 rounded border text-sm bg-white hover:bg-stone-50 transition"
-          >
-            Voir toutes les demandes
-          </Link>
-          <button
-            onClick={refresh}
-            className="px-3 py-2 rounded border text-sm bg-stone-900 text-white hover:bg-stone-800 transition"
-          >
-            Rafraîchir
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="text-sm text-stone-500">Chargement…</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-  <div className="border rounded-xl bg-white p-4">
-    <div className="text-xs text-stone-500">CA jour</div>
-    <div className="text-2xl font-semibold mt-1">{money(revenue.day)}</div>
-    <div className="text-xs text-stone-500 mt-2">depuis minuit</div>
-  </div>
-
-  <div className="border rounded-xl bg-white p-4">
-    <div className="text-xs text-stone-500">CA semaine</div>
-    <div className="text-2xl font-semibold mt-1">{money(revenue.week)}</div>
-    <div className="text-xs text-stone-500 mt-2">depuis lundi</div>
-  </div>
-
-  <div className="border rounded-xl bg-white p-4">
-    <div className="text-xs text-stone-500">CA mois</div>
-    <div className="text-2xl font-semibold mt-1">{money(revenue.month)}</div>
-    <div className="text-xs text-stone-500 mt-2">depuis le 1er</div>
-  </div>
-</div>
+  return {
+    chefsPending,
+    b2bUrgent,
+    fastInReview,
+    recentActivity,
+  };
+}, [requests, chefs]);
+  
           {/* ✅ KPI GRID (c’était ça qui manquait chez toi) */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
