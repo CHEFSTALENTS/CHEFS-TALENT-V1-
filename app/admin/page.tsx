@@ -543,7 +543,36 @@ function Row({ label, value }: { label: string; value: string }) {
 /* =========================
    Icons (inline SVG)
 ========================= */
-
+function IconBriefcase() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
+      <path
+        d="M9 6V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4 8h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 12h16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 12v2h4v-2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 function IconGrid() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
