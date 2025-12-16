@@ -204,182 +204,173 @@ const quickLists = useMemo(() => {
 }, [requests, chefs]);
   
         
-  {/* KPI / CA */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div className="border rounded-xl bg-white p-4">
-      <div className="text-xs text-stone-500">CA jour</div>
-      <div className="text-2xl font-semibold mt-1">{money(revenue.day)}</div>
-      <div className="text-xs text-stone-500 mt-2">depuis minuit</div>
-    </div>
-
-    <div className="border rounded-xl bg-white p-4">
-      <div className="text-xs text-stone-500">CA semaine</div>
-      <div className="text-2xl font-semibold mt-1">{money(revenue.week)}</div>
-      <div className="text-xs text-stone-500 mt-2">depuis lundi</div>
-    </div>
-
-    <div className="border rounded-xl bg-white p-4">
-      <div className="text-xs text-stone-500">CA mois</div>
-      <div className="text-2xl font-semibold mt-1">{money(revenue.month)}</div>
-      <div className="text-xs text-stone-500 mt-2">depuis le 1er</div>
-    </div>
+ {/* KPI / CA */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div className="border rounded-xl bg-white p-4">
+    <div className="text-xs text-stone-500">CA jour</div>
+    <div className="text-2xl font-semibold mt-1">{money(revenue.day)}</div>
+    <div className="text-xs text-stone-500 mt-2">depuis minuit</div>
   </div>
 
-  {/* Stats cards */}
-  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-    <StatCard
-      title="Demandes B2B"
-      value={counts.b2bNew}
-      subtitle="Traitement manuel obligatoire"
-      href="/admin/requests?type=b2b&status=new"
-      tone="amber"
-      icon={<IconBriefcase />}
-    />
-    <StatCard
-      title="Demandes B2C"
-      value={counts.b2cNew}
-      subtitle="Nouveaux clients privés"
-      href="/admin/requests?type=b2c&status=new"
-      tone="blue"
-      icon={<IconUser />}
-    />
-    <StatCard
-      title="En review"
-      value={counts.inReview}
-      subtitle="À matcher / traiter"
-      href="/admin/requests?status=in_review"
-      tone="violet"
-      icon={<IconSpark />}
-    />
-    <StatCard
-      title="Chefs à valider"
-      value={counts.chefsToValidate}
-      subtitle="Pending + approuvés"
-      href="/admin/chefs"
-      tone="stone"
-      icon={<IconShield />}
-    />
-  
+  <div className="border rounded-xl bg-white p-4">
+    <div className="text-xs text-stone-500">CA semaine</div>
+    <div className="text-2xl font-semibold mt-1">{money(revenue.week)}</div>
+    <div className="text-xs text-stone-500 mt-2">depuis lundi</div>
+  </div>
 
-  {/* 2 colonnes */}
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
-    {/* À traiter maintenant */}
-    ...
-  
+  <div className="border rounded-xl bg-white p-4">
+    <div className="text-xs text-stone-500">CA mois</div>
+    <div className="text-2xl font-semibold mt-1">{money(revenue.month)}</div>
+    <div className="text-xs text-stone-500 mt-2">depuis le 1er</div>
+  </div>
+</div>
 
-          {/* 2 colonnes */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
-            {/* À traiter maintenant */}
-            <div className="lg:col-span-2 space-y-4">
-              <Panel
-                title="À traiter maintenant"
-                subtitle="Les points chauds du back-office"
-                right={
-                  <Link
-                    href="/admin/requests?status=new"
-                    className="text-sm text-stone-600 hover:text-stone-900"
-                  >
-                    Ouvrir l’inbox →
-                  </Link>
-                }
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <MiniList
-                    title="Chefs en attente"
-                    tone="amber"
-                    empty="Aucun chef en attente."
-                    items={quickLists.chefsPending}
-                    footerHref="/admin/chefs"
-                    footerLabel="Gérer les chefs"
-                  />
-                  <MiniList
-                    title="Demandes B2B (veto)"
-                    tone="amber"
-                    empty="Aucune demande B2B new."
-                    items={quickLists.b2bUrgent}
-                    footerHref="/admin/requests?type=b2b&status=new"
-                    footerLabel="Voir les B2B"
-                  />
-                  <MiniList
-                    title="Fast en review"
-                    tone="violet"
-                    empty="Aucune fast en review."
-                    items={quickLists.fastInReview}
-                    footerHref="/admin/requests?status=in_review"
-                    footerLabel="Traiter le matching"
-                  />
-                </div>
-              </Panel>
+{/* Stats cards */}
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+  <StatCard
+    title="Demandes B2B"
+    value={counts.b2bNew}
+    subtitle="Traitement manuel obligatoire"
+    href="/admin/requests?type=b2b&status=new"
+    tone="amber"
+    icon={<IconBriefcase />}
+  />
+  <StatCard
+    title="Demandes B2C"
+    value={counts.b2cNew}
+    subtitle="Nouveaux clients privés"
+    href="/admin/requests?type=b2c&status=new"
+    tone="blue"
+    icon={<IconUser />}
+  />
+  <StatCard
+    title="En review"
+    value={counts.inReview}
+    subtitle="À matcher / traiter"
+    href="/admin/requests?status=in_review"
+    tone="violet"
+    icon={<IconSpark />}
+  />
+  <StatCard
+    title="Chefs à valider"
+    value={counts.chefsToValidate}
+    subtitle="Pending + approuvés"
+    href="/admin/chefs"
+    tone="stone"
+    icon={<IconShield />}
+  />
+</div>
 
-              <Panel title="Modules" subtitle="Accès rapide aux pages clés">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <BigLink
-                    href="/admin/requests?status=new"
-                    title="Demandes"
-                    desc="Inbox & détail demandes"
-                    icon={<IconInbox />}
-                  />
-                  <BigLink
-                    href="/admin/chefs"
-                    title="Chefs"
-                    desc="Validation • score • profils"
-                    icon={<IconChefHat />}
-                  />
-                  <BigLink
-                    href="/admin/proposals"
-                    title="Proposals / Missions"
-                    desc="Offers & suivi missions"
-                    icon={<IconBolt />}
-                  />
-                </div>
-              </Panel>
-            </div>
+{/* 2 colonnes */}
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+  {/* À traiter maintenant */}
+  <div className="lg:col-span-2 space-y-4">
+    <Panel
+      title="À traiter maintenant"
+      subtitle="Les points chauds du back-office"
+      right={
+        <Link
+          href="/admin/requests?status=new"
+          className="text-sm text-stone-600 hover:text-stone-900"
+        >
+          Ouvrir l’inbox →
+        </Link>
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <MiniList
+          title="Chefs en attente"
+          tone="amber"
+          empty="Aucun chef en attente."
+          items={quickLists.chefsPending}
+          footerHref="/admin/chefs"
+          footerLabel="Gérer les chefs"
+        />
+        <MiniList
+          title="Demandes B2B (veto)"
+          tone="amber"
+          empty="Aucune demande B2B new."
+          items={quickLists.b2bUrgent}
+          footerHref="/admin/requests?type=b2b&status=new"
+          footerLabel="Voir les B2B"
+        />
+        <MiniList
+          title="Fast en review"
+          tone="violet"
+          empty="Aucune fast en review."
+          items={quickLists.fastInReview}
+          footerHref="/admin/requests?status=in_review"
+          footerLabel="Traiter le matching"
+        />
+      </div>
+    </Panel>
 
-            {/* Activité récente */}
-            <div className="space-y-4">
-              <Panel title="Activité récente" subtitle="Derniers événements (localStorage)">
-                <div className="space-y-2">
-                  {quickLists.recentActivity.length === 0 ? (
-                    <div className="text-sm text-stone-500">Rien pour le moment.</div>
-                  ) : (
-                    quickLists.recentActivity.map(item => (
-                      <Link
-                        key={item.id + item.href}
-                        href={item.href}
-                        className="block rounded-lg border bg-white hover:bg-stone-50 transition p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium truncate">{item.title}</div>
-                            {item.subtitle && (
-                              <div className="text-xs text-stone-500 truncate mt-0.5">
-                                {item.subtitle}
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-xs text-stone-400 whitespace-nowrap">
-                            {item.meta || ''}
-                          </div>
-                        </div>
-                      </Link>
-                    ))
+    <Panel title="Modules" subtitle="Accès rapide aux pages clés">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <BigLink
+          href="/admin/requests?status=new"
+          title="Demandes"
+          desc="Inbox & détail demandes"
+          icon={<IconInbox />}
+        />
+        <BigLink
+          href="/admin/chefs"
+          title="Chefs"
+          desc="Validation • score • profils"
+          icon={<IconChefHat />}
+        />
+        <BigLink
+          href="/admin/proposals"
+          title="Proposals / Missions"
+          desc="Offers & suivi missions"
+          icon={<IconBolt />}
+        />
+      </div>
+    </Panel>
+  </div>
+
+  {/* Activité récente */}
+  <div className="space-y-4">
+    <Panel title="Activité récente" subtitle="Derniers événements (localStorage)">
+      <div className="space-y-2">
+        {quickLists.recentActivity.length === 0 ? (
+          <div className="text-sm text-stone-500">Rien pour le moment.</div>
+        ) : (
+          quickLists.recentActivity.map(item => (
+            <Link
+              key={item.id + item.href}
+              href={item.href}
+              className="block rounded-lg border bg-white hover:bg-stone-50 transition p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{item.title}</div>
+                  {item.subtitle && (
+                    <div className="text-xs text-stone-500 truncate mt-0.5">
+                      {item.subtitle}
+                    </div>
                   )}
                 </div>
-              </Panel>
-              <Panel title="État système" subtitle="Sécurité & cohérence">
-                <div className="space-y-2 text-sm">
-                  <Row label="Source" value="LocalStorage (MVP)" />
-                  <Row label="Auto-match" value="B2C fast uniquement" />
-                  <Row label="Veto" value="B2B / luxe multi-jour" />
+                <div className="text-xs text-stone-400 whitespace-nowrap">
+                  {item.meta || ''}
                 </div>
-              </Panel>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-      }
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+    </Panel>
+
+    <Panel title="État système" subtitle="Sécurité & cohérence">
+      <div className="space-y-2 text-sm">
+        <Row label="Source" value="LocalStorage (MVP)" />
+        <Row label="Auto-match" value="B2C fast uniquement" />
+        <Row label="Veto" value="B2B / luxe multi-jour" />
+      </div>
+    </Panel>
+  </div>
+</div>
+  
 /* =========================
    UI Components
 ========================= */
