@@ -2,40 +2,36 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { api, auth } from '@/services/storage';
-import type { ChefUser, RequestEntity } from '@/types';
+import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForFastRequest } from '@/services/fastMatch';
 
-type MatchedChef = {
-  chef: ChefUser;
-  score: number;
-  badges: string[];
-};
+type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
 
 export default function AdminRequestDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = String(params?.id || '');
 
   const [loading, setLoading] = useState(true);
   const [req, setReq] = useState<RequestEntity | null>(null);
   const [chefs, setChefs] = useState<ChefUser[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [q, setQ] = useState('');
-  const [selectingChefId, setSelectingChefId] = useState<string | null>(null);
-  const [error, setError] = useState<string>('');
+  const [actionChefId, setActionChefId] = useState<string | null>(null);
 
   const refresh = async () => {
-    setError('');
     setLoading(true);
 
-    const [r, c] = await Promise.all([
+    const [r, c, m] = await Promise.all([
       (api.getRequest?.(id) ?? Promise.resolve(null)) as Promise<RequestEntity | null>,
       (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
+      ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
     ]);
 
     setReq(r ?? null);
     setChefs(c ?? []);
+    setMissions(m ?? []);
     setLoading(false);
   };
 
@@ -47,21 +43,16 @@ export default function AdminRequestDetailPage() {
   const matched: MatchedChef[] = useMemo(() => {
     if (!req) return [];
 
-    // 1) chefs actifs uniquement
     const active = chefs.filter(c => c.role === 'chef' && c.status === 'active');
-
-    // 2) matching via moteur existant
     const m = matchChefsForFastRequest(req, active);
 
-    // 3) tri score
     const withScore = m
-      .map(chef => {
-        const sc = auth.computeChefScore(chef);
-        return { chef, score: sc.score, badges: sc.badges };
+      .map(c => {
+        const sc = auth.computeChefScore(c);
+        return { chef: c, score: sc.score, badges: sc.badges };
       })
       .sort((a, b) => b.score - a.score);
 
-    // 4) recherche
     const needle = q.trim().toLowerCase();
     if (!needle) return withScore;
 
@@ -72,63 +63,67 @@ export default function AdminRequestDetailPage() {
     });
   }, [req, chefs, q]);
 
+  const revenue = useMemo(() => {
+    // On fait robuste: si tes missions n'ont pas encore de champs prix,
+    // ça restera 0 sans planter.
+    const amountOf = (m: any) =>
+      Number(m?.priceTotal ?? m?.amount ?? m?.revenue ?? m?.total ?? 0) || 0;
+
+    const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const startOfWeek = new Date(now);
+    // semaine ISO-ish simplifiée: lundi
+    const day = (startOfWeek.getDay() + 6) % 7; // 0=lundi
+    startOfWeek.setDate(startOfWeek.getDate() - day);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const inRange = (iso: any, start: Date) => {
+      const d = new Date(iso || 0);
+      if (Number.isNaN(d.getTime())) return false;
+      return d.getTime() >= start.getTime();
+    };
+
+    const daySum = missions.filter(m => inRange((m as any).createdAt, startOfDay)).reduce((s, m) => s + amountOf(m), 0);
+    const weekSum = missions.filter(m => inRange((m as any).createdAt, startOfWeek)).reduce((s, m) => s + amountOf(m), 0);
+    const monthSum = missions.filter(m => inRange((m as any).createdAt, startOfMonth)).reduce((s, m) => s + amountOf(m), 0);
+
+    return { daySum, weekSum, monthSum };
+  }, [missions]);
+
   const onSelectChef = async (chefId: string) => {
-    if (!req) return;
-
-    setError('');
-
-    const ok = confirm('Confirmer ce chef pour cette demande ?');
-    if (!ok) return;
-
+    // On branche visuellement + placeholder action
+    // (tu me diras ensuite si tu veux créer une proposal ou créer directement une mission)
     try {
-      setSelectingChefId(chefId);
+      setActionChefId(chefId);
 
-      // 1) Créer mission (si dispo)
-      if (typeof (api as any).createMission === 'function') {
-        await (api as any).createMission({
-          requestId: req.id,
-          chefId,
-          status: 'pending', // "pending" côté chef, puis "accepted/declined"
-          location: req.location,
-          guestCount: req.guestCount,
-          missionType: req.missionType,
-          startDate: req.dates?.start,
-          endDate: req.dates?.end,
-          serviceLevel: req.serviceLevel,
-          budgetRange: req.budgetRange,
-          createdFrom: 'admin_select',
-        });
-      }
+      // Option A (future): api.selectChefForRequest(req.id, chefId)
+      // Option B (future): api.createProposal({requestId, chefId, ...})
+      // Option C (future): api.createMission({requestId, chefId, ...}) + api.updateStatus(req.id,'assigned')
 
-      // 2) Mettre le statut de la request en assigned
-      if (typeof (api as any).updateStatus === 'function') {
-        await (api as any).updateStatus(req.id, 'assigned');
-      }
+      // Pour l’instant: on ne casse rien → juste un log
+      console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
+      // Tu pourras remplacer par un vrai call quand tu veux.
 
-      // 3) Optionnel : si tu as updateMissionStatus, tu peux gérer une mission déjà existante
-      // (on le laissera plus tard)
-
-      // 4) Refresh + redirect doux si tu veux
       await refresh();
-
-      // Si tu veux rediriger vers Missions après sélection, décommente :
-      // router.push('/admin/missions');
-    } catch (e: any) {
-      setError(e?.message ? String(e.message) : 'Erreur lors de la sélection.');
     } finally {
-      setSelectingChefId(null);
+      setActionChefId(null);
     }
   };
 
   if (loading) {
-    return <div className="p-6 text-sm text-stone-500">Chargement…</div>;
+    return <div className="p-6 text-sm text-white/60">Chargement…</div>;
   }
 
   if (!req) {
     return (
-      <div className="p-6">
-        <div className="text-sm text-stone-500">Demande introuvable.</div>
-        <Link href="/admin/requests" className="text-sm underline">
+      <div className="p-6 space-y-3">
+        <div className="text-sm text-white/60">Demande introuvable.</div>
+        <Link href="/admin/requests" className="text-sm text-white/80 hover:text-white underline">
           ← Retour
         </Link>
       </div>
@@ -136,172 +131,213 @@ export default function AdminRequestDetailPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div className="min-w-0">
-            <Link href="/admin/requests" className="text-sm text-stone-600 hover:text-stone-900">
-              ← Retour aux demandes
-            </Link>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+        <div>
+          <Link href="/admin/requests" className="text-sm text-white/60 hover:text-white/90">
+            ← Retour aux demandes
+          </Link>
 
-            <h1 className="text-xl font-semibold mt-2 truncate">
-              Demande {req.userType === 'b2b' ? 'B2B' : 'B2C'} — {req.location || 'Lieu'}
-            </h1>
+          <h1 className="text-xl font-semibold text-white mt-2">
+            {req.userType === 'b2b' ? 'B2B' : 'B2C'} — {req.location || 'Lieu'}
+          </h1>
 
-            <div className="text-sm text-stone-500 mt-1">
-              {formatDates(req)} • {req.guestCount ?? '—'} pers • {formatBudget(req.budgetRange)}
-              {req.mode === 'fast' ? ' • Fast' : ''}
-            </div>
-
-            {error ? (
-              <div className="mt-2 text-sm text-red-600">{error}</div>
-            ) : null}
-          </div>
-
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => router.push('/admin/missions')}
-              className="px-3 py-2 rounded-lg border text-sm bg-white hover:bg-stone-50"
-            >
-              Voir missions
-            </button>
-            <button
-              onClick={refresh}
-              className="px-3 py-2 rounded-lg border text-sm bg-stone-900 text-white hover:bg-stone-800"
-            >
-              Rafraîchir
-            </button>
+          <div className="text-sm text-white/55 mt-1">
+            {formatDates(req)} • {req.guestCount ?? '—'} pers • {formatBudget(req.budgetRange)}
+            {req.mode === 'fast' ? ' • Fast' : ' • Standard'}
           </div>
         </div>
 
-        {/* Layout 12 colonnes */}
-        <div className="grid grid-cols-12 gap-4">
-          {/* Fiche demande */}
-          <div className="col-span-12 lg:col-span-4 min-w-0">
-            <div className="border rounded-xl bg-white p-4">
-              <div className="text-sm font-semibold">Fiche demande</div>
+        <div className="flex gap-2">
+          <Link
+            href={`/admin/requests?status=${encodeURIComponent(String(req.status || ''))}`}
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
+          >
+            Voir statut ({String(req.status || '—')})
+          </Link>
+          <button
+            onClick={refresh}
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+          >
+            Rafraîchir
+          </button>
+        </div>
+      </div>
 
-              <div className="mt-3 space-y-2 text-sm">
-                <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
-                <Row label="Email" value={req.contact?.email || '—'} />
-                <Row label="Téléphone" value={req.contact?.phone || '—'} />
-                <Row label="Lieu" value={req.location || '—'} />
-                <Row label="Pax" value={String(req.guestCount ?? '—')} />
-                <Row label="Budget" value={formatBudget(req.budgetRange)} />
-                <Row label="Type" value={String(req.missionType || '—')} />
-                <Row label="Service" value={String(req.serviceLevel || '—')} />
-                <Row label="Statut" value={String(req.status || '—')} />
-              </div>
+      {/* Mini CA */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Kpi title="CA jour" value={money(revenue.daySum)} hint="missions créées aujourd’hui" />
+        <Kpi title="CA semaine" value={money(revenue.weekSum)} hint="depuis lundi" />
+        <Kpi title="CA mois" value={money(revenue.monthSum)} hint="depuis le 1er" />
+      </div>
 
-              {req.notes ? (
-                <div className="mt-4">
-                  <div className="text-xs font-semibold text-stone-600">Notes</div>
-                  <div className="text-sm text-stone-700 mt-1 whitespace-pre-wrap">{req.notes}</div>
-                </div>
-              ) : null}
-            </div>
+      {/* Content */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Fiche demande */}
+        <Panel
+          title="Fiche demande"
+          subtitle="Résumé client + critères"
+          className="xl:col-span-1"
+          right={<StatusBadge status={String(req.status || '')} />}
+        >
+          <div className="space-y-2 text-sm">
+            <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
+            <Row label="Email" value={req.contact?.email || '—'} />
+            <Row label="Téléphone" value={req.contact?.phone || '—'} />
+            <Row label="Lieu" value={req.location || '—'} />
+            <Row label="Pax" value={String(req.guestCount ?? '—')} />
+            <Row label="Budget" value={formatBudget(req.budgetRange)} />
+            <Row label="Type" value={String(req.missionType || '—')} />
+            <Row label="Service" value={String(req.serviceLevel || '—')} />
           </div>
 
-          {/* Matching chefs */}
-          <div className="col-span-12 lg:col-span-8 min-w-0">
-            <div className="border rounded-xl bg-white overflow-hidden">
-              <div className="p-4 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold">Chefs matchables</div>
-                  <div className="text-xs text-stone-500 mt-0.5 truncate">
-                    Actifs uniquement • tri score • recherche simple (MVP).
-                  </div>
-                </div>
+          {req.notes ? (
+            <div className="mt-4">
+              <div className="text-xs font-semibold text-white/70">Notes</div>
+              <div className="text-sm text-white/80 mt-1 whitespace-pre-wrap">{req.notes}</div>
+            </div>
+          ) : null}
+        </Panel>
 
+        {/* Matching */}
+        <div className="xl:col-span-2 space-y-4">
+          <Panel
+            title="Chefs matchables"
+            subtitle="Actifs + tri score (moteur existant)"
+            right={
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-white/50 hidden sm:block">
+                  {matched.length} chef(s)
+                </div>
                 <input
                   value={q}
                   onChange={e => setQ(e.target.value)}
-                  placeholder="Rechercher (nom/email)…"
-                  className="w-full md:w-[320px] px-3 py-2 rounded-lg border text-sm"
+                  placeholder="Recherche (nom/email)…"
+                  className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
                 />
               </div>
+            }
+          >
+            <div className="overflow-auto -mx-4 px-4">
+              <table className="min-w-full text-sm">
+                <thead className="text-white/70">
+                  <tr>
+                    <th className="text-left py-3">Chef</th>
+                    <th className="text-left py-3">Score</th>
+                    <th className="text-left py-3">Badges</th>
+                    <th className="text-right py-3">Action</th>
+                  </tr>
+                </thead>
 
-              <div className="p-4">
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="min-w-[820px] w-full text-sm">
-                    <thead className="bg-stone-50">
-                      <tr>
-                        <th className="text-left p-3">Chef</th>
-                        <th className="text-left p-3">Email</th>
-                        <th className="text-left p-3 w-[130px]">Score</th>
-                        <th className="text-left p-3">Badges</th>
-                        <th className="text-right p-3 w-[190px]">Action</th>
-                      </tr>
-                    </thead>
+                <tbody className="divide-y divide-white/10">
+                  {matched.map(x => (
+                    <tr key={x.chef.id} className="hover:bg-white/5 transition">
+                      <td className="py-3 pr-4">
+                        <div className="text-white font-medium leading-tight">
+                          {(x.chef.firstName || '')} {(x.chef.lastName || '')}
+                        </div>
+                        <div className="text-xs text-white/45 mt-0.5">
+                          {x.chef.email || '—'}
+                          <span className="text-white/25"> • </span>
+                          {x.chef.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
+                        </div>
+                      </td>
 
-                    <tbody>
-                      {matched.map(x => (
-                        <tr key={x.chef.id} className="border-t">
-                          <td className="p-3 min-w-0">
-                            <div className="font-medium truncate">
-                              {(x.chef.firstName || '')} {(x.chef.lastName || '')}
-                            </div>
-                            <div className="text-xs text-stone-500 truncate">
-                              {x.chef.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
-                            </div>
-                          </td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        <span className="text-white font-semibold">{x.score}</span>
+                        <span className="text-white/45"> / 100</span>
+                      </td>
 
-                          <td className="p-3 min-w-0">
-                            <div className="truncate">{x.chef.email || '—'}</div>
-                          </td>
+                      <td className="py-3 pr-4">
+                        <div className="flex flex-wrap gap-2">
+                          {x.badges?.length ? (
+                            x.badges.map(b => (
+                              <span
+                                key={b}
+                                className="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/10 text-white/80"
+                              >
+                                {b}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-white/45">—</span>
+                          )}
+                        </div>
+                      </td>
 
-                          <td className="p-3">
-                            <span className="font-semibold">{x.score}</span>
-                            <span className="text-stone-400"> / 100</span>
-                          </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => onSelectChef(x.chef.id)}
+                          disabled={actionChefId === x.chef.id}
+                          className={[
+                            'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
+                            'border-white/10 bg-white/10 text-white hover:bg-white/15',
+                            actionChefId === x.chef.id ? 'opacity-60 cursor-not-allowed' : '',
+                          ].join(' ')}
+                        >
+                          Sélectionner <span aria-hidden>→</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
 
-                          <td className="p-3">
-                            <div className="flex flex-wrap gap-2">
-                              {x.badges.length ? (
-                                x.badges.map(b => (
-                                  <span key={b} className="text-xs px-2 py-1 rounded-full bg-stone-100">
-                                    {b}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-xs text-stone-500">—</span>
-                              )}
-                            </div>
-                          </td>
-
-                          <td className="p-3 text-right">
-                            <button
-                              onClick={() => onSelectChef(x.chef.id)}
-                              disabled={selectingChefId === x.chef.id}
-                              className="px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-50"
-                            >
-                              {selectingChefId === x.chef.id ? 'Sélection…' : 'Sélectionner'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-
-                      {matched.length === 0 && (
-                        <tr>
-                          <td className="p-3 text-stone-500" colSpan={5}>
-                            Aucun chef matchable (actifs) pour cette demande.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-3 text-xs text-stone-500">
-                  Sélection = création mission + request en <span className="font-semibold">assigned</span>.
-                </div>
-              </div>
+                  {matched.length === 0 && (
+                    <tr>
+                      <td className="py-4 text-white/60" colSpan={4}>
+                        Aucun chef matchable (actifs) pour cette demande.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
+
+            <div className="mt-4 text-xs text-white/45">
+              Prochaine étape : “Sélectionner” = création d’une <span className="text-white/70 font-medium">proposal</span> OU création directe d’une <span className="text-white/70 font-medium">mission</span> + update statut request.
+            </div>
+          </Panel>
         </div>
-        {/* end grid */}
       </div>
+    </div>
+  );
+}
+
+/* ---------- UI ---------- */
+
+function Panel({
+  title,
+  subtitle,
+  right,
+  children,
+  className = '',
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`border border-white/10 rounded-2xl bg-white/5 backdrop-blur overflow-hidden ${className}`}>
+      <div className="p-4 border-b border-white/10 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-white">{title}</div>
+          {subtitle ? <div className="text-xs text-white/45 mt-0.5">{subtitle}</div> : null}
+        </div>
+        {right}
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+function Kpi({ title, value, hint }: { title: string; value: string; hint?: string }) {
+  return (
+    <div className="border border-white/10 rounded-2xl bg-white/5 p-4">
+      <div className="text-sm text-white/70">{title}</div>
+      <div className="text-3xl font-semibold text-white mt-1">{value}</div>
+      {hint ? <div className="text-xs text-white/40 mt-1">{hint}</div> : null}
     </div>
   );
 }
@@ -309,13 +345,34 @@ export default function AdminRequestDetailPage() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="text-stone-500">{label}</div>
-      <div className="font-medium text-stone-900 text-right truncate max-w-[60%]">
-        {value}
-      </div>
+      <div className="text-white/55">{label}</div>
+      <div className="font-medium text-white text-right">{value}</div>
     </div>
   );
 }
+
+function StatusBadge({ status }: { status: string }) {
+  const s = (status || '').toLowerCase();
+
+  const cls =
+    s === 'new'
+      ? 'bg-amber-500/15 text-amber-200 border-amber-500/20'
+      : s === 'in_review'
+      ? 'bg-sky-500/15 text-sky-200 border-sky-500/20'
+      : s === 'assigned'
+      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20'
+      : s === 'closed'
+      ? 'bg-white/10 text-white/60 border-white/10'
+      : 'bg-white/10 text-white/60 border-white/10';
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {s || '—'}
+    </span>
+  );
+}
+
+/* ---------- Helpers ---------- */
 
 function formatDates(r: RequestEntity) {
   const start = r.dates?.start ? new Date(r.dates.start).toLocaleDateString('fr-FR') : '—';
@@ -332,4 +389,12 @@ function formatBudget(b: any) {
   if (min) return `≥ ${min}`;
   if (max) return `≤ ${max}`;
   return '—';
+}
+
+function money(n: number) {
+  try {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
+  } catch {
+    return `${Math.round(n || 0)}€`;
+  }
 }
