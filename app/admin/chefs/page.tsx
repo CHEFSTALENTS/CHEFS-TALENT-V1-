@@ -1,26 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
-import { PageTitle, GhostButton, Card } from '@/app/admin/_components/ui';
 
-export default function AdminChefsPage() {
-  return (
-    <div className="space-y-4">
-      <PageTitle
-        title="Chefs"
-        subtitle="Validation, profils, statut"
-        right={<GhostButton href="/admin">Retour Dashboard</GhostButton>}
-      />
+import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 
-      <Card>
-        <div className="p-4 text-white/70">Contenu à venir…</div>
-      </Card>
-    </div>
-  );
-}
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 type FilterKey = 'all' | 'pending' | 'approved' | 'active';
@@ -34,7 +19,7 @@ export default function AdminChefsPage() {
 
   const refresh = async () => {
     setLoading(true);
-    const list = await auth.getAllChefs();
+    const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
     const filtered = (list ?? []).filter(
       u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
     );
@@ -44,6 +29,7 @@ export default function AdminChefsPage() {
 
   useEffect(() => {
     refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const approve = async (id: string) => {
@@ -107,229 +93,186 @@ export default function AdminChefsPage() {
   }, [chefs, q, filter]);
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Admin — Chefs</h1>
-          <p className="text-sm text-stone-500">
-            Pipeline de validation : À valider → Approuvé → Actif.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <PageTitle
+        title="Chefs"
+        subtitle="Pipeline : À valider → Approuvé → Actif (tri : statut → score → date)"
+        right={
+          <>
+            <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
+            <GhostButton href="/admin">Dashboard</GhostButton>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={refresh}
-            className="px-3 py-2 rounded border text-sm bg-white hover:bg-stone-50"
-          >
-            Rafraîchir
-          </button>
-          <Link
-            href="/admin"
-            className="px-3 py-2 rounded border text-sm bg-white hover:bg-stone-50"
-          >
-            ← Dashboard
-          </Link>
-        </div>
-      </div>
-
-      {/* KPI / Pipeline */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <PipelineCard
-          title="Tous"
-          value={counts.all}
-          active={filter === 'all'}
-          onClick={() => setFilter('all')}
-          tone="stone"
-        />
-        <PipelineCard
-          title="À valider"
-          value={counts.pending}
+      {/* KPI quick (même vibe que Demandes) */}
+      <div className="flex flex-wrap gap-2">
+        <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
+        <Segment
+          label="À valider"
           active={filter === 'pending'}
           onClick={() => setFilter('pending')}
-          tone="yellow"
+          badge={counts.pending}
         />
-        <PipelineCard
-          title="Approuvés"
-          value={counts.approved}
+        <Segment
+          label="Approuvés"
           active={filter === 'approved'}
           onClick={() => setFilter('approved')}
-          tone="blue"
+          badge={counts.approved}
         />
-        <PipelineCard
-          title="Actifs"
-          value={counts.active}
+        <Segment
+          label="Actifs"
           active={filter === 'active'}
           onClick={() => setFilter('active')}
-          tone="green"
+          badge={counts.active}
         />
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3">
-        <input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Rechercher (nom ou email)…"
-          className="w-full md:max-w-md px-3 py-2 rounded border text-sm bg-white"
-        />
-
-        <div className="text-xs text-stone-500">
-          Tri : statut → score → date d’inscription
+      <Card className="p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <input
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Rechercher (nom ou email)…"
+            className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
+          />
+          <div className="text-xs text-white/45">Source : localStorage (MVP)</div>
         </div>
-      </div>
+      </Card>
 
-      {/* List */}
-      <div className="bg-white border rounded overflow-hidden">
-        <div className="px-4 py-3 border-b bg-stone-50 flex items-center justify-between">
-          <div className="text-sm font-medium">Chefs</div>
-          <div className="text-xs text-stone-500">{view.length} résultat(s)</div>
-        </div>
+      {/* Table */}
+      <Card>
+        <div className="overflow-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-white/5">
+              <tr className="text-white/70">
+                <th className="text-left p-3 font-medium">Chef</th>
+                <th className="text-left p-3 font-medium">Email</th>
+                <th className="text-left p-3 font-medium">Statut</th>
+                <th className="text-left p-3 font-medium">Score</th>
+                <th className="text-right p-3 font-medium">Actions</th>
+              </tr>
+            </thead>
 
-        {loading ? (
-          <div className="p-4 text-sm text-stone-500">Chargement…</div>
-        ) : view.length === 0 ? (
-          <div className="p-4 text-sm text-stone-500">Aucun résultat.</div>
-        ) : (
-          <div className="divide-y">
-            {view.map(c => {
-              const sc = auth.computeChefScore(c);
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td className="p-4 text-white/60" colSpan={5}>
+                    Chargement…
+                  </td>
+                </tr>
+              ) : view.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-white/60" colSpan={5}>
+                    Aucun résultat.
+                  </td>
+                </tr>
+              ) : (
+                view.map(c => {
+                  const sc = auth.computeChefScore(c);
+                  const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef';
 
-              return (
-                <div key={c.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
-                  {/* Identity */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium truncate">
-                        {c.firstName} {c.lastName}
-                      </div>
-                      <StatusBadge status={String(c.status)} />
-                      <ScorePill score={sc.score} />
-                    </div>
+                  return (
+                    <tr key={c.id} className="border-t border-white/10 hover:bg-white/5 transition">
+                      <td className="p-3">
+                        <div className="text-white font-medium truncate">{fullName}</div>
+                        <div className="text-xs text-white/45 mt-0.5">
+                          Inscrit : {formatDate(c.createdAt) || '—'}
+                        </div>
+                      </td>
 
-                    <div className="text-sm text-stone-500 truncate">{c.email}</div>
+                      <td className="p-3 text-white/85">{c.email || '—'}</td>
 
-                    {sc.badges?.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {sc.badges.map(b => (
-                          <span
-                            key={b}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs bg-stone-100 text-stone-700"
+                      <td className="p-3">
+                        <ChefStatusBadge status={String(c.status)} />
+                      </td>
+
+                      <td className="p-3">
+                        <ScorePill score={sc.score} />
+                      </td>
+
+                      <td className="p-3 text-right">
+                        <div className="inline-flex flex-wrap gap-2 justify-end">
+                          {c.status === 'pending_validation' ? (
+                            <button
+                              onClick={() => approve(c.id)}
+                              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+                            >
+                              Approuver →
+                            </button>
+                          ) : null}
+
+                          {c.status === 'approved' ? (
+                            <button
+                              onClick={() => activate(c.id)}
+                              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+                            >
+                              Activer →
+                            </button>
+                          ) : null}
+
+                          <button
+                            onClick={() => remove(c.id)}
+                            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-red-200 hover:bg-white/10 transition"
                           >
-                            {b}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                            Supprimer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2 md:justify-end">
-                    {c.status === 'pending_validation' && (
-                      <button
-                        onClick={() => approve(c.id)}
-                        className="px-3 py-2 rounded border text-sm bg-yellow-50 hover:bg-yellow-100"
-                      >
-                        Approuver →
-                      </button>
-                    )}
-
-                    {c.status === 'approved' && (
-                      <button
-                        onClick={() => activate(c.id)}
-                        className="px-3 py-2 rounded border text-sm bg-blue-50 hover:bg-blue-100"
-                      >
-                        Activer →
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => remove(c.id)}
-                      className="px-3 py-2 rounded border text-sm text-red-600 hover:bg-red-50"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        <div className="p-3 border-t border-white/10 text-xs text-white/45">
+          {view.length} résultat(s)
+        </div>
+      </Card>
     </div>
   );
 }
 
-/* ---------------- UI helpers ---------------- */
+/* ---------- UI local (spécifique chefs) ---------- */
 
-function PipelineCard({
-  title,
-  value,
-  active,
-  onClick,
-  tone,
-}: {
-  title: string;
-  value: number;
-  active: boolean;
-  onClick: () => void;
-  tone: 'stone' | 'yellow' | 'blue' | 'green';
-}) {
-  const toneCls =
-    tone === 'yellow'
-      ? 'border-yellow-200 bg-yellow-50'
-      : tone === 'blue'
-      ? 'border-blue-200 bg-blue-50'
-      : tone === 'green'
-      ? 'border-green-200 bg-green-50'
-      : 'border-stone-200 bg-white';
-
-  const activeCls = active ? 'ring-2 ring-stone-900 border-stone-900' : 'hover:bg-stone-50';
-
-  return (
-    <button
-      onClick={onClick}
-      className={`text-left p-4 rounded border transition ${toneCls} ${activeCls}`}
-    >
-      <div className="text-sm text-stone-600">{title}</div>
-      <div className="text-2xl font-semibold mt-1">{value}</div>
-      <div className="text-xs text-stone-500 mt-1">Ouvrir</div>
-    </button>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const s = status || 'unknown';
-
-  const cls =
-    s === 'pending_validation'
-      ? 'bg-yellow-100 text-yellow-800'
-      : s === 'approved'
-      ? 'bg-blue-100 text-blue-800'
-      : s === 'active'
-      ? 'bg-green-100 text-green-800'
-      : 'bg-stone-100 text-stone-700';
+function ChefStatusBadge({ status }: { status: string }) {
+  // on réutilise StatusBadge mais on mappe les labels chefs
+  const s = (status || '').toLowerCase();
 
   const label =
-    s === 'pending_validation' ? 'À valider' : s === 'approved' ? 'Approuvé' : s === 'active' ? 'Actif' : s;
+    s === 'pending_validation' ? 'À valider' : s === 'approved' ? 'Approuvé' : s === 'active' ? 'Actif' : s || '—';
 
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${cls}`}>
-      {label}
-    </span>
-  );
+  // pour garder la charte, on passe un "status" générique
+  // (couleurs) : pending -> new, approved -> in_review, active -> assigned
+  const mapped =
+    s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
+
+  return <StatusBadge status={mapped} />;
 }
 
 function ScorePill({ score }: { score: number }) {
   const cls =
-    score >= 80 ? 'bg-green-100 text-green-800'
-    : score >= 60 ? 'bg-blue-100 text-blue-800'
-    : score >= 40 ? 'bg-yellow-100 text-yellow-800'
-    : 'bg-stone-100 text-stone-700';
+    score >= 80
+      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20'
+      : score >= 60
+      ? 'bg-sky-500/15 text-sky-200 border-sky-500/20'
+      : score >= 40
+      ? 'bg-amber-500/15 text-amber-200 border-amber-500/20'
+      : 'bg-white/10 text-white/60 border-white/10';
 
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${cls}`}>
-      Score {score}/100
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      Score {Number(score || 0)}/100
     </span>
   );
+}
+
+function formatDate(iso?: string) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
