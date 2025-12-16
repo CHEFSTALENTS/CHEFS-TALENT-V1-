@@ -147,16 +147,12 @@ export default function AdminDashboardPage() {
         <div className="text-sm text-stone-500">Chargement…</div>
       ) : (
         <>
-          {/* KPI */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <StatCard
-              title="Demandes B2B"
-              value={counts.b2bNew}
-              subtitle="Nouvelles conciergeries"
-              href="/admin/requests?type=b2b&status=new"
-              tone="amber"
-              icon={<IconBuilding />}
-            />
+         <KpiCard
+  title="Demandes B2B"
+  value={counts.b2bNew}
+  subtitle="Traitement manuel obligatoire"
+  href="/admin/requests?type=b2b&status=new"
+/>
             <StatCard
               title="Demandes B2C"
               value={counts.b2cNew}
