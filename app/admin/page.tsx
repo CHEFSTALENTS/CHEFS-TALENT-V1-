@@ -521,7 +521,6 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
 /* =========================
    Icons (inline SVG)
 ========================= */
