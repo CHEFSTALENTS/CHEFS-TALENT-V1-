@@ -47,32 +47,19 @@ function byDateDesc<T extends { createdAt?: string }>(arr: T[]) {
       new Date(a.createdAt || 0).getTime()
   );
 }
-
 const revenue = useMemo(() => {
   const amountOf = (m: any) =>
-    Number(
-      m?.priceTotal ??
-        m?.totalPrice ??
-        m?.amount ??
-        m?.total ??
-        0
-    ) || 0;
+    Number(m?.priceTotal ?? m?.totalPrice ?? m?.amount ?? m?.total ?? 0) || 0;
 
   const now = new Date();
 
-  const startOfDay = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
+  // Début du jour
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const startOfMonth = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    1
-  );
+  // Début du mois
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // semaine = lundi
+  // Début de semaine (lundi)
   const day = now.getDay(); // 0 dimanche
   const diffToMonday = (day + 6) % 7;
   const startOfWeek = new Date(now);
@@ -80,11 +67,9 @@ const revenue = useMemo(() => {
   startOfWeek.setHours(0, 0, 0, 0);
 
   const sumSince = (from: Date) =>
-    missions.reduce((acc, m: any) => {
-      const d = new Date(m?.createdAt || 0);
-      if (!Number.isNaN(d.getTime()) && d >= from) {
-        acc += amountOf(m);
-      }
+    (missions || []).reduce((acc, m: any) => {
+      const d = new Date(m?.createdAt || m?.paidAt || m?.startAt || 0);
+      if (!Number.isNaN(d.getTime()) && d >= from) acc += amountOf(m);
       return acc;
     }, 0);
 
@@ -96,11 +81,8 @@ const revenue = useMemo(() => {
 }, [missions]);
 
 const money = (n: number) =>
-  new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(n || 0);
-
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n || 0);
+  
 const quickLists = useMemo(() => {
   const chefsPending = byDateDesc(
     chefs.filter(
