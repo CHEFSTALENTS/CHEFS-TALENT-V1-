@@ -543,7 +543,7 @@ function Row({ label, value }: { label: string; value: string }) {
 /* =========================
    Icons (inline SVG)
 ========================= */
-function IconBriefcase() 
+function IconBriefcase() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -558,22 +558,13 @@ function IconBriefcase()
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path
-        d="M4 12h16"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10 12v2h4v-2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
+      <path d="M4 12h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M10 12v2h4v-2" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
 }
-function IconGrid() 
+
+function IconGrid() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -585,7 +576,7 @@ function IconGrid()
   );
 }
 
-function IconBuilding() 
+function IconBuilding() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -598,7 +589,7 @@ function IconBuilding()
   );
 }
 
-function IconUser() 
+function IconUser() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -611,7 +602,7 @@ function IconUser()
   );
 }
 
-function IconSpark() 
+function IconSpark() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -624,7 +615,7 @@ function IconSpark()
   );
 }
 
-function IconShield() 
+function IconShield() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -637,7 +628,7 @@ function IconShield()
   );
 }
 
-function IconInbox() 
+function IconInbox() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -650,7 +641,7 @@ function IconInbox()
   );
 }
 
-function IconChefHat() 
+function IconChefHat() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
@@ -664,7 +655,7 @@ function IconChefHat()
   );
 }
 
-function IconBolt() 
+function IconBolt() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-stone-700">
       <path
