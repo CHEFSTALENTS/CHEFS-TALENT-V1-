@@ -19,15 +19,19 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<RequestEntity[]>([]);
   const [chefs, setChefs] = useState<ChefUser[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
 
   const refresh = async () => {
     setLoading(true);
-    const [r, c] = await Promise.all([
-      (api.getRequests?.() ?? Promise.resolve([])) as Promise<RequestEntity[]>,
-      (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
-    ]);
-    setRequests(r ?? []);
-    setChefs(c ?? []);
+    const [r, c, m] = await Promise.all([
+  (api.getRequests?.() ?? Promise.resolve([])) as Promise<RequestEntity[]>,
+  (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
+  (api.getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
+]);
+
+setRequests(r ?? []);
+setChefs(c ?? []);
+setMissions(m ?? []);
     setLoading(false);
   };
 
@@ -35,27 +39,38 @@ export default function AdminDashboardPage() {
     refresh();
   }, []);
 
-  const counts = useMemo(() => {
-    const b2bNew = requests.filter(r => r.userType === 'b2b' && r.status === 'new').length;
-    const b2cNew = requests.filter(r => r.userType !== 'b2b' && r.status === 'new').length;
-    const newAll = requests.filter(r => r.status === 'new').length;
-    const inReview = requests.filter(r => r.status === 'in_review').length;
+  cconst revenue = useMemo(() => {
+  const amountOf = (m: any) =>
+    Number(m?.priceTotal ?? m?.totalPrice ?? m?.amount ?? m?.total ?? 0) || 0;
 
-    const chefsApproved = chefs.filter(c => c.role === 'chef' && c.status === 'approved').length;
-    const chefsActive = chefs.filter(c => c.role === 'chef' && c.status === 'active').length;
+  const now = new Date();
 
-    const chefsToValidate = chefs.filter(
-      c => c.role === 'chef' && (c.status === 'pending_validation' || c.status === 'approved')
-    ).length;
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    return { b2bNew, b2cNew, newAll, inReview, chefsToValidate, chefsApproved, chefsActive };
-  }, [requests, chefs]);
+  // Lundi
+  const day = now.getDay(); // 0 dimanche
+  const diffToMonday = (day + 6) % 7;
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - diffToMonday);
+  startOfWeek.setHours(0, 0, 0, 0);
 
-  const quickLists = useMemo(() => {
-    const byDateDesc = <T extends { createdAt?: string }>(arr: T[]) =>
-      [...arr].sort(
-        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-      );
+  const sumSince = (from: Date) =>
+    missions.reduce((acc, m: any) => {
+      const d = new Date(m?.createdAt || 0);
+      if (!Number.isNaN(d.getTime()) && d >= from) acc += amountOf(m);
+      return acc;
+    }, 0);
+
+  return {
+    day: sumSince(startOfDay),
+    week: sumSince(startOfWeek),
+    month: sumSince(startOfMonth),
+  };
+}, [missions]);
+
+const money = (n: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n || 0);
 
     const chefsPending = byDateDesc(
       chefs.filter(c => c.role === 'chef' && c.status === 'pending_validation')
@@ -158,6 +173,25 @@ export default function AdminDashboardPage() {
         <div className="text-sm text-stone-500">Chargement…</div>
       ) : (
         <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div className="border rounded-xl bg-white p-4">
+    <div className="text-xs text-stone-500">CA jour</div>
+    <div className="text-2xl font-semibold mt-1">{money(revenue.day)}</div>
+    <div className="text-xs text-stone-500 mt-2">depuis minuit</div>
+  </div>
+
+  <div className="border rounded-xl bg-white p-4">
+    <div className="text-xs text-stone-500">CA semaine</div>
+    <div className="text-2xl font-semibold mt-1">{money(revenue.week)}</div>
+    <div className="text-xs text-stone-500 mt-2">depuis lundi</div>
+  </div>
+
+  <div className="border rounded-xl bg-white p-4">
+    <div className="text-xs text-stone-500">CA mois</div>
+    <div className="text-2xl font-semibold mt-1">{money(revenue.month)}</div>
+    <div className="text-xs text-stone-500 mt-2">depuis le 1er</div>
+  </div>
+</div>
           {/* ✅ KPI GRID (c’était ça qui manquait chez toi) */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
