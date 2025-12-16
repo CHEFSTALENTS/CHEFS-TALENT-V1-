@@ -538,8 +538,8 @@ function Row({ label, value }: { label: string; value: string }) {
       <div className="font-medium text-stone-900">{value}</div>
     </div>
   );
-      }
-      
+}
+
 /* =========================
    Icons (inline SVG)
 ========================= */
@@ -671,7 +671,6 @@ function IconBolt() {
 /* =========================
    Helpers
 ========================= */
-
 function formatDate(iso?: string) {
   if (!iso) return '';
   const d = new Date(iso);
