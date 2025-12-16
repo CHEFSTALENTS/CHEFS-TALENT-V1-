@@ -41,8 +41,7 @@ setMissions(m ?? []);
 function byDateDesc<T extends { createdAt?: string }>(arr: T[]) {
   return [...arr].sort(
     (a, b) =>
-      new Date(b.createdAt || 0).getTime() -
-      new Date(a.createdAt || 0).getTime()
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   );
 }
   const revenue = useMemo(() => {
