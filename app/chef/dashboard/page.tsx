@@ -18,6 +18,9 @@ import {
   Crown,
   Sparkles
 } from 'lucide-react';
+import { computeChefScore } from '@/lib/chefScore';
+
+const { score, rules } = computeChefScore(profile);
 
 export default function ChefDashboardPage() {
   const user = auth.getCurrentUser();
