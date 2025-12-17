@@ -24,15 +24,15 @@ type ChefProfile = {
   city?: string;
   country?: string;
   bio?: string;
-  cuisines?: string[]; // ex: ["French", "Italian"]
-  specialties?: string[]; // ex: ["Private dining", "Yacht"]
-  languages?: string[]; // ex: ["FR", "EN"]
+  cuisines?: string[];
+  specialties?: string[];
+  languages?: string[];
   instagram?: string;
   website?: string;
   portfolioUrl?: string;
   avatarUrl?: string;
   yearsExperience?: number | null;
-  founder?: boolean; // Chef Fondateur (early access)
+  founder?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -46,22 +46,47 @@ export default function ChefSettingsPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    let alive = true;
+
     (async () => {
-      setLoading(true);
-      const user = auth.getCurrentUser?.();
+      try {
+        setLoading(true);
 
-      // 1) essaie via API si dispo
-      const user = auth.getCurrentUser?.();
+        const user = auth.getCurrentUser?.();
+        const apiAny = api as any;
 
-const apiAny = api as any;
+        // 1) API (si dispo) - on n'appelle que des méthodes potentielles
+        let fromApi: ChefProfile | null = null;
+        if (user?.id) {
+          fromApi =
+            (await (apiAny.getChef?.(user.id) ??
+              apiAny.getChefById?.(user.id) ??
+              apiAny.getCurrentChef?.() ??
+              Promise.resolve(null))) ?? null;
+        }
 
-// On n'appelle que des méthodes qui existent potentiellement, sans casser TS.
-const fromApi =
-  (user?.id &&
-    (await (apiAny.getChef?.(user.id) ??
-      apiAny.getCurrentChef?.() ??
-      Promise.resolve(null)))) ||
-  null;
+        // 2) localStorage fallback
+        const fromLS = safeReadLS<ChefProfile>(STORAGE_KEY);
+
+        const base: ChefProfile = {
+          ...(fromLS ?? {}),
+          ...(fromApi ?? {}),
+          id: (fromApi?.id ?? fromLS?.id ?? user?.id) || undefined,
+          email: (fromApi?.email ?? fromLS?.email ?? user?.email) || undefined,
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (alive) setProfile(base);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const checklist = useMemo(() => {
@@ -71,12 +96,21 @@ const fromApi =
       { key: 'city', label: 'Ville / zone', ok: !!profile.city?.trim(), hint: 'Ex: Bordeaux, Paris, Ibiza…' },
       { key: 'bio', label: 'Bio courte', ok: (profile.bio?.trim()?.length ?? 0) >= 80, hint: '80+ caractères' },
       { key: 'cuisines', label: 'Cuisines', ok: (profile.cuisines?.length ?? 0) >= 1, hint: 'Min 1 cuisine' },
-      { key: 'specialties', label: 'Spécialités', ok: (profile.specialties?.length ?? 0) >= 1, hint: 'Min 1 spécialité' },
+      {
+        key: 'specialties',
+        label: 'Spécialités',
+        ok: (profile.specialties?.length ?? 0) >= 1,
+        hint: 'Min 1 spécialité',
+      },
       { key: 'languages', label: 'Langues', ok: (profile.languages?.length ?? 0) >= 1, hint: 'FR/EN recommandé' },
       { key: 'instagram', label: 'Instagram', ok: !!profile.instagram?.trim(), hint: '@toncompte' },
-      { key: 'portfolioUrl', label: 'Portfolio / photos', ok: !!profile.portfolioUrl?.trim(), hint: 'Drive, Notion, site…' },
+      {
+        key: 'portfolioUrl',
+        label: 'Portfolio / photos',
+        ok: !!profile.portfolioUrl?.trim(),
+        hint: 'Drive, Notion, site…',
+      },
     ];
-
     return items;
   }, [profile]);
 
@@ -111,23 +145,28 @@ const fromApi =
       const id = next.id ?? user?.id;
 
       if (id) {
-        await (api.updateChefProfile?.(id, next) ?? api.updateChef?.(id, next) ?? Promise.resolve());
+        const apiAny = api as any;
+        await (apiAny.updateChefProfile?.(id, next) ??
+          apiAny.updateChef?.(id, next) ??
+          apiAny.saveChef?.(id, next) ??
+          Promise.resolve());
       }
 
       setNotice('Enregistré ✅');
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setNotice("Impossible d'enregistrer pour le moment.");
     } finally {
       setSaving(false);
-      setTimeout(() => setNotice(null), 2500);
+      window.setTimeout(() => setNotice(null), 2500);
     }
   };
 
- const updateField = <K extends keyof ChefProfile,>(key: K, value: ChefProfile[K]) => {
-  const next = { ...profile, [key]: value, updatedAt: new Date().toISOString() };
-  setProfile(next);
-};
+  // IMPORTANT: virgule après le générique pour éviter la confusion TSX
+  const updateField = <K extends keyof ChefProfile,>(key: K, value: ChefProfile[K]) => {
+    const next = { ...profile, [key]: value, updatedAt: new Date().toISOString() };
+    setProfile(next);
+  };
 
   const addToken = (key: 'cuisines' | 'specialties' | 'languages', raw: string) => {
     const v = raw.trim();
@@ -156,8 +195,8 @@ const fromApi =
           <Label>Paramètres</Label>
           <h1 className="text-3xl font-serif text-stone-900">Votre profil Chef</h1>
           <p className="text-sm text-stone-500 mt-2 max-w-2xl">
-            Plateforme en lancement : les missions arrivent bientôt. En attendant, compléter votre profil vous place
-            en priorité lors du matching.
+            Plateforme en lancement : les missions arrivent bientôt. En attendant, compléter votre profil vous place en
+            priorité lors du matching.
           </p>
         </div>
 
@@ -173,14 +212,12 @@ const fromApi =
               </div>
 
               <div className="text-sm text-stone-600">
-                Complétion profil : <span className="font-semibold text-stone-900">{completion.score}%</span> ({completion.ok}/{completion.total})
+                Complétion profil : <span className="font-semibold text-stone-900">{completion.score}%</span> (
+                {completion.ok}/{completion.total})
               </div>
 
               <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
-                <div
-                  className="h-2 bg-stone-900 rounded-full transition-all"
-                  style={{ width: `${completion.score}%` }}
-                />
+                <div className="h-2 bg-stone-900 rounded-full transition-all" style={{ width: `${completion.score}%` }} />
               </div>
 
               <div className="text-xs text-stone-500">
@@ -213,7 +250,8 @@ const fromApi =
                 <div>
                   <h2 className="text-lg font-serif text-stone-900">Chef Fondateur</h2>
                   <p className="text-sm text-stone-600 mt-1">
-                    Badge réservé aux premiers chefs : visibilité renforcée au lancement + accès prioritaire aux premières missions.
+                    Badge réservé aux premiers chefs : visibilité renforcée au lancement + accès prioritaire aux premières
+                    missions.
                   </p>
                 </div>
                 <div>
@@ -235,7 +273,8 @@ const fromApi =
 
               {!profile.founder ? (
                 <div className="mt-3 text-xs text-stone-500">
-                  Condition : profil ≥ <span className="font-semibold text-stone-800">70%</span>. {canBecomeFounder ? '✅ OK' : 'Complète encore 2–3 champs.'}
+                  Condition : profil ≥ <span className="font-semibold text-stone-800">70%</span>.{' '}
+                  {canBecomeFounder ? '✅ OK' : 'Complète encore 2–3 champs.'}
                 </div>
               ) : null}
             </div>
@@ -279,12 +318,42 @@ const fromApi =
             ) : (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Nom complet" value={profile.name ?? ''} onChange={v => updateField('name', v)} placeholder="Ex: Thomas Delcroix" />
-                  <Field label="Téléphone" value={profile.phone ?? ''} onChange={v => updateField('phone', v)} placeholder="+33 6…" />
-                  <Field label="Ville / zone" value={profile.city ?? ''} onChange={v => updateField('city', v)} placeholder="Bordeaux / Paris / Ibiza…" />
-                  <Field label="Instagram" value={profile.instagram ?? ''} onChange={v => updateField('instagram', v)} placeholder="@toncompte" />
-                  <Field label="Portfolio / photos" value={profile.portfolioUrl ?? ''} onChange={v => updateField('portfolioUrl', v)} placeholder="https://…" />
-                  <Field label="Site (optionnel)" value={profile.website ?? ''} onChange={v => updateField('website', v)} placeholder="https://…" />
+                  <Field
+                    label="Nom complet"
+                    value={profile.name ?? ''}
+                    onChange={v => updateField('name', v)}
+                    placeholder="Ex: Thomas Delcroix"
+                  />
+                  <Field
+                    label="Téléphone"
+                    value={profile.phone ?? ''}
+                    onChange={v => updateField('phone', v)}
+                    placeholder="+33 6…"
+                  />
+                  <Field
+                    label="Ville / zone"
+                    value={profile.city ?? ''}
+                    onChange={v => updateField('city', v)}
+                    placeholder="Bordeaux / Paris / Ibiza…"
+                  />
+                  <Field
+                    label="Instagram"
+                    value={profile.instagram ?? ''}
+                    onChange={v => updateField('instagram', v)}
+                    placeholder="@toncompte"
+                  />
+                  <Field
+                    label="Portfolio / photos"
+                    value={profile.portfolioUrl ?? ''}
+                    onChange={v => updateField('portfolioUrl', v)}
+                    placeholder="https://…"
+                  />
+                  <Field
+                    label="Site (optionnel)"
+                    value={profile.website ?? ''}
+                    onChange={v => updateField('website', v)}
+                    placeholder="https://…"
+                  />
                 </div>
 
                 <TextArea
@@ -319,16 +388,13 @@ const fromApi =
                 />
 
                 <div className="flex items-center gap-2 pt-2">
-                  <Button
-                    className="bg-stone-900 hover:bg-stone-800"
-                    onClick={() => saveProfile(profile)}
-                    disabled={saving}
-                  >
+                  <Button className="bg-stone-900 hover:bg-stone-800" onClick={() => saveProfile(profile)} disabled={saving}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                     Enregistrer
                   </Button>
                   <div className="text-xs text-stone-500">
-                    Astuce : vise <span className="font-semibold text-stone-800">70%+</span> pour être prioritaire dès l’ouverture des missions.
+                    Astuce : vise <span className="font-semibold text-stone-800">70%+</span> pour être prioritaire dès
+                    l’ouverture des missions.
                   </div>
                 </div>
               </div>
@@ -338,7 +404,8 @@ const fromApi =
 
         {/* Footer note */}
         <div className="text-xs text-stone-400">
-          Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).
+          Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs
+          (réponse rapide).
         </div>
       </div>
     </ChefLayout>
