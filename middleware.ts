@@ -1,35 +1,25 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const accessCode = process.env.SITE_ACCESS_CODE;
+  const cookie = req.cookies.get("ct_access")?.value;
 
-  // Autoriser Next internals + assets
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/assets') ||
-    pathname.startsWith('/images')
-  ) {
-    return NextResponse.next();
-  }
+  // sécurité : si pas de code défini, on bloque rien
+  if (!accessCode) return NextResponse.next();
 
-  // Autoriser la page d'accès + l'API
-  if (pathname === '/access' || pathname.startsWith('/api/access')) {
-    return NextResponse.next();
-  }
+  // autorisé si cookie OK
+  if (cookie === accessCode) return NextResponse.next();
 
-  // Si cookie OK => accès
-  const hasAccess = req.cookies.get('ct_access')?.value === '1';
-  if (hasAccess) return NextResponse.next();
+  // autoriser la page d’accès
+  if (req.nextUrl.pathname === "/access") return NextResponse.next();
 
-  // Sinon => redirect vers /access
+  // sinon → redirect
   const url = req.nextUrl.clone();
-  url.pathname = '/access';
-  url.searchParams.set('next', pathname);
+  url.pathname = "/access";
   return NextResponse.redirect(url);
 }
 
 export const config = {
-  matcher: ['/((?!robots.txt|sitemap.xml).*)'],
+  matcher: ["/((?!_next|favicon.ico).*)"],
 };
