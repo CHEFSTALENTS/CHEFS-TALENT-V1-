@@ -60,10 +60,9 @@ export default function ChefDashboardPage() {
       ...(settingsProfile ?? {}),
       // fallbacks utiles
       email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
-      name:
-        (settingsProfile as any)?.name ??
-        `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim() ||
-        onboardingProfile.name,
+     const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
+
+name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
     };
   }, [onboardingProfile, settingsProfile, user]);
 
