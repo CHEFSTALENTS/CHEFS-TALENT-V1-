@@ -1,65 +1,40 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
 export default function AccessPage() {
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
 
-  const next =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('next') || '/'
-      : '/';
-
-  const submit = async () => {
-    setLoading(true);
-    setErr(null);
-
-    const res = await fetch('/api/access', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  async function submit() {
+    setError("");
+    const res = await fetch("/api/access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code }),
     });
 
-    setLoading(false);
-
-    if (!res.ok) {
-      setErr('Code invalide.');
-      return;
+    if (res.ok) {
+      window.location.href = "/";
+    } else {
+      setError("Code incorrect");
     }
-
-    window.location.href = next;
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
-      <div className="w-full max-w-md bg-white border border-stone-200 rounded-2xl p-6">
-        <h1 className="text-2xl font-serif text-stone-900">Accès privé</h1>
-        <p className="text-sm text-stone-500 mt-2">
-          Le site est en cours de finalisation. Entrez le code d’accès.
-        </p>
-
-        <div className="mt-4 space-y-3">
-          <input
-            value={code}
-            onChange={e => setCode(e.target.value)}
-            placeholder="Code d’accès…"
-            className="w-full px-3 py-2 rounded-xl border border-stone-200"
-            onKeyDown={e => {
-              if (e.key === 'Enter') submit();
-            }}
-          />
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="w-full px-3 py-2 rounded-xl bg-stone-900 text-white disabled:opacity-50"
-          >
-            {loading ? 'Vérification…' : 'Entrer'}
-          </button>
-
-          {err ? <div className="text-sm text-red-600">{err}</div> : null}
-        </div>
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+      <div style={{ maxWidth: 400, width: "100%", padding: 24 }}>
+        <h1>Accès privé</h1>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Code d’accès"
+          style={{ width: "100%", padding: 12, marginTop: 12 }}
+        />
+        <button onClick={submit} style={{ width: "100%", marginTop: 12 }}>
+          Entrer
+        </button>
+        {error && <p style={{ color: "red" }}>{error}</p>}
       </div>
     </div>
   );
