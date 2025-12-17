@@ -24,7 +24,16 @@ import {
 } from 'lucide-react';
 import { computeChefScore } from '@/lib/chefScore';
 
-const { score, rules } = computeChefScore(profile);
+// ...
+
+export default function ChefSettingsPage() {
+  // tes useState etc...
+  const [profile, setProfile] = useState<ChefProfile>({});
+
+  const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile]);
+
+  // puis tu utilises `score` à la place de `completion.score` si tu veux unifier
+}
 
 
 type ChefProfile = {
