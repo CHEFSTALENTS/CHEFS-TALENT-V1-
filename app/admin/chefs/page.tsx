@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
+import { computeChefScore } from '@/lib/chefScore';
+
+const { score } = computeChefScore(chef.profile);
 
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 
