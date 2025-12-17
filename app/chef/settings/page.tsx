@@ -22,6 +22,10 @@ import {
   Calendar,
   SlidersHorizontal,
 } from 'lucide-react';
+import { computeChefScore } from '@/lib/chefScore';
+
+const { score, rules } = computeChefScore(profile);
+
 
 type ChefProfile = {
   id?: string;
