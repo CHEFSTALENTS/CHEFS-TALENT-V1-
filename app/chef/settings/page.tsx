@@ -200,47 +200,53 @@ export default function ChefSettingsPage() {
           </p>
         </div>
 
-        {/* Launch Banner */}
-        <div className="border border-stone-200 bg-white rounded-2xl p-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <launchTier.icon className="w-5 h-5 text-stone-500" />
-                <div className="font-medium text-stone-900">Statut de lancement</div>
-                <Badge tone={launchTier.tone}>{launchTier.label}</Badge>
-                {profile.founder ? <Badge tone="dark">Chef Fondateur</Badge> : null}
-              </div>
+      {/* Launch Banner */}
+<div className="border border-stone-200 bg-white rounded-2xl p-5">
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <launchTier.icon className="w-5 h-5 text-stone-500" />
+        <div className="font-medium text-stone-900">Statut de lancement</div>
 
-              <div className="text-sm text-stone-600">
-                Complétion profil : <span className="font-semibold text-stone-900">{completion.score}%</span> (
-                {completion.ok}/{completion.total})
-              </div>
+        {/* Badge principal */}
+        <Badge variant={launchTier.variant}>{launchTier.label}</Badge>
 
-              <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
-                <div className="h-2 bg-stone-900 rounded-full transition-all" style={{ width: `${completion.score}%` }} />
-              </div>
+        {/* Badge fondateur */}
+        {profile.founder ? <Badge variant="default">Chef Fondateur</Badge> : null}
+      </div>
 
-              <div className="text-xs text-stone-500">
-                Règle simple : <span className="text-stone-800 font-medium">plus ton profil est complet</span>, plus tu
-                remontes en priorité sur les demandes (fast & standard).
-              </div>
-            </div>
+      <div className="text-sm text-stone-600">
+        Complétion profil : <span className="font-semibold text-stone-900">{completion.score}%</span> (
+        {completion.ok}/{completion.total})
+      </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="bg-stone-900 hover:bg-stone-800"
-                onClick={() => saveProfile(profile)}
-                disabled={saving || loading}
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Enregistrer
-              </Button>
-              {notice ? <div className="text-sm text-stone-600">{notice}</div> : null}
-            </div>
-          </div>
-        </div>
+      <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
+        <div
+          className="h-2 bg-stone-900 rounded-full transition-all"
+          style={{ width: `${completion.score}%` }}
+        />
+      </div>
 
+      <div className="text-xs text-stone-500">
+        Règle simple : <span className="text-stone-800 font-medium">plus ton profil est complet</span>, plus tu
+        remontes en priorité sur les demandes (fast & standard).
+      </div>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <Button
+        size="sm"
+        className="bg-stone-900 hover:bg-stone-800"
+        onClick={() => saveProfile(profile)}
+        disabled={saving || loading}
+      >
+        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+        Enregistrer
+      </Button>
+      {notice ? <div className="text-sm text-stone-600">{notice}</div> : null}
+    </div>
+  </div>
+</div>
         {/* Founder / Early access */}
         <div className="border border-stone-200 bg-stone-50/50 rounded-2xl p-6">
           <div className="flex items-start gap-3">
