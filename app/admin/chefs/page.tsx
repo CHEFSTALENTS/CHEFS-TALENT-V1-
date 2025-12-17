@@ -3,10 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
-import { computeChefScore } from '@/lib/chefScore';
-
-const { score } = computeChefScore(chef.profile);
-
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
@@ -108,7 +104,7 @@ export default function AdminChefsPage() {
         }
       />
 
-      {/* KPI quick (même vibe que Demandes) */}
+      {/* KPI quick */}
       <div className="flex flex-wrap gap-2">
         <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
         <Segment
@@ -242,14 +238,9 @@ export default function AdminChefsPage() {
 /* ---------- UI local (spécifique chefs) ---------- */
 
 function ChefStatusBadge({ status }: { status: string }) {
-  // on réutilise StatusBadge mais on mappe les labels chefs
   const s = (status || '').toLowerCase();
 
-  const label =
-    s === 'pending_validation' ? 'À valider' : s === 'approved' ? 'Approuvé' : s === 'active' ? 'Actif' : s || '—';
-
-  // pour garder la charte, on passe un "status" générique
-  // (couleurs) : pending -> new, approved -> in_review, active -> assigned
+  // Couleurs : pending -> new, approved -> in_review, active -> assigned
   const mapped =
     s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
 
