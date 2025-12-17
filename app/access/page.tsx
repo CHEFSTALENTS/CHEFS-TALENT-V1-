@@ -1,41 +1,40 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
 export default function AccessPage() {
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
+  const [code, setCode] = useState('');
+  const [err, setErr] = useState<string | null>(null);
 
-  async function submit() {
-    setError("");
-    const res = await fetch("/api/access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+  const submit = async () => {
+    setErr(null);
+    const r = await fetch('/api/access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
     });
 
-    if (res.ok) {
-      window.location.href = "/";
-    } else {
-      setError("Code incorrect");
+    if (!r.ok) {
+      setErr('Code incorrect');
+      return;
     }
-  }
+    window.location.href = '/';
+  };
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      <div style={{ maxWidth: 400, width: "100%", padding: 24 }}>
-        <h1>Accès privé</h1>
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Code d’accès"
-          style={{ width: "100%", padding: 12, marginTop: 12 }}
-        />
-        <button onClick={submit} style={{ width: "100%", marginTop: 12 }}>
-          Entrer
-        </button>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-      </div>
+    <div style={{ maxWidth: 420, margin: '80px auto', fontFamily: 'system-ui' }}>
+      <h1>Accès privé</h1>
+      <p>Entrez le code pour accéder au site.</p>
+      <input
+        value={code}
+        onChange={e => setCode(e.target.value)}
+        placeholder="Code"
+        style={{ width: '100%', padding: 12, marginTop: 12 }}
+      />
+      <button onClick={submit} style={{ width: '100%', padding: 12, marginTop: 12 }}>
+        Entrer
+      </button>
+      {err ? <p style={{ color: 'crimson' }}>{err}</p> : null}
     </div>
   );
 }
