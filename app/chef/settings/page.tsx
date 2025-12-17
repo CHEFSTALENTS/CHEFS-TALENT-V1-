@@ -51,23 +51,17 @@ export default function ChefSettingsPage() {
       const user = auth.getCurrentUser?.();
 
       // 1) essaie via API si dispo
-      const fromApi =
-        (user?.id && (await (api.getChefProfile?.(user.id) ?? api.getChef?.(user.id)))) ??
-        null;
+      const user = auth.getCurrentUser?.();
 
-      // 2) fallback localStorage
-      const fromLs = safeReadLS<ChefProfile>(STORAGE_KEY);
+const apiAny = api as any;
 
-      const merged: ChefProfile = {
-        id: user?.id ?? fromApi?.id ?? fromLs?.id,
-        email: user?.email ?? fromApi?.email ?? fromLs?.email,
-        ...fromLs,
-        ...fromApi,
-      };
-
-      setProfile(merged);
-      setLoading(false);
-    })();
+// On n'appelle que des méthodes qui existent potentiellement, sans casser TS.
+const fromApi =
+  (user?.id &&
+    (await (apiAny.getChef?.(user.id) ??
+      apiAny.getCurrentChef?.() ??
+      Promise.resolve(null)))) ||
+  null;
   }, []);
 
   const checklist = useMemo(() => {
