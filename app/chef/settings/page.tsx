@@ -124,10 +124,10 @@ const fromApi =
     }
   };
 
-  const updateField = <K extends keyof ChefProfile>(key: K, value: ChefProfile[K]) => {
-    const next = { ...profile, [key]: value, updatedAt: new Date().toISOString() };
-    setProfile(next);
-  };
+ const updateField = <K extends keyof ChefProfile,>(key: K, value: ChefProfile[K]) => {
+  const next = { ...profile, [key]: value, updatedAt: new Date().toISOString() };
+  setProfile(next);
+};
 
   const addToken = (key: 'cuisines' | 'specialties' | 'languages', raw: string) => {
     const v = raw.trim();
