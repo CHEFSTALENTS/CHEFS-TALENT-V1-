@@ -54,17 +54,17 @@ export default function ChefDashboardPage() {
   // ✅ Source de vérité unique : on fusionne
   // - onboarding (ancien flow)
   // - settings (nouveau flow premium)
-  const mergedProfile = useMemo<AnyProfile>(() => {
-    return {
-      ...onboardingProfile,
-      ...(settingsProfile ?? {}),
-      // fallbacks utiles
-      email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
-     const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
+ const mergedProfile = useMemo<AnyProfile>(() => {
+  const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
 
-name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
-    };
-  }, [onboardingProfile, settingsProfile, user]);
+  return {
+    ...onboardingProfile,
+    ...(settingsProfile ?? {}),
+    // fallbacks utiles
+    email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
+    name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
+  };
+}, [onboardingProfile, settingsProfile, user]);
 
   // ✅ Score unique (admin + chef = même)
   const { score, rules } = useMemo(() => computeChefScore(mergedProfile ?? {}), [mergedProfile]);
