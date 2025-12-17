@@ -94,17 +94,9 @@ export default function ChefMissionsPage() {
 
                 <p className="text-sm text-stone-500 font-light mt-1">
                   La plateforme est en phase de lancement : les missions seront ouvertes progressivement.
-                  Les chefs déjà présents seront contactés en priorité dès l’ouverture.
+                  Les chefs qui s'inscrivent maintenant seront contactés en priorité dès l’ouverture.
                 </p>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                  <span className="px-2 py-1 border border-stone-200 bg-stone-50">
-                    {offeredCount} proposition(s) en attente
-                  </span>
-                  <span className="px-2 py-1 border border-stone-200 bg-stone-50">
-                    {activeCount} mission(s) en cours / confirmée(s)
-                  </span>
-                </div>
+                
               </div>
             </div>
 
