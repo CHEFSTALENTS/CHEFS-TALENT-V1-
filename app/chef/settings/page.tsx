@@ -26,16 +26,6 @@ import { computeChefScore } from '@/lib/chefScore';
 
 // ...
 
-export default function ChefSettingsPage() {
-  // tes useState etc...
-  const [profile, setProfile] = useState<ChefProfile>({});
-
-  const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile]);
-
-  // puis tu utilises `score` à la place de `completion.score` si tu veux unifier
-}
-
-
 type ChefProfile = {
   id?: string;
   name?: string;
@@ -66,7 +56,8 @@ export default function ChefSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ChefProfile>({});
   const [notice, setNotice] = useState<string | null>(null);
-
+const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile]);
+  
   useEffect(() => {
     (async () => {
       setLoading(true);
