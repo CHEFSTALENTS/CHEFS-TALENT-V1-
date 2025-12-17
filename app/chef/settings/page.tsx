@@ -121,13 +121,20 @@ export default function ChefSettingsPage() {
     return { total, ok, score };
   }, [checklist]);
 
-  const launchTier = useMemo(() => {
-    const s = completion.score;
-    if (s >= 90) return { label: 'Priorité MAX', tone: 'dark' as const, icon: Crown };
-    if (s >= 70) return { label: 'Prioritaire', tone: 'violet' as const, icon: ShieldCheck };
-    if (s >= 40) return { label: 'En progression', tone: 'stone' as const, icon: Sparkles };
-    return { label: 'À compléter', tone: 'stone' as const, icon: Lock };
-  }, [completion.score]);
+ const launchTier = useMemo(() => {
+  const s = completion.score;
+
+  if (s >= 90) {
+    return { label: 'Priorité MAX', variant: 'default' as const, icon: Crown };
+  }
+  if (s >= 70) {
+    return { label: 'Prioritaire', variant: 'outline' as const, icon: ShieldCheck };
+  }
+  if (s >= 40) {
+    return { label: 'En progression', variant: 'secondary' as const, icon: Sparkles };
+  }
+  return { label: 'À compléter', variant: 'secondary' as const, icon: Lock };
+}, [completion.score]);
 
   const canBecomeFounder = completion.score >= 70;
 
