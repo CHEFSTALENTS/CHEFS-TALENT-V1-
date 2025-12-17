@@ -269,7 +269,7 @@ export default function ChefSettingsPage() {
                 </div>
                 <div>
                   {profile.founder ? (
-                    <Badge tone="dark">Activé</Badge>
+                    <Badge variant="default">Activé</Badge>
                   ) : (
                     <Button
                       size="sm"
