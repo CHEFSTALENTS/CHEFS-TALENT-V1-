@@ -1,127 +1,494 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth } from '../../../services/storage';
-import { Label, Button, Input, Marker, Badge } from '../../../components/ui';
-import { Check, Loader2 } from 'lucide-react';
-import { SubscriptionPlan } from '../../../types';
+import { auth, api } from '../../../services/storage';
+import { Marker, Label, Button, Badge } from '../../../components/ui';
+import {
+  Sparkles,
+  ShieldCheck,
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Lock,
+  Crown,
+  Save,
+  Loader2,
+} from 'lucide-react';
+
+type ChefProfile = {
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  bio?: string;
+  cuisines?: string[]; // ex: ["French", "Italian"]
+  specialties?: string[]; // ex: ["Private dining", "Yacht"]
+  languages?: string[]; // ex: ["FR", "EN"]
+  instagram?: string;
+  website?: string;
+  portfolioUrl?: string;
+  avatarUrl?: string;
+  yearsExperience?: number | null;
+  founder?: boolean; // Chef Fondateur (early access)
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+const STORAGE_KEY = 'ct_chef_profile_v1';
 
 export default function ChefSettingsPage() {
-  const router = useRouter();
-  const [pwd, setPwd] = useState({ current: '', new: '' });
-  const [showDelete, setShowDelete] = useState(false);
-  
-  // No active plan switching for now
-  const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan>('free');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<ChefProfile>({});
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const user = auth.getCurrentUser();
-    if (user) {
-      setCurrentPlan(user.plan);
-    }
+    (async () => {
+      setLoading(true);
+      const user = auth.getCurrentUser?.();
+
+      // 1) essaie via API si dispo
+      const fromApi =
+        (user?.id && (await (api.getChefProfile?.(user.id) ?? api.getChef?.(user.id)))) ??
+        null;
+
+      // 2) fallback localStorage
+      const fromLs = safeReadLS<ChefProfile>(STORAGE_KEY);
+
+      const merged: ChefProfile = {
+        id: user?.id ?? fromApi?.id ?? fromLs?.id,
+        email: user?.email ?? fromApi?.email ?? fromLs?.email,
+        ...fromLs,
+        ...fromApi,
+      };
+
+      setProfile(merged);
+      setLoading(false);
+    })();
   }, []);
 
-  const handleDelete = async () => {
-    const user = auth.getCurrentUser();
-    if (user) {
-      await auth.deleteChefAccount(user.id);
-      router.push('/');
+  const checklist = useMemo(() => {
+    const items: Array<{ key: string; label: string; ok: boolean; hint?: string }> = [
+      { key: 'name', label: 'Nom complet', ok: !!profile.name?.trim(), hint: 'Ex: Thomas Delcroix' },
+      { key: 'phone', label: 'Téléphone', ok: !!profile.phone?.trim(), hint: 'Format international conseillé' },
+      { key: 'city', label: 'Ville / zone', ok: !!profile.city?.trim(), hint: 'Ex: Bordeaux, Paris, Ibiza…' },
+      { key: 'bio', label: 'Bio courte', ok: (profile.bio?.trim()?.length ?? 0) >= 80, hint: '80+ caractères' },
+      { key: 'cuisines', label: 'Cuisines', ok: (profile.cuisines?.length ?? 0) >= 1, hint: 'Min 1 cuisine' },
+      { key: 'specialties', label: 'Spécialités', ok: (profile.specialties?.length ?? 0) >= 1, hint: 'Min 1 spécialité' },
+      { key: 'languages', label: 'Langues', ok: (profile.languages?.length ?? 0) >= 1, hint: 'FR/EN recommandé' },
+      { key: 'instagram', label: 'Instagram', ok: !!profile.instagram?.trim(), hint: '@toncompte' },
+      { key: 'portfolioUrl', label: 'Portfolio / photos', ok: !!profile.portfolioUrl?.trim(), hint: 'Drive, Notion, site…' },
+    ];
+
+    return items;
+  }, [profile]);
+
+  const completion = useMemo(() => {
+    const total = checklist.length;
+    const ok = checklist.filter(i => i.ok).length;
+    const score = total === 0 ? 0 : Math.round((ok / total) * 100);
+    return { total, ok, score };
+  }, [checklist]);
+
+  const launchTier = useMemo(() => {
+    const s = completion.score;
+    if (s >= 90) return { label: 'Priorité MAX', tone: 'dark' as const, icon: Crown };
+    if (s >= 70) return { label: 'Prioritaire', tone: 'violet' as const, icon: ShieldCheck };
+    if (s >= 40) return { label: 'En progression', tone: 'stone' as const, icon: Sparkles };
+    return { label: 'À compléter', tone: 'stone' as const, icon: Lock };
+  }, [completion.score]);
+
+  const canBecomeFounder = completion.score >= 70;
+
+  const saveProfile = async (next: ChefProfile) => {
+    setSaving(true);
+    setNotice(null);
+
+    try {
+      // 1) persist local
+      safeWriteLS(STORAGE_KEY, next);
+      setProfile(next);
+
+      // 2) persist API si dispo
+      const user = auth.getCurrentUser?.();
+      const id = next.id ?? user?.id;
+
+      if (id) {
+        await (api.updateChefProfile?.(id, next) ?? api.updateChef?.(id, next) ?? Promise.resolve());
+      }
+
+      setNotice('Enregistré ✅');
+    } catch (e: any) {
+      console.error(e);
+      setNotice("Impossible d'enregistrer pour le moment.");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setNotice(null), 2500);
     }
+  };
+
+  const updateField = <K extends keyof ChefProfile>(key: K, value: ChefProfile[K]) => {
+    const next = { ...profile, [key]: value, updatedAt: new Date().toISOString() };
+    setProfile(next);
+  };
+
+  const addToken = (key: 'cuisines' | 'specialties' | 'languages', raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    const current = Array.isArray(profile[key]) ? profile[key]! : [];
+    if (current.map(s => s.toLowerCase()).includes(v.toLowerCase())) return;
+    updateField(key, [...current, v]);
+  };
+
+  const removeToken = (key: 'cuisines' | 'specialties' | 'languages', value: string) => {
+    const current = Array.isArray(profile[key]) ? profile[key]! : [];
+    updateField(key, current.filter(s => s !== value));
+  };
+
+  const activateFounder = async () => {
+    const next = { ...profile, founder: true, updatedAt: new Date().toISOString() };
+    await saveProfile(next);
   };
 
   return (
     <ChefLayout>
-      <div className="max-w-3xl">
-        <Marker />
-        <Label>Compte</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Paramètres</h1>
-        
-        <div className="space-y-12">
-          
-          {/* Subscription Section - Coming Soon */}
-          <section className="bg-white border border-stone-200 p-8 md:p-10">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-serif">Abonnement</h3>
-              <Badge variant="secondary" className="bg-stone-100 text-stone-500">À venir</Badge>
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {/* Header */}
+        <div>
+          <Marker />
+          <Label>Paramètres</Label>
+          <h1 className="text-3xl font-serif text-stone-900">Votre profil Chef</h1>
+          <p className="text-sm text-stone-500 mt-2 max-w-2xl">
+            Plateforme en lancement : les missions arrivent bientôt. En attendant, compléter votre profil vous place
+            en priorité lors du matching.
+          </p>
+        </div>
+
+        {/* Launch Banner */}
+        <div className="border border-stone-200 bg-white rounded-2xl p-5">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <launchTier.icon className="w-5 h-5 text-stone-500" />
+                <div className="font-medium text-stone-900">Statut de lancement</div>
+                <Badge tone={launchTier.tone}>{launchTier.label}</Badge>
+                {profile.founder ? <Badge tone="dark">Chef Fondateur</Badge> : null}
+              </div>
+
+              <div className="text-sm text-stone-600">
+                Complétion profil : <span className="font-semibold text-stone-900">{completion.score}%</span> ({completion.ok}/{completion.total})
+              </div>
+
+              <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
+                <div
+                  className="h-2 bg-stone-900 rounded-full transition-all"
+                  style={{ width: `${completion.score}%` }}
+                />
+              </div>
+
+              <div className="text-xs text-stone-500">
+                Règle simple : <span className="text-stone-800 font-medium">plus ton profil est complet</span>, plus tu
+                remontes en priorité sur les demandes (fast & standard).
+              </div>
             </div>
-            
-            <div className="space-y-6">
-              {/* Current Plan Display */}
-              <div className="flex items-center justify-between p-4 bg-stone-50 border border-stone-200">
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="bg-stone-900 hover:bg-stone-800"
+                onClick={() => saveProfile(profile)}
+                disabled={saving || loading}
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                Enregistrer
+              </Button>
+              {notice ? <div className="text-sm text-stone-600">{notice}</div> : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Founder / Early access */}
+        <div className="border border-stone-200 bg-stone-50/50 rounded-2xl p-6">
+          <div className="flex items-start gap-3">
+            <Crown className="w-5 h-5 text-stone-700 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                   <span className="block text-xs uppercase tracking-widest text-stone-400 mb-1">Plan actuel</span>
-                   <span className="text-lg font-medium text-stone-900">Gratuit</span>
+                  <h2 className="text-lg font-serif text-stone-900">Chef Fondateur</h2>
+                  <p className="text-sm text-stone-600 mt-1">
+                    Badge réservé aux premiers chefs : visibilité renforcée au lancement + accès prioritaire aux premières missions.
+                  </p>
                 </div>
-                <div className="text-sm text-stone-500">Accès anticipé</div>
+                <div>
+                  {profile.founder ? (
+                    <Badge tone="dark">Activé</Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="bg-stone-900 hover:bg-stone-800"
+                      onClick={activateFounder}
+                      disabled={!canBecomeFounder || saving}
+                    >
+                      Activer
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              {/* Future Benefits Teaser */}
-              <div className="p-6 border border-dashed border-stone-300">
-                <h4 className="font-serif text-lg mb-4 text-stone-900">Fonctionnalités Pro (Bientôt disponible)</h4>
-                <p className="text-sm text-stone-500 font-light mb-6">
-                  Une offre d'abonnement optionnelle permettra bientôt d'accéder à des outils exclusifs pour développer votre activité.
-                </p>
-                <ul className="space-y-3">
-                   {[
-                     "Priorisation dans le matching",
-                     "Outils de disponibilité avancés",
-                     "Statistiques de sollicitations",
-                     "Préférences de missions avancées"
-                   ].map((benefit, idx) => (
-                     <li key={idx} className="flex items-center gap-3 text-sm text-stone-600">
-                       <div className="w-1.5 h-1.5 bg-stone-300 rounded-full" />
-                       {benefit}
-                     </li>
-                   ))}
-                </ul>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button disabled variant="outline" className="opacity-50">
-                   Gérer mon abonnement
-                </Button>
-              </div>
+              {!profile.founder ? (
+                <div className="mt-3 text-xs text-stone-500">
+                  Condition : profil ≥ <span className="font-semibold text-stone-800">70%</span>. {canBecomeFounder ? '✅ OK' : 'Complète encore 2–3 champs.'}
+                </div>
+              ) : null}
             </div>
-          </section>
+          </div>
+        </div>
 
-          {/* Security */}
-          <div className="bg-white p-8 border border-stone-200 space-y-6">
-             <h3 className="text-xl font-serif">Sécurité</h3>
-             <div className="space-y-4">
-                <div className="space-y-2">
-                   <Label>Mot de passe actuel</Label>
-                   <Input type="password" value={pwd.current} onChange={e => setPwd({...pwd, current: e.target.value})} />
+        {/* Checklist + Form */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Checklist */}
+          <div className="lg:col-span-1 border border-stone-200 bg-white rounded-2xl p-6">
+            <h3 className="text-base font-semibold text-stone-900">Checklist (Priorité)</h3>
+            <p className="text-sm text-stone-500 mt-1">Atteins 70% pour être prioritaire.</p>
+
+            <div className="mt-4 space-y-3">
+              {checklist.map(item => (
+                <div key={item.key} className="flex items-start gap-3">
+                  {item.ok ? (
+                    <CheckCircle2 className="w-5 h-5 text-stone-900 mt-0.5" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-stone-300 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <div className="text-sm text-stone-900 font-medium">{item.label}</div>
+                    {item.ok ? (
+                      <div className="text-xs text-stone-500">OK</div>
+                    ) : (
+                      <div className="text-xs text-stone-400">{item.hint ?? 'À compléter'}</div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                   <Label>Nouveau mot de passe</Label>
-                   <Input type="password" value={pwd.new} onChange={e => setPwd({...pwd, new: e.target.value})} />
-                </div>
-                <Button variant="outline" className="mt-4" disabled>Mettre à jour (Demo)</Button>
-             </div>
+              ))}
+            </div>
           </div>
 
-          {/* Danger Zone */}
-          <div className="bg-stone-50 p-8 border border-stone-200 space-y-6">
-             <h3 className="text-xl font-serif text-stone-900">Zone de danger</h3>
-             
-             {!showDelete ? (
-                <Button variant="outline" onClick={() => setShowDelete(true)} className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700">
-                   Supprimer mon compte
-                </Button>
-             ) : (
-                <div className="space-y-4 bg-white p-6 border border-red-100">
-                   <p className="text-sm text-stone-600">Êtes-vous sûr ? Cette action est irréversible.</p>
-                   <div className="flex gap-4">
-                      <Button onClick={handleDelete} className="bg-red-600 border-red-600 text-white hover:bg-red-700">Confirmer suppression</Button>
-                      <Button variant="ghost" onClick={() => setShowDelete(false)}>Annuler</Button>
-                   </div>
+          {/* Form */}
+          <div className="lg:col-span-2 border border-stone-200 bg-white rounded-2xl p-6">
+            {loading ? (
+              <div className="py-16 flex justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field label="Nom complet" value={profile.name ?? ''} onChange={v => updateField('name', v)} placeholder="Ex: Thomas Delcroix" />
+                  <Field label="Téléphone" value={profile.phone ?? ''} onChange={v => updateField('phone', v)} placeholder="+33 6…" />
+                  <Field label="Ville / zone" value={profile.city ?? ''} onChange={v => updateField('city', v)} placeholder="Bordeaux / Paris / Ibiza…" />
+                  <Field label="Instagram" value={profile.instagram ?? ''} onChange={v => updateField('instagram', v)} placeholder="@toncompte" />
+                  <Field label="Portfolio / photos" value={profile.portfolioUrl ?? ''} onChange={v => updateField('portfolioUrl', v)} placeholder="https://…" />
+                  <Field label="Site (optionnel)" value={profile.website ?? ''} onChange={v => updateField('website', v)} placeholder="https://…" />
                 </div>
-             )}
+
+                <TextArea
+                  label="Bio courte"
+                  value={profile.bio ?? ''}
+                  onChange={v => updateField('bio', v)}
+                  placeholder="Décris ton style, ton expérience, ton univers… (idéal 120–200 mots)"
+                />
+
+                <TokenBox
+                  label="Cuisines"
+                  value={profile.cuisines ?? []}
+                  placeholder="Ajouter une cuisine (Entrée)"
+                  onAdd={v => addToken('cuisines', v)}
+                  onRemove={v => removeToken('cuisines', v)}
+                />
+
+                <TokenBox
+                  label="Spécialités"
+                  value={profile.specialties ?? []}
+                  placeholder="Ajouter une spécialité (Entrée)"
+                  onAdd={v => addToken('specialties', v)}
+                  onRemove={v => removeToken('specialties', v)}
+                />
+
+                <TokenBox
+                  label="Langues"
+                  value={profile.languages ?? []}
+                  placeholder="Ajouter une langue (Entrée)"
+                  onAdd={v => addToken('languages', v)}
+                  onRemove={v => removeToken('languages', v)}
+                />
+
+                <div className="flex items-center gap-2 pt-2">
+                  <Button
+                    className="bg-stone-900 hover:bg-stone-800"
+                    onClick={() => saveProfile(profile)}
+                    disabled={saving}
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    Enregistrer
+                  </Button>
+                  <div className="text-xs text-stone-500">
+                    Astuce : vise <span className="font-semibold text-stone-800">70%+</span> pour être prioritaire dès l’ouverture des missions.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Footer note */}
+        <div className="text-xs text-stone-400">
+          Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).
         </div>
       </div>
     </ChefLayout>
   );
+}
+
+/* ----------------- UI small components ----------------- */
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="space-y-1">
+      <div className="text-xs uppercase tracking-widest text-stone-400">{label}</div>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+      />
+    </label>
+  );
+}
+
+function TextArea({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="space-y-1 block">
+      <div className="text-xs uppercase tracking-widest text-stone-400">{label}</div>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={5}
+        className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+      />
+      <div className="text-xs text-stone-400">Recommandé : 80+ caractères (idéal 120–200 mots).</div>
+    </label>
+  );
+}
+
+function TokenBox({
+  label,
+  value,
+  placeholder,
+  onAdd,
+  onRemove,
+}: {
+  label: string;
+  value: string[];
+  placeholder: string;
+  onAdd: (v: string) => void;
+  onRemove: (v: string) => void;
+}) {
+  const [input, setInput] = useState('');
+
+  return (
+    <div className="space-y-2">
+      <div className="text-xs uppercase tracking-widest text-stone-400">{label}</div>
+
+      <div className="flex gap-2">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onAdd(input);
+              setInput('');
+            }
+          }}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-900/10"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-stone-200"
+          onClick={() => {
+            onAdd(input);
+            setInput('');
+          }}
+        >
+          Ajouter
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {value.length === 0 ? (
+          <div className="text-sm text-stone-400">Aucun.</div>
+        ) : (
+          value.map(v => (
+            <span
+              key={v}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 bg-stone-50 text-sm text-stone-700"
+            >
+              {v}
+              <button
+                className="text-stone-400 hover:text-stone-700 transition"
+                onClick={() => onRemove(v)}
+                aria-label="Remove"
+                type="button"
+              >
+                ×
+              </button>
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ----------------- localStorage helpers ----------------- */
+
+function safeReadLS<T>(key: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function safeWriteLS(key: string, value: any) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
 }
