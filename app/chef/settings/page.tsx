@@ -344,6 +344,7 @@ const fromApi =
     </ChefLayout>
   );
 }
+    }; // TEMP
 
 /* ----------------- UI small components ----------------- */
 
