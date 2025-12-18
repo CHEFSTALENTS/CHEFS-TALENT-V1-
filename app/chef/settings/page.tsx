@@ -69,6 +69,18 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       let fromApi: ChefProfile | null = null;
 
       try {
+        
+        if (user?.id) {
+  const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+  const json = await res.json();
+  const fromDb = json?.data?.profile;
+
+  if (fromDb) {
+    setProfile(fromDb);
+    setLoading(false);
+    return;
+  }
+}
         if (user?.id) {
           fromApi =
             (await (apiAny.getChef?.(user.id) ??
