@@ -191,7 +191,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
 
   const canBecomeFounder = completion.score >= 70;
 
- const saveProfile = async (next: ChefProfile) => {
+const saveProfile = async (next: ChefProfile) => {
   setSaving(true);
   setNotice(null);
 
@@ -215,24 +215,12 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(errText || `HTTP ${res.status}`);
+      const t = await res.text();
+      throw new Error(t || `HTTP ${res.status}`);
     }
 
     const saved = await res.json();
-
     setProfile(saved);
-    setNotice('Enregistré ✅');
-  } catch (e) {
-    console.error(e);
-    setNotice("Impossible d'enregistrer pour le moment.");
-  } finally {
-    setSaving(false);
-    setTimeout(() => setNotice(null), 2500);
-  }
-};
-    // ✅ On garde l'état local pour l'UX
-    setProfile(merged);
     setNotice('Enregistré ✅');
   } catch (e) {
     console.error(e);
