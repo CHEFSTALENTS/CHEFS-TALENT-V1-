@@ -184,14 +184,20 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     setNotice(null);
 
     try {
-      const now = new Date().toISOString();
-      const user = auth.getCurrentUser?.();
+     // 🔑 Sauvegarde Supabase
+await fetch('/api/chef/profile', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    id: merged.id,
+    email: merged.email,
+    profile: merged,
+  }),
+});
 
-      const merged: ChefProfile = {
-        ...next,
-        id: next.id ?? user?.id,
-        email: next.email ?? user?.email,
-        updatedAt: now,
+// ✅ On garde l'état local pour l'UX
+setProfile(merged);
+setNotice('Enregistré ✅');
       };
 
       // local
