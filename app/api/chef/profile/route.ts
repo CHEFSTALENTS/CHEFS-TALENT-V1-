@@ -9,13 +9,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
     .from('chef_profiles')
     .select('*')
     .eq('user_id', user.id)
     .single();
 
-  if (error && error.code !== 'PGRST116') {
+  if (error && (error as any).code !== 'PGRST116') {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -29,6 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const supabase = getSupabaseAdmin();
   const body = await req.json();
 
   const payload = {
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('chef_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select()
