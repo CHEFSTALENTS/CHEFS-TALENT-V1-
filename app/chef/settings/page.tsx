@@ -192,49 +192,45 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
   const canBecomeFounder = completion.score >= 70;
 
   const saveProfile = async (next: ChefProfile) => {
-    setSaving(true);
-    setNotice(null);
+  setSaving(true);
+  setNotice(null);
 
-    try {
-     // 🔑 Sauvegarde Supabase
-await fetch('/api/chef/profile', {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    id: merged.id,
-    email: merged.email,
-    profile: merged,
-  }),
-});
+  try {
+    const now = new Date().toISOString();
+    const user = auth.getCurrentUser?.();
 
-// ✅ On garde l'état local pour l'UX
-setProfile(merged);
-setNotice('Enregistré ✅');
-      };
+    const merged: ChefProfile = {
+      ...next,
+      id: next.id ?? user?.id,
+      email: next.email ?? user?.email,
+      updatedAt: now,
+    };
 
-      // local
-      safeWriteLS(STORAGE_KEY, merged);
-      setProfile(merged);
+    // (optionnel) fallback local si tu veux garder
+    safeWriteLS(STORAGE_KEY, merged);
 
-      // api (si dispo)
-      const apiAny = api as any;
-      const id = merged.id;
+    // ✅ Sauvegarde Supabase via ton endpoint API
+    await fetch('/api/chef/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: merged.id,
+        email: merged.email,
+        profile: merged,
+      }),
+    });
 
-      if (id) {
-        await (apiAny.updateChefProfile?.(id, merged) ??
-          apiAny.updateChef?.(id, merged) ??
-          Promise.resolve());
-      }
-
-      setNotice('Enregistré ✅');
-    } catch (e) {
-      console.error(e);
-      setNotice("Impossible d'enregistrer pour le moment.");
-    } finally {
-      setSaving(false);
-      setTimeout(() => setNotice(null), 2500);
-    }
-  };
+    // ✅ On garde l'état local pour l'UX
+    setProfile(merged);
+    setNotice('Enregistré ✅');
+  } catch (e) {
+    console.error(e);
+    setNotice("Impossible d'enregistrer pour le moment.");
+  } finally {
+    setSaving(false);
+    setTimeout(() => setNotice(null), 2500);
+  }
+};
 
   const activateFounder = async () => {
     const next = { ...profile, founder: true, updatedAt: new Date().toISOString() };
