@@ -1,40 +1,52 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { auth } from '@/services/storage';
 
-// ⚠️ MVP: on récupère l'id via query string ?id=...
-// Ensuite on branchera avec une vraie auth Supabase
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-
-  const { data, error } = await supabaseAdmin
-    .from('chef_profiles')
-    .select('id,email,profile,created_at,updated_at')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data: data ?? null });
-}
-
-export async function PUT(req: Request) {
-  const body = await req.json().catch(() => null);
-  const id = body?.id as string | undefined;
-  const email = body?.email as string | undefined;
-  const profile = body?.profile ?? {};
-
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+// GET → récupérer le profil
+export async function GET() {
+  const user = auth.getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { data, error } = await supabaseAdmin
     .from('chef_profiles')
-    .upsert(
-      { id, email: email ?? null, profile },
-      { onConflict: 'id' }
-    )
-    .select('id,email,profile,created_at,updated_at')
+    .select('*')
+    .eq('user_id', user.id)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data });
+  if (error && error.code !== 'PGRST116') {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data || null);
+}
+
+// POST → créer ou mettre à jour le profil
+export async function POST(req: Request) {
+  const user = auth.getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await req.json();
+
+  const payload = {
+    user_id: user.id,
+    email: user.email,
+    ...body,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('chef_profiles')
+    .upsert(payload, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
 }
