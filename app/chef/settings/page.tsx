@@ -191,7 +191,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
 
   const canBecomeFounder = completion.score >= 70;
 
-  const saveProfile = async (next: ChefProfile) => {
+ const saveProfile = async (next: ChefProfile) => {
   setSaving(true);
   setNotice(null);
 
@@ -206,20 +206,33 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       updatedAt: now,
     };
 
-    // (optionnel) fallback local si tu veux garder
+    // (optionnel) fallback local
     safeWriteLS(STORAGE_KEY, merged);
 
-    // ✅ Sauvegarde Supabase via ton endpoint API
-    await fetch('/api/chef/profile', {
-      method: 'PUT',
+    const res = await fetch('/api/chef/profile', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: merged.id,
-        email: merged.email,
-        profile: merged,
-      }),
+      body: JSON.stringify(merged), // ✅ à plat
     });
 
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || `HTTP ${res.status}`);
+    }
+
+    const saved = await res.json();
+
+    // ✅ on se resynchronise avec ce que la DB renvoie
+    setProfile(saved);
+    setNotice('Enregistré ✅');
+  } catch (e) {
+    console.error(e);
+    setNotice("Impossible d'enregistrer pour le moment.");
+  } finally {
+    setSaving(false);
+    setTimeout(() => setNotice(null), 2500);
+  }
+};
     // ✅ On garde l'état local pour l'UX
     setProfile(merged);
     setNotice('Enregistré ✅');
