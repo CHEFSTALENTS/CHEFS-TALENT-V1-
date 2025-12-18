@@ -206,23 +206,21 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       updatedAt: now,
     };
 
-    // (optionnel) fallback local
     safeWriteLS(STORAGE_KEY, merged);
 
     const res = await fetch('/api/chef/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(merged), // ✅ à plat
+      body: JSON.stringify(merged),
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err || `HTTP ${res.status}`);
+      const errText = await res.text();
+      throw new Error(errText || `HTTP ${res.status}`);
     }
 
     const saved = await res.json();
 
-    // ✅ on se resynchronise avec ce que la DB renvoie
     setProfile(saved);
     setNotice('Enregistré ✅');
   } catch (e) {
