@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("chef_profiles")
     .select("*")
-.eq("id", id)
+    .eq("id", id)
     .maybeSingle();
 
   if (error) {
@@ -25,28 +25,29 @@ export async function GET(req: Request) {
   return NextResponse.json(data ?? null);
 }
 
-// POST ou PUT -> upsert
+// POST/PUT -> upsert
 async function upsertProfile(req: Request) {
   const supabase = getSupabaseAdmin();
   const body = await req.json();
 
   const id = body?.id || body?.profile?.id;
   const email = body?.email || body?.profile?.email;
-  const profile = body?.profile || body; // objet complet profil
+  const profile = body?.profile || body;
 
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
   const payload = {
-  id: id,                         // ✅ correspond à ta colonne "id"
-  email: email ?? null,
-  profile: profile ?? {},         // ✅ ton JSON dans la colonne profile (jsonb)
-  updated_at: new Date().toISOString(),
-};
+    id: id,
+    email: email ?? null,
+    profile: profile ?? {},
+    updated_at: new Date().toISOString(),
+  };
+
   const { data, error } = await supabase
     .from("chef_profiles")
-.upsert(payload, { onConflict: "id" })
+    .upsert(payload, { onConflict: "id" })
     .select()
     .single();
 
