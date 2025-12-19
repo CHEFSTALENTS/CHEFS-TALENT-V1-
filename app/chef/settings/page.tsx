@@ -192,6 +192,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
   const canBecomeFounder = completion.score >= 70;
 
 const saveProfile = async (next: ChefProfile) => {
+  console.log("SAVE PROFILE CALLED", next);
   setSaving(true);
   setNotice(null);
 
@@ -281,7 +282,10 @@ const saveProfile = async (next: ChefProfile) => {
               <Button
                 size="sm"
                 className="bg-stone-900 hover:bg-stone-800"
-                onClick={() => saveProfile(profile)}
+                onClick={() => {
+  alert("CLICK OK");
+  saveProfile(profile);
+}}
                 disabled={saving || loading}
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
