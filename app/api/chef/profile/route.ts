@@ -39,15 +39,14 @@ async function upsertProfile(req: Request) {
   }
 
   const payload = {
-    user_id: id,
-    email: email ?? null,
-    profile, // ✅ tout le profil dans la colonne jsonb
-    updated_at: new Date().toISOString(),
-  };
-
+  id: id,                         // ✅ correspond à ta colonne "id"
+  email: email ?? null,
+  profile: profile ?? {},         // ✅ ton JSON dans la colonne profile (jsonb)
+  updated_at: new Date().toISOString(),
+};
   const { data, error } = await supabase
     .from("chef_profiles")
-    .upsert(payload, { onConflict: "user_id" })
+.upsert(payload, { onConflict: "id" })
     .select()
     .single();
 
