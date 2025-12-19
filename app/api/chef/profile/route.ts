@@ -39,11 +39,11 @@ async function upsertProfile(req: Request) {
   }
 
   const payload = {
-    id: id,
-    email: email ?? null,
-    profile: profile ?? {},
-    updated_at: new Date().toISOString(),
-  };
+  user_id: id,
+  email: email ?? null,
+  profile: profile, // ✅ tout le profil dans jsonb
+  updated_at: new Date().toISOString(),
+};
 
   const { data, error } = await supabase
     .from("chef_profiles")
