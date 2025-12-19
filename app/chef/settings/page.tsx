@@ -279,18 +279,18 @@ const saveProfile = async (next: ChefProfile) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="bg-stone-900 hover:bg-stone-800"
-                onClick={() => {
-  alert("CLICK OK");
-  saveProfile(profile);
-}}
-                disabled={saving || loading}
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Enregistrer
-              </Button>
+              <button
+  type="button"
+  onClick={() => {
+    alert("CLICK OK");
+    console.log("CLICK OK");
+    saveProfile(profile);
+  }}
+  style={{ padding: 12, border: "1px solid #000", cursor: "pointer" }}
+  disabled={saving || loading}
+>
+  Enregistrer
+</button>
               {notice ? <div className="text-sm text-stone-600">{notice}</div> : null}
             </div>
           </div>
