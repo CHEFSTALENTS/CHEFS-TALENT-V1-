@@ -97,13 +97,15 @@ const fromDb = json?.profile;
         FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
         null;
 
-      const merged: ChefProfile = {
-        ...(fromLs ?? {}),
-        ...(fromApi ?? {}),
-        id: (fromApi?.id ?? fromLs?.id ?? user?.id) || undefined,
-        email: (fromApi?.email ?? fromLs?.email ?? user?.email) || undefined,
-      };
-
+      const merged = {
+  ...(user.profile ?? {}), // 👈 TOUT ce qui vient des pages Identity / Mobility
+  ...next,                 // ce qui vient de Settings
+  id: user.id,
+  email: user.email,
+  updatedAt: new Date().toISOString(),
+};
+console.log("PROFILE ENVOYÉ À SUPABASE", merged);
+      
       setProfile(merged);
       setLoading(false);
     })();
