@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("chef_profiles")
     .select("*")
-    .eq("user_id", id)
+.eq("id", id)
     .maybeSingle();
 
   if (error) {
