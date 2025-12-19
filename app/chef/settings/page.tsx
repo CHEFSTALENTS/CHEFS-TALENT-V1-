@@ -192,7 +192,7 @@ console.log("PROFILE ENVOYÉ À SUPABASE", merged);
 
   const canBecomeFounder = completion.score >= 70;
 
-const saveProfile = async (next: ChefProfile) => {
+const saveProfile = async (patch: ChefProfile) => {
   console.log("SAVE PROFILE CALLED", next);
   setSaving(true);
   setNotice(null);
