@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-// GET /api/chef/profile?id=UUID  -> récupérer le profil
+// GET /api/chef/profile?id=UUID
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -25,14 +25,14 @@ export async function GET(req: Request) {
   return NextResponse.json(data ?? null);
 }
 
-// POST ou PUT -> upsert du profil
+// POST ou PUT -> upsert
 async function upsertProfile(req: Request) {
   const supabase = getSupabaseAdmin();
   const body = await req.json();
 
   const id = body?.id || body?.profile?.id;
   const email = body?.email || body?.profile?.email;
-  const profile = body?.profile || body;
+  const profile = body?.profile || body; // objet complet profil
 
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -41,7 +41,7 @@ async function upsertProfile(req: Request) {
   const payload = {
     user_id: id,
     email: email ?? null,
-    ...profile,
+    profile, // ✅ tout le profil dans la colonne jsonb
     updated_at: new Date().toISOString(),
   };
 
