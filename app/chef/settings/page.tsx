@@ -196,35 +196,36 @@ const saveProfile = async (next: ChefProfile) => {
   setNotice(null);
 
   try {
-    const now = new Date().toISOString();
     const user = auth.getCurrentUser?.();
+    if (!user?.id) throw new Error("No user id");
 
-    const merged: ChefProfile = {
+    const merged = {
       ...next,
-      id: next.id ?? user?.id,
-      email: next.email ?? user?.email,
-      updatedAt: now,
+      id: user.id,
+      email: user.email,
+      updatedAt: new Date().toISOString(),
     };
 
-    safeWriteLS(STORAGE_KEY, merged);
-
-    const res = await fetch('/api/chef/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(merged),
+    const res = await fetch("/api/chef/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: user.id,
+        email: user.email,
+        profile: merged,
+      }),
     });
 
     if (!res.ok) {
-      const t = await res.text();
-      throw new Error(t || `HTTP ${res.status}`);
+      const err = await res.json();
+      throw new Error(err.error || "Save failed");
     }
 
-    const saved = await res.json();
-    setProfile(saved);
-    setNotice('Enregistré ✅');
+    setProfile(merged);
+    setNotice("Enregistré ✅");
   } catch (e) {
     console.error(e);
-    setNotice("Impossible d'enregistrer pour le moment.");
+    setNotice("Impossible d'enregistrer");
   } finally {
     setSaving(false);
     setTimeout(() => setNotice(null), 2500);
