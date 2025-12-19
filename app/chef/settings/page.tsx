@@ -207,14 +207,16 @@ const saveProfile = async (next: ChefProfile) => {
     };
 
     const res = await fetch("/api/chef/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: user.id,
-        email: user.email,
-        profile: merged,
-      }),
-    });
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    id: user.id,
+    email: user.email,
+    profile: merged,
+  }),
+});
 
     if (!res.ok) {
       const err = await res.json();
