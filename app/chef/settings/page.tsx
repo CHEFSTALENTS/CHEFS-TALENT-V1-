@@ -193,7 +193,7 @@ setProfile(merged);
   const canBecomeFounder = completion.score >= 70;
 
 const saveProfile = async (patch: ChefProfile) => {
-  console.log("SAVE PROFILE CALLED", next);
+  console.log("SAVE PROFILE CALLED", patch);
   setSaving(true);
   setNotice(null);
 
@@ -202,7 +202,7 @@ const saveProfile = async (patch: ChefProfile) => {
     if (!user?.id) throw new Error("No user id");
 
     const merged = {
-      ...next,
+      ...patch,
       id: user.id,
       email: user.email,
       updatedAt: new Date().toISOString(),
