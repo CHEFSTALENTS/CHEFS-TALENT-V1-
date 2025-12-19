@@ -38,18 +38,26 @@ async function upsertProfile(req: Request) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
 
-  const payload = {
+const payload = {
   user_id: id,
   email: email ?? null,
-  profile: profile, // ✅ tout le profil dans jsonb
+  profile: profile, // ✅ TOUT dans le JSON
   updated_at: new Date().toISOString(),
 };
 
-  const { data, error } = await supabase
-    .from("chef_profiles")
-    .upsert(payload, { onConflict: "id" })
-    .select()
-    .single();
+ const { data, error } = await supabase
+  .from("chef_profiles")
+  .upsert(
+    {
+      user_id: id,
+      email: email ?? null,
+      profile,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  )
+  .select()
+  .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
