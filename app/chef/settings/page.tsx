@@ -192,8 +192,8 @@ setProfile(merged);
 
   const canBecomeFounder = completion.score >= 70;
 
-const saveProfile = async (patch: ChefProfile) => {
-  console.log("SAVE PROFILE CALLED", patch);
+const saveProfile = async (profileToSave: ChefProfile) => {
+  console.log("SAVE PROFILE CALLED", profileToSave);
   setSaving(true);
   setNotice(null);
 
@@ -202,33 +202,38 @@ const saveProfile = async (patch: ChefProfile) => {
     if (!user?.id) throw new Error("No user id");
 
     const merged = {
-      ...patch,
+      ...profileToSave,
       id: user.id,
       email: user.email,
       updatedAt: new Date().toISOString(),
     };
 
+    console.log("FETCH /api/chef/profile PAYLOAD", merged);
+
     const res = await fetch("/api/chef/profile", {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    id: user.id,
-    email: user.email,
-    profile: merged,
-  }),
-});
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: user.id,
+        email: user.email,
+        profile: merged,
+      }),
+    });
+
+    console.log("FETCH STATUS", res.status);
 
     if (!res.ok) {
       const err = await res.json();
+      console.error("API ERROR", err);
       throw new Error(err.error || "Save failed");
     }
 
     setProfile(merged);
     setNotice("Enregistré ✅");
   } catch (e) {
-    console.error(e);
+    console.error("SAVE ERROR", e);
     setNotice("Impossible d'enregistrer");
   } finally {
     setSaving(false);
