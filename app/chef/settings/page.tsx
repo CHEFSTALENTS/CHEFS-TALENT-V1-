@@ -51,7 +51,7 @@ location?: {
   internationalMobility?: boolean;
   coverageZones?: string[];
   };
-  };
+  
 
 
 };
