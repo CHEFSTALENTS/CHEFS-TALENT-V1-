@@ -37,18 +37,49 @@ export default function ChefCoveragePage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const user = auth.getCurrentUser();
-    if (user) {
-      await auth.updateChefProfile(user.id, data);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    }
-    setLoading(false);
-  };
+  const saveProfile = async (patch: ChefProfile) => {
+  console.log("SAVE PROFILE CALLED", patch);
+  setSaving(true);
+  setNotice(null);
 
+  try {
+    const user = auth.getCurrentUser?.();
+    if (!user?.id) throw new Error("No user");
+
+    const merged = {
+      ...profile,     // état actuel complet
+      ...patch,       // éventuelle modif locale
+      id: user.id,
+      email: user.email,
+      updatedAt: new Date().toISOString(),
+    };
+
+    console.log("PROFILE ENVOYÉ À SUPABASE", merged);
+
+    const res = await fetch("/api/chef/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: user.id,
+        profile: merged,
+      }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt);
+    }
+
+    setProfile(merged);
+    setNotice("Enregistré ✅");
+  } catch (e) {
+    console.error("SAVE ERROR", e);
+    setNotice("Erreur d’enregistrement");
+  } finally {
+    setSaving(false);
+    setTimeout(() => setNotice(null), 2500);
+  }
+};
   return (
     <ChefLayout>
       <div className="max-w-2xl">
