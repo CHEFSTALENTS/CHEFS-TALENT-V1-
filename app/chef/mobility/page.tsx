@@ -36,9 +36,6 @@ export default function ChefCoveragePage() {
         : [...prev.coverageZones, zone]
     }));
   };
-
-  const saveProfile = async (patch: ChefProfile) => {
-  console.log("SAVE PROFILE CALLED", patch);
   setSaving(true);
   setNotice(null);
 
