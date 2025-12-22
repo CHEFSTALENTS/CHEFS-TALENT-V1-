@@ -204,7 +204,7 @@ const saveProfile = async (patch: ChefProfile) => {
   console.log("SAVE PROFILE CALLED", patch);
   setSaving(true);
   setNotice(null);
-safeWriteLS(STORAGE_KEY, merged);
+
   try {
     const user = auth.getCurrentUser?.();
     if (!user?.id) throw new Error("No user");
@@ -216,6 +216,9 @@ safeWriteLS(STORAGE_KEY, merged);
       email: user.email,
       updatedAt: new Date().toISOString(),
     };
+
+    // ✅ localStorage AFTER merged exists
+    safeWriteLS(STORAGE_KEY, merged);
 
     console.log("PROFILE ENVOYÉ À SUPABASE", merged);
 
