@@ -204,7 +204,7 @@ const saveProfile = async (patch: ChefProfile) => {
   console.log("SAVE PROFILE CALLED", patch);
   setSaving(true);
   setNotice(null);
-
+safeWriteLS(STORAGE_KEY, merged);
   try {
     const user = auth.getCurrentUser?.();
     if (!user?.id) throw new Error("No user");
@@ -293,8 +293,6 @@ const saveProfile = async (patch: ChefProfile) => {
               <button
   type="button"
   onClick={() => {
-    alert("CLICK OK");
-    console.log("CLICK OK");
     saveProfile(profile);
   }}
   style={{ padding: 12, border: "1px solid #000", cursor: "pointer" }}
