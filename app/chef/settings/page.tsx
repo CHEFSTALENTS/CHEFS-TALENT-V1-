@@ -71,28 +71,41 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
 };
 
 const [profile, setProfile] = useState<ChefProfile>({});
-  useEffect(() => {
+ useEffect(() => {
   (async () => {
+    setLoading(true);
+
     const user = auth.getCurrentUser?.();
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
 
     try {
+      // 1) DB (Supabase via ton API)
       const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
       const json = await res.json();
-      const fromDb = json?.profile ?? {};
+      const fromDb = json?.profile ?? null;
 
-      setProfile(fromDb);
+      // 2) Fallback localStorage
+      const fromLs =
+        safeReadLS<ChefProfile>(STORAGE_KEY) ??
+        FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
+        null;
 
-      // pré-remplir le formulaire depuis DB
-      const loc = fromDb.location ?? {};
-      setData({
-        baseCity: loc.baseCity || '',
-        travelRadiusKm: loc.travelRadiusKm || 50,
-        internationalMobility: !!loc.internationalMobility,
-        coverageZones: loc.coverageZones || [],
-      });
+      const merged: ChefProfile = {
+        ...(fromLs ?? {}),
+        ...(fromDb ?? {}),
+        id: user.id,
+        email: user.email,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setProfile(merged);
     } catch (e) {
-      console.error("MOBILITY LOAD ERROR", e);
+      console.error("SETTINGS LOAD ERROR", e);
+    } finally {
+      setLoading(false);
     }
   })();
 }, []);
