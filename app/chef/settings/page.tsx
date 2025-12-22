@@ -110,15 +110,7 @@ const [profile, setProfile] = useState<ChefProfile>({});
   })();
 }, []);
 
-          fromApi =
-            (await (apiAny.getChef?.(user.id) ??
-              apiAny.getChefProfile?.(user.id) ??
-              apiAny.getCurrentChef?.() ??
-              Promise.resolve(null))) ?? null;
-        }
-      } catch {
-        fromApi = null;
-      }
+        
 
       // 2) Fallback localStorage (on tente plusieurs clés)
       const fromLs =
@@ -126,13 +118,7 @@ const [profile, setProfile] = useState<ChefProfile>({});
         FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
         null;
 
-  const merged: ChefProfile = {
-  ...(fromLs ?? {}),
-  ...(fromApi ?? {}),
-  id: (fromApi?.id ?? fromLs?.id ?? user?.id) || undefined,
-  email: (fromApi?.email ?? fromLs?.email ?? user?.email) || undefined,
-};
-
+  const merged: ChefProfile = 
 setProfile(merged);
       
       setProfile(merged);
