@@ -63,7 +63,6 @@ const FALLBACK_KEYS = ['ct_chef_profile', 'chef_profile', 'ct_chef_v1'];
 export default function ChefSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<ChefProfile>({});
   const [notice, setNotice] = useState<string | null>(null);
 const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile]);
 
