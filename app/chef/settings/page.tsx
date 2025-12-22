@@ -194,46 +194,42 @@ setProfile(merged);
 
 const saveProfile = async (patch: ChefProfile) => {
   console.log("SAVE PROFILE CALLED", patch);
-
   setSaving(true);
   setNotice(null);
 
   try {
     const user = auth.getCurrentUser?.();
-    if (!user?.id) throw new Error("No user id");
+    if (!user?.id) throw new Error("No user");
 
     const merged = {
-      ...profile,   // état actuel
-      ...patch,     // ce qu’on modifie
+      ...profile,     // état actuel complet
+      ...patch,       // éventuelle modif locale
       id: user.id,
       email: user.email,
       updatedAt: new Date().toISOString(),
     };
 
-    console.log("JUSTE AVANT FETCH", merged);
+    console.log("PROFILE ENVOYÉ À SUPABASE", merged);
 
     const res = await fetch("/api/chef/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: user.id,
-        email: user.email,
         profile: merged,
       }),
     });
 
-    console.log("JUSTE APRES FETCH", res.status);
-
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Save failed");
+      const txt = await res.text();
+      throw new Error(txt);
     }
 
     setProfile(merged);
     setNotice("Enregistré ✅");
   } catch (e) {
-    console.error(e);
-    setNotice("Impossible d'enregistrer");
+    console.error("SAVE ERROR", e);
+    setNotice("Erreur d’enregistrement");
   } finally {
     setSaving(false);
     setTimeout(() => setNotice(null), 2500);
