@@ -33,8 +33,8 @@ async function upsertProfile(req: Request) {
 
   const payload = {
     user_id: id,
-    email,
-    profile, // ✅ TOUT le profil dans jsonb
+    email: email ?? null, 
+    profile,: profile ?? {},
     updated_at: new Date().toISOString(),
   };
 
