@@ -149,8 +149,9 @@ setProfile(merged);
       {
         key: 'mobility',
         label: 'Zone & mobilité',
-        ok: !!profile.city?.trim(), // à affiner quand on aura tes champs “zones”
-        hint: 'Zones, déplacements',
+ok:!!profile.location?.baseCity?.trim() ||
+  profile.location?.internationalMobility === true ||
+  (profile.location?.coverageZones?.length ?? 0) > 0,        hint: 'Zones, déplacements',
         href: '/chef/mobility',
         icon: MapPinned,
       },
