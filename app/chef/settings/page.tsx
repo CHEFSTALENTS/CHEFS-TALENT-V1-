@@ -72,44 +72,55 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
 
 const [profile, setProfile] = useState<ChefProfile>({});
  useEffect(() => {
+  let cancelled = false;
+
   (async () => {
     setLoading(true);
 
-    const user = auth.getCurrentUser?.();
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      // 1) DB (Supabase via ton API)
+      const user = auth.getCurrentUser?.();
+      if (!user?.id) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      // 1) on lit en DB
       const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
       const json = await res.json();
       const fromDb = json?.profile ?? null;
 
-      // 2) Fallback localStorage
-      const fromLs =
-        safeReadLS<ChefProfile>(STORAGE_KEY) ??
-        FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
-        null;
+      if (!cancelled) {
+        if (fromDb) {
+          setProfile(fromDb);
+        } else {
+          // 2) fallback localStorage
+          const fromLs =
+            safeReadLS<ChefProfile>(STORAGE_KEY) ??
+            FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
+            null;
 
-      const merged: ChefProfile = {
-        ...(fromLs ?? {}),
-        ...(fromDb ?? {}),
-        id: user.id,
-        email: user.email,
-        updatedAt: new Date().toISOString(),
-      };
+          const merged: ChefProfile = {
+            ...(fromLs ?? {}),
+            id: user.id,
+            email: user.email,
+            updatedAt: new Date().toISOString(),
+          };
 
-      setProfile(merged);
+          setProfile(merged);
+        }
+
+        setLoading(false);
+      }
     } catch (e) {
-      console.error("SETTINGS LOAD ERROR", e);
-    } finally {
-      setLoading(false);
+      console.error("LOAD PROFILE ERROR", e);
+      if (!cancelled) setLoading(false);
     }
   })();
-}, []);
 
+  return () => {
+    cancelled = true;
+  };
+}, []);
         
 
       // 2) Fallback localStorage (on tente plusieurs clés)
