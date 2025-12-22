@@ -26,9 +26,7 @@ export default function ChefMobilityPage() {
     internationalMobility: data.internationalMobility,
     coverageZones: data.coverageZones,
   },
-};
   meta: {
-    ...(profile.meta ?? {}),
     updatedAt: new Date().toISOString(),
   }
 };
