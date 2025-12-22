@@ -45,6 +45,15 @@ type ChefProfile = {
   founder?: boolean;
   createdAt?: string;
   updatedAt?: string;
+location?: {
+  baseCity?: string;
+  travelRadiusKm?: number;
+  internationalMobility?: boolean;
+  coverageZones?: string[];
+  };
+  };
+
+
 };
 
 const STORAGE_KEY = 'ct_chef_profile_v1';
@@ -57,18 +66,6 @@ export default function ChefSettingsPage() {
   const [profile, setProfile] = useState<ChefProfile>({});
   const [notice, setNotice] = useState<string | null>(null);
 const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile]);
-  type ChefProfile = {
-  id?: string;
-  email?: string;
-  location?: {
-    baseCity?: string;
-    travelRadiusKm?: number;
-    internationalMobility?: boolean;
-    coverageZones?: string[];
-  };
-  updatedAt?: string;
-  [key: string]: any;
-};
 
 const [profile, setProfile] = useState<ChefProfile>({});
  useEffect(() => {
@@ -121,21 +118,6 @@ const [profile, setProfile] = useState<ChefProfile>({});
     cancelled = true;
   };
 }, []);
-        
-
-      // 2) Fallback localStorage (on tente plusieurs clés)
-      const fromLs =
-        safeReadLS<ChefProfile>(STORAGE_KEY) ??
-        FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
-        null;
-
-  const merged: ChefProfile = 
-setProfile(merged);
-      
-      setProfile(merged);
-      setLoading(false);
-    })();
-  }, []);
 
   const checklist = useMemo(() => {
     // IMPORTANT : cette checklist lit le “profil”, mais Settings NE redemande PAS les champs.
