@@ -18,6 +18,19 @@ export default function ChefMobilityPage() {
   });
 
   useEffect(() => {
+    const merged = {
+  ...profile,
+  location: {
+    baseCity: data.baseCity,
+    travelRadiusKm: data.travelRadiusKm,
+    coverageZones: data.coverageZones,
+    internationalMobility: data.internationalMobility,
+  },
+  meta: {
+    ...(profile.meta ?? {}),
+    updatedAt: new Date().toISOString(),
+  }
+};
     const user = auth.getCurrentUser?.();
     if (user?.profile) {
       setData({
