@@ -19,13 +19,14 @@ export default function ChefMobilityPage() {
 
   useEffect(() => {
     const merged = {
-  ...profile,
+  ...data,
   location: {
     baseCity: data.baseCity,
     travelRadiusKm: data.travelRadiusKm,
-    coverageZones: data.coverageZones,
     internationalMobility: data.internationalMobility,
+    coverageZones: data.coverageZones,
   },
+};
   meta: {
     ...(profile.meta ?? {}),
     updatedAt: new Date().toISOString(),
@@ -52,47 +53,41 @@ export default function ChefMobilityPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const user = auth.getCurrentUser?.();
-      if (!user?.id) throw new Error('No user');
+  try {
+    const user = auth.getCurrentUser?.();
+    if (!user?.id) throw new Error("No user");
 
-      const payload = {
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
+    const merged = {
+      id: user.id,
+      email: user.email ?? null,
+      location: {
+        baseCity: data.baseCity,
+        travelRadiusKm: data.travelRadiusKm,
+        internationalMobility: data.internationalMobility,
+        coverageZones: data.coverageZones,
+      },
+      updatedAt: new Date().toISOString(),
+    };
 
-      console.log('MOBILITY → PUT /api/chef/profile', payload);
+    const res = await fetch("/api/chef/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: user.id, profile: merged }),
+    });
 
-      const res = await fetch('/api/chef/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: user.id,
-          email: user.email,
-          profile: payload,
-        }),
-      });
+    if (!res.ok) throw new Error(await res.text());
 
-      const json = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        console.error('MOBILITY SAVE FAILED', json);
-        throw new Error(json?.error || 'Save failed');
-      }
-
-      console.log('MOBILITY SAVE OK', json);
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error('MOBILITY SAVE ERROR', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  } catch (e) {
+    console.error("MOBILITY SAVE ERROR", e);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ChefLayout>
