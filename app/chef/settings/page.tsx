@@ -57,30 +57,46 @@ export default function ChefSettingsPage() {
   const [profile, setProfile] = useState<ChefProfile>({});
   const [notice, setNotice] = useState<string | null>(null);
 const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile]);
-  
+  type ChefProfile = {
+  id?: string;
+  email?: string;
+  location?: {
+    baseCity?: string;
+    travelRadiusKm?: number;
+    internationalMobility?: boolean;
+    coverageZones?: string[];
+  };
+  updatedAt?: string;
+  [key: string]: any;
+};
+
+const [profile, setProfile] = useState<ChefProfile>({});
   useEffect(() => {
-    (async () => {
-      setLoading(true);
+  (async () => {
+    const user = auth.getCurrentUser?.();
+    if (!user?.id) return;
 
-      const user = auth.getCurrentUser?.();
+    try {
+      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+      const json = await res.json();
+      const fromDb = json?.profile ?? {};
 
-      // 1) On tente API (sans casser TS : any + optional chaining)
-      const apiAny = api as any;
-      let fromApi: ChefProfile | null = null;
+      setProfile(fromDb);
 
-      try {
-        
-        if (user?.id) {
-  const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
- const json = await res.json();
-const fromDb = json?.profile;
-  if (fromDb) {
-    setProfile(fromDb);
-    setLoading(false);
-    return;
-  }
-}
-        if (user?.id) {
+      // pré-remplir le formulaire depuis DB
+      const loc = fromDb.location ?? {};
+      setData({
+        baseCity: loc.baseCity || '',
+        travelRadiusKm: loc.travelRadiusKm || 50,
+        internationalMobility: !!loc.internationalMobility,
+        coverageZones: loc.coverageZones || [],
+      });
+    } catch (e) {
+      console.error("MOBILITY LOAD ERROR", e);
+    }
+  })();
+}, []);
+
           fromApi =
             (await (apiAny.getChef?.(user.id) ??
               apiAny.getChefProfile?.(user.id) ??
