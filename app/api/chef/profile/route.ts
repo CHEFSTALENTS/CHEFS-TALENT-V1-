@@ -34,7 +34,7 @@ async function upsertProfile(req: Request) {
   const payload = {
     user_id: id,
     email: email ?? null, 
-    profile,: profile ?? {},
+    profile: profile ?? {},
     updated_at: new Date().toISOString(),
   };
 
