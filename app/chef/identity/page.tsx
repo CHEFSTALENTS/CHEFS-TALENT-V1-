@@ -38,23 +38,33 @@ export default function ChefProfilePage() {
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const user = auth.getCurrentUser();
-    if (user) {
-      await auth.updateChefProfile(user.id, {
-        phone: data.phone,
-        photoUrl: data.photoUrl,
-        languages: data.languages.split(',').map(s => s.trim()).filter(Boolean),
-        profileType: data.profileType,
-        seniorityLevel: data.seniorityLevel
-      });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    }
-    setLoading(false);
-  };
+  e.preventDefault();
+  setLoading(true);
 
+  const user = auth.getCurrentUser();
+  if (user) {
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+
+    await auth.updateChefProfile(user.id, {
+      name: fullName || undefined,
+      phone: data.phone,
+      // on garde photoUrl si tu l'utilises ailleurs,
+      // mais on écrit AUSSI avatarUrl pour l'uniformiser avec le reste
+      photoUrl: data.photoUrl,
+      avatarUrl: data.photoUrl,
+
+      languages: data.languages.split(',').map(s => s.trim()).filter(Boolean),
+      profileType: data.profileType,
+      seniorityLevel: data.seniorityLevel,
+      updatedAt: new Date().toISOString(),
+    });
+
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  }
+
+  setLoading(false);
+};
   return (
     <ChefLayout>
       <div className="max-w-2xl">
