@@ -6,6 +6,19 @@ import { auth } from '../../../services/storage';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
 
+type ChefProfileMobility = {
+  baseCity?: string;
+  travelRadiusKm?: number;
+  internationalMobility?: boolean;
+  coverageZones?: string[];
+  location?: {
+    baseCity?: string;
+    travelRadiusKm?: number;
+    internationalMobility?: boolean;
+    coverageZones?: string[];
+  };
+};
+
 export default function ChefMobilityPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -17,29 +30,15 @@ export default function ChefMobilityPage() {
     coverageZones: [] as string[],
   });
 
-  useEffect(() => {
+ useEffect(() => {
   const user = auth.getCurrentUser?.();
-  const p = user?.profile;
-
-  if (!p) return;
+  const p = (user?.profile ?? {}) as ChefProfileMobility;
 
   setData({
-    baseCity:
-      p.location?.baseCity ??
-      p.baseCity ??
-      '',
-    travelRadiusKm:
-      p.location?.travelRadiusKm ??
-      p.travelRadiusKm ??
-      50,
-    internationalMobility:
-      p.location?.internationalMobility ??
-      p.internationalMobility ??
-      false,
-    coverageZones:
-      p.location?.coverageZones ??
-      p.coverageZones ??
-      [],
+    baseCity: p.location?.baseCity ?? p.baseCity ?? '',
+    travelRadiusKm: p.location?.travelRadiusKm ?? p.travelRadiusKm ?? 50,
+    internationalMobility: p.location?.internationalMobility ?? p.internationalMobility ?? false,
+    coverageZones: p.location?.coverageZones ?? p.coverageZones ?? [],
   });
 }, []);
 
