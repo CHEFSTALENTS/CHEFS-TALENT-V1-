@@ -1,106 +1,340 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth } from '../../../services/storage';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
 
+type ChefProfile = {
+  id?: string;
+  email?: string;
+  cuisines?: string[];
+  languages?: string[];
+  specialties?: string[];
+  updatedAt?: string;
+  [key: string]: any;
+};
+
+const CUISINES_PRESET = [
+  'Française',
+  'Italienne',
+  'Japonaise',
+  'Méditerranéenne',
+  'Asiatique',
+  'Végétarienne',
+  'Pâtisserie',
+  'BBQ / Grill',
+  'Healthy',
+  'Fusion',
+];
+
+const LANGUAGES_PRESET = ['Français', 'Anglais', 'Espagnol', 'Italien', 'Allemand', 'Arabe'];
+
+const SPECIALTIES_PRESET = [
+  'Fine dining',
+  'Family style',
+  'Brunch',
+  'Private villa',
+  'Yacht',
+  'Chalet',
+  'Event / catering',
+  'Menu dégustation',
+];
+
+function toggle(list: string[], value: string) {
+  return list.includes(value) ? list.filter(v => v !== value) : [...list, value];
+}
+
 export default function ChefPreferencesPage() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [data, setData] = useState({
-    minBudgetPerDay: 400,
-    maxGuestCount: 10,
-    teamAcceptance: 'solo' as 'solo' | 'assistants' | 'brigade'
-  });
+
+  const [baseProfile, setBaseProfile] = useState<ChefProfile>({});
+  const [cuisines, setCuisines] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [specialties, setSpecialties] = useState<string[]>([]);
+
+  const [customCuisine, setCustomCuisine] = useState('');
+  const [customLanguage, setCustomLanguage] = useState('');
+  const [customSpecialty, setCustomSpecialty] = useState('');
 
   useEffect(() => {
-    const user = auth.getCurrentUser();
-    if (user && user.profile) {
-      setData({
-        minBudgetPerDay: user.profile.minBudgetPerDay || 400,
-        maxGuestCount: user.profile.maxGuestCount || 10,
-        teamAcceptance: user.profile.teamAcceptance || 'solo'
-      });
-    }
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      try {
+        const user = auth.getCurrentUser?.();
+        if (!user?.id) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+
+        // 1) Lire le profil depuis la DB
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+        const json = await res.json();
+        const fromDb: ChefProfile | null = json?.profile ?? null;
+
+        const p: ChefProfile = fromDb ?? { id: user.id, email: user.email };
+
+        if (!cancelled) {
+          setBaseProfile(p);
+          setCuisines(Array.isArray(p.cuisines) ? p.cuisines : []);
+          setLanguages(Array.isArray(p.languages) ? p.languages : []);
+          setSpecialties(Array.isArray(p.specialties) ? p.specialties : []);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error('PREFERENCES LOAD ERROR', e);
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const user = auth.getCurrentUser();
-    if (user) {
-      await auth.updateChefProfile(user.id, data);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+  const canSave = useMemo(() => cuisines.length >= 1 && languages.length >= 1, [cuisines, languages]);
+
+  const addCustom = (kind: 'cuisine' | 'language' | 'specialty') => {
+    const raw =
+      kind === 'cuisine' ? customCuisine : kind === 'language' ? customLanguage : customSpecialty;
+
+    const v = raw.trim();
+    if (!v) return;
+
+    if (kind === 'cuisine') {
+      setCuisines(prev => (prev.includes(v) ? prev : [...prev, v]));
+      setCustomCuisine('');
+    } else if (kind === 'language') {
+      setLanguages(prev => (prev.includes(v) ? prev : [...prev, v]));
+      setCustomLanguage('');
+    } else {
+      setSpecialties(prev => (prev.includes(v) ? prev : [...prev, v]));
+      setCustomSpecialty('');
     }
-    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSuccess(false);
+
+    try {
+      const user = auth.getCurrentUser?.();
+      if (!user?.id) throw new Error('No user');
+
+      // IMPORTANT : on MERGE avec le profil DB pour ne rien écraser
+      const merged: ChefProfile = {
+        ...baseProfile,
+        id: user.id,
+        email: user.email,
+        cuisines,
+        languages,
+        specialties,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const res = await fetch('/api/chef/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, profile: merged }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setBaseProfile(merged);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2500);
+    } catch (e) {
+      console.error('PREFERENCES SAVE ERROR', e);
+      alert("Erreur d’enregistrement (check console)");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <ChefLayout>
-      <div className="max-w-2xl">
+      <div className="max-w-3xl">
         <Marker />
-        <Label>Critères</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Préférences de Mission</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 border border-stone-200">
-           
-           <div className="space-y-2">
-              <Label>TJM Minimum (€ / jour)</Label>
-              <Input 
-                type="number"
-                value={data.minBudgetPerDay} 
-                onChange={e => setData({...data, minBudgetPerDay: parseInt(e.target.value)})} 
-                className="w-32"
-              />
-              <p className="text-xs text-stone-400">Ce montant est indicatif pour le matching.</p>
-           </div>
+        <Label>Préférences</Label>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">Cuisines & Langues</h1>
 
-           <div className="space-y-2">
-              <Label>Capacité maximale (Couverts)</Label>
-              <Input 
-                type="number"
-                value={data.maxGuestCount} 
-                onChange={e => setData({...data, maxGuestCount: parseInt(e.target.value)})} 
-                className="w-32"
-              />
-              <p className="text-xs text-stone-400">Nombre de convives maximum pour un service seul.</p>
-           </div>
-
-           <div className="space-y-4">
-              <Label>Travail en équipe</Label>
+        <div className="space-y-8 bg-white p-8 border border-stone-200">
+          {loading ? (
+            <div className="py-16 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
+            </div>
+          ) : (
+            <>
+              {/* Cuisines */}
               <div className="space-y-3">
-                 {[
-                   {id: 'solo', label: 'Seul uniquement'},
-                   {id: 'assistants', label: 'Accepte des assistants'},
-                   {id: 'brigade', label: 'Habitué aux brigades'}
-                 ].map((opt) => (
-                   <label key={opt.id} className={`flex items-center gap-4 p-4 border cursor-pointer transition-colors ${data.teamAcceptance === opt.id ? 'border-stone-900 bg-stone-50' : 'border-stone-200'}`}>
-                      <input 
-                        type="radio" 
-                        name="team"
-                        className="hidden" 
-                        checked={data.teamAcceptance === opt.id}
-                        onChange={() => setData({...data, teamAcceptance: opt.id as any})}
-                      />
-                      <div className={`w-4 h-4 border rounded-full flex items-center justify-center ${data.teamAcceptance === opt.id ? 'border-stone-900' : 'border-stone-300'}`}>
-                         {data.teamAcceptance === opt.id && <div className="w-2 h-2 bg-stone-900 rounded-full" />}
-                      </div>
-                      <span className="text-sm font-medium text-stone-800">{opt.label}</span>
-                   </label>
-                 ))}
-              </div>
-           </div>
+                <Label>Cuisines (min. 1)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {CUISINES_PRESET.map(x => (
+                    <button
+                      key={x}
+                      type="button"
+                      onClick={() => setCuisines(prev => toggle(prev, x))}
+                      className={`p-3 border text-left transition ${
+                        cuisines.includes(x)
+                          ? 'border-stone-900 bg-stone-50'
+                          : 'border-stone-200 hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-stone-900">{x}</div>
+                      <div className="text-xs text-stone-500">{cuisines.includes(x) ? 'Sélectionné' : 'Cliquer'}</div>
+                    </button>
+                  ))}
+                </div>
 
-           <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
-              {success && <span className="text-sm text-green-600">Modifications enregistrées.</span>}
-              <Button type="submit" disabled={loading} className="ml-auto w-32">
-                {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
-              </Button>
-           </div>
-        </form>
+                <div className="flex gap-2">
+                  <Input
+                    value={customCuisine}
+                    onChange={e => setCustomCuisine(e.target.value)}
+                    placeholder="Ajouter une cuisine…"
+                  />
+                  <Button type="button" onClick={() => addCustom('cuisine')}>
+                    Ajouter
+                  </Button>
+                </div>
+
+                {cuisines.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {cuisines.map(x => (
+                      <button
+                        key={x}
+                        type="button"
+                        onClick={() => setCuisines(prev => prev.filter(v => v !== x))}
+                        className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
+                      >
+                        {x} ✕
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Langues */}
+              <div className="space-y-3 pt-6 border-t border-stone-100">
+                <Label>Langues (min. 1)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {LANGUAGES_PRESET.map(x => (
+                    <button
+                      key={x}
+                      type="button"
+                      onClick={() => setLanguages(prev => toggle(prev, x))}
+                      className={`p-3 border text-left transition ${
+                        languages.includes(x)
+                          ? 'border-stone-900 bg-stone-50'
+                          : 'border-stone-200 hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-stone-900">{x}</div>
+                      <div className="text-xs text-stone-500">{languages.includes(x) ? 'Sélectionné' : 'Cliquer'}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={customLanguage}
+                    onChange={e => setCustomLanguage(e.target.value)}
+                    placeholder="Ajouter une langue…"
+                  />
+                  <Button type="button" onClick={() => addCustom('language')}>
+                    Ajouter
+                  </Button>
+                </div>
+
+                {languages.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {languages.map(x => (
+                      <button
+                        key={x}
+                        type="button"
+                        onClick={() => setLanguages(prev => prev.filter(v => v !== x))}
+                        className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
+                      >
+                        {x} ✕
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Spécialités (optionnel, mais utile) */}
+              <div className="space-y-3 pt-6 border-t border-stone-100">
+                <Label>Spécialités (optionnel)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {SPECIALTIES_PRESET.map(x => (
+                    <button
+                      key={x}
+                      type="button"
+                      onClick={() => setSpecialties(prev => toggle(prev, x))}
+                      className={`p-3 border text-left transition ${
+                        specialties.includes(x)
+                          ? 'border-stone-900 bg-stone-50'
+                          : 'border-stone-200 hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-stone-900">{x}</div>
+                      <div className="text-xs text-stone-500">{specialties.includes(x) ? 'Sélectionné' : 'Cliquer'}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={customSpecialty}
+                    onChange={e => setCustomSpecialty(e.target.value)}
+                    placeholder="Ajouter une spécialité…"
+                  />
+                  <Button type="button" onClick={() => addCustom('specialty')}>
+                    Ajouter
+                  </Button>
+                </div>
+
+                {specialties.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {specialties.map(x => (
+                      <button
+                        key={x}
+                        type="button"
+                        onClick={() => setSpecialties(prev => prev.filter(v => v !== x))}
+                        className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
+                      >
+                        {x} ✕
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Save */}
+              <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
+                <div className="text-xs text-stone-500">
+                  Checklist : <span className={canSave ? 'text-green-700' : 'text-stone-500'}>
+                    {canSave ? 'OK ✅' : 'Il faut 1 cuisine + 1 langue'}
+                  </span>
+                  {success ? <span className="ml-2 text-green-700">Enregistré ✅</span> : null}
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || loading || !canSave}
+                  className="w-32"
+                >
+                  {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </ChefLayout>
   );
