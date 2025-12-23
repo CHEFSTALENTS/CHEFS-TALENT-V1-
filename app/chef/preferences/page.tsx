@@ -23,8 +23,6 @@ const CUISINES_PRESET = [
   'Méditerranéenne',
   'Asiatique',
   'Végétarienne',
-  'Pâtisserie',
-  'BBQ / Grill',
   'Healthy',
   'Fusion',
 ];
