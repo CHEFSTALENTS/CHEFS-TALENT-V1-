@@ -201,7 +201,6 @@ ok:!!profile.location?.baseCity?.trim() ||
   const canBecomeFounder = completion.score >= 70;
 
 const saveProfile = async (patch: ChefProfile) => {
-  console.log("SAVE PROFILE CALLED", patch);
   setSaving(true);
   setNotice(null);
 
@@ -209,32 +208,24 @@ const saveProfile = async (patch: ChefProfile) => {
     const user = auth.getCurrentUser?.();
     if (!user?.id) throw new Error("No user");
 
-    const merged = {
-      ...profile,     // état actuel complet
-      ...patch,       // éventuelle modif locale
+    const merged: ChefProfile = {
+      ...profile,
+      ...patch,
       id: user.id,
       email: user.email,
       updatedAt: new Date().toISOString(),
     };
 
-    // ✅ localStorage AFTER merged exists
+    // ✅ localStorage ici (APRES merged)
     safeWriteLS(STORAGE_KEY, merged);
-
-    console.log("PROFILE ENVOYÉ À SUPABASE", merged);
 
     const res = await fetch("/api/chef/profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: user.id,
-        profile: merged,
-      }),
+      body: JSON.stringify({ id: user.id, profile: merged }),
     });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt);
-    }
+    if (!res.ok) throw new Error(await res.text());
 
     setProfile(merged);
     setNotice("Enregistré ✅");
