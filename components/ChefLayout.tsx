@@ -75,10 +75,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: Euro, label: 'Revenus', path: '/chef/earnings' },
     
     // Separator Concept in rendering
-    { icon: User, label: 'Identité', path: '/chef/profile' },
+    { icon: User, label: 'Identité', path: '/chef/identity' },
     { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
     { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
-    { icon: Map, label: 'Zone & Mobilité', path: '/chef/coverage' },
+    { icon: Map, label: 'Zone & Mobilité', path: '/chef/mobility' },
     { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
     { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
@@ -99,7 +99,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
             const Icon = item.icon;
             
             // Visual separation between Ops and Profile sections
-            const isProfileStart = item.path === '/chef/profile';
+            const isProfileStart = item.path === '/chef/identity';
 
             return (
               <React.Fragment key={item.path}>
