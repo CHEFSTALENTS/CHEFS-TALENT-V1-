@@ -191,6 +191,7 @@ ok:!!profile.location?.baseCity?.trim() ||
 
     return items;
   }, [profile]);
+  
 
   const completion = useMemo(() => {
     const total = checklist.length;
