@@ -130,29 +130,38 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       icon: React.ElementType;
     }> = [
       {
-        key: 'identity',
-        label: 'Identité',
-        ok: !!profile.name?.trim() && !!profile.phone?.trim() && !!profile.city?.trim(),
-        hint: 'Nom, téléphone, ville…',
-        href: '/chef/identity',
-        icon: User,
-      },
+  key: 'identity',
+  label: 'Identité',
+  ok:
+    !!profile.name?.trim() &&
+    !!profile.phone?.trim() &&
+    (!!profile.city?.trim() || !!profile.location?.baseCity?.trim()),
+  hint: 'Nom, téléphone, ville…',
+  href: '/chef/identity',
+  icon: User,
+},
+      const bio = (profile.bio ?? (profile as any).about ?? (profile as any).description ?? '').trim();
+const years = profile.yearsExperience ?? (profile as any).experienceYears ?? 0;
+
+{
+  key: 'experience',
+  label: 'Expérience',
+  ok: (years ?? 0) > 0 || bio.length >= 80,
+  hint: 'Bio + expérience',
+  href: '/chef/experience',
+  icon: Briefcase,
+}
       {
-        key: 'experience',
-        label: 'Expérience',
-        ok: (profile.yearsExperience ?? 0) > 0 || (profile.bio?.trim()?.length ?? 0) >= 80,
-        hint: 'Bio + expérience',
-        href: '/chef/experience',
-        icon: Briefcase,
-      },
-      {
-        key: 'portfolio',
-        label: 'Portfolio',
-        ok: !!profile.portfolioUrl?.trim() || !!profile.instagram?.trim(),
-        hint: 'Photos / Instagram / site',
-        href: '/chef/portfolio',
-        icon: ImageIcon,
-      },
+  key: 'portfolio',
+  label: 'Portfolio',
+  ok:
+    !!profile.portfolioUrl?.trim() ||
+    !!profile.instagram?.trim() ||
+    !!profile.website?.trim(),
+  hint: 'Photos / Instagram / site',
+  href: '/chef/portfolio',
+  icon: ImageIcon,
+},
       {
         key: 'mobility',
         label: 'Zone & mobilité',
