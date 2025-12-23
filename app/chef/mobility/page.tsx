@@ -18,28 +18,30 @@ export default function ChefMobilityPage() {
   });
 
   useEffect(() => {
-    const merged = {
-  ...data,
-  location: {
-    baseCity: data.baseCity,
-    travelRadiusKm: data.travelRadiusKm,
-    internationalMobility: data.internationalMobility,
-    coverageZones: data.coverageZones,
-  },
-  meta: {
-    updatedAt: new Date().toISOString(),
-  }
-};
-    const user = auth.getCurrentUser?.();
-    if (user?.profile) {
-      setData({
-        baseCity: user.profile.baseCity || '',
-        travelRadiusKm: user.profile.travelRadiusKm || 50,
-        internationalMobility: user.profile.internationalMobility || false,
-        coverageZones: user.profile.coverageZones || [],
-      });
-    }
-  }, []);
+  const user = auth.getCurrentUser?.();
+  const p = user?.profile;
+
+  if (!p) return;
+
+  setData({
+    baseCity:
+      p.location?.baseCity ??
+      p.baseCity ??
+      '',
+    travelRadiusKm:
+      p.location?.travelRadiusKm ??
+      p.travelRadiusKm ??
+      50,
+    internationalMobility:
+      p.location?.internationalMobility ??
+      p.internationalMobility ??
+      false,
+    coverageZones:
+      p.location?.coverageZones ??
+      p.coverageZones ??
+      [],
+  });
+}, []);
 
   const toggleZone = (zone: string) => {
     setData(prev => ({
