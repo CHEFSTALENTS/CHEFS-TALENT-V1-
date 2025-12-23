@@ -119,79 +119,98 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
 }, []);
 
   const checklist = useMemo(() => {
-    // IMPORTANT : cette checklist lit le “profil”, mais Settings NE redemande PAS les champs.
-    // Elle sert juste à guider vers les pages.
-    const items: Array<{
-      key: string;
-      label: string;
-      ok: boolean;
-      hint?: string;
-      href?: string;
-      icon: React.ElementType;
-    }> = [
-      {
-  key: 'identity',
-  label: 'Identité',
-  ok:
-    !!profile.name?.trim() &&
-    !!profile.phone?.trim() &&
-    (!!profile.city?.trim() || !!profile.location?.baseCity?.trim()),
-  hint: 'Nom, téléphone, ville…',
-  href: '/chef/identity',
-  icon: User,
-}
-      const bio = (profile.bio ?? (profile as any).about ?? (profile as any).description ?? '').trim();
-const years = profile.yearsExperience ?? (profile as any).experienceYears ?? 0;
+  // Normalisation des champs (pour compat legacy)
+  const bio = (
+    profile.bio ??
+    (profile as any).about ??
+    (profile as any).description ??
+    ''
+  ).trim();
 
-{
-  key: 'experience',
-  label: 'Expérience',
-  ok: (years ?? 0) > 0 || bio.length >= 80,
-  hint: 'Bio + expérience',
-  href: '/chef/experience',
-  icon: Briefcase,
-}
-      {
-  key: 'portfolio',
-  label: 'Portfolio',
-  ok:
-    !!profile.portfolioUrl?.trim() ||
-    !!profile.instagram?.trim() ||
-    !!profile.website?.trim(),
-  hint: 'Photos / Instagram / site',
-  href: '/chef/portfolio',
-  icon: ImageIcon,
-},
-      {
-        key: 'mobility',
-        label: 'Zone & mobilité',
-ok:!!profile.location?.baseCity?.trim() ||
-  profile.location?.internationalMobility === true ||
-  (profile.location?.coverageZones?.length ?? 0) > 0,        hint: 'Zones, déplacements',
-        href: '/chef/mobility',
-        icon: MapPinned,
-      },
-      {
-        key: 'availability',
-        label: 'Disponibilités',
-        ok: true, // placeholder (à connecter quand on a tes champs)
-        hint: 'Calendrier, périodes',
-        href: '/chef/availability',
-        icon: Calendar,
-      },
-      {
-        key: 'preferences',
-        label: 'Préférences',
-        ok: (profile.cuisines?.length ?? 0) >= 1 && (profile.languages?.length ?? 0) >= 1,
-        hint: 'Cuisines, langues…',
-        href: '/chef/preferences',
-        icon: SlidersHorizontal,
-      },
-    ];
+  const years =
+    profile.yearsExperience ??
+    (profile as any).experienceYears ??
+    0;
 
-    return items;
-  }, [profile]);
-  
+  const items: Array<{
+    key: string;
+    label: string;
+    ok: boolean;
+    hint?: string;
+    href?: string;
+    icon: React.ElementType;
+  }> = [
+    {
+      key: 'identity',
+      label: 'Identité',
+      ok:
+        !!profile.name?.trim() &&
+        !!profile.phone?.trim() &&
+        (
+          !!profile.city?.trim() ||
+          !!profile.location?.baseCity?.trim()
+        ),
+      hint: 'Nom, téléphone, ville…',
+      href: '/chef/identity',
+      icon: User,
+    },
+
+    {
+      key: 'experience',
+      label: 'Expérience',
+      ok: years > 0 || bio.length >= 80,
+      hint: 'Bio + expérience',
+      href: '/chef/experience',
+      icon: Briefcase,
+    },
+
+    {
+      key: 'portfolio',
+      label: 'Portfolio',
+      ok:
+        !!profile.portfolioUrl?.trim() ||
+        !!profile.instagram?.trim() ||
+        !!profile.website?.trim(),
+      hint: 'Photos / Instagram / site',
+      href: '/chef/portfolio',
+      icon: ImageIcon,
+    },
+
+    {
+      key: 'mobility',
+      label: 'Zone & mobilité',
+      ok:
+        !!profile.location?.baseCity?.trim() ||
+        profile.location?.internationalMobility === true ||
+        (profile.location?.coverageZones?.length ?? 0) > 0,
+      hint: 'Zones, déplacements',
+      href: '/chef/mobility',
+      icon: MapPinned,
+    },
+
+    {
+      key: 'availability',
+      label: 'Disponibilités',
+      ok: true, // volontairement neutre
+      hint: 'Calendrier, périodes',
+      href: '/chef/availability',
+      icon: Calendar,
+    },
+
+    {
+      key: 'preferences',
+      label: 'Préférences',
+      ok:
+        (profile.cuisines?.length ?? 0) >= 1 &&
+        (profile.languages?.length ?? 0) >= 1,
+      hint: 'Cuisines, langues…',
+      href: '/chef/preferences',
+      icon: SlidersHorizontal,
+    },
+  ];
+
+  return items;
+}, [profile]);
 
   const completion = useMemo(() => {
     const total = checklist.length;
