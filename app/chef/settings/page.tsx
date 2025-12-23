@@ -139,7 +139,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
   hint: 'Nom, téléphone, ville…',
   href: '/chef/identity',
   icon: User,
-},
+}
       const bio = (profile.bio ?? (profile as any).about ?? (profile as any).description ?? '').trim();
 const years = profile.yearsExperience ?? (profile as any).experienceYears ?? 0;
 
