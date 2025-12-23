@@ -265,7 +265,7 @@ export default function ChefAvailabilityPage() {
 
         {/* autosave option (si tu veux) */}
         <div className="text-xs text-stone-400 mt-4">
-          Astuce : si tu veux, je te mets un “autosave” après chaque clic calendrier.
+         
         </div>
       </div>
     </ChefLayout>
