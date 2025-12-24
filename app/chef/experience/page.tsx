@@ -27,7 +27,36 @@ export default function ChefExperiencePage() {
       });
     }
   }, []);
+  
+async function saveChefProfilePatch(patch: any) {
+  const user = auth.getCurrentUser?.();
+  if (!user?.id) throw new Error("No user");
 
+  // 1) GET existing profile from DB
+  const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+  const json = await resGet.json();
+  const current = json?.profile ?? {};
+
+  // 2) merge
+  const merged = {
+    ...current,
+    ...patch,
+    id: user.id,
+    email: user.email,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // 3) PUT
+  const resPut = await fetch("/api/chef/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: user.id, profile: merged }),
+  });
+
+  if (!resPut.ok) throw new Error(await resPut.text());
+
+  return merged;
+}
   const toggleEnv = (env: string) => {
     setData(prev => ({
       ...prev,
