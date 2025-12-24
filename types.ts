@@ -33,31 +33,79 @@ export interface Mission {
 }
 
 export interface ChefProfile {
-  phone?: string;
-  languages: string[];
-  photoUrl?: string;
+  /* -----------------
+   * Identité / infos générales (utilisées dans /chef/settings + /chef/identity + autres)
+   * ----------------- */
+  name?: string; // ex: "Thomas Delcroix"
+  city?: string;
+  country?: string;
+  website?: string;
+  instagram?: string;
+  portfolioUrl?: string;
+  avatarUrl?: string; // standard
+  photoUrl?: string; // legacy (on garde)
 
+  phone?: string;
+  email?: string;
+
+  languages?: string[];
+
+  /* -----------------
+   * Classification
+   * ----------------- */
   profileType?: ChefProfileType;
   seniorityLevel?: ChefSeniority;
 
+  /* -----------------
+   * Expérience / Profil
+   * ----------------- */
   yearsExperience?: number;
-  environments: string[];
-  specialties: string[];
+  environments?: string[];
+  specialties?: string[];
+  cuisines?: string[];
   bio?: string;
 
-  images: string[];
+  images?: string[];
 
+  /* -----------------
+   * Mobilité (legacy + nouveau format)
+   * ----------------- */
+  // legacy (ancien)
   baseCity?: string;
   travelRadiusKm?: number;
   internationalMobility?: boolean;
-  coverageZones: string[];
+  coverageZones?: string[];
 
+  // nouveau (utilisé dans /chef/mobility + checklist settings)
+  location?: {
+    baseCity?: string;
+    travelRadiusKm?: number;
+    internationalMobility?: boolean;
+    coverageZones?: string[];
+  };
+
+  /* -----------------
+   * Contraintes / pricing
+   * ----------------- */
   minBudgetPerDay?: number;
   maxGuestCount?: number;
-  acceptedMissions: string[];
   teamAcceptance?: 'solo' | 'assistants' | 'brigade';
 
-  unavailableDates: string[];
+  acceptedMissions?: string[];
+
+  /* -----------------
+   * Disponibilités
+   * ----------------- */
+  unavailableDates?: string[];
+
+  /* -----------------
+   * Meta
+   * ----------------- */
+  createdAt?: string;
+  updatedAt?: string;
+
+  // pour tolérer des champs qui traînent (utile tant que tu itères)
+  [key: string]: any;
 }
 
 export interface ChefUser {
