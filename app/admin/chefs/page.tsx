@@ -29,14 +29,13 @@ export default function AdminChefsPage() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
 
-  // Source affichée (DB vs fallback)
   const [source, setSource] = useState<'db' | 'localStorage'>('db');
 
   const refresh = async () => {
     setLoading(true);
     setErr(null);
 
-    // 1) Try DB via API (recommandé)
+    // 1) Try DB via API
     try {
       const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs', { method: 'GET' });
       const list = Array.isArray(json?.chefs) ? json.chefs : [];
@@ -47,7 +46,6 @@ export default function AdminChefsPage() {
       setLoading(false);
       return;
     } catch (e: any) {
-      // Continue to fallback
       console.warn('[AdminChefs] DB API failed, fallback to localStorage auth.getAllChefs()', e?.message || e);
     }
 
@@ -65,10 +63,9 @@ export default function AdminChefsPage() {
   };
 
   useEffect(() => {
-    // Petit garde-fou UX (la vraie sécurité doit être dans middleware / API)
+    // UX guard only (real security must be server-side)
     const u = auth.getCurrentUser?.();
     if (u?.email && u.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-      // On ne bloque pas “sécurité”, mais on évite l’accident UX
       setErr("Accès admin réservé. (Sécurise aussi via middleware côté serveur.)");
       setLoading(false);
       return;
@@ -81,7 +78,6 @@ export default function AdminChefsPage() {
   const approve = async (id: string) => {
     setErr(null);
 
-    // 1) DB route
     try {
       await fetchJson('/api/admin/chefs', {
         method: 'PUT',
@@ -94,7 +90,6 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] approve via API failed, fallback to auth.updateChefStatus()', e?.message || e);
     }
 
-    // 2) fallback
     await auth.updateChefStatus(id, 'approved' as any);
     await refresh();
   };
@@ -102,7 +97,6 @@ export default function AdminChefsPage() {
   const activate = async (id: string) => {
     setErr(null);
 
-    // 1) DB route
     try {
       await fetchJson('/api/admin/chefs', {
         method: 'PUT',
@@ -115,7 +109,6 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] activate via API failed, fallback to auth.updateChefStatus()', e?.message || e);
     }
 
-    // 2) fallback
     await auth.updateChefStatus(id, 'active' as any);
     await refresh();
   };
@@ -124,7 +117,6 @@ export default function AdminChefsPage() {
     if (!confirm('Supprimer ce compte chef ?')) return;
     setErr(null);
 
-    // 1) DB route
     try {
       await fetchJson(`/api/admin/chefs?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       await refresh();
@@ -133,7 +125,6 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] delete via API failed, fallback to auth.deleteChefAccount()', e?.message || e);
     }
 
-    // 2) fallback
     await auth.deleteChefAccount(id);
     await refresh();
   };
@@ -155,17 +146,8 @@ export default function AdminChefsPage() {
     const needle = q.trim().toLowerCase();
 
     const getScore = (c: ApiChef) => {
-      const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim();
-      // computeChefScore attend un “profil” aplati
-      const merged: Record<string, any> = {
-        ...(c.profile ?? {}),
-        email: c.email,
-        name: fullName,
-        // compat anciens champs si jamais
-        baseCity: (c.profile as any)?.baseCity,
-        coverageZones: (c.profile as any)?.coverageZones,
-      };
-      return computeChefScore(merged).score ?? 0;
+      // computeChefScore attend un ChefProfile (pas d'email/name dans ChefProfile)
+      return computeChefScore(c.profile ?? {}).score ?? 0;
     };
 
     return [...chefs]
@@ -209,7 +191,6 @@ export default function AdminChefsPage() {
         }
       />
 
-      {/* Info / erreur */}
       <Card className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
@@ -222,7 +203,6 @@ export default function AdminChefsPage() {
         </div>
       </Card>
 
-      {/* KPI quick */}
       <div className="flex flex-wrap gap-2">
         <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
         <Segment label="À valider" active={filter === 'pending'} onClick={() => setFilter('pending')} badge={counts.pending} />
@@ -230,7 +210,6 @@ export default function AdminChefsPage() {
         <Segment label="Actifs" active={filter === 'active'} onClick={() => setFilter('active')} badge={counts.active} />
       </div>
 
-      {/* Toolbar */}
       <Card className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
           <input
@@ -245,7 +224,6 @@ export default function AdminChefsPage() {
         </div>
       </Card>
 
-      {/* Table */}
       <Card>
         <div className="overflow-auto">
           <table className="min-w-full text-sm">
@@ -274,12 +252,8 @@ export default function AdminChefsPage() {
                 </tr>
               ) : (
                 view.map(c => {
+                  const sc = computeChefScore(c.profile ?? {}).score ?? 0;
                   const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef';
-                  const sc = computeChefScore({
-                    ...(c.profile ?? {}),
-                    email: c.email,
-                    name: fullName,
-                  }).score;
 
                   return (
                     <tr key={c.id} className="border-t border-white/10 hover:bg-white/5 transition">
@@ -295,7 +269,7 @@ export default function AdminChefsPage() {
                       </td>
 
                       <td className="p-3">
-                        <ScorePill score={sc || 0} />
+                        <ScorePill score={sc} />
                       </td>
 
                       <td className="p-3 text-right">
@@ -339,8 +313,6 @@ export default function AdminChefsPage() {
     </div>
   );
 }
-
-/* ---------- UI local (spécifique chefs) ---------- */
 
 function ChefStatusBadge({ status }: { status: string }) {
   const s = (status || '').toLowerCase();
