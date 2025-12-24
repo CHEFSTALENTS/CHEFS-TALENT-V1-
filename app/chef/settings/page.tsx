@@ -119,18 +119,37 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
 }, []);
 
   const checklist = useMemo(() => {
-  // Normalisation des champs (pour compat legacy)
-  const bio = (
+  // Helpers “tolérants” (on accepte plusieurs clés / vieux champs)
+  const bio = String(
     profile.bio ??
-    (profile as any).about ??
-    (profile as any).description ??
-    ''
+      (profile as any).about ??
+      (profile as any).description ??
+      ''
   ).trim();
 
   const years =
-    profile.yearsExperience ??
-    (profile as any).experienceYears ??
-    0;
+    Number(
+      profile.yearsExperience ??
+        (profile as any).experienceYears ??
+        (profile as any).years ??
+        0
+    ) || 0;
+
+  const images =
+    (profile as any).images ??
+    (profile as any).portfolioImages ??
+    [];
+
+  const photoUrl =
+    (profile as any).photoUrl ??
+    (profile as any).avatarUrl ??
+    '';
+
+  const instagram = String((profile as any).instagram ?? '').trim();
+  const website = String((profile as any).website ?? '').trim();
+  const portfolioUrl = String((profile as any).portfolioUrl ?? '').trim();
+
+  const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
 
   const items: Array<{
     key: string;
@@ -144,12 +163,9 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       key: 'identity',
       label: 'Identité',
       ok:
-        !!profile.name?.trim() &&
-        !!profile.phone?.trim() &&
-        (
-          !!profile.city?.trim() ||
-          !!profile.location?.baseCity?.trim()
-        ),
+        !!(profile as any).name?.trim?.() &&
+        !!profile.phone?.trim?.() &&
+        (!!(profile as any).city?.trim?.() || !!profile.location?.baseCity?.trim?.()),
       hint: 'Nom, téléphone, ville…',
       href: '/chef/identity',
       icon: User,
@@ -158,7 +174,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     {
       key: 'experience',
       label: 'Expérience',
-      ok: years > 0 || bio.length >= 80,
+      ok: years > 0 || bio.length >= 80 || (profile.specialties?.length ?? 0) >= 1,
       hint: 'Bio + expérience',
       href: '/chef/experience',
       icon: Briefcase,
@@ -167,10 +183,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     {
       key: 'portfolio',
       label: 'Portfolio',
-      ok:
-        !!profile.portfolioUrl?.trim() ||
-        !!profile.instagram?.trim() ||
-        !!profile.website?.trim(),
+      ok: hasImages || !!photoUrl?.trim?.() || !!portfolioUrl || !!instagram || !!website,
       hint: 'Photos / Instagram / site',
       href: '/chef/portfolio',
       icon: ImageIcon,
@@ -180,7 +193,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       key: 'mobility',
       label: 'Zone & mobilité',
       ok:
-        !!profile.location?.baseCity?.trim() ||
+        !!profile.location?.baseCity?.trim?.() ||
         profile.location?.internationalMobility === true ||
         (profile.location?.coverageZones?.length ?? 0) > 0,
       hint: 'Zones, déplacements',
@@ -191,7 +204,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     {
       key: 'availability',
       label: 'Disponibilités',
-      ok: true, // volontairement neutre
+      ok: true,
       hint: 'Calendrier, périodes',
       href: '/chef/availability',
       icon: Calendar,
@@ -200,9 +213,7 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     {
       key: 'preferences',
       label: 'Préférences',
-      ok:
-        (profile.cuisines?.length ?? 0) >= 1 &&
-        (profile.languages?.length ?? 0) >= 1,
+      ok: (profile.cuisines?.length ?? 0) >= 1 && (profile.languages?.length ?? 0) >= 1,
       hint: 'Cuisines, langues…',
       href: '/chef/preferences',
       icon: SlidersHorizontal,
