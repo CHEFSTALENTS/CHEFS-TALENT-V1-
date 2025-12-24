@@ -166,33 +166,37 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
-      {/* Mobile header */}
+      {/* Mobile header (menu à droite + titre centré) */}
       <div className="md:hidden sticky top-0 z-20 bg-stone-50/95 backdrop-blur border-b border-stone-200">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="inline-flex items-center justify-center w-10 h-10 border border-stone-200 bg-white"
-            aria-label="Ouvrir le menu"
-          >
-            <Menu className="w-5 h-5 text-stone-800" />
-          </button>
-
-          <div className="text-center">
+        <div className="relative flex items-center px-4 py-3">
+          {/* Centre parfait */}
+          <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
             <div className="text-xs uppercase tracking-widest text-stone-400">Chef Portal</div>
             <div className="text-sm font-medium text-stone-900 truncate max-w-[220px]">
               {user.firstName} {user.lastName}
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex items-center justify-center w-10 h-10 border border-stone-200 bg-white"
-            aria-label="Déconnexion"
-          >
-            <LogOut className="w-5 h-5 text-stone-800" />
-          </button>
+          {/* Droite : menu + logout */}
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="inline-flex items-center justify-center w-10 h-10 border border-stone-200 bg-white"
+              aria-label="Ouvrir le menu"
+            >
+              <Menu className="w-5 h-5 text-stone-800" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center w-10 h-10 border border-stone-200 bg-white"
+              aria-label="Déconnexion"
+            >
+              <LogOut className="w-5 h-5 text-stone-800" />
+            </button>
+          </div>
         </div>
       </div>
 
