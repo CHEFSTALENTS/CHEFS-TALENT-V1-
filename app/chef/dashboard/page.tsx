@@ -41,76 +41,149 @@ export default function ChefDashboardPage() {
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  (async () => {
-    try {
-      const u = auth.getCurrentUser?.();
-      if (!u?.id) return;
+    (async () => {
+      try {
+        const u = auth.getCurrentUser?.();
+        if (!u?.id) return;
 
-      // 1) DB (source de vérité)
-      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`);
-      const json = await res.json();
-      const fromDb = json?.profile ?? null;
+        // 1) DB (source de vérité)
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`);
+        const json = await res.json();
+        const fromDb = json?.profile ?? null;
 
-      if (!cancelled) {
-        if (fromDb) {
-          setSettingsProfile(fromDb);
-        } else {
-          // 2) fallback localStorage
-          const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-          setSettingsProfile(fromLS);
+        if (!cancelled) {
+          if (fromDb) {
+            setSettingsProfile(fromDb);
+          } else {
+            // 2) fallback localStorage
+            const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
+            setSettingsProfile(fromLS);
+          }
         }
+      } catch {
+        // fallback localStorage
+        const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
+        if (!cancelled) setSettingsProfile(fromLS);
       }
-    } catch {
-      // fallback localStorage
-      const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-      if (!cancelled) setSettingsProfile(fromLS);
-    }
-  })();
+    })();
 
-  return () => {
-    cancelled = true;
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!user) return null;
+
+  const profileTypeLabels: Record<string, string> = {
+    private: 'Chef Privé',
+    residence: 'Chef Résidence',
+    yacht: 'Chef Yacht',
+    pastry: 'Chef Pâtissier',
   };
-}, []);
 
-  // ✅ Cards basées sur le scoring (évite le doublon “langues ici et là”)
-  // On mappe “règles” -> sections à compléter
+  // Profil "onboarding" (historique)
+  const onboardingProfile: AnyProfile = (user as any).profile || {};
+
+  // ✅ Source de vérité unique : on fusionne onboarding + settings (DB/LS)
+  const mergedProfile = useMemo<AnyProfile>(() => {
+    const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
+
+    return {
+      ...onboardingProfile,
+      ...(settingsProfile ?? {}),
+      // fallbacks utiles
+      email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
+      name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
+    };
+  }, [onboardingProfile, settingsProfile, user]);
+
+  // ✅ Score unique
+  const { score } = useMemo(() => computeChefScore(mergedProfile ?? {}), [mergedProfile]);
+
+  // ✅ Checks “Tableau de bord” alignés sur tes champs réels (settings + anciens)
   const checks = useMemo(() => {
-  const bio = (mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
-  const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
+    const bio = (mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
+    const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
 
-  const identityOk =
-    !!mergedProfile.name?.trim() &&
-    !!mergedProfile.phone?.trim() &&
-    (!!mergedProfile.city?.trim() || !!mergedProfile.location?.baseCity?.trim() || !!(mergedProfile as any).baseCity?.trim());
+    const identityOk =
+      !!mergedProfile.name?.trim() &&
+      !!mergedProfile.phone?.trim() &&
+      (!!mergedProfile.city?.trim() ||
+        !!mergedProfile.location?.baseCity?.trim() ||
+        !!(mergedProfile as any).baseCity?.trim());
 
-  const experienceOk = (years ?? 0) > 0 || bio.length >= 80;
+    const experienceOk = (years ?? 0) > 0 || bio.length >= 80;
 
-  const portfolioOk =
-    !!mergedProfile.portfolioUrl?.trim() ||
-    !!mergedProfile.instagram?.trim() ||
-    !!mergedProfile.website?.trim();
+    const portfolioOk =
+      !!mergedProfile.portfolioUrl?.trim() ||
+      !!mergedProfile.instagram?.trim() ||
+      !!mergedProfile.website?.trim();
 
-  const mobilityOk =
-    !!mergedProfile.location?.baseCity?.trim() ||
-    !!(mergedProfile as any).baseCity?.trim() ||
-    mergedProfile.location?.internationalMobility === true ||
-    (mergedProfile.location?.coverageZones?.length ?? 0) > 0 ||
-    (mergedProfile as any).coverageZones?.length > 0;
+    const mobilityOk =
+      !!mergedProfile.location?.baseCity?.trim() ||
+      !!(mergedProfile as any).baseCity?.trim() ||
+      mergedProfile.location?.internationalMobility === true ||
+      (mergedProfile.location?.coverageZones?.length ?? 0) > 0 ||
+      ((mergedProfile as any).coverageZones?.length ?? 0) > 0;
 
-  const preferencesOk =
-    (mergedProfile.cuisines?.length ?? 0) >= 1 &&
-    (mergedProfile.languages?.length ?? 0) >= 1;
+    const preferencesOk = (mergedProfile.cuisines?.length ?? 0) >= 1 && (mergedProfile.languages?.length ?? 0) >= 1;
 
-  return [
-    { title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
-    { title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: experienceOk, icon: ChefHat },
-    { title: 'Portfolio / Photos', desc: 'Lien Drive / site / Notion', path: '/chef/portfolio', done: portfolioOk, icon: ImageIcon },
-    { title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
-    { title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
-  ];
-}, [mergedProfile]);
+    // dispo non-bloquante au lancement (tu peux la connecter plus tard)
+    const availabilityOk = true;
+
+    return [
+      {
+        key: 'identity',
+        title: 'Identité & Coordonnées',
+        desc: 'Nom, téléphone, ville…',
+        path: '/chef/identity',
+        done: identityOk,
+        icon: User,
+      },
+      {
+        key: 'experience',
+        title: 'Expérience',
+        desc: 'Bio + expérience',
+        path: '/chef/experience',
+        done: experienceOk,
+        icon: ChefHat,
+      },
+      {
+        key: 'portfolio',
+        title: 'Portfolio / Photos',
+        desc: 'Lien Drive / site / Notion.',
+        path: '/chef/portfolio',
+        done: portfolioOk,
+        icon: ImageIcon,
+      },
+      {
+        key: 'mobility',
+        title: 'Zone & Mobilité',
+        desc: 'Zones, déplacements',
+        path: '/chef/mobility',
+        done: mobilityOk,
+        icon: Map,
+      },
+      {
+        key: 'availability',
+        title: 'Disponibilités',
+        desc: 'Ouverture des missions bientôt.',
+        path: '/chef/availability',
+        done: availabilityOk,
+        icon: Calendar,
+      },
+      {
+        key: 'preferences',
+        title: 'Préférences',
+        desc: 'Cuisines + langues',
+        path: '/chef/preferences',
+        done: preferencesOk,
+        icon: Sparkles,
+      },
+    ];
+  }, [mergedProfile]);
 
   const completedCount = checks.filter(c => c.done).length;
   const progress = Math.round((completedCount / checks.length) * 100);
@@ -167,7 +240,7 @@ export default function ChefDashboardPage() {
           </div>
         </div>
 
-        {/* Score banner (source unique) */}
+        {/* Score banner */}
         <div className="bg-white border border-stone-200 p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-3 flex-1">
@@ -190,8 +263,7 @@ export default function ChefDashboardPage() {
               </div>
 
               <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Objectif :{' '}
-                <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
+                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
               </p>
             </div>
 
@@ -210,11 +282,7 @@ export default function ChefDashboardPage() {
           <div className="bg-white border border-stone-200 p-8 shadow-sm">
             <div className="flex items-start gap-6">
               <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? (
-                  <Clock className="w-6 h-6 text-stone-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-bronze" />
-                )}
+                {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
               </div>
               <div className="space-y-4">
                 <h3 className="text-xl font-serif text-stone-900">
@@ -245,8 +313,8 @@ export default function ChefDashboardPage() {
             <div className="space-y-2">
               <h3 className="text-lg font-serif text-stone-900">Abonnement (à venir)</h3>
               <p className="text-stone-500 font-light text-sm max-w-lg">
-                Chef Talents est actuellement gratuit pour les chefs. Une offre d’abonnement optionnelle pourra arriver plus tard
-                (outils, visibilité, automatisations…).
+                Chef Talents est actuellement gratuit pour les chefs. Une offre d’abonnement optionnelle pourra arriver plus tard (outils,
+                visibilité, automatisations…).
               </p>
             </div>
           </div>
@@ -257,15 +325,8 @@ export default function ChefDashboardPage() {
 
         {/* Action List */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {checks.map((c: any) => (
-            <ActionCard
-              key={c.label}
-              icon={c.icon}
-              title={c.title}
-              desc={c.desc}
-              path={c.path}
-              done={c.done}
-            />
+          {checks.map(c => (
+            <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
           ))}
         </div>
       </div>
@@ -287,17 +348,10 @@ function ActionCard({
   done: boolean;
 }) {
   return (
-    <Link
-      href={path}
-      className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300"
-    >
+    <Link href={path} className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300">
       <div className="flex justify-between items-start mb-6">
         <Icon className={`w-6 h-6 ${done ? 'text-stone-900' : 'text-stone-300'}`} strokeWidth={1.5} />
-        {done ? (
-          <CheckCircle2 className="w-5 h-5 text-stone-900" />
-        ) : (
-          <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />
-        )}
+        {done ? <CheckCircle2 className="w-5 h-5 text-stone-900" /> : <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />}
       </div>
       <h3 className="text-lg font-serif text-stone-900 mb-2">{title}</h3>
       <p className="text-sm text-stone-500 font-light mb-6">{desc}</p>
@@ -326,7 +380,11 @@ function StatusBadge({ status }: { status: string }) {
   const s = (status || '').toLowerCase();
 
   return (
-    <span className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${styles[s] || styles.pending_validation}`}>
+    <span
+      className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
+        styles[s] || styles.pending_validation
+      }`}
+    >
       {labels[s] || s || '—'}
     </span>
   );
