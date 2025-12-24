@@ -41,90 +41,76 @@ export default function ChefDashboardPage() {
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
   useEffect(() => {
-    // Profil premium (settings) -> localStorage
-    const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-    setSettingsProfile(fromLS);
-  }, []);
+  let cancelled = false;
 
-  if (!user) return null;
+  (async () => {
+    try {
+      const u = auth.getCurrentUser?.();
+      if (!u?.id) return;
 
-  // Profil "onboarding" (historique)
-  const onboardingProfile: AnyProfile = (user as any).profile || {};
+      // 1) DB (source de vérité)
+      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`);
+      const json = await res.json();
+      const fromDb = json?.profile ?? null;
 
-  // ✅ Source de vérité unique : on fusionne
-  // - onboarding (ancien flow)
-  // - settings (nouveau flow premium)
- const mergedProfile = useMemo<AnyProfile>(() => {
-  const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
+      if (!cancelled) {
+        if (fromDb) {
+          setSettingsProfile(fromDb);
+        } else {
+          // 2) fallback localStorage
+          const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
+          setSettingsProfile(fromLS);
+        }
+      }
+    } catch {
+      // fallback localStorage
+      const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
+      if (!cancelled) setSettingsProfile(fromLS);
+    }
+  })();
 
-  return {
-    ...onboardingProfile,
-    ...(settingsProfile ?? {}),
-    // fallbacks utiles
-    email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
-    name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
+  return () => {
+    cancelled = true;
   };
-}, [onboardingProfile, settingsProfile, user]);
-
-  // ✅ Score unique (admin + chef = même)
-  const { score, rules } = useMemo(() => computeChefScore(mergedProfile ?? {}), [mergedProfile]);
-
-  const profileTypeLabels: Record<string, string> = {
-    private: 'Chef Privé',
-    residence: 'Chef Résidence',
-    yacht: 'Chef Yacht',
-    pastry: 'Chef Pâtissier',
-  };
+}, []);
 
   // ✅ Cards basées sur le scoring (évite le doublon “langues ici et là”)
   // On mappe “règles” -> sections à compléter
   const checks = useMemo(() => {
-    const getOk = (keys: string[]) => keys.every(k => Boolean((rules as any)?.[k]?.ok));
+  const bio = (mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
+  const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
 
-    return [
-      {
-        label: 'Profil (essentiel)',
-        title: 'Identité & Coordonnées',
-        desc: 'Nom, téléphone, ville, bio.',
-        path: '/chef/settings',
-        done: getOk(['name', 'phone', 'city', 'bio']),
-        icon: User,
-      },
-      {
-        label: 'Positionnement',
-        title: 'Cuisines & Spécialités',
-        desc: 'Ton univers culinaire + ce que tu fais le mieux.',
-        path: '/chef/settings',
-        done: getOk(['cuisines', 'specialties']),
-        icon: ChefHat,
-      },
-      {
-        label: 'Portfolio',
-        title: 'Portfolio / Photos',
-        desc: 'Lien Drive / site / Notion.',
-        path: '/chef/settings',
-        done: getOk(['portfolioUrl']),
-        icon: ImageIcon,
-      },
-      {
-        label: 'Langues',
-        title: 'Langues',
-        desc: 'FR/EN recommandé.',
-        path: '/chef/settings',
-        done: getOk(['languages']),
-        icon: Sparkles,
-      },
-      {
-        label: 'Disponibilités',
-        title: 'Disponibilités',
-        desc: 'Ouverture des missions bientôt.',
-        path: '/chef/missions',
-        // pas bloquant au lancement
-        done: true,
-        icon: Calendar,
-      },
-    ];
-  }, [rules]);
+  const identityOk =
+    !!mergedProfile.name?.trim() &&
+    !!mergedProfile.phone?.trim() &&
+    (!!mergedProfile.city?.trim() || !!mergedProfile.location?.baseCity?.trim() || !!(mergedProfile as any).baseCity?.trim());
+
+  const experienceOk = (years ?? 0) > 0 || bio.length >= 80;
+
+  const portfolioOk =
+    !!mergedProfile.portfolioUrl?.trim() ||
+    !!mergedProfile.instagram?.trim() ||
+    !!mergedProfile.website?.trim();
+
+  const mobilityOk =
+    !!mergedProfile.location?.baseCity?.trim() ||
+    !!(mergedProfile as any).baseCity?.trim() ||
+    mergedProfile.location?.internationalMobility === true ||
+    (mergedProfile.location?.coverageZones?.length ?? 0) > 0 ||
+    (mergedProfile as any).coverageZones?.length > 0;
+
+  const preferencesOk =
+    (mergedProfile.cuisines?.length ?? 0) >= 1 &&
+    (mergedProfile.languages?.length ?? 0) >= 1;
+
+  return [
+    { title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
+    { title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: experienceOk, icon: ChefHat },
+    { title: 'Portfolio / Photos', desc: 'Lien Drive / site / Notion', path: '/chef/portfolio', done: portfolioOk, icon: ImageIcon },
+    { title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
+    { title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
+  ];
+}, [mergedProfile]);
 
   const completedCount = checks.filter(c => c.done).length;
   const progress = Math.round((completedCount / checks.length) * 100);
