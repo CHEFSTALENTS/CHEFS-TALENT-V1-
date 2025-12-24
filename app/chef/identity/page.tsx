@@ -36,29 +36,57 @@ export default function ChefProfilePage() {
       });
     }
   }, []);
+async function saveChefProfilePatch(patch: any) {
+  const user = auth.getCurrentUser?.();
+  if (!user?.id) throw new Error("No user");
 
+  // 1) GET existing profile from DB
+  const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+  const json = await resGet.json();
+  const current = json?.profile ?? {};
+
+  // 2) merge
+  const merged = {
+    ...current,
+    ...patch,
+    id: user.id,
+    email: user.email,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // 3) PUT
+  const resPut = await fetch("/api/chef/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: user.id, profile: merged }),
+  });
+
+  if (!resPut.ok) throw new Error(await resPut.text());
+
+  return merged;
+}
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
 
   const user = auth.getCurrentUser();
   if (user) {
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+    const fullName = `${data.firstName} ${data.lastName}`.trim();
 
-    await auth.updateChefProfile(user.id, {
-      name: fullName || undefined,
-      phone: data.phone,
-      // on garde photoUrl si tu l'utilises ailleurs,
-      // mais on écrit AUSSI avatarUrl pour l'uniformiser avec le reste
-      photoUrl: data.photoUrl,
-      avatarUrl: data.photoUrl,
+    
 
-      languages: data.languages.split(',').map(s => s.trim()).filter(Boolean),
-      profileType: data.profileType,
-      seniorityLevel: data.seniorityLevel,
-      updatedAt: new Date().toISOString(),
-    });
-
+await saveChefProfilePatch({
+  name: fullName || undefined,
+  phone: data.phone,
+  // tu peux décider : photoUrl legacy + avatarUrl standard
+  photoUrl: data.photoUrl || undefined,
+  avatarUrl: data.photoUrl || undefined,
+  languages: data.languages.split(',').map(s => s.trim()).filter(Boolean),
+  profileType: data.profileType,
+  seniorityLevel: data.seniorityLevel,
+  // city: (si tu veux l’utiliser) -> soit baseCity, soit location.baseCity
+});
+    
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   }
