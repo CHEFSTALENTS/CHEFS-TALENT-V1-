@@ -204,8 +204,8 @@ export default function ChefDashboardPage() {
               </div>
 
               <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Ce score est le même que celui vu côté admin (matching/priorité). Objectif :{' '}
-                <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs au lancement.
+                Objectif :{' '}
+                <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
               </p>
             </div>
 
