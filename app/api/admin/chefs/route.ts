@@ -1,15 +1,16 @@
+// app/api/admin/chefs/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // ⚠️ service role obligatoire
 );
 
 export async function GET() {
   try {
     const { data, error } = await supabase
-      .from('users') // ⚠️ si ta table a un autre nom, remplace ici
+      .from('users') // ⚠️ adapte si ta table s'appelle autrement
       .select('*')
       .eq('role', 'chef')
       .order('createdAt', { ascending: false });
