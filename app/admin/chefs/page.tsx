@@ -186,8 +186,7 @@ export default function AdminChefsPage() {
     };
 
     const needle = q.trim().toLowerCase();
-    const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).score ?? 0;
-
+const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).score ?? 0;
     return [...chefs]
       .filter((c) => {
         const st = String(c.status || '');
@@ -217,7 +216,7 @@ export default function AdminChefsPage() {
       });
   }, [chefs, q, filter]);
 
-  return (
+   return (
     <div className="space-y-4">
       <PageTitle
         title="Chefs"
@@ -249,8 +248,18 @@ export default function AdminChefsPage() {
 
       <div className="flex flex-wrap gap-2">
         <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
-        <Segment label="À valider" active={filter === 'pending'} onClick={() => setFilter('pending')} badge={counts.pending} />
-        <Segment label="Approuvés" active={filter === 'approved'} onClick={() => setFilter('approved')} badge={counts.approved} />
+        <Segment
+          label="À valider"
+          active={filter === 'pending'}
+          onClick={() => setFilter('pending')}
+          badge={counts.pending}
+        />
+        <Segment
+          label="Approuvés"
+          active={filter === 'approved'}
+          onClick={() => setFilter('approved')}
+          badge={counts.approved}
+        />
         <Segment label="Actifs" active={filter === 'active'} onClick={() => setFilter('active')} badge={counts.active} />
       </div>
 
@@ -263,7 +272,8 @@ export default function AdminChefsPage() {
             className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
           />
           <div className="text-xs text-white/45">
-            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de header).
+            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de
+            header).
           </div>
         </div>
       </Card>
@@ -296,9 +306,13 @@ export default function AdminChefsPage() {
                 </tr>
               ) : (
                 view.map((c) => {
-                  const score = computeChefScore((c as any).profile ?? {}).score ?? 0;
-                  const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef';
-                  const createdIso = (c.createdAt || c.created_at || '') as string;
+                  const profile = (c as any).profile ?? {};
+                  const score = computeChefScore(profile as any).score ?? 0;
+                  const fullName =
+                    `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.trim() ||
+                    'Chef';
+                  const createdIso = String(c.createdAt || c.created_at || profile.createdAt || profile.created_at || '');
+                  const status = String(c.status || profile.status || '');
 
                   return (
                     <tr
@@ -308,15 +322,13 @@ export default function AdminChefsPage() {
                     >
                       <td className="p-3">
                         <div className="text-white font-medium truncate">{fullName}</div>
-                        <div className="text-xs text-white/45 mt-0.5">
-                          Inscrit : {formatDate(createdIso) || '—'}
-                        </div>
+                        <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
                       </td>
 
                       <td className="p-3 text-white/85">{c.email || '—'}</td>
 
                       <td className="p-3">
-                        <ChefStatusBadge status={String(c.status || '')} />
+                        <ChefStatusBadge status={status} />
                       </td>
 
                       <td className="p-3">
@@ -325,7 +337,7 @@ export default function AdminChefsPage() {
 
                       <td className="p-3 text-right">
                         <div className="inline-flex flex-wrap gap-2 justify-end">
-                          {String(c.status) === 'pending_validation' ? (
+                          {status === 'pending_validation' ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -338,7 +350,7 @@ export default function AdminChefsPage() {
                             </button>
                           ) : null}
 
-                          {String(c.status) === 'approved' ? (
+                          {status === 'approved' ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -369,100 +381,169 @@ export default function AdminChefsPage() {
               )}
             </tbody>
           </table>
-
-          {selected ? (
-            <div className="fixed inset-0 z-50">
-              <div className="absolute inset-0 bg-black/60" onClick={closeDrawer} />
-
-              <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-neutral-950 border-l border-white/10 p-5 overflow-auto">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-white text-lg font-semibold">
-                      {(detail?.profile?.firstName || selected.firstName || '').toString()}{' '}
-                      {(detail?.profile?.lastName || selected.lastName || '').toString()}
-                    </div>
-                    <div className="text-white/60 text-sm">{selected.email}</div>
-                    <div className="text-white/40 text-xs mt-1">
-                      Inscrit :{' '}
-                      {formatDate(
-                        detail?.createdAt || detail?.created_at || selected.createdAt || selected.created_at
-                      ) || '—'}
-                    </div>
-                  </div>
-
-                  <button
-                    className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
-                    onClick={closeDrawer}
-                  >
-                    Fermer
-                  </button>
-                </div>
-
-                <div className="mt-4 flex items-center gap-2">
-                  <ScorePill score={computeChefScore((detail?.profile ?? selected.profile) ?? {}).score ?? 0} />
-                  <div className="ml-2">
-                    <ChefStatusBadge status={String(detail?.profile?.status || selected.status || '')} />
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  {String(detail?.profile?.status || selected.status) === 'pending_validation' ? (
-                    <button
-                      className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
-                      onClick={async () => {
-                        await updateStatus(String(selected.email || ''), 'approved');
-                        await openChef(selected);
-                      }}
-                    >
-                      Approuver →
-                    </button>
-                  ) : null}
-
-                  {String(detail?.profile?.status || selected.status) === 'approved' ? (
-                    <button
-                      className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
-                      onClick={async () => {
-                        await updateStatus(String(selected.email || ''), 'active');
-                        await openChef(selected);
-                      }}
-                    >
-                      Activer →
-                    </button>
-                  ) : null}
-
-                  <button
-                    className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10"
-                    onClick={async () => removeChef(String(selected.email || ''))}
-                  >
-                    Supprimer
-                  </button>
-                </div>
-
-                <<div className="mt-6 space-y-4">
-  <div className="text-white/80 font-medium">Fiche chef</div>
-
-  {detailLoading ? (
-    <div className="text-white/60 text-sm">Chargement du détail…</div>
-  ) : (
-    <ChefReadableProfile profile={(detail?.profile ?? selected.profile) || {}} />
-  )}
-
-  <details className="mt-2">
-    <summary className="cursor-pointer text-xs text-white/50 hover:text-white/70">
-      Voir le JSON (debug)
-    </summary>
-    <pre className="mt-2 text-xs text-white/70 bg-white/5 border border-white/10 rounded-xl p-3 overflow-auto">
-{JSON.stringify(detail?.profile ?? selected.profile ?? {}, null, 2)}
-    </pre>
-  </details>
-</div>
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div className="p-3 border-t border-white/10 text-xs text-white/45">{view.length} résultat(s)</div>
       </Card>
+
+      {/* Drawer */}
+      {selected ? (
+        <ChefDrawer
+          selected={selected}
+          detail={detail}
+          loading={detailLoading}
+          onClose={closeDrawer}
+          onApprove={async () => {
+            await updateStatus(String(selected.email || ''), 'approved');
+            await openChef(selected);
+          }}
+          onActivate={async () => {
+            await updateStatus(String(selected.email || ''), 'active');
+            await openChef(selected);
+          }}
+          onDelete={async () => {
+            await removeChef(String(selected.email || ''));
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------- Drawer component ---------- */
+
+function ChefDrawer({
+  selected,
+  detail,
+  loading,
+  onClose,
+  onApprove,
+  onActivate,
+  onDelete,
+}: {
+  selected: ApiChef;
+  detail: any | null;
+  loading: boolean;
+  onClose: () => void;
+  onApprove: () => Promise<void>;
+  onActivate: () => Promise<void>;
+  onDelete: () => Promise<void>;
+}) {
+  const profile = (detail?.profile ?? selected.profile ?? {}) as any;
+
+  const email = String(selected.email || profile.email || '');
+  const firstName = String(profile.firstName || selected.firstName || '');
+  const lastName = String(profile.lastName || selected.lastName || '');
+  const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
+
+  const createdIso = String(
+    detail?.createdAt ||
+      detail?.created_at ||
+      selected.createdAt ||
+      selected.created_at ||
+      profile.createdAt ||
+      profile.created_at ||
+      ''
+  );
+
+  const status = String(detail?.status || profile.status || selected.status || '');
+  const score = computeChefScore(profile).score ?? 0;
+
+  // champs "humains" (adapte à ton schéma Supabase)
+  const phone = profile.phone || profile.phoneNumber || '—';
+  const languages = Array.isArray(profile.languages) ? profile.languages.join(', ') : profile.languages || '—';
+  const profileType = profile.profileType || profile.type || '—';
+  const seniority = profile.seniorityLevel || profile.seniority || '—';
+  const updatedAt = profile.updatedAt || detail?.updatedAt || '—';
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+
+      <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-neutral-950 border-l border-white/10 p-5 overflow-auto">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-white text-lg font-semibold">{fullName}</div>
+            <div className="text-white/60 text-sm">{email || '—'}</div>
+            <div className="text-white/40 text-xs mt-1">Inscrit : {formatDate(createdIso) || '—'}</div>
+          </div>
+
+          <button
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+            onClick={onClose}
+          >
+            Fermer
+          </button>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <ScorePill score={score} />
+          <div className="ml-2">
+            <ChefStatusBadge status={status} />
+          </div>
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          {status === 'pending_validation' ? (
+            <button
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
+              onClick={onApprove}
+            >
+              Approuver →
+            </button>
+          ) : null}
+
+          {status === 'approved' ? (
+            <button
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
+              onClick={onActivate}
+            >
+              Activer →
+            </button>
+          ) : null}
+
+          <button
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10"
+            onClick={onDelete}
+          >
+            Supprimer
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <div className="text-white/80 font-medium mb-2">Informations</div>
+
+          {loading ? (
+            <div className="text-white/60 text-sm">Chargement du détail…</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoRow label="Téléphone" value={phone} />
+              <InfoRow label="Langues" value={languages} />
+              <InfoRow label="Type de profil" value={profileType} />
+              <InfoRow label="Séniorité" value={seniority} />
+              <InfoRow label="Dernière mise à jour" value={String(updatedAt)} />
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6">
+          <details className="rounded-xl border border-white/10 bg-white/5">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-white/80">
+              Voir JSON (debug)
+            </summary>
+            <pre className="text-xs text-white/70 p-3 overflow-auto">{JSON.stringify(profile, null, 2)}</pre>
+          </details>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <div className="text-xs text-white/45">{label}</div>
+      <div className="text-sm text-white/85 mt-1 break-words">{value || '—'}</div>
     </div>
   );
 }
@@ -471,14 +552,7 @@ export default function AdminChefsPage() {
 
 function ChefStatusBadge({ status }: { status: string }) {
   const s = (status || '').toLowerCase();
-  const mapped =
-    s === 'pending_validation'
-      ? 'new'
-      : s === 'approved'
-      ? 'in_review'
-      : s === 'active'
-      ? 'assigned'
-      : 'closed';
+  const mapped = s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
   return <StatusBadge status={mapped} />;
 }
 
@@ -501,7 +575,7 @@ function ScorePill({ score }: { score: number }) {
 
 function formatDate(iso?: string) {
   if (!iso) return '';
-  const d = new Date(String(iso));
+  const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
