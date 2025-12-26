@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 import { computeChefScore } from '@/lib/chefScore';
@@ -113,7 +113,7 @@ export default function AdminChefsPage() {
   };
 
   useEffect(() => {
-    refresh().finally(() => setLoading(false));
+    refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -186,7 +186,8 @@ export default function AdminChefsPage() {
     };
 
     const needle = q.trim().toLowerCase();
-const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).score ?? 0;
+    const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).score ?? 0;
+
     return [...chefs]
       .filter((c) => {
         const st = String(c.status || '');
@@ -216,7 +217,7 @@ const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).scor
       });
   }, [chefs, q, filter]);
 
-   return (
+  return (
     <div className="space-y-4">
       <PageTitle
         title="Chefs"
@@ -237,9 +238,7 @@ const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).scor
               {source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}
             </span>
             {source === 'localStorage' ? (
-              <span className="ml-2 text-amber-200/80">
-                ⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)
-              </span>
+              <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>
             ) : null}
           </div>
           {err ? <div className="text-xs text-red-200">{err}</div> : null}
@@ -309,8 +308,7 @@ const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).scor
                   const profile = (c as any).profile ?? {};
                   const score = computeChefScore(profile as any).score ?? 0;
                   const fullName =
-                    `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.trim() ||
-                    'Chef';
+                    `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.trim() || 'Chef';
                   const createdIso = String(c.createdAt || c.created_at || profile.createdAt || profile.created_at || '');
                   const status = String(c.status || profile.status || '');
 
@@ -386,7 +384,6 @@ const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).scor
         <div className="p-3 border-t border-white/10 text-xs text-white/45">{view.length} résultat(s)</div>
       </Card>
 
-      {/* Drawer */}
       {selected ? (
         <ChefDrawer
           selected={selected}
@@ -431,9 +428,10 @@ function ChefDrawer({
 }) {
   const profile = (detail?.profile ?? selected.profile ?? {}) as any;
 
-  const email = String(selected.email || profile.email || '');
-  const firstName = String(profile.firstName || selected.firstName || '');
-  const lastName = String(profile.lastName || selected.lastName || '');
+  // Basics
+  const email = String(selected.email || profile.email || '').trim();
+  const firstName = String(profile.firstName || selected.firstName || '').trim();
+  const lastName = String(profile.lastName || selected.lastName || '').trim();
   const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
 
   const createdIso = String(
@@ -449,12 +447,33 @@ function ChefDrawer({
   const status = String(detail?.status || profile.status || selected.status || '');
   const score = computeChefScore(profile).score ?? 0;
 
-  // champs "humains" (adapte à ton schéma Supabase)
-  const phone = profile.phone || profile.phoneNumber || '—';
-  const languages = Array.isArray(profile.languages) ? profile.languages.join(', ') : profile.languages || '—';
-  const profileType = profile.profileType || profile.type || '—';
-  const seniority = profile.seniorityLevel || profile.seniority || '—';
-  const updatedAt = profile.updatedAt || detail?.updatedAt || '—';
+  // Readable fields (robustes)
+  const phone = profile.phone || profile.phoneNumber || profile.tel || '';
+  const languages = Array.isArray(profile.languages) ? profile.languages.join(', ') : profile.languages || '';
+
+  const city = profile.city || profile.location?.city || '';
+  const country = profile.country || profile.location?.country || '';
+  const location = [city, country].filter(Boolean).join(', ');
+
+  const specialties = Array.isArray(profile.specialties) ? profile.specialties.join(', ') : profile.specialties || '';
+  const cuisines = Array.isArray(profile.cuisines) ? profile.cuisines.join(', ') : profile.cuisines || profile.style || '';
+
+  const bio = profile.bio || profile.about || profile.description || '';
+
+  const dailyRate = profile.dailyRate || profile.rateDay || profile.pricePerDay;
+  const pricePerPerson = profile.pricePerPerson || profile.pp || profile.ratePerPerson;
+  const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : '';
+
+  const minGuests = profile.minGuests || profile.minimumGuests || '';
+  const availability = profile.availability || profile.availableFrom || profile.calendarNote || '';
+  const mobility = profile.mobility || profile.travel || profile.zones || profile.radius || '';
+
+  const photosArr = profile.photos || profile.images || profile.gallery || [];
+  const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
+
+  const profileType = profile.profileType || profile.type || '';
+  const seniority = profile.seniorityLevel || profile.seniority || profile.experienceLevel || '';
+  const updatedAt = profile.updatedAt || profile.updated_at || detail?.updatedAt || detail?.updated_at || '';
 
   return (
     <div className="fixed inset-0 z-50">
@@ -478,9 +497,7 @@ function ChefDrawer({
 
         <div className="mt-4 flex items-center gap-2">
           <ScorePill score={score} />
-          <div className="ml-2">
-            <ChefStatusBadge status={status} />
-          </div>
+          <ChefStatusBadge status={status} />
         </div>
 
         <div className="mt-4 flex gap-2">
@@ -510,49 +527,41 @@ function ChefDrawer({
           </button>
         </div>
 
-               <div className="mt-6 space-y-5">
-          {/* IDENTITÉ */}
+        <div className="mt-6 space-y-5">
           <Section title="Identité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Nom" value={fullName} />
               <InfoRow label="Email" value={email || '—'} />
-              <InfoRow label="Téléphone" value={String(phone || '—')} />
-              <InfoRow label="Langues" value={String(languages || '—')} />
-              <InfoRow label="Localisation" value={String(location || '—')} />
+              <InfoRow label="Téléphone" value={phone ? String(phone) : '—'} />
+              <InfoRow label="Langues" value={languages || '—'} />
+              <InfoRow label="Localisation" value={location || '—'} />
               <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
           </Section>
 
-          {/* PROFIL */}
           <Section title="Profil">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Type de profil" value={humanizeProfileType(profileType)} />
-              <InfoRow label="Niveau" value={humanizeSeniority(seniority)} />
-              <InfoRow label="Spécialités" value={String(specialties || '—')} />
-              <InfoRow label="Styles / Cuisines" value={String(cuisines || '—')} />
+              <InfoRow label="Type de profil" value={humanizeProfileType(String(profileType || ''))} />
+              <InfoRow label="Niveau" value={humanizeSeniority(String(seniority || ''))} />
+              <InfoRow label="Spécialités" value={specialties || '—'} />
+              <InfoRow label="Styles / Cuisines" value={cuisines || '—'} />
             </div>
 
-            {bio ? (
-              <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="text-xs text-white/45">Bio</div>
-                <div className="text-sm text-white/85 mt-1 whitespace-pre-wrap">{String(bio)}</div>
-              </div>
-            ) : (
-              <div className="mt-3 text-xs text-white/45">Bio : —</div>
-            )}
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="text-xs text-white/45">Bio</div>
+              <div className="text-sm text-white/85 mt-1 whitespace-pre-wrap">{bio || '—'}</div>
+            </div>
           </Section>
 
-          {/* PRIX & DISPO */}
           <Section title="Prix & disponibilité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Tarif" value={String(pricing || 'Non renseigné')} />
-              <InfoRow label="Minimum convives" value={String(minGuests || '—')} />
-              <InfoRow label="Disponibilité" value={String(availability || '—')} />
-              <InfoRow label="Mobilité" value={String(mobility || '—')} />
+              <InfoRow label="Tarif" value={pricing || 'Non renseigné'} />
+              <InfoRow label="Minimum convives" value={minGuests ? String(minGuests) : '—'} />
+              <InfoRow label="Disponibilité" value={availability || '—'} />
+              <InfoRow label="Mobilité" value={mobility || '—'} />
             </div>
           </Section>
 
-          {/* CHECKLIST */}
           <Section title="Vérifications">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Bio" value={bio ? '✅ OK' : '❌ Manquante'} />
@@ -561,20 +570,16 @@ function ChefDrawer({
               <InfoRow label="Tarif" value={pricing ? '✅ OK' : '❌ Non renseigné'} />
             </div>
 
-            <div className="mt-3 text-xs text-white/45">
-              Dernière mise à jour : {humanizeDateTime(updatedAt)}
-            </div>
+            <div className="mt-3 text-xs text-white/45">Dernière mise à jour : {humanizeDateTime(updatedAt)}</div>
           </Section>
-        </div>
-          )}
-        </div>
 
-        <div className="mt-6">
-          <details className="rounded-xl border border-white/10 bg-white/5">
-            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-white/80">
-              Voir JSON (debug)
+          <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <summary className="text-white/80 cursor-pointer select-none">
+              Voir JSON (debug){loading ? ' — Chargement…' : ''}
             </summary>
-            <pre className="text-xs text-white/70 p-3 overflow-auto">{JSON.stringify(profile, null, 2)}</pre>
+            <pre className="mt-3 text-xs text-white/70 bg-white/5 border border-white/10 rounded-xl p-3 overflow-auto">
+{JSON.stringify(profile, null, 2)}
+            </pre>
           </details>
         </div>
       </div>
@@ -587,6 +592,15 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
       <div className="text-xs text-white/45">{label}</div>
       <div className="text-sm text-white/85 mt-1 break-words">{value || '—'}</div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="text-white/85 font-medium mb-3">{title}</div>
+      {children}
     </div>
   );
 }
@@ -618,17 +632,9 @@ function ScorePill({ score }: { score: number }) {
 
 function formatDate(iso?: string) {
   if (!iso) return '';
-  const d = new Date(iso);
+  const d = new Date(String(iso));
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-}
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="text-white/85 font-medium mb-3">{title}</div>
-      {children}
-    </div>
-  );
 }
 
 function humanizeProfileType(v: string) {
@@ -655,111 +661,4 @@ function humanizeDateTime(v: any) {
   const d = new Date(String(v));
   if (Number.isNaN(d.getTime())) return String(v);
   return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-function ChefReadableProfile({ profile }: { profile: any }) {
-  const p = profile || {};
-
-  // Helpers de lecture safe
-  const get = (...keys: string[]) => keys.map(k => p?.[k]).find(v => v !== undefined && v !== null && v !== '');
-  const asStr = (v: any) => (v === undefined || v === null ? '' : String(v));
-  const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
-  const joinArr = (v: any) => asArr(v).map(String).filter(Boolean).join(', ') || '—';
-
-  const fullName = [get('firstName', 'firstname', 'prenom', 'name'), get('lastName', 'lastname', 'nom')]
-    .map(asStr)
-    .join(' ')
-    .trim();
-
-  const email = asStr(get('email'));
-  const phone = asStr(get('phone', 'telephone', 'tel'));
-  const languages = joinArr(get('languages', 'langues'));
-  const location = asStr(get('city', 'ville', 'location', 'baseCity', 'base'));
-  const updatedAt = asStr(get('updatedAt', 'updated_at'));
-    const city = profile.city || profile.location?.city || '';
-  const country = profile.country || profile.location?.country || '';
-  const location = [city, country].filter(Boolean).join(', ');
-
-  const specialties = Array.isArray(profile.specialties)
-    ? profile.specialties.join(', ')
-    : profile.specialties || '';
-
-  const cuisines = Array.isArray(profile.cuisines)
-    ? profile.cuisines.join(', ')
-    : profile.cuisines || profile.style || '';
-
-  const bio = profile.bio || profile.about || profile.description || '';
-
-  const dailyRate = profile.dailyRate || profile.rateDay || profile.pricePerDay;
-  const pricePerPerson = profile.pricePerPerson || profile.pp || profile.ratePerPerson;
-  const pricing =
-    dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : '';
-
-  const minGuests = profile.minGuests || profile.minimumGuests || '';
-
-  const availability =
-    profile.availability || profile.availableFrom || profile.calendarNote || '';
-
-  const mobility =
-    profile.mobility || profile.travel || profile.zones || profile.radius || '';
-
-  const photosArr = profile.photos || profile.images || profile.gallery || [];
-  const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
-  const createdAt = asStr(get('createdAt', 'created_at'));
-
-  // Champs “métier” possibles (selon tes formulaires)
-  const seniority = asStr(get('seniorityLevel', 'seniority', 'experienceLevel'));
-  const specialties = joinArr(get('specialties', 'speciality', 'cuisines', 'cuisineTypes'));
-  const services = joinArr(get('services', 'serviceTypes'));
-  const maxGuests = asStr(get('maxGuests', 'maxPax', 'capacity'));
-  const minRate = asStr(get('minRate', 'dayRate', 'dailyRate', 'pricePerDay'));
-  const profileType = asStr(get('profileType', 'type'));
-
-  return (
-    <div className="space-y-3">
-      <InfoGrid
-        items={[
-          { label: 'Nom', value: fullName || asStr(get('name')) || '—' },
-          { label: 'Email', value: email || '—' },
-          { label: 'Téléphone', value: phone || '—' },
-          { label: 'Langues', value: languages },
-          { label: 'Ville / Base', value: location || '—' },
-          { label: 'Niveau', value: seniority || '—' },
-          { label: 'Type de profil', value: profileType || '—' },
-          { label: 'Spécialités', value: specialties },
-          { label: 'Services', value: services },
-          { label: 'Capacité', value: maxGuests ? `${maxGuests} pers.` : '—' },
-          { label: 'Tarif min', value: minRate ? `${minRate}€` : '—' },
-          { label: 'Inscription', value: formatDate(createdAt) || '—' },
-          { label: 'Dernière maj', value: formatDate(updatedAt) || '—' },
-        ]}
-      />
-
-      {/* Si tu as un champ bio/description */}
-      {p?.bio || p?.about ? (
-        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-white/50 mb-1">Présentation</div>
-          <div className="text-sm text-white/80 whitespace-pre-wrap">
-            {String(p.bio || p.about)}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function InfoGrid({
-  items,
-}: {
-  items: { label: string; value: string }[];
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {items.map((it) => (
-        <div key={it.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs text-white/45">{it.label}</div>
-          <div className="text-sm text-white/85 mt-0.5 break-words">{it.value}</div>
-        </div>
-      ))}
-    </div>
-  );
 }
