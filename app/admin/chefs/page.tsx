@@ -6,6 +6,9 @@ import type { ChefUser } from '@/types';
 import { computeChefScore } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 import { supabase } from '@/lib/supabase';
+import { adminFetch } from '@/lib/adminFetch';
+
+const data = await adminFetch<{ chefs: ApiChef[] }>('/api/admin/chefs');
 
 const {
   data: { session },
