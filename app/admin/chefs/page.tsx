@@ -544,18 +544,18 @@ function ChefDrawer({
   const score = computeChefScore(profile as any).score ?? 0;
 
   // champs possibles (selon ton schéma)
-  const phone = profile.phone ?? profile.phoneNumber ?? profile.tel ?? profile.telephone;
-  const languages = profile.languages ?? profile.langues;
-  const location = profile.location ?? profile.baseCity ?? profile.city ?? profile.ville ?? profile.address;
-  // Localisation (string ou objet)
-  const location =
-    profile.location ??
-    (profile.city || profile.country ? { city: profile.city, country: profile.country } : null) ??
-    profile.baseCity ??
-    profile.base ??
-    profile.city ??
-    profile.country ??
-    '—';
+const phone = profile.phone ?? profile.phoneNumber ?? profile.tel ?? profile.telephone;
+const languages = profile.languages ?? profile.langues;
+
+// Localisation (string ou objet) — UNE SEULE FOIS
+const locationVal =
+  profile.location ??
+  (profile.city || profile.country ? { city: profile.city, country: profile.country } : null) ??
+  profile.baseCity ??
+  profile.city ??
+  profile.ville ??
+  profile.address ??
+  null;
   const profileType = profile.profileType ?? profile.type;
   const seniority = profile.seniorityLevel ?? profile.seniority ?? profile.experienceLevel;
 
