@@ -9,11 +9,6 @@ import { adminFetch } from '@/lib/adminFetch';
 
 const data = await adminFetch<{ chefs: ApiChef[] }>('/api/admin/chefs');
 
-const {
-  data: { session },
-} = await supabase.auth.getSession();
-
-const token = session?.access_token;
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 type FilterKey = 'all' | 'pending' | 'approved' | 'active';
