@@ -74,21 +74,17 @@ export default function AdminChefsPage() {
     );
     setChefs(filtered as any);
     setSource('localStorage');
-  } catch (e: any) {
-    setErr(e?.message || 'Erreur inconnue');
-  } finally {
-    setLoading(false);
-  }
+  } } catch (e: any) {
+  setErr(`API admin KO: ${e?.message || e}`);
+  setChefs([]);
+  setSource('db');
+  setLoading(false);
+  return;
+}
 };
 
-  useEffect(() => {
-    // Guard UX (la vraie sécurité doit être côté serveur)
-    const u = auth.getCurrentUser?.();
-    if (u?.email && u.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-      setErr("Accès admin réservé. (Sécurise aussi via middleware côté serveur.)");
-      setLoading(false);
-      return;
-    }
+
+ useEffect(() => {
   refresh();
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
