@@ -72,7 +72,135 @@ function toDisplay(v: any): string {
   }
   return String(v);
 }
+function firstNonEmpty<T>(...vals: T[]): T | undefined {
+  for (const v of vals) {
+    if (v === null || v === undefined) continue;
+    if (typeof v === 'string') {
+      if (v.trim()) return v;
+      continue;
+    }
+    if (Array.isArray(v)) {
+      if (v.length) return v;
+      continue;
+    }
+    return v;
+  }
+  return undefined;
+}
 
+function unwrapText(v: any): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (Array.isArray(v)) {
+    // array de strings ou d'objets -> join intelligent
+    const parts = v
+      .map((x) => {
+        if (x === null || x === undefined) return '';
+        if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return String(x);
+        if (isPlainObject(x)) return String(x.label ?? x.name ?? x.title ?? x.value ?? x.text ?? x.id ?? '');
+        return '';
+      })
+      .filter(Boolean);
+    return parts.join(', ');
+  }
+  if (isPlainObject(v)) {
+    // cas typiques: {value:""}, {text:""}, {label:""}
+    return String(v.value ?? v.text ?? v.label ?? v.name ?? v.title ?? '');
+  }
+  return String(v);
+}
+
+function isBrowserLocationObject(v: any) {
+  // ton bug “Localisation = { href: ..., protocol: ..., host: ... }”
+  return (
+    isPlainObject(v) &&
+    typeof v.href === 'string' &&
+    typeof v.protocol === 'string' &&
+    typeof v.host === 'string'
+  );
+}
+
+function normalizeProfile(raw: any) {
+  const p = isPlainObject(raw) ? { ...raw } : {};
+
+  // Remap snake_case -> camelCase (sans casser ce que tu as déjà)
+  const firstName = firstNonEmpty(p.firstName, p.first_name);
+  const lastName = firstNonEmpty(p.lastName, p.last_name);
+  const email = firstNonEmpty(p.email);
+
+  const profileType = firstNonEmpty(p.profileType, p.profile_type, p.type);
+  const seniorityLevel = firstNonEmpty(p.seniorityLevel, p.seniority_level, p.seniority, p.experienceLevel, p.experience_level);
+
+  const phone = firstNonEmpty(p.phone, p.phoneNumber, p.phone_number, p.tel, p.telephone);
+
+  const languages = firstNonEmpty(p.languages, p.langues);
+  const specialties = firstNonEmpty(p.specialties, p.speciality);
+  const cuisines = firstNonEmpty(p.cuisines, p.cuisineTypes, p.cuisine_types, p.styles, p.style);
+
+  // BIO : peut être string ou objet {value/text/...}
+  const bioRaw = firstNonEmpty(p.bio, p.about, p.description, p.biography, p.bio_long, p.bioLong);
+  const bio = unwrapText(bioRaw);
+
+  // SERVICES : peut être services ou service_types etc.
+  const servicesRaw = firstNonEmpty(p.services, p.serviceTypes, p.service_types);
+  const services = Array.isArray(servicesRaw) ? servicesRaw : unwrapText(servicesRaw);
+
+  // MOBILITÉ : le portail peut stocker coverage_zones / zones / radius / travel...
+  const mobilityRaw = firstNonEmpty(
+    p.mobility,
+    p.travel,
+    p.zones,
+    p.coverageZones,
+    p.coverage_zones,
+    p.coverageZonesText,
+    p.coverage_zones_text,
+    p.radius
+  );
+  const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
+
+  // PHOTOS
+  const images = firstNonEmpty(p.photos, p.images, p.gallery);
+
+  // LOCATION: ignorer l’objet window.location si présent
+  const locationRaw = firstNonEmpty(
+    p.location,
+    p.baseCity,
+    p.base_city,
+    p.city,
+    p.ville,
+    p.address
+  );
+
+  const location =
+    isBrowserLocationObject(locationRaw)
+      ? firstNonEmpty(p.baseCity, p.base_city, p.city, p.ville, p.address)
+      : locationRaw;
+
+  // Dates
+  const created_at = firstNonEmpty(p.created_at, p.createdAt);
+  const updated_at = firstNonEmpty(p.updated_at, p.updatedAt);
+
+  return {
+    ...p,
+    firstName,
+    lastName,
+    email,
+    phone,
+    languages,
+    specialties,
+    cuisines,
+    profileType,
+    seniorityLevel,
+    bio,
+    services,
+    mobility,
+    images,
+    location,
+    created_at,
+    updated_at,
+  };
+}
 function formatDateTime(iso?: any) {
   if (!iso) return '';
   const d = new Date(String(iso));
@@ -410,10 +538,10 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-    const getScore = (c: ApiChef) => {
-      const { profile } = getNormalizedChef(c, null);
-      return computeChefScore(profile as any).score ?? 0;
-    };
+    cconst getScore = (c: ApiChef) => {
+  const profile = normalizeProfile((c as any).profile ?? c);
+  return computeChefScore(profile as any).score ?? 0;
+};
 
     return [...chefs]
       .filter((c) => {
@@ -525,8 +653,8 @@ export default function AdminChefsPage() {
                 </tr>
               ) : (
                 view.map((c) => {
-                  const { profile, fullName, status, createdIso, email } = getNormalizedChef(c, null);
-                  const score = computeChefScore(profile as any).score ?? 0;
+                  const profile = normalizeProfile((c as any).profile ?? c);
+const score = computeChefScore(profile as any).score ?? 0;
 
                   return (
                     <tr
@@ -645,8 +773,84 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const { profile, email, fullName, status, createdIso, updatedAt } = getNormalizedChef(selected, detail);
+const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
+const profile = normalizeProfile(raw);
 
+const email = String(firstNonEmpty(selected.email, profile.email, '') || '');
+const firstName = String(firstNonEmpty(profile.firstName, selected.firstName, '') || '');
+const lastName = String(firstNonEmpty(profile.lastName, selected.lastName, '') || '');
+const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
+
+const createdIso = String(
+  firstNonEmpty(
+    detail?.createdAt,
+    detail?.created_at,
+    selected.createdAt,
+    selected.created_at,
+    profile.createdAt,
+    profile.created_at,
+    profile.created_at,
+    ''
+  ) || ''
+);
+
+const status = String(firstNonEmpty(detail?.status, profile.status, selected.status, '') || '');
+const score = computeChefScore(profile as any).score ?? 0;
+
+// champs normalisés
+const phone = profile.phone;
+const languages = profile.languages;
+
+// Localisation propre (et sans l’objet window.location)
+const locationVal = profile.location;
+const locationLabel =
+  typeof locationVal === 'string'
+    ? locationVal
+    : locationVal && typeof locationVal === 'object'
+    ? [(locationVal as any).baseCity, (locationVal as any).city, (locationVal as any).ville, (locationVal as any).country]
+        .filter(Boolean)
+        .join(', ')
+    : null;
+
+const profileType = profile.profileType;
+const seniority = profile.seniorityLevel;
+
+const specialties = profile.specialties;
+const cuisines = profile.cuisines;
+
+// 🔥 ici on fixe ton “services/bio/mobility n’apparaissent pas”
+const services = profile.services; // déjà normalisé (string ou array)
+const bio = profile.bio;           // déjà normalisé en string
+const mobility = profile.mobility; // déjà normalisé (string ou array)
+
+const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
+const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
+const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
+
+const minGuests = profile.minGuests ?? profile.minimumGuests;
+const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
+
+const availability =
+  profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
+
+const photosArr = profile.photos ?? profile.images ?? profile.gallery;
+const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
+
+const updatedAt = profile.updatedAt ?? profile.updated_at ?? detail?.updatedAt ?? detail?.updated_at;
+
+// ✅ Checklist : bio est maintenant une string, donc le test devient fiable
+const checklist = {
+  identité: Boolean(fullName && email),
+  téléphone: Boolean(phone),
+  bio: Boolean(bio && String(bio).trim().length > 30),
+  langues: Boolean(Array.isArray(languages) ? languages.length : languages),
+  spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
+  tarifs: Boolean(dailyRate || pricePerPerson),
+  photos: Boolean(hasPhotos),
+};
+
+const checklistOk = Object.values(checklist).filter(Boolean).length;
+  
   const score = computeChefScore(profile as any).score ?? 0;
 
   const phone = profile.phone;
