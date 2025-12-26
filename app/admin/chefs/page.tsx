@@ -77,11 +77,48 @@ function toDisplay(v: any): string {
   return String(v);
 }
 
-function formatDate(iso?: any) {
-  if (!iso) return '';
-  const d = new Date(String(iso));
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+function formatAvailability(v: any): string {
+  if (!v) return '—';
+
+  if (typeof v === 'string') return v;
+
+  if (typeof v === 'object' && !Array.isArray(v)) {
+    const availableNow = v.availableNow;
+    const preferredPeriods = Array.isArray(v.preferredPeriods) ? v.preferredPeriods : [];
+    const unavailableDates = Array.isArray(v.unavailableDates) ? v.unavailableDates : [];
+    const nextAvailableFrom = v.nextAvailableFrom;
+
+    const parts: string[] = [];
+
+    if (availableNow === true) parts.push('✅ Disponible maintenant');
+    if (availableNow === false) parts.push('⛔️ Pas disponible maintenant');
+
+    if (preferredPeriods.length) {
+      const mapPeriod = (p: string) =>
+        p === 'season_summer' ? 'Été' :
+        p === 'season_winter' ? 'Hiver' :
+        p === 'season_spring' ? 'Printemps' :
+        p === 'season_autumn' ? 'Automne' :
+        p;
+      parts.push(`Périodes : ${preferredPeriods.map(mapPeriod).join(', ')}`);
+    }
+
+    if (nextAvailableFrom) {
+      parts.push(`Prochaine dispo : ${formatDate(nextAvailableFrom) || String(nextAvailableFrom)}`);
+    }
+
+    if (unavailableDates.length) {
+      const cleaned = unavailableDates
+        .map((d: any) => formatDate(d) || String(d))
+        .slice(0, 6);
+      const more = unavailableDates.length > 6 ? ` (+${unavailableDates.length - 6})` : '';
+      parts.push(`Indisponible : ${cleaned.join(', ')}${more}`);
+    }
+
+    return parts.length ? parts.join(' • ') : '—';
+  }
+
+  return String(v);
 }
 
 function formatDateTime(iso?: any) {
@@ -622,7 +659,7 @@ function ChefDrawer({
               <InfoRow label="Tarif" value={pricing} />
               <InfoRow label="Min convives" value={minGuests} />
               <InfoRow label="Max convives" value={maxGuests} />
-              <InfoRow label="Disponibilité" value={availability} />
+<InfoRow label="Disponibilité" value={formatAvailability(availability)} />
               <InfoRow label="Mobilité" value={mobility} />
               <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
             </div>
