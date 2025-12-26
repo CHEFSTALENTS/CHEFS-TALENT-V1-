@@ -622,7 +622,40 @@ function formatDate(iso?: string) {
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="text-white/85 font-medium mb-3">{title}</div>
+      {children}
+    </div>
+  );
+}
 
+function humanizeProfileType(v: string) {
+  const s = String(v || '').toLowerCase();
+  if (!s) return '—';
+  if (s === 'private') return 'Chef privé';
+  if (s === 'events' || s === 'event') return 'Événementiel';
+  if (s === 'yacht') return 'Yacht';
+  if (s === 'chalet') return 'Chalet';
+  return v;
+}
+
+function humanizeSeniority(v: string) {
+  const s = String(v || '').toLowerCase();
+  if (!s) return '—';
+  if (s === 'confirmed') return 'Confirmé';
+  if (s === 'junior') return 'Junior';
+  if (s === 'senior') return 'Senior';
+  return v;
+}
+
+function humanizeDateTime(v: any) {
+  if (!v) return '—';
+  const d = new Date(String(v));
+  if (Number.isNaN(d.getTime())) return String(v);
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
 function ChefReadableProfile({ profile }: { profile: any }) {
   const p = profile || {};
 
@@ -642,6 +675,35 @@ function ChefReadableProfile({ profile }: { profile: any }) {
   const languages = joinArr(get('languages', 'langues'));
   const location = asStr(get('city', 'ville', 'location', 'baseCity', 'base'));
   const updatedAt = asStr(get('updatedAt', 'updated_at'));
+    const city = profile.city || profile.location?.city || '';
+  const country = profile.country || profile.location?.country || '';
+  const location = [city, country].filter(Boolean).join(', ');
+
+  const specialties = Array.isArray(profile.specialties)
+    ? profile.specialties.join(', ')
+    : profile.specialties || '';
+
+  const cuisines = Array.isArray(profile.cuisines)
+    ? profile.cuisines.join(', ')
+    : profile.cuisines || profile.style || '';
+
+  const bio = profile.bio || profile.about || profile.description || '';
+
+  const dailyRate = profile.dailyRate || profile.rateDay || profile.pricePerDay;
+  const pricePerPerson = profile.pricePerPerson || profile.pp || profile.ratePerPerson;
+  const pricing =
+    dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : '';
+
+  const minGuests = profile.minGuests || profile.minimumGuests || '';
+
+  const availability =
+    profile.availability || profile.availableFrom || profile.calendarNote || '';
+
+  const mobility =
+    profile.mobility || profile.travel || profile.zones || profile.radius || '';
+
+  const photosArr = profile.photos || profile.images || profile.gallery || [];
+  const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
   const createdAt = asStr(get('createdAt', 'created_at'));
 
   // Champs “métier” possibles (selon tes formulaires)
