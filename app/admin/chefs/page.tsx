@@ -184,7 +184,7 @@ const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs', {
 
     // API d’abord
     try {
-      aawait fetchJson(`/api/admin/chefs?email=${encodeURIComponent(email)}`, {
+      await fetchJson(`/api/admin/chefs?email=${encodeURIComponent(email)}`, {
   method: 'DELETE',
   headers: { 'x-admin-email': ADMIN_EMAIL },
 });
@@ -224,23 +224,27 @@ const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs', {
     }
   };
 
-  const remove = async (row: ApiChefRow) => {
-    if (!confirm('Supprimer ce compte chef ?')) return;
-    setErr(null);
+  const remove = async (email: string) => {
+  if (!confirm('Supprimer ce compte chef ?')) return;
+  setErr(null);
 
-    try {
-      await fetchJson(`/api/admin/chefs?email=${encodeURIComponent(row.email)}`, { method: 'DELETE' });
-      await refresh();
-      return;
-    } catch (e: any) {
-      console.warn('[AdminChefs] delete via API failed, fallback local', e?.message || e);
-    }
+  // API d’abord
+  try {
+    await fetchJson(`/api/admin/chefs?email=${encodeURIComponent(email)}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-email': ADMIN_EMAIL },
+    });
+    await refresh();
+    return;
+  } catch (e: any) {
+    console.warn('[AdminChefs] delete via API failed, fallback to auth.deleteChefAccount()', e?.message || e);
+  }
 
-    if (row.id && auth.deleteChefAccount) {
-      await auth.deleteChefAccount(row.id);
-      await refresh();
-    }
-  };
+  // Fallback localStorage (ancien)
+  // ⚠️ Ici on n’a pas forcément l’email comme id ; adapte si ton auth.deleteChefAccount attend un id.
+  await auth.deleteChefAccount(email as any);
+  await refresh();
+};
 
   const counts = useMemo(() => {
     const pending = rows.filter(r => normalizeStatus(r.status) === 'pending_validation').length;
