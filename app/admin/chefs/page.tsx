@@ -546,7 +546,15 @@ function ChefDrawer({
   // champs possibles (selon ton schéma)
   const phone = profile.phone ?? profile.phoneNumber ?? profile.tel ?? profile.telephone;
   const languages = profile.languages ?? profile.langues;
-  const location = profile.location ?? profile.baseCity ?? profile.city ?? profile.ville ?? profile.address;
+  // Localisation (string ou objet)
+  const location =
+    profile.location ??
+    (profile.city || profile.country ? { city: profile.city, country: profile.country } : null) ??
+    profile.baseCity ??
+    profile.base ??
+    profile.city ??
+    profile.country ??
+    '—';
   const profileType = profile.profileType ?? profile.type;
   const seniority = profile.seniorityLevel ?? profile.seniority ?? profile.experienceLevel;
 
@@ -648,7 +656,7 @@ function ChefDrawer({
               <InfoRow label="Email" value={email} />
               <InfoRow label="Téléphone" value={phone} />
               <InfoRow label="Langues" value={languages} />
-              <InfoRow label="Localisation" value={location} />
+<InfoRow label="Localisation" value={toDisplay(location)} />
               <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
           </Section>
