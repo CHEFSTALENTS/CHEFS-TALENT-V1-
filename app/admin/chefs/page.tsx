@@ -538,7 +538,7 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-    cconst getScore = (c: ApiChef) => {
+   const getScore = (c: ApiChef) => {
   const profile = normalizeProfile((c as any).profile ?? c);
   return computeChefScore(profile as any).score ?? 0;
 };
