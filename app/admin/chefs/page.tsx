@@ -250,77 +250,77 @@ export default function AdminChefsPage() {
             </thead>
 
             <tbody>
-              {loading ? (
-                <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>
-                    Chargement…
-                  </td>
-                </tr>
-              ) : view.length === 0 ? (
-                <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>
-                    Aucun résultat.
-                  </td>
-                </tr>
-              ) : (
-                view.map(c => {
-                  const score = computeChefScore((c as any).profile ?? {}).score ?? 0;
-                  const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef';
-                  const createdIso = String(c.createdAt || c.created_at || '');
+  {loading && view.length === 0 ? (
+    <tr>
+      <td className="p-4 text-white/60" colSpan={5}>
+        Chargement…
+      </td>
+    </tr>
+  ) : view.length === 0 ? (
+    <tr>
+      <td className="p-4 text-white/60" colSpan={5}>
+        Aucun résultat.
+      </td>
+    </tr>
+  ) : (
+    view.map(c => {
+      const score = computeChefScore((c as any).profile ?? {}).score ?? 0;
+      const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef';
+      const createdIso = (c.createdAt || c.created_at || '') as string;
 
-                  return (
-                    <tr key={String(c.email || c.user_id || fullName)} className="border-t border-white/10 hover:bg-white/5 transition">
-                      <td className="p-3">
-                        <div className="text-white font-medium truncate">{fullName}</div>
-                        <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
-                      </td>
+      return (
+        <tr key={String(c.email || fullName)} className="border-t border-white/10 hover:bg-white/5 transition">
+          <td className="p-3">
+            <div className="text-white font-medium truncate">{fullName}</div>
+            <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
+          </td>
 
-                      <td className="p-3 text-white/85">{c.email || '—'}</td>
+          <td className="p-3 text-white/85">{c.email || '—'}</td>
 
-                      <td className="p-3">
-                        <ChefStatusBadge status={String(c.status || '')} />
-                      </td>
+          <td className="p-3">
+            <ChefStatusBadge status={String(c.status || '')} />
+          </td>
 
-                      <td className="p-3">
-                        <ScorePill score={score} />
-                      </td>
+          <td className="p-3">
+            <ScorePill score={score} />
+          </td>
 
-                      <td className="p-3 text-right">
-                        <div className="inline-flex flex-wrap gap-2 justify-end">
-                          {String(c.status) === 'pending_validation' ? (
-                            <button
-                              onClick={() => updateStatus(String(c.email || ''), 'approved')}
-                              disabled={!c.email}
-                              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Approuver →
-                            </button>
-                          ) : null}
+          <td className="p-3 text-right">
+            <div className="inline-flex flex-wrap gap-2 justify-end">
+              {String(c.status) === 'pending_validation' ? (
+                <button
+                  onClick={() => updateStatus(String(c.email || ''), 'approved')}
+                  disabled={!c.email}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Approuver →
+                </button>
+              ) : null}
 
-                          {String(c.status) === 'approved' ? (
-                            <button
-                              onClick={() => updateStatus(String(c.email || ''), 'active')}
-                              disabled={!c.email}
-                              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              Activer →
-                            </button>
-                          ) : null}
+              {String(c.status) === 'approved' ? (
+                <button
+                  onClick={() => updateStatus(String(c.email || ''), 'active')}
+                  disabled={!c.email}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Activer →
+                </button>
+              ) : null}
 
-                          <button
-                            onClick={() => removeChef(String(c.email || ''))}
-                            disabled={!c.email}
-                            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-red-200 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            Supprimer
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
+              <button
+                onClick={() => removeChef(String(c.email || ''))}
+                disabled={!c.email}
+                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-red-200 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Supprimer
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    })
+  )}
+</tbody>
           </table>
         </div>
 
