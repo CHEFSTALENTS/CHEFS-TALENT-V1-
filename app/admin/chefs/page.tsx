@@ -27,8 +27,15 @@ type ApiChef = ChefUser & {
   lastName?: string;
 };
 
-async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, init);
+async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(input, {
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      'x-admin-email': 'thomas@chef-talents.com',
+    },
+  });
+
   const text = await res.text().catch(() => '');
   if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
   return (text ? JSON.parse(text) : null) as T;
