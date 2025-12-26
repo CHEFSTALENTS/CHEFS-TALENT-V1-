@@ -53,11 +53,12 @@ export default function AdminChefsPage() {
 
     // 1) DB via API
     try {
-      const json = await fetch('/api/admin/chefs', {
+    const res = await fetch('/api/admin/chefs', {
   headers: {
-    Authorization: `Bearer ${token}`,
+    'x-admin-email': 'thomas@chef-talents.com',
   },
 });
+const json = await res.json();
 
       const list: ApiChef[] = Array.isArray(json) ? json : Array.isArray(json?.chefs) ? json.chefs : [];
 
