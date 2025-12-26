@@ -44,11 +44,10 @@ export default function AdminChefsPage() {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [source, setSource] = useState<'db' | 'localStorage'>('db');
 
-  const refresh = async () => {
+ const refresh = async () => {
   setLoading(true);
   setErr(null);
 
-  // 1) DB via API
   try {
     const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
     const list = Array.isArray(json?.chefs) ? json.chefs : [];
@@ -59,29 +58,14 @@ export default function AdminChefsPage() {
 
     setChefs(filtered);
     setSource('db');
-    return;
   } catch (e: any) {
-    const msg = e?.message || 'API error';
-    console.warn('[AdminChefs] DB API failed, fallback to localStorage', msg);
-    setErr(`API admin: ${msg}`);
+    setErr(`API admin KO: ${e?.message || String(e)}`);
+    setChefs([]);
+    setSource('db');
+  } finally {
+    setLoading(false);
   }
-
-  // 2) fallback localStorage (ancien MVP)
-  try {
-    const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
-    const filtered = (list ?? []).filter(
-      u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
-    );
-    setChefs(filtered as any);
-    setSource('localStorage');
-  } } catch (e: any) {
-  setErr(`API admin KO: ${e?.message || e}`);
-  setChefs([]);
-  setSource('db');
-  setLoading(false);
-  return;
 };
-
 
  useEffect(() => {
   refresh();
