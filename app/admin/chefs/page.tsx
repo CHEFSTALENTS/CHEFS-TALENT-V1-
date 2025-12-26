@@ -438,17 +438,24 @@ export default function AdminChefsPage() {
                   </button>
                 </div>
 
-                <div className="mt-6">
-                  <div className="text-white/80 font-medium mb-2">Profil complet</div>
+                <<div className="mt-6 space-y-4">
+  <div className="text-white/80 font-medium">Fiche chef</div>
 
-                  {detailLoading ? (
-                    <div className="text-white/60 text-sm">Chargement du détail…</div>
-                  ) : (
-                    <pre className="text-xs text-white/70 bg-white/5 border border-white/10 rounded-xl p-3 overflow-auto">
+  {detailLoading ? (
+    <div className="text-white/60 text-sm">Chargement du détail…</div>
+  ) : (
+    <ChefReadableProfile profile={(detail?.profile ?? selected.profile) || {}} />
+  )}
+
+  <details className="mt-2">
+    <summary className="cursor-pointer text-xs text-white/50 hover:text-white/70">
+      Voir le JSON (debug)
+    </summary>
+    <pre className="mt-2 text-xs text-white/70 bg-white/5 border border-white/10 rounded-xl p-3 overflow-auto">
 {JSON.stringify(detail?.profile ?? selected.profile ?? {}, null, 2)}
-                    </pre>
-                  )}
-                </div>
+    </pre>
+  </details>
+</div>
               </div>
             </div>
           ) : null}
@@ -497,4 +504,83 @@ function formatDate(iso?: string) {
   const d = new Date(String(iso));
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function ChefReadableProfile({ profile }: { profile: any }) {
+  const p = profile || {};
+
+  // Helpers de lecture safe
+  const get = (...keys: string[]) => keys.map(k => p?.[k]).find(v => v !== undefined && v !== null && v !== '');
+  const asStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+  const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
+  const joinArr = (v: any) => asArr(v).map(String).filter(Boolean).join(', ') || '—';
+
+  const fullName = [get('firstName', 'firstname', 'prenom', 'name'), get('lastName', 'lastname', 'nom')]
+    .map(asStr)
+    .join(' ')
+    .trim();
+
+  const email = asStr(get('email'));
+  const phone = asStr(get('phone', 'telephone', 'tel'));
+  const languages = joinArr(get('languages', 'langues'));
+  const location = asStr(get('city', 'ville', 'location', 'baseCity', 'base'));
+  const updatedAt = asStr(get('updatedAt', 'updated_at'));
+  const createdAt = asStr(get('createdAt', 'created_at'));
+
+  // Champs “métier” possibles (selon tes formulaires)
+  const seniority = asStr(get('seniorityLevel', 'seniority', 'experienceLevel'));
+  const specialties = joinArr(get('specialties', 'speciality', 'cuisines', 'cuisineTypes'));
+  const services = joinArr(get('services', 'serviceTypes'));
+  const maxGuests = asStr(get('maxGuests', 'maxPax', 'capacity'));
+  const minRate = asStr(get('minRate', 'dayRate', 'dailyRate', 'pricePerDay'));
+  const profileType = asStr(get('profileType', 'type'));
+
+  return (
+    <div className="space-y-3">
+      <InfoGrid
+        items={[
+          { label: 'Nom', value: fullName || asStr(get('name')) || '—' },
+          { label: 'Email', value: email || '—' },
+          { label: 'Téléphone', value: phone || '—' },
+          { label: 'Langues', value: languages },
+          { label: 'Ville / Base', value: location || '—' },
+          { label: 'Niveau', value: seniority || '—' },
+          { label: 'Type de profil', value: profileType || '—' },
+          { label: 'Spécialités', value: specialties },
+          { label: 'Services', value: services },
+          { label: 'Capacité', value: maxGuests ? `${maxGuests} pers.` : '—' },
+          { label: 'Tarif min', value: minRate ? `${minRate}€` : '—' },
+          { label: 'Inscription', value: formatDate(createdAt) || '—' },
+          { label: 'Dernière maj', value: formatDate(updatedAt) || '—' },
+        ]}
+      />
+
+      {/* Si tu as un champ bio/description */}
+      {p?.bio || p?.about ? (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="text-xs text-white/50 mb-1">Présentation</div>
+          <div className="text-sm text-white/80 whitespace-pre-wrap">
+            {String(p.bio || p.about)}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function InfoGrid({
+  items,
+}: {
+  items: { label: string; value: string }[];
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {items.map((it) => (
+        <div key={it.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="text-xs text-white/45">{it.label}</div>
+          <div className="text-sm text-white/85 mt-0.5 break-words">{it.value}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
