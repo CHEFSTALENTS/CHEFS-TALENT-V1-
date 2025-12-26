@@ -77,6 +77,14 @@ function toDisplay(v: any): string {
   return String(v);
 }
 
+
+
+function formatDateTime(iso?: any) {
+  if (!iso) return '';
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
 function formatAvailability(v: any): string {
   if (!v) return '—';
 
@@ -120,14 +128,6 @@ function formatAvailability(v: any): string {
 
   return String(v);
 }
-
-function formatDateTime(iso?: any) {
-  if (!iso) return '';
-  const d = new Date(String(iso));
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-
 /* -------------------- page -------------------- */
 
 export default function AdminChefsPage() {
