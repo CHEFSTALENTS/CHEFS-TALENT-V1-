@@ -324,18 +324,19 @@ export default function AdminChefsPage() {
   }, [chefs, q, filter]);
 
   return (
-  <PageTitle
-  title="Chefs"
-  subtitle="Pipeline : À valider → Approuvé → Actif (tri : statut → score → date)"
-  right={
-    <>
-      <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
-      <GhostButton href="/admin">Dashboard</GhostButton>
-    </>
-  
-/>
+    <div className="space-y-4">
+      <PageTitle
+        title="Chefs"
+        subtitle="Pipeline : À valider → Approuvé → Actif (tri : statut → score → date)"
+        right={
+          <>
+            <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
+            <GhostButton href="/admin">Dashboard</GhostButton>
+          </>
+        }
+      />
 
-<Card className="p-4">
+      <Card className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
             Source :{' '}
@@ -366,6 +367,8 @@ export default function AdminChefsPage() {
             className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
           />
           <div className="text-xs text-white/45">
+            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de header).
+          </div>
         </div>
       </Card>
 
@@ -543,6 +546,7 @@ function ChefDrawer({
   // champs possibles (selon ton schéma)
   const phone = profile.phone ?? profile.phoneNumber ?? profile.tel ?? profile.telephone;
   const languages = profile.languages ?? profile.langues;
+  const location = profile.location ?? profile.baseCity ?? profile.city ?? profile.ville ?? profile.address;
   // Localisation (string ou objet)
   const location =
     profile.location ??
@@ -653,6 +657,7 @@ function ChefDrawer({
               <InfoRow label="Email" value={email} />
               <InfoRow label="Téléphone" value={phone} />
               <InfoRow label="Langues" value={languages} />
+              <InfoRow label="Localisation" value={location} />
 <InfoRow label="Localisation" value={toDisplay(location)} />
               <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
