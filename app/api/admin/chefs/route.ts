@@ -1,63 +1,48 @@
 export const runtime = 'nodejs';
 
-
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !serviceKey) {
-    return { supabase: null as any, missing: { url: !!url, serviceKey: !!serviceKey } };
-  }
+  if (!url || !serviceKey) return null;
 
-  const supabase = createClient(url, serviceKey, {
-    auth: { persistSession: false },
-  });
-
-  return { supabase, missing: null as any };
+  return createClient(url, serviceKey, { auth: { persistSession: false } });
 }
-
-// (Optionnel mais recommandé) : simple garde “admin email” via header
-// Tu peux l’enlever si tu n’en veux pas.
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 function isAdminRequest(req: Request) {
   const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email && email === ADMIN_EMAIL.toLowerCase();
+  return email === ADMIN_EMAIL.toLowerCase();
 }
 
 export async function GET(req: Request) {
   try {
-    // garde soft (pas une vraie sécu, mais évite l’accès public direct)
     if (!isAdminRequest(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { supabase, missing } = supabaseAdmin();
+    const supabase = supabaseAdmin();
     if (!supabase) {
-      return NextResponse.json(
-        { error: 'Missing env', missing },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Missing SUPABASE env' }, { status: 500 });
     }
 
-    // ⚠️ Table: public.profiles (comme sur ta capture)
+    // ✅ table correcte + order safe
     const { data, error } = await supabase
-  .from('chef_profiles')
-  .select('*')
-  .order('created_at', { ascending: false });
+      .from('chef_profiles')
+      .select('user_id,email,profile')
+      .order('email', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-    // Réponse stable pour ton front
     return NextResponse.json({ chefs: data ?? [] });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'GET /api/admin/chefs failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || 'GET failed' }, { status: 500 });
   }
 }
 
