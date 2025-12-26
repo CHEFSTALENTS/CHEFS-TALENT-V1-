@@ -45,45 +45,41 @@ export default function AdminChefsPage() {
   const [source, setSource] = useState<'db' | 'localStorage'>('db');
 
   const refresh = async () => {
-    setLoading(true);
-    setErr(null);
+  setLoading(true);
+  setErr(null);
 
-    // 1) DB via API
-    try {
-    const res = await fetch('/api/admin/chefs', {
-  headers: {
-    'x-admin-email': 'thomas@chef-talents.com',
-  },
-});
-const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
-const list = Array.isArray(json?.chefs) ? json.chefs : [];
-      
-      const filtered = (list ?? []).filter(
-        u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
-      );
+  // 1) DB via API
+  try {
+    const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
+    const list = Array.isArray(json?.chefs) ? json.chefs : [];
 
-      setChefs(filtered);
-      setSource('db');
-      setLoading(false);
-      return;
-    } catch (e: any) {
-      console.warn('[AdminChefs] DB API failed, fallback to localStorage', e?.message || e);
-    }
+    const filtered = (list ?? []).filter(
+      u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
+    );
 
-    // 2) fallback localStorage (ancien MVP)
-    try {
-      const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
-      const filtered = (list ?? []).filter(
-        u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
-      );
-      setChefs(filtered as any);
-      setSource('localStorage');
-    } catch (e: any) {
-      setErr(e?.message || 'Erreur inconnue');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setChefs(filtered);
+    setSource('db');
+    return;
+  } catch (e: any) {
+    const msg = e?.message || 'API error';
+    console.warn('[AdminChefs] DB API failed, fallback to localStorage', msg);
+    setErr(`API admin: ${msg}`);
+  }
+
+  // 2) fallback localStorage (ancien MVP)
+  try {
+    const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
+    const filtered = (list ?? []).filter(
+      u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
+    );
+    setChefs(filtered as any);
+    setSource('localStorage');
+  } catch (e: any) {
+    setErr(e?.message || 'Erreur inconnue');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     // Guard UX (la vraie sécurité doit être côté serveur)
