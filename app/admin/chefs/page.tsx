@@ -5,9 +5,6 @@ import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 import { computeChefScore } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
-import { adminFetch } from '@/lib/adminFetch';
-
-const data = await adminFetch<{ chefs: ApiChef[] }>('/api/admin/chefs');
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
@@ -58,10 +55,9 @@ export default function AdminChefsPage() {
     'x-admin-email': 'thomas@chef-talents.com',
   },
 });
-const json = await res.json();
-
-      const list: ApiChef[] = Array.isArray(json) ? json : Array.isArray(json?.chefs) ? json.chefs : [];
-
+const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
+const list = Array.isArray(json?.chefs) ? json.chefs : [];
+      
       const filtered = (list ?? []).filter(
         u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
       );
@@ -97,9 +93,9 @@ const json = await res.json();
       setLoading(false);
       return;
     }
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  refresh();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const updateStatus = async (email: string, status: 'approved' | 'active') => {
     setErr(null);
