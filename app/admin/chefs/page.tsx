@@ -1,10 +1,5 @@
 'use client';
 
-const API_BASE =
-  typeof window === 'undefined'
-    ? ''
-    : window.location.origin;
-
 import { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
@@ -16,7 +11,7 @@ const ADMIN_EMAIL = 'thomas@chef-talents.com';
 type FilterKey = 'all' | 'pending' | 'approved' | 'active';
 
 type ApiChef = ChefUser & {
-  // au cas où ton API renvoie des champs différents
+  user_id?: string;
   profile?: any;
   created_at?: string;
   createdAt?: string;
@@ -26,33 +21,8 @@ type ApiChef = ChefUser & {
   lastName?: string;
 };
 
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-// Base URL absolue côté navigateur
-const API_BASE =
-  typeof window === 'undefined'
-    ? ''
-    : window.location.origin;
-
-function toAbsoluteApiUrl(input: RequestInfo) {
-  // si on passe déjà une URL absolue (http/https), on ne touche pas
-  const s = typeof input === 'string' ? input : '';
-  if (s.startsWith('http://') || s.startsWith('https://')) return s;
-
-  // si c'est une string relative du type "/api/..." ou "api/..."
-  if (typeof input === 'string') {
-    const path = input.startsWith('/') ? input : `/${input}`;
-    return `${API_BASE}${path}`;
-  }
-
-  // si ce n'est pas une string (Request object), on renvoie tel quel
-  return input;
-}
-
-async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): Promise<T> {
-  const urlOrReq = toAbsoluteApiUrl(input);
-
-  const res = await fetch(urlOrReq as any, {
+async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(path, {
     ...init,
     headers: {
       ...(init.headers || {}),
@@ -78,6 +48,7 @@ export default function AdminChefsPage() {
     setLoading(true);
     setErr(null);
 
+    // 1) DB via API
     try {
       const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
       const list = Array.isArray(json?.chefs) ? json.chefs : [];
@@ -88,10 +59,24 @@ export default function AdminChefsPage() {
 
       setChefs(filtered);
       setSource('db');
+      return;
     } catch (e: any) {
-      setErr(`API admin KO: ${e?.message || String(e)}`);
+      console.warn('[AdminChefs] API failed, fallback localStorage', e?.message || e);
+    }
+
+    // 2) fallback localStorage (ancien MVP)
+    try {
+      const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
+      const filtered = (list ?? []).filter(
+        u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
+      );
+      setChefs(filtered as any);
+      setSource('localStorage');
+      setErr('API admin KO (fallback localStorage).');
+    } catch (e: any) {
       setChefs([]);
-      setSource('db');
+      setSource('localStorage');
+      setErr(e?.message || 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
@@ -110,6 +95,7 @@ export default function AdminChefsPage() {
       return;
     }
 
+    // API d’abord
     try {
       await fetchJson('/api/admin/chefs', {
         method: 'PUT',
@@ -122,6 +108,7 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] update via API failed, fallback localStorage', e?.message || e);
     }
 
+    // fallback legacy
     await auth.updateChefStatus(safeEmail as any, status as any);
     await refresh();
   };
@@ -136,6 +123,7 @@ export default function AdminChefsPage() {
       return;
     }
 
+    // API d’abord
     try {
       await fetchJson(`/api/admin/chefs?email=${encodeURIComponent(safeEmail)}`, {
         method: 'DELETE',
@@ -146,16 +134,29 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] delete via API failed, fallback localStorage', e?.message || e);
     }
 
+    // fallback legacy
     await auth.deleteChefAccount(safeEmail as any);
     await refresh();
   };
 
-  // ... le reste de ton fichier ne change pas
-}
+  const counts = useMemo(() => {
+    const pending = chefs.filter(c => String(c.status) === 'pending_validation').length;
+    const approved = chefs.filter(c => String(c.status) === 'approved').length;
+    const active = chefs.filter(c => String(c.status) === 'active').length;
+    return { pending, approved, active, all: chefs.length };
+  }, [chefs]);
+
+  const view = useMemo(() => {
+    const priority: Record<string, number> = {
+      pending_validation: 0,
+      approved: 1,
+      active: 2,
+    };
 
     const needle = q.trim().toLowerCase();
 
-    const getScore = (c: ApiChef) => computeChefScore((c as any).profile ?? {}).score ?? 0;
+    const getScore = (c: ApiChef) =>
+      computeChefScore((c as any).profile ?? {}).score ?? 0;
 
     return [...chefs]
       .filter(c => {
@@ -180,8 +181,8 @@ export default function AdminChefsPage() {
         const sb = getScore(b);
         if (sa !== sb) return sb - sa;
 
-        const da = new Date((a.createdAt || a.created_at || '') as string).getTime() || 0;
-        const db = new Date((b.createdAt || b.created_at || '') as string).getTime() || 0;
+        const da = new Date(String(a.createdAt || a.created_at || '')).getTime() || 0;
+        const db = new Date(String(b.createdAt || b.created_at || '')).getTime() || 0;
         return db - da;
       });
   }, [chefs, q, filter]);
@@ -229,7 +230,9 @@ export default function AdminChefsPage() {
             placeholder="Rechercher (nom ou email)…"
             className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
           />
-          <div className="text-xs text-white/45">Astuce : ouvre `/api/admin/chefs` dans le navigateur pour voir l’erreur exacte.</div>
+          <div className="text-xs text-white/45">
+            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de header).
+          </div>
         </div>
       </Card>
 
@@ -263,10 +266,10 @@ export default function AdminChefsPage() {
                 view.map(c => {
                   const score = computeChefScore((c as any).profile ?? {}).score ?? 0;
                   const fullName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Chef';
-                  const createdIso = (c.createdAt || c.created_at || '') as string;
+                  const createdIso = String(c.createdAt || c.created_at || '');
 
                   return (
-                    <tr key={String(c.email || fullName)} className="border-t border-white/10 hover:bg-white/5 transition">
+                    <tr key={String(c.email || c.user_id || fullName)} className="border-t border-white/10 hover:bg-white/5 transition">
                       <td className="p-3">
                         <div className="text-white font-medium truncate">{fullName}</div>
                         <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
