@@ -45,9 +45,9 @@ export async function GET(req: Request) {
 
     // ⚠️ Table: public.profiles (comme sur ta capture)
     const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+  .from('chef_profiles')
+  .select('*')
+  .order('created_at', { ascending: false });
 
     if (error) throw error;
 
