@@ -324,7 +324,7 @@ export default function AdminChefsPage() {
   }, [chefs, q, filter]);
 
   return (
-    <PageTitle
+  <PageTitle
   title="Chefs"
   subtitle="Pipeline : À valider → Approuvé → Actif (tri : statut → score → date)"
   right={
@@ -335,7 +335,7 @@ export default function AdminChefsPage() {
   }
 />
 
-      <Card className="p-4">
+<Card className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
             Source :{' '}
