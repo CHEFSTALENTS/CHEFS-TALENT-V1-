@@ -324,7 +324,6 @@ export default function AdminChefsPage() {
   }, [chefs, q, filter]);
 
   return (
-    <div className="space-y-4">
       <PageTitle
         title="Chefs"
       
