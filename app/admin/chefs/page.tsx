@@ -657,7 +657,6 @@ const locationVal =
               <InfoRow label="Email" value={email} />
               <InfoRow label="Téléphone" value={phone} />
               <InfoRow label="Langues" value={languages} />
-              <InfoRow label="Localisation" value={location} />
 <InfoRow label="Localisation" value={toDisplay(location)} />
               <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
