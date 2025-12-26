@@ -324,16 +324,15 @@ export default function AdminChefsPage() {
   }, [chefs, q, filter]);
 
   return (
-      <PageTitle
-        title="Chefs"
-      
-        right={
-          <>
-            <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
-            <GhostButton href="/admin">Dashboard</GhostButton>
-          </>
-        }
-      />
+     <PageTitle
+  title="Chefs"
+  right={
+    <>
+      <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
+      <GhostButton href="/admin">Dashboard</GhostButton>
+    </>
+  }
+/>
 
       <Card className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
