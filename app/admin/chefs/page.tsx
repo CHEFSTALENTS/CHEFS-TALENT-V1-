@@ -332,7 +332,7 @@ export default function AdminChefsPage() {
       <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
       <GhostButton href="/admin">Dashboard</GhostButton>
     </>
-  }
+  
 />
 
 <Card className="p-4">
