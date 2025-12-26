@@ -113,8 +113,10 @@ export default function AdminChefsPage() {
 
     // 1) Try DB via API
     try {
-      const json = await fetchJson<any>('/api/admin/chefs', { method: 'GET' });
-
+const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs', {
+  method: 'GET',
+  headers: { 'x-admin-email': ADMIN_EMAIL },
+});
       // L’API peut renvoyer:
       // - directement un tableau:  [{...}]
       // - ou un objet: { chefs: [...] }
@@ -182,10 +184,11 @@ export default function AdminChefsPage() {
 
     // API d’abord
     try {
-      await fetchJson('/api/admin/chefs', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: row.email, status: 'approved' }),
+      aawait fetchJson(`/api/admin/chefs?email=${encodeURIComponent(email)}`, {
+  method: 'DELETE',
+  headers: { 'x-admin-email': ADMIN_EMAIL },
+});
+      body: JSON.stringify({ email: row.email, status: 'approved' }),
       });
       await refresh();
       return;
