@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 import { computeChefScore } from '@/lib/chefScore';
@@ -34,6 +34,64 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
   return (text ? JSON.parse(text) : null) as T;
 }
+
+/* -------------------- utils safe display -------------------- */
+
+function isPlainObject(v: any) {
+  return v && typeof v === 'object' && !Array.isArray(v);
+}
+
+function toDisplay(v: any): string {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'string') return v.trim() ? v : '—';
+  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : '—';
+  if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '—' : v.toLocaleString('fr-FR');
+  if (Array.isArray(v)) {
+    if (v.length === 0) return '—';
+    // arrays d'objets -> on essaye un join intelligent
+    const asText = v
+      .map((x) => {
+        if (x === null || x === undefined) return '';
+        if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return String(x);
+        if (isPlainObject(x)) {
+          // si l’objet ressemble à {label/name/value}
+          const maybe = x.label ?? x.name ?? x.title ?? x.value ?? x.id;
+          return maybe ? String(maybe) : '';
+        }
+        return '';
+      })
+      .filter(Boolean);
+    return asText.length ? asText.join(', ') : JSON.stringify(v);
+  }
+  if (isPlainObject(v)) {
+    // objets "location" etc.
+    const keys = Object.keys(v);
+    if (keys.length === 0) return '—';
+    // si {city,country}
+    const city = (v as any).city;
+    const country = (v as any).country;
+    if (city || country) return [city, country].filter(Boolean).join(', ');
+    return JSON.stringify(v);
+  }
+  return String(v);
+}
+
+function formatDate(iso?: any) {
+  if (!iso) return '';
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function formatDateTime(iso?: any) {
+  if (!iso) return '';
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+/* -------------------- page -------------------- */
 
 export default function AdminChefsPage() {
   const [chefs, setChefs] = useState<ApiChef[]>([]);
@@ -113,7 +171,7 @@ export default function AdminChefsPage() {
   };
 
   useEffect(() => {
-    refresh();
+    refresh().finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -125,7 +183,6 @@ export default function AdminChefsPage() {
       return;
     }
 
-    // API d’abord
     try {
       await fetchJson('/api/admin/chefs', {
         method: 'PUT',
@@ -133,14 +190,12 @@ export default function AdminChefsPage() {
         body: JSON.stringify({ email: safeEmail, status }),
       });
       await refresh();
-      return;
     } catch (e: any) {
       console.warn('[AdminChefs] update via API failed, fallback localStorage', e?.message || e);
+      // fallback legacy
+      await auth.updateChefStatus(safeEmail as any, status as any);
+      await refresh();
     }
-
-    // fallback legacy
-    await auth.updateChefStatus(safeEmail as any, status as any);
-    await refresh();
   };
 
   const removeChef = async (email: string) => {
@@ -153,22 +208,18 @@ export default function AdminChefsPage() {
       return;
     }
 
-    // API d’abord
     try {
       await fetchJson(`/api/admin/chefs?email=${encodeURIComponent(safeEmail)}`, {
         method: 'DELETE',
       });
       await refresh();
       closeDrawer();
-      return;
     } catch (e: any) {
       console.warn('[AdminChefs] delete via API failed, fallback localStorage', e?.message || e);
+      await auth.deleteChefAccount(safeEmail as any);
+      await refresh();
+      closeDrawer();
     }
-
-    // fallback legacy
-    await auth.deleteChefAccount(safeEmail as any);
-    await refresh();
-    closeDrawer();
   };
 
   const counts = useMemo(() => {
@@ -186,7 +237,7 @@ export default function AdminChefsPage() {
     };
 
     const needle = q.trim().toLowerCase();
-    const getScore = (c: ApiChef) => computeChefScore((c.profile ?? {}) as any).score ?? 0;
+    const getScore = (c: ApiChef) => computeChefScore(((c as any).profile ?? {}) as any).score ?? 0;
 
     return [...chefs]
       .filter((c) => {
@@ -198,7 +249,8 @@ export default function AdminChefsPage() {
       })
       .filter((c) => {
         if (!needle) return true;
-        const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+        const profile = (c as any).profile ?? {};
+        const fullName = `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.toLowerCase();
         const email = (c.email || '').toLowerCase();
         return fullName.includes(needle) || email.includes(needle);
       })
@@ -211,8 +263,11 @@ export default function AdminChefsPage() {
         const sb = getScore(b);
         if (sa !== sb) return sb - sa;
 
-        const da = new Date(String(a.createdAt || a.created_at || '')).getTime() || 0;
-        const db = new Date(String(b.createdAt || b.created_at || '')).getTime() || 0;
+        const profileA = (a as any).profile ?? {};
+        const profileB = (b as any).profile ?? {};
+
+        const da = new Date(String(a.createdAt || a.created_at || profileA.createdAt || profileA.created_at || '')).getTime() || 0;
+        const db = new Date(String(b.createdAt || b.created_at || profileB.createdAt || profileB.created_at || '')).getTime() || 0;
         return db - da;
       });
   }, [chefs, q, filter]);
@@ -247,18 +302,8 @@ export default function AdminChefsPage() {
 
       <div className="flex flex-wrap gap-2">
         <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
-        <Segment
-          label="À valider"
-          active={filter === 'pending'}
-          onClick={() => setFilter('pending')}
-          badge={counts.pending}
-        />
-        <Segment
-          label="Approuvés"
-          active={filter === 'approved'}
-          onClick={() => setFilter('approved')}
-          badge={counts.approved}
-        />
+        <Segment label="À valider" active={filter === 'pending'} onClick={() => setFilter('pending')} badge={counts.pending} />
+        <Segment label="Approuvés" active={filter === 'approved'} onClick={() => setFilter('approved')} badge={counts.approved} />
         <Segment label="Actifs" active={filter === 'active'} onClick={() => setFilter('active')} badge={counts.active} />
       </div>
 
@@ -271,8 +316,7 @@ export default function AdminChefsPage() {
             className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
           />
           <div className="text-xs text-white/45">
-            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de
-            header).
+            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de header).
           </div>
         </div>
       </Card>
@@ -293,23 +337,24 @@ export default function AdminChefsPage() {
             <tbody>
               {loading && view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>
-                    Chargement…
-                  </td>
+                  <td className="p-4 text-white/60" colSpan={5}>Chargement…</td>
                 </tr>
               ) : view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>
-                    Aucun résultat.
-                  </td>
+                  <td className="p-4 text-white/60" colSpan={5}>Aucun résultat.</td>
                 </tr>
               ) : (
                 view.map((c) => {
                   const profile = (c as any).profile ?? {};
                   const score = computeChefScore(profile as any).score ?? 0;
+
                   const fullName =
                     `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.trim() || 'Chef';
-                  const createdIso = String(c.createdAt || c.created_at || profile.createdAt || profile.created_at || '');
+
+                  const createdIso = String(
+                    c.createdAt || c.created_at || profile.createdAt || profile.created_at || ''
+                  );
+
                   const status = String(c.status || profile.status || '');
 
                   return (
@@ -407,7 +452,7 @@ export default function AdminChefsPage() {
   );
 }
 
-/* ---------- Drawer component ---------- */
+/* -------------------- Drawer -------------------- */
 
 function ChefDrawer({
   selected,
@@ -426,12 +471,11 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const profile = (detail?.profile ?? selected.profile ?? {}) as any;
+  const profile = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
 
-  // Basics
-  const email = String(selected.email || profile.email || '').trim();
-  const firstName = String(profile.firstName || selected.firstName || '').trim();
-  const lastName = String(profile.lastName || selected.lastName || '').trim();
+  const email = String(selected.email || profile.email || '');
+  const firstName = String(profile.firstName || selected.firstName || '');
+  const lastName = String(profile.lastName || selected.lastName || '');
   const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
 
   const createdIso = String(
@@ -445,35 +489,49 @@ function ChefDrawer({
   );
 
   const status = String(detail?.status || profile.status || selected.status || '');
-  const score = computeChefScore(profile).score ?? 0;
 
-  // Readable fields (robustes)
-  const phone = profile.phone || profile.phoneNumber || profile.tel || '';
-  const languages = Array.isArray(profile.languages) ? profile.languages.join(', ') : profile.languages || '';
+  const score = computeChefScore(profile as any).score ?? 0;
 
-  const city = profile.city || profile.location?.city || '';
-  const country = profile.country || profile.location?.country || '';
-  const location = [city, country].filter(Boolean).join(', ');
+  // champs possibles (selon ton schéma)
+  const phone = profile.phone ?? profile.phoneNumber ?? profile.tel ?? profile.telephone;
+  const languages = profile.languages ?? profile.langues;
+  const location = profile.location ?? profile.baseCity ?? profile.city ?? profile.ville ?? profile.address;
+  const profileType = profile.profileType ?? profile.type;
+  const seniority = profile.seniorityLevel ?? profile.seniority ?? profile.experienceLevel;
 
-  const specialties = Array.isArray(profile.specialties) ? profile.specialties.join(', ') : profile.specialties || '';
-  const cuisines = Array.isArray(profile.cuisines) ? profile.cuisines.join(', ') : profile.cuisines || profile.style || '';
+  const specialties = profile.specialties ?? profile.speciality;
+  const cuisines = profile.cuisines ?? profile.cuisineTypes ?? profile.styles ?? profile.style;
+  const services = profile.services ?? profile.serviceTypes;
 
-  const bio = profile.bio || profile.about || profile.description || '';
+  const bio = profile.bio ?? profile.about ?? profile.description;
 
-  const dailyRate = profile.dailyRate || profile.rateDay || profile.pricePerDay;
-  const pricePerPerson = profile.pricePerPerson || profile.pp || profile.ratePerPerson;
-  const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : '';
+  const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
+  const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
+  const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
 
-  const minGuests = profile.minGuests || profile.minimumGuests || '';
-  const availability = profile.availability || profile.availableFrom || profile.calendarNote || '';
-  const mobility = profile.mobility || profile.travel || profile.zones || profile.radius || '';
+  const minGuests = profile.minGuests ?? profile.minimumGuests;
+  const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
 
-  const photosArr = profile.photos || profile.images || profile.gallery || [];
+  const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
+  const mobility = profile.mobility ?? profile.travel ?? profile.zones ?? profile.radius;
+
+  const photosArr = profile.photos ?? profile.images ?? profile.gallery;
   const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
 
-  const profileType = profile.profileType || profile.type || '';
-  const seniority = profile.seniorityLevel || profile.seniority || profile.experienceLevel || '';
-  const updatedAt = profile.updatedAt || profile.updated_at || detail?.updatedAt || detail?.updated_at || '';
+  const updatedAt = profile.updatedAt ?? profile.updated_at ?? detail?.updatedAt ?? detail?.updated_at;
+
+  // Checklist utile pour “approuver”
+  const checklist = {
+    identité: Boolean(fullName && email),
+    téléphone: Boolean(phone),
+    bio: Boolean(bio && String(bio).trim().length > 30),
+    langues: Boolean(Array.isArray(languages) ? languages.length : languages),
+    spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
+    tarifs: Boolean(dailyRate || pricePerPerson),
+    photos: Boolean(hasPhotos),
+  };
+
+  const checklistOk = Object.values(checklist).filter(Boolean).length;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -497,7 +555,12 @@ function ChefDrawer({
 
         <div className="mt-4 flex items-center gap-2">
           <ScorePill score={score} />
-          <ChefStatusBadge status={status} />
+          <div className="ml-2">
+            <ChefStatusBadge status={status} />
+          </div>
+          <div className="ml-auto text-xs text-white/50">
+            Dossier : <span className="text-white/70 font-medium">{checklistOk}/7</span>
+          </div>
         </div>
 
         <div className="mt-4 flex gap-2">
@@ -527,59 +590,66 @@ function ChefDrawer({
           </button>
         </div>
 
-        <div className="mt-6 space-y-5">
+        <div className="mt-6 space-y-4">
           <Section title="Identité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Nom" value={fullName} />
-              <InfoRow label="Email" value={email || '—'} />
-              <InfoRow label="Téléphone" value={phone ? String(phone) : '—'} />
-              <InfoRow label="Langues" value={languages || '—'} />
-              <InfoRow label="Localisation" value={location || '—'} />
+              <InfoRow label="Email" value={email} />
+              <InfoRow label="Téléphone" value={phone} />
+              <InfoRow label="Langues" value={languages} />
+              <InfoRow label="Localisation" value={location} />
               <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
           </Section>
 
           <Section title="Profil">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Type de profil" value={humanizeProfileType(String(profileType || ''))} />
-              <InfoRow label="Niveau" value={humanizeSeniority(String(seniority || ''))} />
-              <InfoRow label="Spécialités" value={specialties || '—'} />
-              <InfoRow label="Styles / Cuisines" value={cuisines || '—'} />
+              <InfoRow label="Type de profil" value={humanizeProfileType(profileType)} />
+              <InfoRow label="Niveau" value={humanizeSeniority(seniority)} />
+              <InfoRow label="Spécialités" value={specialties} />
+              <InfoRow label="Cuisines / styles" value={cuisines} />
+              <InfoRow label="Services" value={services} />
             </div>
 
             <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="text-xs text-white/45">Bio</div>
-              <div className="text-sm text-white/85 mt-1 whitespace-pre-wrap">{bio || '—'}</div>
+              <div className="text-sm text-white/85 mt-1 whitespace-pre-wrap">{toDisplay(bio)}</div>
             </div>
           </Section>
 
           <Section title="Prix & disponibilité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Tarif" value={pricing || 'Non renseigné'} />
-              <InfoRow label="Minimum convives" value={minGuests ? String(minGuests) : '—'} />
-              <InfoRow label="Disponibilité" value={availability || '—'} />
-              <InfoRow label="Mobilité" value={mobility || '—'} />
+              <InfoRow label="Tarif" value={pricing} />
+              <InfoRow label="Min convives" value={minGuests} />
+              <InfoRow label="Max convives" value={maxGuests} />
+              <InfoRow label="Disponibilité" value={availability} />
+              <InfoRow label="Mobilité" value={mobility} />
+              <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
             </div>
           </Section>
 
-          <Section title="Vérifications">
+          <Section title="Vérifications (avant approbation)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Bio" value={bio ? '✅ OK' : '❌ Manquante'} />
-              <InfoRow label="Photos" value={hasPhotos ? '✅ OK' : '❌ Manquantes'} />
-              <InfoRow label="Spécialités" value={specialties ? '✅ OK' : '❌ Manquantes'} />
-              <InfoRow label="Tarif" value={pricing ? '✅ OK' : '❌ Non renseigné'} />
+              <InfoRow label="Identité" value={checklist.identité ? '✅ OK' : '❌ Incomplète'} />
+              <InfoRow label="Téléphone" value={checklist.téléphone ? '✅ OK' : '❌ Manquant'} />
+              <InfoRow label="Bio" value={checklist.bio ? '✅ OK' : '❌ Trop courte / absente'} />
+              <InfoRow label="Langues" value={checklist.langues ? '✅ OK' : '❌ Manquantes'} />
+              <InfoRow label="Spécialités" value={checklist.spécialités ? '✅ OK' : '❌ Manquantes'} />
+              <InfoRow label="Tarifs" value={checklist.tarifs ? '✅ OK' : '❌ Non renseignés'} />
+              <InfoRow label="Photos" value={checklist.photos ? '✅ OK' : '❌ Manquantes'} />
             </div>
 
-            <div className="mt-3 text-xs text-white/45">Dernière mise à jour : {humanizeDateTime(updatedAt)}</div>
+            <div className="mt-3 text-xs text-white/45">
+              Dernière mise à jour : {updatedAt ? formatDateTime(updatedAt) : '—'}
+              {loading ? <span className="ml-2 text-white/40">(chargement…)</span> : null}
+            </div>
           </Section>
 
-          <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <summary className="text-white/80 cursor-pointer select-none">
-              Voir JSON (debug){loading ? ' — Chargement…' : ''}
+          <details className="rounded-xl border border-white/10 bg-white/5">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-white/80">
+              Voir JSON (debug)
             </summary>
-            <pre className="mt-3 text-xs text-white/70 bg-white/5 border border-white/10 rounded-xl p-3 overflow-auto">
-{JSON.stringify(profile, null, 2)}
-            </pre>
+            <pre className="text-xs text-white/70 p-3 overflow-auto">{JSON.stringify(profile, null, 2)}</pre>
           </details>
         </div>
       </div>
@@ -587,14 +657,7 @@ function ChefDrawer({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-      <div className="text-xs text-white/45">{label}</div>
-      <div className="text-sm text-white/85 mt-1 break-words">{value || '—'}</div>
-    </div>
-  );
-}
+/* -------------------- small UI -------------------- */
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -605,11 +668,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-/* ---------- UI helpers ---------- */
+function InfoRow({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <div className="text-xs text-white/45">{label}</div>
+      <div className="text-sm text-white/85 mt-1 break-words">{toDisplay(value)}</div>
+    </div>
+  );
+}
 
 function ChefStatusBadge({ status }: { status: string }) {
   const s = (status || '').toLowerCase();
-  const mapped = s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
+  const mapped =
+    s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
   return <StatusBadge status={mapped} />;
 }
 
@@ -630,35 +701,21 @@ function ScorePill({ score }: { score: number }) {
   );
 }
 
-function formatDate(iso?: string) {
-  if (!iso) return '';
-  const d = new Date(String(iso));
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-}
-
-function humanizeProfileType(v: string) {
+function humanizeProfileType(v: any) {
   const s = String(v || '').toLowerCase();
   if (!s) return '—';
   if (s === 'private') return 'Chef privé';
   if (s === 'events' || s === 'event') return 'Événementiel';
   if (s === 'yacht') return 'Yacht';
   if (s === 'chalet') return 'Chalet';
-  return v;
+  return toDisplay(v);
 }
 
-function humanizeSeniority(v: string) {
+function humanizeSeniority(v: any) {
   const s = String(v || '').toLowerCase();
   if (!s) return '—';
   if (s === 'confirmed') return 'Confirmé';
   if (s === 'junior') return 'Junior';
   if (s === 'senior') return 'Senior';
-  return v;
-}
-
-function humanizeDateTime(v: any) {
-  if (!v) return '—';
-  const d = new Date(String(v));
-  if (Number.isNaN(d.getTime())) return String(v);
-  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return toDisplay(v);
 }
