@@ -556,6 +556,19 @@ const locationVal =
   profile.ville ??
   profile.address ??
   null;
+  const locationLabel =
+  typeof locationVal === 'string'
+    ? locationVal
+    : locationVal && typeof locationVal === 'object'
+    ? [
+        (locationVal as any).baseCity,
+        (locationVal as any).city,
+        (locationVal as any).ville,
+        (locationVal as any).country,
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : null;
   const profileType = profile.profileType ?? profile.type;
   const seniority = profile.seniorityLevel ?? profile.seniority ?? profile.experienceLevel;
 
@@ -654,11 +667,11 @@ const locationVal =
           <Section title="Identité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Nom" value={fullName} />
-              <InfoRow label="Email" value={email} />
-              <InfoRow label="Téléphone" value={phone} />
-              <InfoRow label="Langues" value={languages} />
-<InfoRow label="Localisation" value={toDisplay(location)} />
-              <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
+<InfoRow label="Email" value={email} />
+<InfoRow label="Téléphone" value={phone} />
+<InfoRow label="Langues" value={languages} />
+<InfoRow label="Localisation" value={locationLabel || toDisplay(locationVal) || '—'} />
+<InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
           </Section>
 
