@@ -327,7 +327,7 @@ export default function AdminChefsPage() {
     <div className="space-y-4">
       <PageTitle
         title="Chefs"
-        subtitle="Pipeline : À valider → Approuvé → Actif (tri : statut → score → date)"
+      
         right={
           <>
             <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
@@ -367,8 +367,6 @@ export default function AdminChefsPage() {
             className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
           />
           <div className="text-xs text-white/45">
-            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent “Unauthorized” (pas de header).
-          </div>
         </div>
       </Card>
 
