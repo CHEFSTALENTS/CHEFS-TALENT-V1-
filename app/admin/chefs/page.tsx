@@ -49,14 +49,12 @@ function toDisplay(v: any): string {
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? '—' : v.toLocaleString('fr-FR');
   if (Array.isArray(v)) {
     if (v.length === 0) return '—';
-    // arrays d'objets -> on essaye un join intelligent
     const asText = v
       .map((x) => {
         if (x === null || x === undefined) return '';
         if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return String(x);
         if (isPlainObject(x)) {
-          // si l’objet ressemble à {label/name/value}
-          const maybe = x.label ?? x.name ?? x.title ?? x.value ?? x.id;
+          const maybe = (x as any).label ?? (x as any).name ?? (x as any).title ?? (x as any).value ?? (x as any).id;
           return maybe ? String(maybe) : '';
         }
         return '';
@@ -65,19 +63,15 @@ function toDisplay(v: any): string {
     return asText.length ? asText.join(', ') : JSON.stringify(v);
   }
   if (isPlainObject(v)) {
-    // objets "location" etc.
     const keys = Object.keys(v);
     if (keys.length === 0) return '—';
-    // si {city,country}
-    const city = (v as any).city;
+    const city = (v as any).city ?? (v as any).baseCity ?? (v as any).ville;
     const country = (v as any).country;
     if (city || country) return [city, country].filter(Boolean).join(', ');
     return JSON.stringify(v);
   }
   return String(v);
 }
-
-
 
 function formatDateTime(iso?: any) {
   if (!iso) return '';
@@ -105,10 +99,10 @@ function formatAvailability(v: any): string {
   if (typeof v === 'string') return v;
 
   if (typeof v === 'object' && !Array.isArray(v)) {
-    const availableNow = v.availableNow;
-    const preferredPeriods = Array.isArray(v.preferredPeriods) ? v.preferredPeriods : [];
-    const unavailableDates = Array.isArray(v.unavailableDates) ? v.unavailableDates : [];
-    const nextAvailableFrom = v.nextAvailableFrom;
+    const availableNow = (v as any).availableNow;
+    const preferredPeriods = Array.isArray((v as any).preferredPeriods) ? (v as any).preferredPeriods : [];
+    const unavailableDates = Array.isArray((v as any).unavailableDates) ? (v as any).unavailableDates : [];
+    const nextAvailableFrom = (v as any).nextAvailableFrom;
 
     const parts: string[] = [];
 
@@ -117,11 +111,15 @@ function formatAvailability(v: any): string {
 
     if (preferredPeriods.length) {
       const mapPeriod = (p: string) =>
-        p === 'season_summer' ? 'Été'
-        : p === 'season_winter' ? 'Hiver'
-        : p === 'season_spring' ? 'Printemps'
-        : p === 'season_autumn' ? 'Automne'
-        : p;
+        p === 'season_summer'
+          ? 'Été'
+          : p === 'season_winter'
+          ? 'Hiver'
+          : p === 'season_spring'
+          ? 'Printemps'
+          : p === 'season_autumn'
+          ? 'Automne'
+          : p;
       parts.push(`Périodes : ${preferredPeriods.map(mapPeriod).join(', ')}`);
     }
 
@@ -130,9 +128,7 @@ function formatAvailability(v: any): string {
     }
 
     if (unavailableDates.length) {
-      const cleaned = unavailableDates
-        .map((d: any) => fmt(d) || String(d))
-        .slice(0, 6);
+      const cleaned = unavailableDates.map((d: any) => fmt(d) || String(d)).slice(0, 6);
       const more = unavailableDates.length > 6 ? ` (+${unavailableDates.length - 6})` : '';
       parts.push(`Indisponible : ${cleaned.join(', ')}${more}`);
     }
@@ -142,6 +138,136 @@ function formatAvailability(v: any): string {
 
   return String(v);
 }
+
+/* -------------------- NORMALIZATION (fix score + champs manquants) -------------------- */
+
+function asArray(val: any): any[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    // "Français, Anglais" => ["Français","Anglais"]
+    if (val.includes(',')) return val.split(',').map((s) => s.trim()).filter(Boolean);
+    if (val.trim()) return [val.trim()];
+    return [];
+  }
+  return [val];
+}
+
+function normalizeProfile(raw: any) {
+  const r = raw ?? {};
+
+  const firstName = r.firstName ?? r.first_name ?? r.firstname ?? '';
+  const lastName = r.lastName ?? r.last_name ?? r.lastname ?? '';
+
+  const phone =
+    r.phone ?? r.phone_number ?? r.phoneNumber ?? r.tel ?? r.telephone ?? r.mobile ?? r.mobilePhone ?? null;
+
+  const languages = r.languages ?? r.langues ?? r.language ?? r.lang ?? [];
+  const images = r.images ?? r.photos ?? r.gallery ?? r.pictures ?? [];
+
+  const bio =
+    r.bio ??
+    r.bio_text ??
+    r.about ??
+    r.description ??
+    r.presentation ??
+    r.summary ??
+    r.biography ??
+    null;
+
+  const services = r.services ?? r.service_types ?? r.serviceTypes ?? r.service ?? null;
+
+  // Mobilité : souvent coverage_zones / base_city / radius…
+  const mobility = r.mobility ?? r.coverage_zones ?? r.coverageZones ?? r.zones ?? r.radius ?? r.travel ?? null;
+
+  // Localisation : parfois base_city, city, country…
+  const location =
+    r.location ??
+    (r.city || r.country || r.base_city || r.baseCity
+      ? {
+          city: r.city ?? r.base_city ?? r.baseCity ?? r.ville ?? null,
+          country: r.country ?? null,
+        }
+      : null) ??
+    r.address ??
+    null;
+
+  const baseCity = r.baseCity ?? r.base_city ?? r.city ?? r.ville ?? null;
+
+  const profileType = r.profileType ?? r.profile_type ?? r.type ?? null;
+  const seniorityLevel = r.seniorityLevel ?? r.seniority_level ?? r.seniority ?? r.experienceLevel ?? null;
+
+  const specialties = r.specialties ?? r.speciality ?? r.specialisations ?? r.skills ?? null;
+  const cuisines = r.cuisines ?? r.cuisineTypes ?? r.styles ?? r.style ?? null;
+
+  const dailyRate = r.dailyRate ?? r.rateDay ?? r.pricePerDay ?? r.day_rate ?? null;
+  const pricePerPerson = r.pricePerPerson ?? r.pp ?? r.ratePerPerson ?? r.price_per_person ?? null;
+
+  const minGuests = r.minGuests ?? r.minimumGuests ?? r.min_guests ?? null;
+  const maxGuests = r.maxGuests ?? r.maxPax ?? r.capacity ?? r.max_guests ?? null;
+
+  const availability =
+    r.availability ?? r.availableFrom ?? r.calendarNote ?? r.preferredPeriods ?? r.available_from ?? null;
+
+  const status = r.status ?? null;
+  const created_at = r.created_at ?? r.createdAt ?? null;
+  const updated_at = r.updated_at ?? r.updatedAt ?? null;
+
+  return {
+    ...r,
+    firstName,
+    lastName,
+    phone,
+    languages: asArray(languages),
+    images: asArray(images),
+    bio: typeof bio === 'string' ? bio : bio ? String(bio) : null,
+    services,
+    mobility,
+    location,
+    baseCity,
+    profileType,
+    seniorityLevel,
+    specialties,
+    cuisines,
+    dailyRate,
+    pricePerPerson,
+    minGuests,
+    maxGuests,
+    availability,
+    status,
+    created_at,
+    updated_at,
+  };
+}
+
+function getNormalizedChef(c: ApiChef, detail?: any | null) {
+  // On garde EXACTEMENT ta logique: detail > selected.profile > selected
+  const raw = (detail?.profile ?? detail ?? (c as any).profile ?? c) as any;
+  const profile = normalizeProfile(raw);
+
+  const email = String((c as any).email ?? profile.email ?? '').trim().toLowerCase();
+
+  const firstName = String(profile.firstName || (c as any).firstName || '').trim();
+  const lastName = String(profile.lastName || (c as any).lastName || '').trim();
+  const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
+
+  const status = String(profile.status ?? (c as any).status ?? '').trim();
+
+  const createdIso = String(
+    (detail as any)?.createdAt ||
+      (detail as any)?.created_at ||
+      (c as any).createdAt ||
+      (c as any).created_at ||
+      profile.createdAt ||
+      profile.created_at ||
+      ''
+  );
+
+  const updatedAt = profile.updatedAt ?? profile.updated_at ?? (detail as any)?.updatedAt ?? (detail as any)?.updated_at;
+
+  return { profile, email, fullName, status, createdIso, updatedAt };
+}
+
 /* -------------------- page -------------------- */
 
 export default function AdminChefsPage() {
@@ -191,9 +317,7 @@ export default function AdminChefsPage() {
       const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
       const list = Array.isArray(json?.chefs) ? json.chefs : [];
 
-      const filtered = (list ?? []).filter(
-        (u) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
-      );
+      const filtered = (list ?? []).filter((u) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase());
 
       setChefs(filtered);
       setSource('db');
@@ -205,9 +329,7 @@ export default function AdminChefsPage() {
     // 2) fallback localStorage (ancien MVP)
     try {
       const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
-      const filtered = (list ?? []).filter(
-        (u: any) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
-      );
+      const filtered = (list ?? []).filter((u: any) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase());
 
       setChefs(filtered as any);
       setSource('localStorage');
@@ -230,7 +352,7 @@ export default function AdminChefsPage() {
     setErr(null);
     const safeEmail = String(email || '').trim().toLowerCase();
     if (!safeEmail) {
-      setErr("Email manquant pour ce chef (impossible de mettre à jour).");
+      setErr('Email manquant pour ce chef (impossible de mettre à jour).');
       return;
     }
 
@@ -243,7 +365,6 @@ export default function AdminChefsPage() {
       await refresh();
     } catch (e: any) {
       console.warn('[AdminChefs] update via API failed, fallback localStorage', e?.message || e);
-      // fallback legacy
       await auth.updateChefStatus(safeEmail as any, status as any);
       await refresh();
     }
@@ -255,7 +376,7 @@ export default function AdminChefsPage() {
 
     const safeEmail = String(email || '').trim().toLowerCase();
     if (!safeEmail) {
-      setErr("Email manquant pour ce chef (impossible de supprimer).");
+      setErr('Email manquant pour ce chef (impossible de supprimer).');
       return;
     }
 
@@ -288,7 +409,11 @@ export default function AdminChefsPage() {
     };
 
     const needle = q.trim().toLowerCase();
-    const getScore = (c: ApiChef) => computeChefScore(((c as any).profile ?? {}) as any).score ?? 0;
+
+    const getScore = (c: ApiChef) => {
+      const { profile } = getNormalizedChef(c, null);
+      return computeChefScore(profile as any).score ?? 0;
+    };
 
     return [...chefs]
       .filter((c) => {
@@ -300,9 +425,11 @@ export default function AdminChefsPage() {
       })
       .filter((c) => {
         if (!needle) return true;
-        const profile = (c as any).profile ?? {};
-        const fullName = `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.toLowerCase();
-        const email = (c.email || '').toLowerCase();
+        const { profile } = getNormalizedChef(c, null);
+        const fn = String((c as any).firstName || profile.firstName || '').trim();
+        const ln = String((c as any).lastName || profile.lastName || '').trim();
+        const fullName = `${fn} ${ln}`.toLowerCase();
+        const email = String((c as any).email || profile.email || '').toLowerCase();
         return fullName.includes(needle) || email.includes(needle);
       })
       .sort((a, b) => {
@@ -314,11 +441,11 @@ export default function AdminChefsPage() {
         const sb = getScore(b);
         if (sa !== sb) return sb - sa;
 
-        const profileA = (a as any).profile ?? {};
-        const profileB = (b as any).profile ?? {};
+        const { createdIso: ca } = getNormalizedChef(a, null);
+        const { createdIso: cb } = getNormalizedChef(b, null);
 
-        const da = new Date(String(a.createdAt || a.created_at || profileA.createdAt || profileA.created_at || '')).getTime() || 0;
-        const db = new Date(String(b.createdAt || b.created_at || profileB.createdAt || profileB.created_at || '')).getTime() || 0;
+        const da = new Date(String(ca || '')).getTime() || 0;
+        const db = new Date(String(cb || '')).getTime() || 0;
         return db - da;
       });
   }, [chefs, q, filter]);
@@ -340,9 +467,7 @@ export default function AdminChefsPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
             Source :{' '}
-            <span className="text-white/85 font-medium">
-              {source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}
-            </span>
+            <span className="text-white/85 font-medium">{source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}</span>
             {source === 'localStorage' ? (
               <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>
             ) : null}
@@ -388,29 +513,24 @@ export default function AdminChefsPage() {
             <tbody>
               {loading && view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>Chargement…</td>
+                  <td className="p-4 text-white/60" colSpan={5}>
+                    Chargement…
+                  </td>
                 </tr>
               ) : view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>Aucun résultat.</td>
+                  <td className="p-4 text-white/60" colSpan={5}>
+                    Aucun résultat.
+                  </td>
                 </tr>
               ) : (
                 view.map((c) => {
-                  const profile = (c as any).profile ?? {};
+                  const { profile, fullName, status, createdIso, email } = getNormalizedChef(c, null);
                   const score = computeChefScore(profile as any).score ?? 0;
-
-                  const fullName =
-                    `${c.firstName || profile.firstName || ''} ${c.lastName || profile.lastName || ''}`.trim() || 'Chef';
-
-                  const createdIso = String(
-                    c.createdAt || c.created_at || profile.createdAt || profile.created_at || ''
-                  );
-
-                  const status = String(c.status || profile.status || '');
 
                   return (
                     <tr
-                      key={String(c.email || fullName)}
+                      key={String(email || fullName)}
                       className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
                       onClick={() => openChef(c)}
                     >
@@ -419,7 +539,7 @@ export default function AdminChefsPage() {
                         <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
                       </td>
 
-                      <td className="p-3 text-white/85">{c.email || '—'}</td>
+                      <td className="p-3 text-white/85">{email || '—'}</td>
 
                       <td className="p-3">
                         <ChefStatusBadge status={status} />
@@ -435,9 +555,9 @@ export default function AdminChefsPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(String(c.email || ''), 'approved');
+                                updateStatus(String(email || ''), 'approved');
                               }}
-                              disabled={!c.email}
+                              disabled={!email}
                               className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               Approuver →
@@ -448,9 +568,9 @@ export default function AdminChefsPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(String(c.email || ''), 'active');
+                                updateStatus(String(email || ''), 'active');
                               }}
-                              disabled={!c.email}
+                              disabled={!email}
                               className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               Activer →
@@ -460,9 +580,9 @@ export default function AdminChefsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              removeChef(String(c.email || ''));
+                              removeChef(String(email || ''));
                             }}
-                            disabled={!c.email}
+                            disabled={!email}
                             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-red-200 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Supprimer
@@ -487,15 +607,18 @@ export default function AdminChefsPage() {
           loading={detailLoading}
           onClose={closeDrawer}
           onApprove={async () => {
-            await updateStatus(String(selected.email || ''), 'approved');
+            const email = String(selected.email || '').trim().toLowerCase();
+            await updateStatus(email, 'approved');
             await openChef(selected);
           }}
           onActivate={async () => {
-            await updateStatus(String(selected.email || ''), 'active');
+            const email = String(selected.email || '').trim().toLowerCase();
+            await updateStatus(email, 'active');
             await openChef(selected);
           }}
           onDelete={async () => {
-            await removeChef(String(selected.email || ''));
+            const email = String(selected.email || '').trim().toLowerCase();
+            await removeChef(email);
           }}
         />
       ) : null}
@@ -522,82 +645,52 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const profile = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
-
-  const email = String(selected.email || profile.email || '');
-  const firstName = String(profile.firstName || selected.firstName || '');
-  const lastName = String(profile.lastName || selected.lastName || '');
-  const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
-
-  const createdIso = String(
-    detail?.createdAt ||
-      detail?.created_at ||
-      selected.createdAt ||
-      selected.created_at ||
-      profile.createdAt ||
-      profile.created_at ||
-      ''
-  );
-
-  const status = String(detail?.status || profile.status || selected.status || '');
+  const { profile, email, fullName, status, createdIso, updatedAt } = getNormalizedChef(selected, detail);
 
   const score = computeChefScore(profile as any).score ?? 0;
 
-  // champs possibles (selon ton schéma)
-const phone = profile.phone ?? profile.phoneNumber ?? profile.tel ?? profile.telephone;
-const languages = profile.languages ?? profile.langues;
+  const phone = profile.phone;
+  const languages = profile.languages;
 
-// Localisation (string ou objet) — UNE SEULE FOIS
-const locationVal =
-  profile.location ??
-  (profile.city || profile.country ? { city: profile.city, country: profile.country } : null) ??
-  profile.baseCity ??
-  profile.city ??
-  profile.ville ??
-  profile.address ??
-  null;
+  const locationVal = profile.location ?? profile.baseCity ?? null;
   const locationLabel =
-  typeof locationVal === 'string'
-    ? locationVal
-    : locationVal && typeof locationVal === 'object'
-    ? [
-        (locationVal as any).baseCity,
-        (locationVal as any).city,
-        (locationVal as any).ville,
-        (locationVal as any).country,
-      ]
-        .filter(Boolean)
-        .join(', ')
-    : null;
-  const profileType = profile.profileType ?? profile.type;
-  const seniority = profile.seniorityLevel ?? profile.seniority ?? profile.experienceLevel;
+    typeof locationVal === 'string'
+      ? locationVal
+      : locationVal && typeof locationVal === 'object'
+      ? [locationVal.baseCity, locationVal.city, locationVal.ville, locationVal.country].filter(Boolean).join(', ')
+      : null;
 
-  const specialties = profile.specialties ?? profile.speciality;
-  const cuisines = profile.cuisines ?? profile.cuisineTypes ?? profile.styles ?? profile.style;
-  const services = profile.services ?? profile.serviceTypes;
+  const profileType = profile.profileType;
+  const seniority = profile.seniorityLevel;
 
-  const bio = profile.bio ?? profile.about ?? profile.description;
+  const specialties = profile.specialties;
+  const cuisines = profile.cuisines;
 
-  const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
-  const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
+  const services = profile.services;
+  const servicesDisplay = Array.isArray(services) ? services.join(', ') : services;
+
+  const bio = profile.bio;
+  const bioText = String(bio ?? '').trim();
+
+  const dailyRate = profile.dailyRate;
+  const pricePerPerson = profile.pricePerPerson;
   const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
 
-  const minGuests = profile.minGuests ?? profile.minimumGuests;
-  const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
+  const minGuests = profile.minGuests;
+  const maxGuests = profile.maxGuests;
 
-  const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
-  const mobility = profile.mobility ?? profile.travel ?? profile.zones ?? profile.radius;
+  const availability = profile.availability;
+  const mobility = profile.mobility;
+  const mobilityDisplay = Array.isArray(mobility) ? mobility.join(', ') : mobility;
 
-  const photosArr = profile.photos ?? profile.images ?? profile.gallery;
+  const photosArr = profile.images ?? [];
   const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
-
-  const updatedAt = profile.updatedAt ?? profile.updated_at ?? detail?.updatedAt ?? detail?.updated_at;
 
   // Checklist utile pour “approuver”
   const checklist = {
     identité: Boolean(fullName && email),
     téléphone: Boolean(phone),
-    bio: Boolean(bio && String(bio).trim().length > 30),
+    bio: bioText.length > 30,
     langues: Boolean(Array.isArray(languages) ? languages.length : languages),
     spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
     tarifs: Boolean(dailyRate || pricePerPerson),
@@ -638,27 +731,18 @@ const locationVal =
 
         <div className="mt-4 flex gap-2">
           {status === 'pending_validation' ? (
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
-              onClick={onApprove}
-            >
+            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onApprove}>
               Approuver →
             </button>
           ) : null}
 
           {status === 'approved' ? (
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
-              onClick={onActivate}
-            >
+            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onActivate}>
               Activer →
             </button>
           ) : null}
 
-          <button
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10"
-            onClick={onDelete}
-          >
+          <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10" onClick={onDelete}>
             Supprimer
           </button>
         </div>
@@ -667,11 +751,11 @@ const locationVal =
           <Section title="Identité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Nom" value={fullName} />
-<InfoRow label="Email" value={email} />
-<InfoRow label="Téléphone" value={phone} />
-<InfoRow label="Langues" value={languages} />
-<InfoRow label="Localisation" value={locationLabel || toDisplay(locationVal) || '—'} />
-<InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
+              <InfoRow label="Email" value={email} />
+              <InfoRow label="Téléphone" value={phone} />
+              <InfoRow label="Langues" value={languages} />
+              <InfoRow label="Localisation" value={locationLabel || toDisplay(locationVal) || '—'} />
+              <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
           </Section>
 
@@ -681,7 +765,7 @@ const locationVal =
               <InfoRow label="Niveau" value={humanizeSeniority(seniority)} />
               <InfoRow label="Spécialités" value={specialties} />
               <InfoRow label="Cuisines / styles" value={cuisines} />
-              <InfoRow label="Services" value={services} />
+              <InfoRow label="Services" value={servicesDisplay} />
             </div>
 
             <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -695,8 +779,8 @@ const locationVal =
               <InfoRow label="Tarif" value={pricing} />
               <InfoRow label="Min convives" value={minGuests} />
               <InfoRow label="Max convives" value={maxGuests} />
-<InfoRow label="Disponibilité" value={formatAvailability(availability)} />
-              <InfoRow label="Mobilité" value={mobility} />
+              <InfoRow label="Disponibilité" value={formatAvailability(availability)} />
+              <InfoRow label="Mobilité" value={mobilityDisplay} />
               <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
             </div>
           </Section>
@@ -719,9 +803,7 @@ const locationVal =
           </Section>
 
           <details className="rounded-xl border border-white/10 bg-white/5">
-            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-white/80">
-              Voir JSON (debug)
-            </summary>
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-white/80">Voir JSON (debug)</summary>
             <pre className="text-xs text-white/70 p-3 overflow-auto">{JSON.stringify(profile, null, 2)}</pre>
           </details>
         </div>
