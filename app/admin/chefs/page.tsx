@@ -80,7 +80,6 @@ export default function AdminChefsPage() {
   setSource('db');
   setLoading(false);
   return;
-}
 };
 
 
