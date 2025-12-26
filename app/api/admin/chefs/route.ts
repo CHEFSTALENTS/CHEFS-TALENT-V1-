@@ -1,17 +1,28 @@
+// app/api/admin/chefs/route.ts
+
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
+const TABLE = 'chef_profiles';
 
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !serviceKey) return null;
+  const missing = { url: !url, serviceKey: !serviceKey };
 
-  return createClient(url, serviceKey, { auth: { persistSession: false } });
+  if (!url || !serviceKey) {
+    return { supabase: null as any, missing };
+  }
+
+  const supabase = createClient(url, serviceKey, {
+    auth: { persistSession: false },
+  });
+
+  return { supabase, missing: null as any };
 }
 
 function isAdminRequest(req: Request) {
@@ -25,14 +36,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = supabaseAdmin();
+    const { supabase, missing } = supabaseAdmin();
     if (!supabase) {
-      return NextResponse.json({ error: 'Missing SUPABASE env' }, { status: 500 });
+      return NextResponse.json({ error: 'Missing env', missing }, { status: 500 });
     }
 
-    // ✅ table correcte + order safe
+    // ✅ Table correcte (chef_profiles) + tri safe
     const { data, error } = await supabase
-      .from('chef_profiles')
+      .from(TABLE)
       .select('user_id,email,profile')
       .order('email', { ascending: true });
 
@@ -42,7 +53,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ chefs: data ?? [] });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'GET failed' }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'GET /api/admin/chefs failed' }, { status: 500 });
   }
 }
 
@@ -64,19 +75,20 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Missing env', missing }, { status: 500 });
     }
 
+    // ✅ On met à jour dans chef_profiles (pas profiles)
+    // Le champ "status" doit exister dans chef_profiles, sinon adapte.
     const { error } = await supabase
-      .from('profiles')
-      .update({ status, updated_at: new Date().toISOString() })
+      .from(TABLE)
+      .update({ status })
       .eq('email', email);
 
-    if (error) throw error;
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'PUT /api/admin/chefs failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || 'PUT /api/admin/chefs failed' }, { status: 500 });
   }
 }
 
@@ -95,14 +107,15 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Missing env', missing }, { status: 500 });
     }
 
-    const { error } = await supabase.from('profiles').delete().eq('email', email);
-    if (error) throw error;
+    // ✅ Suppression dans chef_profiles (pas profiles)
+    const { error } = await supabase.from(TABLE).delete().eq('email', email);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'DELETE /api/admin/chefs failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || 'DELETE /api/admin/chefs failed' }, { status: 500 });
   }
 }
