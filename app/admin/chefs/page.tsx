@@ -1,5 +1,10 @@
 'use client';
 
+const API_BASE =
+  typeof window === 'undefined'
+    ? ''
+    : window.location.origin;
+
 import { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
@@ -21,12 +26,37 @@ type ApiChef = ChefUser & {
   lastName?: string;
 };
 
+const ADMIN_EMAIL = 'thomas@chef-talents.com';
+
+// Base URL absolue côté navigateur
+const API_BASE =
+  typeof window === 'undefined'
+    ? ''
+    : window.location.origin;
+
+function toAbsoluteApiUrl(input: RequestInfo) {
+  // si on passe déjà une URL absolue (http/https), on ne touche pas
+  const s = typeof input === 'string' ? input : '';
+  if (s.startsWith('http://') || s.startsWith('https://')) return s;
+
+  // si c'est une string relative du type "/api/..." ou "api/..."
+  if (typeof input === 'string') {
+    const path = input.startsWith('/') ? input : `/${input}`;
+    return `${API_BASE}${path}`;
+  }
+
+  // si ce n'est pas une string (Request object), on renvoie tel quel
+  return input;
+}
+
 async function fetchJson<T>(input: RequestInfo, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(input, {
+  const urlOrReq = toAbsoluteApiUrl(input);
+
+  const res = await fetch(urlOrReq as any, {
     ...init,
     headers: {
       ...(init.headers || {}),
-      'x-admin-email': 'thomas@chef-talents.com',
+      'x-admin-email': ADMIN_EMAIL,
     },
   });
 
@@ -44,33 +74,33 @@ export default function AdminChefsPage() {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [source, setSource] = useState<'db' | 'localStorage'>('db');
 
- const refresh = async () => {
-  setLoading(true);
-  setErr(null);
+  const refresh = async () => {
+    setLoading(true);
+    setErr(null);
 
-  try {
-    const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
-    const list = Array.isArray(json?.chefs) ? json.chefs : [];
+    try {
+      const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
+      const list = Array.isArray(json?.chefs) ? json.chefs : [];
 
-    const filtered = (list ?? []).filter(
-      u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
-    );
+      const filtered = (list ?? []).filter(
+        u => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()
+      );
 
-    setChefs(filtered);
-    setSource('db');
-  } catch (e: any) {
-    setErr(`API admin KO: ${e?.message || String(e)}`);
-    setChefs([]);
-    setSource('db');
-  } finally {
-    setLoading(false);
-  }
-};
+      setChefs(filtered);
+      setSource('db');
+    } catch (e: any) {
+      setErr(`API admin KO: ${e?.message || String(e)}`);
+      setChefs([]);
+      setSource('db');
+    } finally {
+      setLoading(false);
+    }
+  };
 
- useEffect(() => {
-  refresh();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateStatus = async (email: string, status: 'approved' | 'active') => {
     setErr(null);
@@ -80,14 +110,10 @@ export default function AdminChefsPage() {
       return;
     }
 
-    // API d’abord
     try {
       await fetchJson('/api/admin/chefs', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: safeEmail, status }),
       });
       await refresh();
@@ -96,8 +122,6 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] update via API failed, fallback localStorage', e?.message || e);
     }
 
-    // fallback legacy
-    // ⚠️ si ton auth.updateChefStatus attend un id, adapte
     await auth.updateChefStatus(safeEmail as any, status as any);
     await refresh();
   };
@@ -112,11 +136,9 @@ export default function AdminChefsPage() {
       return;
     }
 
-    // API d’abord
     try {
       await fetchJson(`/api/admin/chefs?email=${encodeURIComponent(safeEmail)}`, {
         method: 'DELETE',
-        headers: { 'x-admin-email': ADMIN_EMAIL },
       });
       await refresh();
       return;
@@ -124,24 +146,12 @@ export default function AdminChefsPage() {
       console.warn('[AdminChefs] delete via API failed, fallback localStorage', e?.message || e);
     }
 
-    // fallback legacy
     await auth.deleteChefAccount(safeEmail as any);
     await refresh();
   };
 
-  const counts = useMemo(() => {
-    const pending = chefs.filter(c => String(c.status) === 'pending_validation').length;
-    const approved = chefs.filter(c => String(c.status) === 'approved').length;
-    const active = chefs.filter(c => String(c.status) === 'active').length;
-    return { pending, approved, active, all: chefs.length };
-  }, [chefs]);
-
-  const view = useMemo(() => {
-    const priority: Record<string, number> = {
-      pending_validation: 0,
-      approved: 1,
-      active: 2,
-    };
+  // ... le reste de ton fichier ne change pas
+}
 
     const needle = q.trim().toLowerCase();
 
