@@ -85,9 +85,23 @@ function formatDateTime(iso?: any) {
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
-function formatAvailability(v: any): string {
-  if (!v) return '—';
 
+function formatDate(iso?: any) {
+  if (!iso) return '';
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function formatAvailability(v: any): string {
+  const fmt = (iso: any) => {
+    if (!iso) return '';
+    const d = new Date(String(iso));
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  };
+
+  if (!v) return '—';
   if (typeof v === 'string') return v;
 
   if (typeof v === 'object' && !Array.isArray(v)) {
@@ -103,21 +117,21 @@ function formatAvailability(v: any): string {
 
     if (preferredPeriods.length) {
       const mapPeriod = (p: string) =>
-        p === 'season_summer' ? 'Été' :
-        p === 'season_winter' ? 'Hiver' :
-        p === 'season_spring' ? 'Printemps' :
-        p === 'season_autumn' ? 'Automne' :
-        p;
+        p === 'season_summer' ? 'Été'
+        : p === 'season_winter' ? 'Hiver'
+        : p === 'season_spring' ? 'Printemps'
+        : p === 'season_autumn' ? 'Automne'
+        : p;
       parts.push(`Périodes : ${preferredPeriods.map(mapPeriod).join(', ')}`);
     }
 
     if (nextAvailableFrom) {
-      parts.push(`Prochaine dispo : ${formatDate(nextAvailableFrom) || String(nextAvailableFrom)}`);
+      parts.push(`Prochaine dispo : ${fmt(nextAvailableFrom) || String(nextAvailableFrom)}`);
     }
 
     if (unavailableDates.length) {
       const cleaned = unavailableDates
-        .map((d: any) => formatDate(d) || String(d))
+        .map((d: any) => fmt(d) || String(d))
         .slice(0, 6);
       const more = unavailableDates.length > 6 ? ` (+${unavailableDates.length - 6})` : '';
       parts.push(`Indisponible : ${cleaned.join(', ')}${more}`);
