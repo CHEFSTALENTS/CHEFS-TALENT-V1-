@@ -324,8 +324,9 @@ export default function AdminChefsPage() {
   }, [chefs, q, filter]);
 
   return (
-     <PageTitle
+    <PageTitle
   title="Chefs"
+  subtitle="Pipeline : À valider → Approuvé → Actif (tri : statut → score → date)"
   right={
     <>
       <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
