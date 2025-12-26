@@ -510,19 +510,62 @@ function ChefDrawer({
           </button>
         </div>
 
-        <div className="mt-6">
-          <div className="text-white/80 font-medium mb-2">Informations</div>
-
-          {loading ? (
-            <div className="text-white/60 text-sm">Chargement du détail…</div>
-          ) : (
+               <div className="mt-6 space-y-5">
+          {/* IDENTITÉ */}
+          <Section title="Identité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Téléphone" value={phone} />
-              <InfoRow label="Langues" value={languages} />
-              <InfoRow label="Type de profil" value={profileType} />
-              <InfoRow label="Séniorité" value={seniority} />
-              <InfoRow label="Dernière mise à jour" value={String(updatedAt)} />
+              <InfoRow label="Nom" value={fullName} />
+              <InfoRow label="Email" value={email || '—'} />
+              <InfoRow label="Téléphone" value={String(phone || '—')} />
+              <InfoRow label="Langues" value={String(languages || '—')} />
+              <InfoRow label="Localisation" value={String(location || '—')} />
+              <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
+          </Section>
+
+          {/* PROFIL */}
+          <Section title="Profil">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoRow label="Type de profil" value={humanizeProfileType(profileType)} />
+              <InfoRow label="Niveau" value={humanizeSeniority(seniority)} />
+              <InfoRow label="Spécialités" value={String(specialties || '—')} />
+              <InfoRow label="Styles / Cuisines" value={String(cuisines || '—')} />
+            </div>
+
+            {bio ? (
+              <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="text-xs text-white/45">Bio</div>
+                <div className="text-sm text-white/85 mt-1 whitespace-pre-wrap">{String(bio)}</div>
+              </div>
+            ) : (
+              <div className="mt-3 text-xs text-white/45">Bio : —</div>
+            )}
+          </Section>
+
+          {/* PRIX & DISPO */}
+          <Section title="Prix & disponibilité">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoRow label="Tarif" value={String(pricing || 'Non renseigné')} />
+              <InfoRow label="Minimum convives" value={String(minGuests || '—')} />
+              <InfoRow label="Disponibilité" value={String(availability || '—')} />
+              <InfoRow label="Mobilité" value={String(mobility || '—')} />
+            </div>
+          </Section>
+
+          {/* CHECKLIST */}
+          <Section title="Vérifications">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoRow label="Bio" value={bio ? '✅ OK' : '❌ Manquante'} />
+              <InfoRow label="Photos" value={hasPhotos ? '✅ OK' : '❌ Manquantes'} />
+              <InfoRow label="Spécialités" value={specialties ? '✅ OK' : '❌ Manquantes'} />
+              <InfoRow label="Tarif" value={pricing ? '✅ OK' : '❌ Non renseigné'} />
+            </div>
+
+            <div className="mt-3 text-xs text-white/45">
+              Dernière mise à jour : {humanizeDateTime(updatedAt)}
+            </div>
+          </Section>
+        </div>
           )}
         </div>
 
