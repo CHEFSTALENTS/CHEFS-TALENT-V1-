@@ -7,6 +7,27 @@ import { computeChefScore } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
+const [selected, setSelected] = useState<ApiChef | null>(null);
+const [detail, setDetail] = useState<any | null>(null);
+const [detailLoading, setDetailLoading] = useState(false);
+
+const openChef = async (c: ApiChef) => {
+  setSelected(c);
+  setDetail(null);
+  if (!c?.email) return;
+
+  setDetailLoading(true);
+  try {
+    const json = await fetchJson<{ chef: ApiChef & { profile: any } }>(
+      `/api/admin/chefs/${encodeURIComponent(String(c.email).toLowerCase())}`
+    );
+    setDetail(json?.chef || null);
+  } catch (e: any) {
+    setErr(`Impossible de charger le détail : ${e?.message || e}`);
+  } finally {
+    setDetailLoading(false);
+  }
+};
 
 type FilterKey = 'all' | 'pending' | 'approved' | 'active';
 
@@ -268,8 +289,13 @@ computeChefScore(c.profile ?? {}).score ?? 0
       const createdIso = (c.createdAt || c.created_at || '') as string;
 
       return (
-        <tr key={String(c.email || fullName)} className="border-t border-white/10 hover:bg-white/5 transition">
-          <td className="p-3">
+<tr
+  key={String(c.email || fullName)}
+  className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
+  onClick={() => openChef(c)}
+>
+  onClick={(e) => { e.stopPropagation(); updateStatus(String(c.email || ''), 'approved'); }}
+  <td className="p-3">
             <div className="text-white font-medium truncate">{fullName}</div>
             <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
           </td>
@@ -321,6 +347,81 @@ computeChefScore(c.profile ?? {}).score ?? 0
   )}
 </tbody>
           </table>
+          {selected ? (
+  <div className="fixed inset-0 z-50">
+    {/* overlay */}
+    <div
+      className="absolute inset-0 bg-black/60"
+      onClick={() => { setSelected(null); setDetail(null); }}
+    />
+    {/* panel */}
+    <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-neutral-950 border-l border-white/10 p-5 overflow-auto">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-white text-lg font-semibold">
+            {detail?.profile?.firstName || selected.firstName || ''} {detail?.profile?.lastName || selected.lastName || ''}
+          </div>
+          <div className="text-white/60 text-sm">{selected.email}</div>
+          <div className="text-white/40 text-xs mt-1">
+            Inscrit : {formatDate(detail?.createdAt || selected.createdAt || selected.created_at) || '—'}
+          </div>
+        </div>
+
+        <button
+          className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+          onClick={() => { setSelected(null); setDetail(null); }}
+        >
+          Fermer
+        </button>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <ScorePill score={computeChefScore((detail?.profile ?? selected.profile) ?? {}).score ?? 0} />
+        <div className="ml-2">
+          <ChefStatusBadge status={String(detail?.profile?.status || selected.status || '')} />
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        {String(detail?.profile?.status || selected.status) === 'pending_validation' ? (
+          <button
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
+            onClick={async () => {
+              await updateStatus(String(selected.email || ''), 'approved');
+              await openChef(selected); // refresh drawer
+            }}
+          >
+            Approuver →
+          </button>
+        ) : null}
+
+        {String(detail?.profile?.status || selected.status) === 'approved' ? (
+          <button
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
+            onClick={async () => {
+              await updateStatus(String(selected.email || ''), 'active');
+              await openChef(selected);
+            }}
+          >
+            Activer →
+          </button>
+        ) : null}
+      </div>
+
+      <div className="mt-6">
+        <div className="text-white/80 font-medium mb-2">Profil complet</div>
+
+        {detailLoading ? (
+          <div className="text-white/60 text-sm">Chargement du détail…</div>
+        ) : (
+          <pre className="text-xs text-white/70 bg-white/5 border border-white/10 rounded-xl p-3 overflow-auto">
+{JSON.stringify(detail?.profile ?? selected.profile ?? {}, null, 2)}
+          </pre>
+        )}
+      </div>
+    </div>
+  </div>
+) : null}
         </div>
 
         <div className="p-3 border-t border-white/10 text-xs text-white/45">{view.length} résultat(s)</div>
