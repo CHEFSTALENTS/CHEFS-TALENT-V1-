@@ -5,7 +5,13 @@ import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 import { computeChefScore } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
+import { supabase } from '@/lib/supabase';
 
+const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+const token = session?.access_token;
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 type FilterKey = 'all' | 'pending' | 'approved' | 'active';
@@ -43,10 +49,11 @@ export default function AdminChefsPage() {
 
     // 1) DB via API
     try {
-      const json = await fetchJson<any>('/api/admin/chefs', {
-        method: 'GET',
-        headers: { 'x-admin-email': ADMIN_EMAIL },
-      });
+      const json = await fetch('/api/admin/chefs', {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
 
       const list: ApiChef[] = Array.isArray(json) ? json : Array.isArray(json?.chefs) ? json.chefs : [];
 
