@@ -7,6 +7,7 @@ import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
 import { computeChefScore } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
+import { normalizeProfile, getNormalizedChef } from '@/app/admin/chefs/utils/normalizeProfile';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
