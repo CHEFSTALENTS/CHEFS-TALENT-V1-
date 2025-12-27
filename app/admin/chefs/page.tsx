@@ -279,8 +279,10 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-const getScore = (c: ApiChef) =>
-  computeChefScore(toChefProfileForScore((c as any).profile ?? c)).score ?? 0;
+const getScore = (c: ApiChef) => {
+  const profile = normalizeProfile((c as any).profile ?? c);
+  return computeChefScore(normalizeForScore(profile)).score ?? 0;
+};
     
 function ensureArray(v: any): any[] {
   if (!v) return [];
@@ -317,6 +319,31 @@ function normalizeForScore(profile: any) {
     pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
 
     images: imagesArr,
+  };
+}
+
+    function normalizeForScore(profile: any) {
+  const p = normalizeProfile(profile);
+
+  const city =
+    p.city ??
+    p.baseCity ??
+    p.location?.city ??
+    (typeof p.location?.baseCity === 'string'
+      ? p.location.baseCity.split(',')[0].trim()
+      : undefined);
+
+  return {
+    name: p.name || `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim(),
+    phone: p.phone,
+    city,
+    bio: p.bio,
+    cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
+    specialties: Array.isArray(p.specialties) ? p.specialties : [],
+    languages: Array.isArray(p.languages) ? p.languages : [],
+    portfolioUrl: p.portfolioUrl,
+    instagram: p.instagram,
+    website: p.website,
   };
 }
     return [...chefs]
