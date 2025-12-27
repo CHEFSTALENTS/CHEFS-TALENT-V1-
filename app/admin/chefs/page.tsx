@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { auth } from '@/services/storage';
 import type { ChefUser } from '@/types';
-import { computeChefScore } from '@/lib/chefScore';
+import { computeChefScore, type ChefProfile } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 import { normalizeProfile, getNormalizedChef } from '@/app/admin/chefs/utils/normalizeProfile';
 
@@ -138,6 +138,73 @@ function formatAvailability(v: any): string {
   }
 
   return String(v);
+}
+
+/* -------------------- scoring helpers (UNIQUE) -------------------- */
+
+function ensureArray(v: any): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map((x) => String(x ?? '').trim()).filter(Boolean);
+
+  if (typeof v === 'string') {
+    return v
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof v === 'object') {
+    const t = String((v as any).label ?? (v as any).value ?? (v as any).name ?? (v as any).title ?? (v as any).text ?? '')
+      .trim();
+    return t ? [t] : [];
+  }
+
+  return [];
+}
+
+/**
+ * Convertit n'importe quel "raw chef/profile" vers le format EXACT attendu par lib/chefScore.ts (ChefProfile)
+ */
+function toChefProfileForScore(raw: any): ChefProfile {
+  const p: any = normalizeProfile(raw);
+
+  // City: peut être string, ou {baseCity:"Paris, Londres, ..."}, ou p.baseCity/p.city, etc.
+  const cityFromLocationObject =
+    typeof p.location === 'object' && p.location
+      ? (p.location.city ?? p.location.baseCity ?? p.location.ville ?? '')
+      : '';
+
+  const cityCandidate =
+    p.city ??
+    p.baseCity ??
+    cityFromLocationObject ??
+    (typeof p.location === 'string' ? p.location : '');
+
+  // si "Paris, Londres, " -> garder la première ville (cohérent avec ton portail)
+  const city = String(cityCandidate ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)[0] ?? '';
+
+  const name =
+    String(p.name ?? `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() ?? '')
+      .trim();
+
+  return {
+    name,
+    phone: String(p.phone ?? '').trim(),
+    city: city.trim(),
+    country: String(p.country ?? (typeof p.location === 'object' ? p.location?.country : '') ?? '').trim(),
+    bio: String(p.bio ?? '').trim(),
+    yearsExperience: (typeof p.yearsExperience === 'number' ? p.yearsExperience : null) as any,
+    cuisines: ensureArray(p.cuisines),
+    specialties: ensureArray(p.specialties),
+    languages: ensureArray(p.languages),
+    instagram: String(p.instagram ?? '').trim(),
+    website: String(p.website ?? '').trim(),
+    portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
+    avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? p.avatar ?? '').trim(),
+  };
 }
 
 /* -------------------- page -------------------- */
@@ -279,51 +346,9 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-const getScore = (c: ApiChef) => {
-  const profile = normalizeProfile((c as any).profile ?? c);
-  return computeChefScore(normalizeForScore(profile)).score ?? 0;
-};
-    
-function ensureArray(v: any): any[] {
-  if (!v) return [];
-  if (Array.isArray(v)) return v;
-  if (typeof v === 'string') {
-    return v.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  // objets type {label:""} ou {value:""} etc.
-  if (typeof v === 'object') {
-    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
-    return t ? [t] : [];
-  }
-  return [];
-}
+    const getScore = (c: ApiChef) =>
+      computeChefScore(toChefProfileForScore((c as any).profile ?? c)).score ?? 0;
 
-
-
-    function normalizeForScore(profile: any) {
-  const p = normalizeProfile(profile);
-
-  const city =
-    p.city ??
-    p.baseCity ??
-    p.location?.city ??
-    (typeof p.location?.baseCity === 'string'
-      ? p.location.baseCity.split(',')[0].trim()
-      : undefined);
-
-  return {
-    name: p.name || `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim(),
-    phone: p.phone,
-    city,
-    bio: p.bio,
-    cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
-    specialties: Array.isArray(p.specialties) ? p.specialties : [],
-    languages: Array.isArray(p.languages) ? p.languages : [],
-    portfolioUrl: p.portfolioUrl,
-    instagram: p.instagram,
-    website: p.website,
-  };
-}
     return [...chefs]
       .filter((c) => {
         const st = String((c as any).status || '');
@@ -376,7 +401,9 @@ function ensureArray(v: any): any[] {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
             Source :{' '}
-            <span className="text-white/85 font-medium">{source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}</span>
+            <span className="text-white/85 font-medium">
+              {source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}
+            </span>
             {source === 'localStorage' ? (
               <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>
             ) : null}
@@ -434,46 +461,9 @@ function ensureArray(v: any): any[] {
                 </tr>
               ) : (
                 view.map((c) => {
-                  const { profile, email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
-const score = computeChefScore(normalizeForScore((c as any).profile ?? c) as any).score ?? 0;
-                  
-                  function ensureArray(v: any): any[] {
-  if (!v) return [];
-  if (Array.isArray(v)) return v;
-  if (typeof v === 'string') {
-    return v.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  // objets type {label:""} ou {value:""} etc.
-  if (typeof v === 'object') {
-    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
-    return t ? [t] : [];
-  }
-  return [];
-}
+                  const { email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
+                  const score = computeChefScore(toChefProfileForScore((c as any).profile ?? c)).score ?? 0;
 
-function normalizeForScore(profile: any) {
-  const p = normalizeProfile(profile);
-
-  const imagesArr = Array.isArray(p.images) ? p.images
-    : Array.isArray(p.photos) ? p.photos
-    : Array.isArray(p.gallery) ? p.gallery
-    : [];
-
-  return {
-    ...p,
-    languages: ensureArray(p.languages),
-    specialties: ensureArray(p.specialties),
-    cuisines: ensureArray(p.cuisines),
-    services: ensureArray(p.services),
-    mobility: ensureArray(p.mobility),
-
-    // pricing fallback
-    dailyRate: p.dailyRate ?? p.rateDay ?? p.pricePerDay ?? p.rate_day,
-    pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
-
-    images: imagesArr,
-  };
-}
                   return (
                     <tr
                       key={email || fullName}
@@ -593,7 +583,7 @@ function ChefDrawer({
   const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
   const profile = normalizeProfile(raw);
 
-  // ✅ score UNIQUE (garde celui-ci)
+  // ✅ score UNIQUE + identique à la liste
   const score = computeChefScore(toChefProfileForScore(raw)).score ?? 0;
 
   const email = String(profile.email ?? (selected as any).email ?? '').trim();
