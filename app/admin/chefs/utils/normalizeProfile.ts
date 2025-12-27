@@ -1,7 +1,49 @@
 // app/admin/chefs/utils/normalizeProfile.ts
 
 import type { ChefUser } from '@/types';
+import type { ChefProfile } from '@/lib/chefScore';
 
+function ensureArray(v: any): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map(String).map(s => s.trim()).filter(Boolean);
+  if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
+  if (typeof v === 'object') {
+    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
+    return t ? [t] : [];
+  }
+  return [];
+}
+
+function toChefProfileForScore(raw: any): ChefProfile {
+  // ici tu peux utiliser ton normalizeProfile(raw) si tu veux,
+  // mais ensuite il faut MAPPER vers ChefProfile
+  const p = normalizeProfile(raw);
+
+  const firstName = String(p.firstName ?? '').trim();
+  const lastName = String(p.lastName ?? '').trim();
+  const name = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : String(p.name ?? '').trim();
+
+  // ta "location" peut être "Paris, Londres" -> on prend la 1ère ville pour city
+  const loc = typeof p.location === 'string' ? p.location : '';
+  const city = String(p.city ?? p.baseCity ?? loc.split(',')[0] ?? '').trim();
+
+  return {
+    name,
+    phone: String(p.phone ?? '').trim(),
+    city,
+    country: String(p.country ?? '').trim(),
+    bio: String(p.bio ?? '').trim(),
+
+    cuisines: ensureArray(p.cuisines),
+    specialties: ensureArray(p.specialties),
+    languages: ensureArray(p.languages),
+
+    instagram: String(p.instagram ?? p.instagramUrl ?? '').trim(),
+    website: String(p.website ?? p.site ?? '').trim(),
+    portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? p.driveUrl ?? p.drive ?? '').trim(),
+    avatarUrl: String(p.avatarUrl ?? p.avatar ?? '').trim(),
+  };
+}
 /* -------------------- types -------------------- */
 
 export type AdminChefLike = ChefUser & {
