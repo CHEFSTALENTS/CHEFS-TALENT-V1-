@@ -91,48 +91,6 @@ function firstNonEmpty<T>(...vals: T[]): T | undefined {
   }
   return undefined;
 }
-
-function unwrapText(v: any): string {
-  if (v === null || v === undefined) return '';
-  if (typeof v === 'string') return v;
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-  if (Array.isArray(v)) {
-    const parts = v
-      .map((x) => {
-        if (x === null || x === undefined) return '';
-        if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return String(x);
-        if (isPlainObject(x)) return String(x.label ?? x.name ?? x.title ?? x.value ?? x.text ?? x.id ?? '');
-        return '';
-      })
-      .filter(Boolean);
-    return parts.join(', ');
-  }
-  if (isPlainObject(v)) {
-    return String(v.value ?? v.text ?? v.label ?? v.name ?? v.title ?? '');
-  }
-  return String(v);
-}
-
-function isBrowserLocationObject(v: any) {
-  return isPlainObject(v) && typeof v.href === 'string' && typeof v.protocol === 'string' && typeof v.host === 'string';
-}
-
-function normalizeProfile(raw: any) {
-  const p = isPlainObject(raw) ? { ...raw } : {};
-
-  const firstName = firstNonEmpty(p.firstName, p.first_name);
-  const lastName = firstNonEmpty(p.lastName, p.last_name);
-  const email = firstNonEmpty(p.email);
-
-  const profileType = firstNonEmpty(p.profileType, p.profile_type, p.type);
-  const seniorityLevel = firstNonEmpty(
-    p.seniorityLevel,
-    p.seniority_level,
-    p.seniority,
-    p.experienceLevel,
-    p.experience_level
-  );
-
   const phone = firstNonEmpty(p.phone, p.phoneNumber, p.phone_number, p.tel, p.telephone);
 
   const languages = firstNonEmpty(p.languages, p.langues);
@@ -551,15 +509,15 @@ export default function AdminChefsPage() {
                 </tr>
               ) : (
                 view.map((c) => {
-                  const { profile, email, fullName, createdIso, status } = getNormalizedChef(c, null);
-                  const score = computeChefScore(profile as any).score ?? 0;
+  const { profile, email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
+  const score = computeChefScore(profile as any).score ?? 0;
 
-                  return (
-                    <tr
-                      key={email || String((c as any).user_id || fullName)}
-                      className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
-                      onClick={() => openChef(c)}
-                    >
+  return (
+    <tr
+      key={email || fullName}
+      className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
+      onClick={() => openChef(c)}
+    >
                       <td className="p-3">
                         <div className="text-white font-medium truncate">{fullName}</div>
                         <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
