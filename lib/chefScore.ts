@@ -19,7 +19,7 @@ export function computeChefScore(p: ChefProfile) {
     { key: 'name', ok: !!p.name?.trim(), weight: 1 },
     { key: 'phone', ok: !!p.phone?.trim(), weight: 1 },
     { key: 'city', ok: !!p.city?.trim(), weight: 1 },
-    { key: 'bio', ok: (p.bio?.trim()?.length ?? 0) >= 80, weight: 2 },
+    { key: 'bio', ok: (p.bio?.trim()?.length ?? 0) >= 30, weight: 2 },
     { key: 'cuisines', ok: (p.cuisines?.length ?? 0) >= 1, weight: 1 },
     { key: 'specialties', ok: (p.specialties?.length ?? 0) >= 1, weight: 1 },
     { key: 'languages', ok: (p.languages?.length ?? 0) >= 1, weight: 1 },
