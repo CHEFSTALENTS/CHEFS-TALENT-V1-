@@ -280,7 +280,7 @@ export default function AdminChefsPage() {
     const needle = q.trim().toLowerCase();
 
 const getScore = (c: ApiChef) =>
-  computeChefScore(normalizeForScore((c as any).profile ?? c) as any).score ?? 0;
+  computeChefScore(toChefProfileForScore((c as any).profile ?? c)).score ?? 0;
     
 function ensureArray(v: any): any[] {
   if (!v) return [];
@@ -586,7 +586,8 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const raw = (detail?.profile ?? detail ?? (selected as any).profile ?? selected ?? {}) as any;
+ const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
+const score = computeChefScore(toChefProfileForScore(raw)).score ?? 0;
   const profile = normalizeProfile(raw);
 
   const email = String(profile.email ?? (selected as any).email ?? '').trim();
