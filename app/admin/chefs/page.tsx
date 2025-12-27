@@ -1,3 +1,5 @@
+// app/admin/chefs/page.tsx
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -72,6 +74,7 @@ function toDisplay(v: any): string {
   }
   return String(v);
 }
+
 function firstNonEmpty<T>(...vals: T[]): T | undefined {
   for (const v of vals) {
     if (v === null || v === undefined) continue;
@@ -93,7 +96,6 @@ function unwrapText(v: any): string {
   if (typeof v === 'string') return v;
   if (typeof v === 'number' || typeof v === 'boolean') return String(v);
   if (Array.isArray(v)) {
-    // array de strings ou d'objets -> join intelligent
     const parts = v
       .map((x) => {
         if (x === null || x === undefined) return '';
@@ -105,32 +107,30 @@ function unwrapText(v: any): string {
     return parts.join(', ');
   }
   if (isPlainObject(v)) {
-    // cas typiques: {value:""}, {text:""}, {label:""}
     return String(v.value ?? v.text ?? v.label ?? v.name ?? v.title ?? '');
   }
   return String(v);
 }
 
 function isBrowserLocationObject(v: any) {
-  // ton bug “Localisation = { href: ..., protocol: ..., host: ... }”
-  return (
-    isPlainObject(v) &&
-    typeof v.href === 'string' &&
-    typeof v.protocol === 'string' &&
-    typeof v.host === 'string'
-  );
+  return isPlainObject(v) && typeof v.href === 'string' && typeof v.protocol === 'string' && typeof v.host === 'string';
 }
 
 function normalizeProfile(raw: any) {
   const p = isPlainObject(raw) ? { ...raw } : {};
 
-  // Remap snake_case -> camelCase (sans casser ce que tu as déjà)
   const firstName = firstNonEmpty(p.firstName, p.first_name);
   const lastName = firstNonEmpty(p.lastName, p.last_name);
   const email = firstNonEmpty(p.email);
 
   const profileType = firstNonEmpty(p.profileType, p.profile_type, p.type);
-  const seniorityLevel = firstNonEmpty(p.seniorityLevel, p.seniority_level, p.seniority, p.experienceLevel, p.experience_level);
+  const seniorityLevel = firstNonEmpty(
+    p.seniorityLevel,
+    p.seniority_level,
+    p.seniority,
+    p.experienceLevel,
+    p.experience_level
+  );
 
   const phone = firstNonEmpty(p.phone, p.phoneNumber, p.phone_number, p.tel, p.telephone);
 
@@ -138,15 +138,12 @@ function normalizeProfile(raw: any) {
   const specialties = firstNonEmpty(p.specialties, p.speciality);
   const cuisines = firstNonEmpty(p.cuisines, p.cuisineTypes, p.cuisine_types, p.styles, p.style);
 
-  // BIO : peut être string ou objet {value/text/...}
   const bioRaw = firstNonEmpty(p.bio, p.about, p.description, p.biography, p.bio_long, p.bioLong);
   const bio = unwrapText(bioRaw);
 
-  // SERVICES : peut être services ou service_types etc.
   const servicesRaw = firstNonEmpty(p.services, p.serviceTypes, p.service_types);
   const services = Array.isArray(servicesRaw) ? servicesRaw : unwrapText(servicesRaw);
 
-  // MOBILITÉ : le portail peut stocker coverage_zones / zones / radius / travel...
   const mobilityRaw = firstNonEmpty(
     p.mobility,
     p.travel,
@@ -159,25 +156,13 @@ function normalizeProfile(raw: any) {
   );
   const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
 
-  // PHOTOS
   const images = firstNonEmpty(p.photos, p.images, p.gallery);
 
-  // LOCATION: ignorer l’objet window.location si présent
-  const locationRaw = firstNonEmpty(
-    p.location,
-    p.baseCity,
-    p.base_city,
-    p.city,
-    p.ville,
-    p.address
-  );
+  const locationRaw = firstNonEmpty(p.location, p.baseCity, p.base_city, p.city, p.ville, p.address);
+  const location = isBrowserLocationObject(locationRaw)
+    ? firstNonEmpty(p.baseCity, p.base_city, p.city, p.ville, p.address)
+    : locationRaw;
 
-  const location =
-    isBrowserLocationObject(locationRaw)
-      ? firstNonEmpty(p.baseCity, p.base_city, p.city, p.ville, p.address)
-      : locationRaw;
-
-  // Dates
   const created_at = firstNonEmpty(p.created_at, p.createdAt);
   const updated_at = firstNonEmpty(p.updated_at, p.updatedAt);
 
@@ -201,6 +186,36 @@ function normalizeProfile(raw: any) {
     updated_at,
   };
 }
+
+function getNormalizedChef(c: ApiChef, detail: any | null) {
+  const raw = (detail?.profile ?? detail ?? (c as any)?.profile ?? c ?? {}) as any;
+  const profile = normalizeProfile(raw);
+
+  const email = String(firstNonEmpty(detail?.email, c.email, profile.email, '') || '')
+    .trim()
+    .toLowerCase();
+
+  const firstName = String(firstNonEmpty(detail?.firstName, (c as any).firstName, profile.firstName, '') || '').trim();
+  const lastName = String(firstNonEmpty(detail?.lastName, (c as any).lastName, profile.lastName, '') || '').trim();
+  const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
+
+  const createdIso = String(
+    firstNonEmpty(
+      detail?.createdAt,
+      detail?.created_at,
+      c.createdAt,
+      c.created_at,
+      profile.createdAt,
+      profile.created_at,
+      ''
+    ) || ''
+  );
+
+  const status = String(firstNonEmpty(detail?.status, (c as any).status, profile.status, '') || '');
+
+  return { profile, email, fullName, createdIso, status };
+}
+
 function formatDateTime(iso?: any) {
   if (!iso) return '';
   const d = new Date(String(iso));
@@ -267,7 +282,6 @@ function formatAvailability(v: any): string {
   return String(v);
 }
 
-
 /* -------------------- page -------------------- */
 
 export default function AdminChefsPage() {
@@ -316,11 +330,10 @@ export default function AdminChefsPage() {
     try {
       const json = await fetchJson<{ chefs: ApiChef[] }>('/api/admin/chefs');
       const list = Array.isArray(json?.chefs) ? json.chefs : [];
-
       const filtered = (list ?? []).filter((u) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase());
-
       setChefs(filtered);
       setSource('db');
+      setLoading(false);
       return;
     } catch (e: any) {
       console.warn('[AdminChefs] API failed, fallback localStorage', e?.message || e);
@@ -330,7 +343,6 @@ export default function AdminChefsPage() {
     try {
       const list = await (auth.getAllChefs?.() ?? Promise.resolve([]));
       const filtered = (list ?? []).filter((u: any) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase());
-
       setChefs(filtered as any);
       setSource('localStorage');
       setErr('API admin KO (fallback localStorage).');
@@ -344,7 +356,7 @@ export default function AdminChefsPage() {
   };
 
   useEffect(() => {
-    refresh().finally(() => setLoading(false));
+    refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -410,10 +422,10 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-   const getScore = (c: ApiChef) => {
-  const profile = normalizeProfile((c as any).profile ?? c);
-  return computeChefScore(profile as any).score ?? 0;
-};
+    const getScore = (c: ApiChef) => {
+      const { profile } = getNormalizedChef(c, null);
+      return computeChefScore(profile as any).score ?? 0;
+    };
 
     return [...chefs]
       .filter((c) => {
@@ -425,12 +437,13 @@ export default function AdminChefsPage() {
       })
       .filter((c) => {
         if (!needle) return true;
-        const { profile } = getNormalizedChef(c, null);
+        const { profile, email, fullName } = getNormalizedChef(c, null);
         const fn = String((c as any).firstName || profile.firstName || '').trim();
         const ln = String((c as any).lastName || profile.lastName || '').trim();
-        const fullName = `${fn} ${ln}`.toLowerCase();
-        const email = String((c as any).email || profile.email || '').toLowerCase();
-        return fullName.includes(needle) || email.includes(needle);
+        const full = `${fn} ${ln}`.toLowerCase();
+        const em = String((c as any).email || email || '').toLowerCase();
+        const nameFallback = String(fullName || '').toLowerCase();
+        return full.includes(needle) || em.includes(needle) || nameFallback.includes(needle);
       })
       .sort((a, b) => {
         const pa = priority[String(a.status)] ?? 99;
@@ -467,7 +480,9 @@ export default function AdminChefsPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
             Source :{' '}
-            <span className="text-white/85 font-medium">{source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}</span>
+            <span className="text-white/85 font-medium">
+              {source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}
+            </span>
             {source === 'localStorage' ? (
               <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>
             ) : null}
@@ -478,8 +493,18 @@ export default function AdminChefsPage() {
 
       <div className="flex flex-wrap gap-2">
         <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
-        <Segment label="À valider" active={filter === 'pending'} onClick={() => setFilter('pending')} badge={counts.pending} />
-        <Segment label="Approuvés" active={filter === 'approved'} onClick={() => setFilter('approved')} badge={counts.approved} />
+        <Segment
+          label="À valider"
+          active={filter === 'pending'}
+          onClick={() => setFilter('pending')}
+          badge={counts.pending}
+        />
+        <Segment
+          label="Approuvés"
+          active={filter === 'approved'}
+          onClick={() => setFilter('approved')}
+          badge={counts.approved}
+        />
         <Segment label="Actifs" active={filter === 'active'} onClick={() => setFilter('active')} badge={counts.active} />
       </div>
 
@@ -525,12 +550,12 @@ export default function AdminChefsPage() {
                 </tr>
               ) : (
                 view.map((c) => {
-                  const profile = normalizeProfile((c as any).profile ?? c);
-const score = computeChefScore(profile as any).score ?? 0;
+                  const { profile, email, fullName, createdIso, status } = getNormalizedChef(c, null);
+                  const score = computeChefScore(profile as any).score ?? 0;
 
                   return (
                     <tr
-                      key={String(email || fullName)}
+                      key={email || String((c as any).user_id || fullName)}
                       className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
                       onClick={() => openChef(c)}
                     >
@@ -555,7 +580,7 @@ const score = computeChefScore(profile as any).score ?? 0;
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(String(email || ''), 'approved');
+                                updateStatus(email, 'approved');
                               }}
                               disabled={!email}
                               className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -568,7 +593,7 @@ const score = computeChefScore(profile as any).score ?? 0;
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(String(email || ''), 'active');
+                                updateStatus(email, 'active');
                               }}
                               disabled={!email}
                               className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -580,7 +605,7 @@ const score = computeChefScore(profile as any).score ?? 0;
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              removeChef(String(email || ''));
+                              removeChef(email);
                             }}
                             disabled={!email}
                             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-red-200 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -645,95 +670,20 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
-const profile = normalizeProfile(raw);
-
-const email = String(firstNonEmpty(selected.email, profile.email, '') || '');
-const firstName = String(firstNonEmpty(profile.firstName, selected.firstName, '') || '');
-const lastName = String(firstNonEmpty(profile.lastName, selected.lastName, '') || '');
-const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
-
-const createdIso = String(
-  firstNonEmpty(
-    detail?.createdAt,
-    detail?.created_at,
-    selected.createdAt,
-    selected.created_at,
-    profile.createdAt,
-    profile.created_at,
-    profile.created_at,
-    ''
-  ) || ''
-);
-
-const status = String(firstNonEmpty(detail?.status, profile.status, selected.status, '') || '');
-const score = computeChefScore(profile as any).score ?? 0;
-
-// champs normalisés
-const phone = profile.phone;
-const languages = profile.languages;
-
-// Localisation propre (et sans l’objet window.location)
-const locationVal = profile.location;
-const locationLabel =
-  typeof locationVal === 'string'
-    ? locationVal
-    : locationVal && typeof locationVal === 'object'
-    ? [(locationVal as any).baseCity, (locationVal as any).city, (locationVal as any).ville, (locationVal as any).country]
-        .filter(Boolean)
-        .join(', ')
-    : null;
-
-const profileType = profile.profileType;
-const seniority = profile.seniorityLevel;
-
-const specialties = profile.specialties;
-const cuisines = profile.cuisines;
-
-// 🔥 ici on fixe ton “services/bio/mobility n’apparaissent pas”
-const services = profile.services; // déjà normalisé (string ou array)
-const bio = profile.bio;           // déjà normalisé en string
-const mobility = profile.mobility; // déjà normalisé (string ou array)
-
-const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
-const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
-const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
-
-const minGuests = profile.minGuests ?? profile.minimumGuests;
-const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
-
-const availability =
-  profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
-
-const photosArr = profile.photos ?? profile.images ?? profile.gallery;
-const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
-
-const updatedAt = profile.updatedAt ?? profile.updated_at ?? detail?.updatedAt ?? detail?.updated_at;
-
-// ✅ Checklist : bio est maintenant une string, donc le test devient fiable
-const checklist = {
-  identité: Boolean(fullName && email),
-  téléphone: Boolean(phone),
-  bio: Boolean(bio && String(bio).trim().length > 30),
-  langues: Boolean(Array.isArray(languages) ? languages.length : languages),
-  spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
-  tarifs: Boolean(dailyRate || pricePerPerson),
-  photos: Boolean(hasPhotos),
-};
-
-const checklistOk = Object.values(checklist).filter(Boolean).length;
-  
+  const { profile, email, fullName, createdIso, status } = getNormalizedChef(selected, detail);
   const score = computeChefScore(profile as any).score ?? 0;
 
   const phone = profile.phone;
   const languages = profile.languages;
 
-  const locationVal = profile.location ?? profile.baseCity ?? null;
+  const locationVal = profile.location;
   const locationLabel =
     typeof locationVal === 'string'
       ? locationVal
       : locationVal && typeof locationVal === 'object'
-      ? [locationVal.baseCity, locationVal.city, locationVal.ville, locationVal.country].filter(Boolean).join(', ')
+      ? [(locationVal as any).baseCity, (locationVal as any).city, (locationVal as any).ville, (locationVal as any).country]
+          .filter(Boolean)
+          .join(', ')
       : null;
 
   const profileType = profile.profileType;
@@ -748,25 +698,27 @@ const checklistOk = Object.values(checklist).filter(Boolean).length;
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
-  const dailyRate = profile.dailyRate;
-  const pricePerPerson = profile.pricePerPerson;
-  const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
-
-  const minGuests = profile.minGuests;
-  const maxGuests = profile.maxGuests;
-
-  const availability = profile.availability;
   const mobility = profile.mobility;
   const mobilityDisplay = Array.isArray(mobility) ? mobility.join(', ') : mobility;
 
-  const photosArr = profile.images ?? [];
+  const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
+  const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
+  const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
+
+  const minGuests = profile.minGuests ?? profile.minimumGuests;
+  const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
+
+  const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
+
+  const photosArr = profile.photos ?? profile.images ?? profile.gallery;
   const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
 
-  // Checklist utile pour “approuver”
+  const updatedAt = profile.updatedAt ?? profile.updated_at ?? detail?.updatedAt ?? detail?.updated_at;
+
   const checklist = {
     identité: Boolean(fullName && email),
     téléphone: Boolean(phone),
-    bio: bioText.length > 30,
+    bio: Boolean(bioText.length > 30),
     langues: Boolean(Array.isArray(languages) ? languages.length : languages),
     spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
     tarifs: Boolean(dailyRate || pricePerPerson),
@@ -807,18 +759,27 @@ const checklistOk = Object.values(checklist).filter(Boolean).length;
 
         <div className="mt-4 flex gap-2">
           {status === 'pending_validation' ? (
-            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onApprove}>
+            <button
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
+              onClick={onApprove}
+            >
               Approuver →
             </button>
           ) : null}
 
           {status === 'approved' ? (
-            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onActivate}>
+            <button
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
+              onClick={onActivate}
+            >
               Activer →
             </button>
           ) : null}
 
-          <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10" onClick={onDelete}>
+          <button
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10"
+            onClick={onDelete}
+          >
             Supprimer
           </button>
         </div>
@@ -910,8 +871,7 @@ function InfoRow({ label, value }: { label: string; value: any }) {
 
 function ChefStatusBadge({ status }: { status: string }) {
   const s = (status || '').toLowerCase();
-  const mapped =
-    s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
+  const mapped = s === 'pending_validation' ? 'new' : s === 'approved' ? 'in_review' : s === 'active' ? 'assigned' : 'closed';
   return <StatusBadge status={mapped} />;
 }
 
