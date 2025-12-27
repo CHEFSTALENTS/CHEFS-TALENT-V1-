@@ -1,128 +1,170 @@
-/* -------------------- NORMALIZATION (fix score + champs manquants) -------------------- */
+// app/admin/chefs/utils/normalizeProfile.ts
 
-function asArray(val: any): any[] {
-  if (!val) return [];
-  if (Array.isArray(val)) return val;
-  if (typeof val === 'string') {
-    // "Français, Anglais" => ["Français","Anglais"]
-    if (val.includes(',')) return val.split(',').map((s) => s.trim()).filter(Boolean);
-    if (val.trim()) return [val.trim()];
-    return [];
-  }
-  return [val];
+import type { ChefUser } from '@/types';
+
+/* -------------------- types -------------------- */
+
+export type AdminChefLike = ChefUser & {
+  user_id?: string;
+  profile?: any;
+  created_at?: string;
+  createdAt?: string;
+  status?: any;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
+/* -------------------- utils safe display -------------------- */
+
+function isPlainObject(v: any) {
+  return v && typeof v === 'object' && !Array.isArray(v);
 }
 
-function normalizeProfile(raw: any) {
-  const r = raw ?? {};
+export function firstNonEmpty<T>(...vals: T[]): T | undefined {
+  for (const v of vals) {
+    if (v === null || v === undefined) continue;
+    if (typeof v === 'string') {
+      if (v.trim()) return v;
+      continue;
+    }
+    if (Array.isArray(v)) {
+      if (v.length) return v;
+      continue;
+    }
+    return v;
+  }
+  return undefined;
+}
 
-  const firstName = r.firstName ?? r.first_name ?? r.firstname ?? '';
-  const lastName = r.lastName ?? r.last_name ?? r.lastname ?? '';
+export function unwrapText(v: any): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (Array.isArray(v)) {
+    const parts = v
+      .map((x) => {
+        if (x === null || x === undefined) return '';
+        if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return String(x);
+        if (isPlainObject(x)) return String((x as any).label ?? (x as any).name ?? (x as any).title ?? (x as any).value ?? (x as any).text ?? (x as any).id ?? '');
+        return '';
+      })
+      .filter(Boolean);
+    return parts.join(', ');
+  }
+  if (isPlainObject(v)) {
+    return String((v as any).value ?? (v as any).text ?? (v as any).label ?? (v as any).name ?? (v as any).title ?? '');
+  }
+  return String(v);
+}
 
-  const phone =
-    r.phone ?? r.phone_number ?? r.phoneNumber ?? r.tel ?? r.telephone ?? r.mobile ?? r.mobilePhone ?? null;
+function isBrowserLocationObject(v: any) {
+  return (
+    isPlainObject(v) &&
+    typeof (v as any).href === 'string' &&
+    typeof (v as any).protocol === 'string' &&
+    typeof (v as any).host === 'string'
+  );
+}
 
-  const languages = r.languages ?? r.langues ?? r.language ?? r.lang ?? [];
-  const images = r.images ?? r.photos ?? r.gallery ?? r.pictures ?? [];
+/* -------------------- normalizeProfile -------------------- */
 
-  const bio =
-    r.bio ??
-    r.bio_text ??
-    r.about ??
-    r.description ??
-    r.presentation ??
-    r.summary ??
-    r.biography ??
-    null;
+export function normalizeProfile(raw: any) {
+  const p = isPlainObject(raw) ? { ...raw } : {};
 
-  const services = r.services ?? r.service_types ?? r.serviceTypes ?? r.service ?? null;
+  const firstName = firstNonEmpty((p as any).firstName, (p as any).first_name);
+  const lastName = firstNonEmpty((p as any).lastName, (p as any).last_name);
+  const email = firstNonEmpty((p as any).email);
 
-  // Mobilité : souvent coverage_zones / base_city / radius…
-  const mobility = r.mobility ?? r.coverage_zones ?? r.coverageZones ?? r.zones ?? r.radius ?? r.travel ?? null;
+  const profileType = firstNonEmpty((p as any).profileType, (p as any).profile_type, (p as any).type);
+  const seniorityLevel = firstNonEmpty(
+    (p as any).seniorityLevel,
+    (p as any).seniority_level,
+    (p as any).seniority,
+    (p as any).experienceLevel,
+    (p as any).experience_level
+  );
 
-  // Localisation : parfois base_city, city, country…
-  const location =
-    r.location ??
-    (r.city || r.country || r.base_city || r.baseCity
-      ? {
-          city: r.city ?? r.base_city ?? r.baseCity ?? r.ville ?? null,
-          country: r.country ?? null,
-        }
-      : null) ??
-    r.address ??
-    null;
+  const phone = firstNonEmpty((p as any).phone, (p as any).phoneNumber, (p as any).phone_number, (p as any).tel, (p as any).telephone);
 
-  const baseCity = r.baseCity ?? r.base_city ?? r.city ?? r.ville ?? null;
+  const languages = firstNonEmpty((p as any).languages, (p as any).langues);
+  const specialties = firstNonEmpty((p as any).specialties, (p as any).speciality);
+  const cuisines = firstNonEmpty((p as any).cuisines, (p as any).cuisineTypes, (p as any).cuisine_types, (p as any).styles, (p as any).style);
 
-  const profileType = r.profileType ?? r.profile_type ?? r.type ?? null;
-  const seniorityLevel = r.seniorityLevel ?? r.seniority_level ?? r.seniority ?? r.experienceLevel ?? null;
+  const bioRaw = firstNonEmpty((p as any).bio, (p as any).about, (p as any).description, (p as any).biography, (p as any).bio_long, (p as any).bioLong);
+  const bio = unwrapText(bioRaw);
 
-  const specialties = r.specialties ?? r.speciality ?? r.specialisations ?? r.skills ?? null;
-  const cuisines = r.cuisines ?? r.cuisineTypes ?? r.styles ?? r.style ?? null;
+  const servicesRaw = firstNonEmpty((p as any).services, (p as any).serviceTypes, (p as any).service_types);
+  const services = Array.isArray(servicesRaw) ? servicesRaw : unwrapText(servicesRaw);
 
-  const dailyRate = r.dailyRate ?? r.rateDay ?? r.pricePerDay ?? r.day_rate ?? null;
-  const pricePerPerson = r.pricePerPerson ?? r.pp ?? r.ratePerPerson ?? r.price_per_person ?? null;
+  const mobilityRaw = firstNonEmpty(
+    (p as any).mobility,
+    (p as any).travel,
+    (p as any).zones,
+    (p as any).coverageZones,
+    (p as any).coverage_zones,
+    (p as any).coverageZonesText,
+    (p as any).coverage_zones_text,
+    (p as any).radius
+  );
+  const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
 
-  const minGuests = r.minGuests ?? r.minimumGuests ?? r.min_guests ?? null;
-  const maxGuests = r.maxGuests ?? r.maxPax ?? r.capacity ?? r.max_guests ?? null;
+  const images = firstNonEmpty((p as any).photos, (p as any).images, (p as any).gallery);
 
-  const availability =
-    r.availability ?? r.availableFrom ?? r.calendarNote ?? r.preferredPeriods ?? r.available_from ?? null;
+  const locationRaw = firstNonEmpty((p as any).location, (p as any).baseCity, (p as any).base_city, (p as any).city, (p as any).ville, (p as any).address);
+  const location = isBrowserLocationObject(locationRaw)
+    ? firstNonEmpty((p as any).baseCity, (p as any).base_city, (p as any).city, (p as any).ville, (p as any).address)
+    : locationRaw;
 
-  const status = r.status ?? null;
-  const created_at = r.created_at ?? r.createdAt ?? null;
-  const updated_at = r.updated_at ?? r.updatedAt ?? null;
+  const created_at = firstNonEmpty((p as any).created_at, (p as any).createdAt);
+  const updated_at = firstNonEmpty((p as any).updated_at, (p as any).updatedAt);
 
   return {
-    ...r,
+    ...p,
     firstName,
     lastName,
+    email,
     phone,
-    languages: asArray(languages),
-    images: asArray(images),
-    bio: typeof bio === 'string' ? bio : bio ? String(bio) : null,
-    services,
-    mobility,
-    location,
-    baseCity,
-    profileType,
-    seniorityLevel,
+    languages,
     specialties,
     cuisines,
-    dailyRate,
-    pricePerPerson,
-    minGuests,
-    maxGuests,
-    availability,
-    status,
+    profileType,
+    seniorityLevel,
+    bio,
+    services,
+    mobility,
+    images,
+    location,
     created_at,
     updated_at,
   };
 }
 
-function getNormalizedChef(c: ApiChef, detail?: any | null) {
-  // On garde EXACTEMENT ta logique: detail > selected.profile > selected
-  const raw = (detail?.profile ?? detail ?? (c as any).profile ?? c) as any;
+/* -------------------- getNormalizedChef -------------------- */
+
+export function getNormalizedChef(c: AdminChefLike, detail: any | null = null) {
+  const raw = (detail?.profile ?? detail ?? (c as any)?.profile ?? c ?? {}) as any;
   const profile = normalizeProfile(raw);
 
-  const email = String((c as any).email ?? profile.email ?? '').trim().toLowerCase();
+  const email = String(firstNonEmpty(detail?.email, (c as any).email, profile.email, '') || '').trim().toLowerCase();
 
-  const firstName = String(profile.firstName || (c as any).firstName || '').trim();
-  const lastName = String(profile.lastName || (c as any).lastName || '').trim();
+  const firstName = String(firstNonEmpty(detail?.firstName, (c as any).firstName, profile.firstName, '') || '').trim();
+  const lastName = String(firstNonEmpty(detail?.lastName, (c as any).lastName, profile.lastName, '') || '').trim();
   const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
 
-  const status = String(profile.status ?? (c as any).status ?? '').trim();
-
   const createdIso = String(
-    (detail as any)?.createdAt ||
-      (detail as any)?.created_at ||
-      (c as any).createdAt ||
-      (c as any).created_at ||
-      profile.createdAt ||
-      profile.created_at ||
+    firstNonEmpty(
+      detail?.createdAt,
+      detail?.created_at,
+      (c as any).createdAt,
+      (c as any).created_at,
+      (profile as any).createdAt,
+      (profile as any).created_at,
       ''
+    ) || ''
   );
 
-  const updatedAt = profile.updatedAt ?? profile.updated_at ?? (detail as any)?.updatedAt ?? (detail as any)?.updated_at;
+  const status = String(firstNonEmpty(detail?.status, (c as any).status, (profile as any).status, '') || '');
 
-  return { profile, email, fullName, status, createdIso, updatedAt };
+  return { profile, email, fullName, createdIso, status };
 }
