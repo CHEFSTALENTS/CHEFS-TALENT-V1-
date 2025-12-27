@@ -279,10 +279,9 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-const getScore = (c: ApiChef) => computeChefScore(normalizeForScore((c as any).profile ?? c) as any).score ?? 0;
-    const profile = normalizeProfile((c as any).profile ?? c);
-      return computeChefScore(profile as any).score ?? 0;
-    };
+const getScore = (c: ApiChef) =>
+  computeChefScore(normalizeForScore((c as any).profile ?? c) as any).score ?? 0;
+    
 function ensureArray(v: any): any[] {
   if (!v) return [];
   if (Array.isArray(v)) return v;
