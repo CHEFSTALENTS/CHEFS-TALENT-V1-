@@ -298,29 +298,7 @@ function ensureArray(v: any): any[] {
   return [];
 }
 
-function normalizeForScore(profile: any) {
-  const p = normalizeProfile(profile);
 
-  const imagesArr = Array.isArray(p.images) ? p.images
-    : Array.isArray(p.photos) ? p.photos
-    : Array.isArray(p.gallery) ? p.gallery
-    : [];
-
-  return {
-    ...p,
-    languages: ensureArray(p.languages),
-    specialties: ensureArray(p.specialties),
-    cuisines: ensureArray(p.cuisines),
-    services: ensureArray(p.services),
-    mobility: ensureArray(p.mobility),
-
-    // pricing fallback
-    dailyRate: p.dailyRate ?? p.rateDay ?? p.pricePerDay ?? p.rate_day,
-    pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
-
-    images: imagesArr,
-  };
-}
 
     function normalizeForScore(profile: any) {
   const p = normalizeProfile(profile);
