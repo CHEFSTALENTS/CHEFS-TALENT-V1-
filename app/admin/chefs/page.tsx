@@ -279,11 +279,47 @@ export default function AdminChefsPage() {
 
     const needle = q.trim().toLowerCase();
 
-    const getScore = (c: ApiChef) => {
-      const profile = normalizeProfile((c as any).profile ?? c);
+const getScore = (c: ApiChef) => computeChefScore(normalizeForScore((c as any).profile ?? c) as any).score ?? 0;
+    const profile = normalizeProfile((c as any).profile ?? c);
       return computeChefScore(profile as any).score ?? 0;
     };
+function ensureArray(v: any): any[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    return v.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  // objets type {label:""} ou {value:""} etc.
+  if (typeof v === 'object') {
+    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
+    return t ? [t] : [];
+  }
+  return [];
+}
 
+function normalizeForScore(profile: any) {
+  const p = normalizeProfile(profile);
+
+  const imagesArr = Array.isArray(p.images) ? p.images
+    : Array.isArray(p.photos) ? p.photos
+    : Array.isArray(p.gallery) ? p.gallery
+    : [];
+
+  return {
+    ...p,
+    languages: ensureArray(p.languages),
+    specialties: ensureArray(p.specialties),
+    cuisines: ensureArray(p.cuisines),
+    services: ensureArray(p.services),
+    mobility: ensureArray(p.mobility),
+
+    // pricing fallback
+    dailyRate: p.dailyRate ?? p.rateDay ?? p.pricePerDay ?? p.rate_day,
+    pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
+
+    images: imagesArr,
+  };
+}
     return [...chefs]
       .filter((c) => {
         const st = String((c as any).status || '');
@@ -395,8 +431,45 @@ export default function AdminChefsPage() {
               ) : (
                 view.map((c) => {
                   const { profile, email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
-                  const score = computeChefScore(profile as any).score ?? 0;
+const score = computeChefScore(normalizeForScore((c as any).profile ?? c) as any).score ?? 0;
+                  
+                  function ensureArray(v: any): any[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    return v.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  // objets type {label:""} ou {value:""} etc.
+  if (typeof v === 'object') {
+    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
+    return t ? [t] : [];
+  }
+  return [];
+}
 
+function normalizeForScore(profile: any) {
+  const p = normalizeProfile(profile);
+
+  const imagesArr = Array.isArray(p.images) ? p.images
+    : Array.isArray(p.photos) ? p.photos
+    : Array.isArray(p.gallery) ? p.gallery
+    : [];
+
+  return {
+    ...p,
+    languages: ensureArray(p.languages),
+    specialties: ensureArray(p.specialties),
+    cuisines: ensureArray(p.cuisines),
+    services: ensureArray(p.services),
+    mobility: ensureArray(p.mobility),
+
+    // pricing fallback
+    dailyRate: p.dailyRate ?? p.rateDay ?? p.pricePerDay ?? p.rate_day,
+    pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
+
+    images: imagesArr,
+  };
+}
                   return (
                     <tr
                       key={email || fullName}
@@ -534,7 +607,43 @@ function ChefDrawer({
 
   const status = String(detail?.status ?? profile.status ?? (selected as any).status ?? '');
   const score = computeChefScore(profile as any).score ?? 0;
+function ensureArray(v: any): any[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    return v.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  // objets type {label:""} ou {value:""} etc.
+  if (typeof v === 'object') {
+    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
+    return t ? [t] : [];
+  }
+  return [];
+}
 
+function normalizeForScore(profile: any) {
+  const p = normalizeProfile(profile);
+
+  const imagesArr = Array.isArray(p.images) ? p.images
+    : Array.isArray(p.photos) ? p.photos
+    : Array.isArray(p.gallery) ? p.gallery
+    : [];
+
+  return {
+    ...p,
+    languages: ensureArray(p.languages),
+    specialties: ensureArray(p.specialties),
+    cuisines: ensureArray(p.cuisines),
+    services: ensureArray(p.services),
+    mobility: ensureArray(p.mobility),
+
+    // pricing fallback
+    dailyRate: p.dailyRate ?? p.rateDay ?? p.pricePerDay ?? p.rate_day,
+    pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
+
+    images: imagesArr,
+  };
+}
   const phone = profile.phone;
   const languages = profile.languages;
 
