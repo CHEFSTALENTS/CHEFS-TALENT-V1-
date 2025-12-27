@@ -1,5 +1,3 @@
-// app/admin/chefs/page.tsx
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -74,104 +72,6 @@ function toDisplay(v: any): string {
     return JSON.stringify(v);
   }
   return String(v);
-}
-
-function firstNonEmpty<T>(...vals: T[]): T | undefined {
-  for (const v of vals) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === 'string') {
-      if (v.trim()) return v;
-      continue;
-    }
-    if (Array.isArray(v)) {
-      if (v.length) return v;
-      continue;
-    }
-    return v;
-  }
-  return undefined;
-}
-  const phone = firstNonEmpty(p.phone, p.phoneNumber, p.phone_number, p.tel, p.telephone);
-
-  const languages = firstNonEmpty(p.languages, p.langues);
-  const specialties = firstNonEmpty(p.specialties, p.speciality);
-  const cuisines = firstNonEmpty(p.cuisines, p.cuisineTypes, p.cuisine_types, p.styles, p.style);
-
-  const bioRaw = firstNonEmpty(p.bio, p.about, p.description, p.biography, p.bio_long, p.bioLong);
-  const bio = unwrapText(bioRaw);
-
-  const servicesRaw = firstNonEmpty(p.services, p.serviceTypes, p.service_types);
-  const services = Array.isArray(servicesRaw) ? servicesRaw : unwrapText(servicesRaw);
-
-  const mobilityRaw = firstNonEmpty(
-    p.mobility,
-    p.travel,
-    p.zones,
-    p.coverageZones,
-    p.coverage_zones,
-    p.coverageZonesText,
-    p.coverage_zones_text,
-    p.radius
-  );
-  const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
-
-  const images = firstNonEmpty(p.photos, p.images, p.gallery);
-
-  const locationRaw = firstNonEmpty(p.location, p.baseCity, p.base_city, p.city, p.ville, p.address);
-  const location = isBrowserLocationObject(locationRaw)
-    ? firstNonEmpty(p.baseCity, p.base_city, p.city, p.ville, p.address)
-    : locationRaw;
-
-  const created_at = firstNonEmpty(p.created_at, p.createdAt);
-  const updated_at = firstNonEmpty(p.updated_at, p.updatedAt);
-
-  return {
-    ...p,
-    firstName,
-    lastName,
-    email,
-    phone,
-    languages,
-    specialties,
-    cuisines,
-    profileType,
-    seniorityLevel,
-    bio,
-    services,
-    mobility,
-    images,
-    location,
-    created_at,
-    updated_at,
-  };
-}
-
-  const raw = (detail?.profile ?? detail ?? (c as any)?.profile ?? c ?? {}) as any;
-  const profile = normalizeProfile(raw);
-
-  const email = String(firstNonEmpty(detail?.email, c.email, profile.email, '') || '')
-    .trim()
-    .toLowerCase();
-
-  const firstName = String(firstNonEmpty(detail?.firstName, (c as any).firstName, profile.firstName, '') || '').trim();
-  const lastName = String(firstNonEmpty(detail?.lastName, (c as any).lastName, profile.lastName, '') || '').trim();
-  const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
-
-  const createdIso = String(
-    firstNonEmpty(
-      detail?.createdAt,
-      detail?.created_at,
-      c.createdAt,
-      c.created_at,
-      profile.createdAt,
-      profile.created_at,
-      ''
-    ) || ''
-  );
-
-  const status = String(firstNonEmpty(detail?.status, (c as any).status, profile.status, '') || '');
-
-  return { profile, email, fullName, createdIso, status };
 }
 
 function formatDateTime(iso?: any) {
@@ -266,7 +166,7 @@ export default function AdminChefsPage() {
     setSelected(c);
     setDetail(null);
 
-    const email = String(c?.email || '').trim().toLowerCase();
+    const email = String((c as any)?.email || '').trim().toLowerCase();
     if (!email) return;
 
     setDetailLoading(true);
@@ -291,7 +191,6 @@ export default function AdminChefsPage() {
       const filtered = (list ?? []).filter((u) => (u.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase());
       setChefs(filtered);
       setSource('db');
-      setLoading(false);
       return;
     } catch (e: any) {
       console.warn('[AdminChefs] API failed, fallback localStorage', e?.message || e);
@@ -314,7 +213,7 @@ export default function AdminChefsPage() {
   };
 
   useEffect(() => {
-    refresh();
+    refresh().finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -365,9 +264,9 @@ export default function AdminChefsPage() {
   };
 
   const counts = useMemo(() => {
-    const pending = chefs.filter((c) => String(c.status) === 'pending_validation').length;
-    const approved = chefs.filter((c) => String(c.status) === 'approved').length;
-    const active = chefs.filter((c) => String(c.status) === 'active').length;
+    const pending = chefs.filter((c) => String((c as any).status) === 'pending_validation').length;
+    const approved = chefs.filter((c) => String((c as any).status) === 'approved').length;
+    const active = chefs.filter((c) => String((c as any).status) === 'active').length;
     return { pending, approved, active, all: chefs.length };
   }, [chefs]);
 
@@ -381,13 +280,13 @@ export default function AdminChefsPage() {
     const needle = q.trim().toLowerCase();
 
     const getScore = (c: ApiChef) => {
-      const { profile } = getNormalizedChef(c, null);
+      const profile = normalizeProfile((c as any).profile ?? c);
       return computeChefScore(profile as any).score ?? 0;
     };
 
     return [...chefs]
       .filter((c) => {
-        const st = String(c.status || '');
+        const st = String((c as any).status || '');
         if (filter === 'pending') return st === 'pending_validation';
         if (filter === 'approved') return st === 'approved';
         if (filter === 'active') return st === 'active';
@@ -395,25 +294,24 @@ export default function AdminChefsPage() {
       })
       .filter((c) => {
         if (!needle) return true;
-        const { profile, email, fullName } = getNormalizedChef(c, null);
-        const fn = String((c as any).firstName || profile.firstName || '').trim();
-        const ln = String((c as any).lastName || profile.lastName || '').trim();
-        const full = `${fn} ${ln}`.toLowerCase();
-        const em = String((c as any).email || email || '').toLowerCase();
-        const nameFallback = String(fullName || '').toLowerCase();
-        return full.includes(needle) || em.includes(needle) || nameFallback.includes(needle);
+        const { profile } = getNormalizedChef(c as any, null);
+        const fn = String(((c as any).firstName || profile.firstName || '')).trim();
+        const ln = String(((c as any).lastName || profile.lastName || '')).trim();
+        const fullName = `${fn} ${ln}`.toLowerCase();
+        const email = String(((c as any).email || profile.email || '')).toLowerCase();
+        return fullName.includes(needle) || email.includes(needle);
       })
       .sort((a, b) => {
-        const pa = priority[String(a.status)] ?? 99;
-        const pb = priority[String(b.status)] ?? 99;
+        const pa = priority[String((a as any).status)] ?? 99;
+        const pb = priority[String((b as any).status)] ?? 99;
         if (pa !== pb) return pa - pb;
 
         const sa = getScore(a);
         const sb = getScore(b);
         if (sa !== sb) return sb - sa;
 
-        const { createdIso: ca } = getNormalizedChef(a, null);
-        const { createdIso: cb } = getNormalizedChef(b, null);
+        const { createdIso: ca } = getNormalizedChef(a as any, null);
+        const { createdIso: cb } = getNormalizedChef(b as any, null);
 
         const da = new Date(String(ca || '')).getTime() || 0;
         const db = new Date(String(cb || '')).getTime() || 0;
@@ -438,9 +336,7 @@ export default function AdminChefsPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
             Source :{' '}
-            <span className="text-white/85 font-medium">
-              {source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}
-            </span>
+            <span className="text-white/85 font-medium">{source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}</span>
             {source === 'localStorage' ? (
               <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>
             ) : null}
@@ -451,18 +347,8 @@ export default function AdminChefsPage() {
 
       <div className="flex flex-wrap gap-2">
         <Segment label="Tous" active={filter === 'all'} onClick={() => setFilter('all')} badge={counts.all} />
-        <Segment
-          label="À valider"
-          active={filter === 'pending'}
-          onClick={() => setFilter('pending')}
-          badge={counts.pending}
-        />
-        <Segment
-          label="Approuvés"
-          active={filter === 'approved'}
-          onClick={() => setFilter('approved')}
-          badge={counts.approved}
-        />
+        <Segment label="À valider" active={filter === 'pending'} onClick={() => setFilter('pending')} badge={counts.pending} />
+        <Segment label="Approuvés" active={filter === 'approved'} onClick={() => setFilter('approved')} badge={counts.approved} />
         <Segment label="Actifs" active={filter === 'active'} onClick={() => setFilter('active')} badge={counts.active} />
       </div>
 
@@ -508,17 +394,17 @@ export default function AdminChefsPage() {
                 </tr>
               ) : (
                 view.map((c) => {
-  const { profile, email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
-  const score = computeChefScore(profile as any).score ?? 0;
+                  const { profile, email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
+                  const score = computeChefScore(profile as any).score ?? 0;
 
-  return (
-    <tr
-      key={email || fullName}
-      className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
-      onClick={() => openChef(c)}
-    >
+                  return (
+                    <tr
+                      key={email || fullName}
+                      className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer"
+                      onClick={() => openChef(c)}
+                    >
                       <td className="p-3">
-                        <div className="text-white font-medium truncate">{fullName}</div>
+                        <div className="text-white font-medium truncate">{fullName || 'Chef'}</div>
                         <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
                       </td>
 
@@ -538,7 +424,7 @@ export default function AdminChefsPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(email, 'approved');
+                                updateStatus(String(email || ''), 'approved');
                               }}
                               disabled={!email}
                               className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -551,7 +437,7 @@ export default function AdminChefsPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(email, 'active');
+                                updateStatus(String(email || ''), 'active');
                               }}
                               disabled={!email}
                               className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -563,7 +449,7 @@ export default function AdminChefsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              removeChef(email);
+                              removeChef(String(email || ''));
                             }}
                             disabled={!email}
                             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-red-200 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -590,17 +476,17 @@ export default function AdminChefsPage() {
           loading={detailLoading}
           onClose={closeDrawer}
           onApprove={async () => {
-            const email = String(selected.email || '').trim().toLowerCase();
+            const email = String((selected as any).email || '').trim().toLowerCase();
             await updateStatus(email, 'approved');
             await openChef(selected);
           }}
           onActivate={async () => {
-            const email = String(selected.email || '').trim().toLowerCase();
+            const email = String((selected as any).email || '').trim().toLowerCase();
             await updateStatus(email, 'active');
             await openChef(selected);
           }}
           onDelete={async () => {
-            const email = String(selected.email || '').trim().toLowerCase();
+            const email = String((selected as any).email || '').trim().toLowerCase();
             await removeChef(email);
           }}
         />
@@ -628,20 +514,36 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const { profile, email, fullName, createdIso, status } = getNormalizedChef(selected, detail);
+  const raw = (detail?.profile ?? detail ?? (selected as any).profile ?? selected ?? {}) as any;
+  const profile = normalizeProfile(raw);
+
+  const email = String(profile.email ?? (selected as any).email ?? '').trim();
+  const firstName = String(profile.firstName ?? (selected as any).firstName ?? '').trim();
+  const lastName = String(profile.lastName ?? (selected as any).lastName ?? '').trim();
+  const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
+
+  const createdIso = String(
+    (detail?.createdAt ??
+      detail?.created_at ??
+      (selected as any).createdAt ??
+      (selected as any).created_at ??
+      profile.createdAt ??
+      profile.created_at ??
+      '') as any
+  );
+
+  const status = String(detail?.status ?? profile.status ?? (selected as any).status ?? '');
   const score = computeChefScore(profile as any).score ?? 0;
 
   const phone = profile.phone;
   const languages = profile.languages;
 
-  const locationVal = profile.location;
+  const locationVal = profile.location ?? profile.baseCity ?? null;
   const locationLabel =
     typeof locationVal === 'string'
       ? locationVal
       : locationVal && typeof locationVal === 'object'
-      ? [(locationVal as any).baseCity, (locationVal as any).city, (locationVal as any).ville, (locationVal as any).country]
-          .filter(Boolean)
-          .join(', ')
+      ? [locationVal.baseCity, locationVal.city, locationVal.ville, locationVal.country].filter(Boolean).join(', ')
       : null;
 
   const profileType = profile.profileType;
@@ -656,9 +558,6 @@ function ChefDrawer({
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
-  const mobility = profile.mobility;
-  const mobilityDisplay = Array.isArray(mobility) ? mobility.join(', ') : mobility;
-
   const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
   const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
   const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
@@ -668,7 +567,10 @@ function ChefDrawer({
 
   const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
 
-  const photosArr = profile.photos ?? profile.images ?? profile.gallery;
+  const mobility = profile.mobility;
+  const mobilityDisplay = Array.isArray(mobility) ? mobility.join(', ') : mobility;
+
+  const photosArr = profile.photos ?? profile.images ?? profile.gallery ?? [];
   const hasPhotos = Array.isArray(photosArr) ? photosArr.length > 0 : Boolean(photosArr);
 
   const updatedAt = profile.updatedAt ?? profile.updated_at ?? detail?.updatedAt ?? detail?.updated_at;
@@ -676,7 +578,7 @@ function ChefDrawer({
   const checklist = {
     identité: Boolean(fullName && email),
     téléphone: Boolean(phone),
-    bio: Boolean(bioText.length > 30),
+    bio: bioText.length > 30,
     langues: Boolean(Array.isArray(languages) ? languages.length : languages),
     spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
     tarifs: Boolean(dailyRate || pricePerPerson),
@@ -697,10 +599,7 @@ function ChefDrawer({
             <div className="text-white/40 text-xs mt-1">Inscrit : {formatDate(createdIso) || '—'}</div>
           </div>
 
-          <button
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
-            onClick={onClose}
-          >
+          <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10" onClick={onClose}>
             Fermer
           </button>
         </div>
@@ -717,27 +616,18 @@ function ChefDrawer({
 
         <div className="mt-4 flex gap-2">
           {status === 'pending_validation' ? (
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
-              onClick={onApprove}
-            >
+            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onApprove}>
               Approuver →
             </button>
           ) : null}
 
           {status === 'approved' ? (
-            <button
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15"
-              onClick={onActivate}
-            >
+            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onActivate}>
               Activer →
             </button>
           ) : null}
 
-          <button
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10"
-            onClick={onDelete}
-          >
+          <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10" onClick={onDelete}>
             Supprimer
           </button>
         </div>
