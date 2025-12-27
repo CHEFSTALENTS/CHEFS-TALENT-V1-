@@ -146,7 +146,6 @@ function firstNonEmpty<T>(...vals: T[]): T | undefined {
   };
 }
 
-function getNormalizedChef(c: ApiChef, detail: any | null) {
   const raw = (detail?.profile ?? detail ?? (c as any)?.profile ?? c ?? {}) as any;
   const profile = normalizeProfile(raw);
 
