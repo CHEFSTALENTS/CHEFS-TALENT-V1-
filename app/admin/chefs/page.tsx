@@ -595,7 +595,6 @@ function normalizeForScore(profile: any) {
 }
 
 /* -------------------- Drawer -------------------- */
-
 function ChefDrawer({
   selected,
   detail,
@@ -613,9 +612,11 @@ function ChefDrawer({
   onActivate: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
- const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
-const score = computeChefScore(toChefProfileForScore(raw)).score ?? 0;
+  const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
   const profile = normalizeProfile(raw);
+
+  // ✅ score UNIQUE (garde celui-ci)
+  const score = computeChefScore(toChefProfileForScore(raw)).score ?? 0;
 
   const email = String(profile.email ?? (selected as any).email ?? '').trim();
   const firstName = String(profile.firstName ?? (selected as any).firstName ?? '').trim();
@@ -633,44 +634,6 @@ const score = computeChefScore(toChefProfileForScore(raw)).score ?? 0;
   );
 
   const status = String(detail?.status ?? profile.status ?? (selected as any).status ?? '');
-  const score = computeChefScore(profile as any).score ?? 0;
-function ensureArray(v: any): any[] {
-  if (!v) return [];
-  if (Array.isArray(v)) return v;
-  if (typeof v === 'string') {
-    return v.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  // objets type {label:""} ou {value:""} etc.
-  if (typeof v === 'object') {
-    const t = String(v.label ?? v.value ?? v.name ?? v.title ?? v.text ?? '').trim();
-    return t ? [t] : [];
-  }
-  return [];
-}
-
-function normalizeForScore(profile: any) {
-  const p = normalizeProfile(profile);
-
-  const imagesArr = Array.isArray(p.images) ? p.images
-    : Array.isArray(p.photos) ? p.photos
-    : Array.isArray(p.gallery) ? p.gallery
-    : [];
-
-  return {
-    ...p,
-    languages: ensureArray(p.languages),
-    specialties: ensureArray(p.specialties),
-    cuisines: ensureArray(p.cuisines),
-    services: ensureArray(p.services),
-    mobility: ensureArray(p.mobility),
-
-    // pricing fallback
-    dailyRate: p.dailyRate ?? p.rateDay ?? p.pricePerDay ?? p.rate_day,
-    pricePerPerson: p.pricePerPerson ?? p.pp ?? p.ratePerPerson ?? p.rate_per_person,
-
-    images: imagesArr,
-  };
-}
   const phone = profile.phone;
   const languages = profile.languages;
 
