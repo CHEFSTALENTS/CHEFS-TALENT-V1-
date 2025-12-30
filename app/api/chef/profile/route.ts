@@ -7,6 +7,27 @@ export async function GET(req: Request) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
+  pricing: {
+  tier: 'essential' | 'premium' | 'luxury' | 'ultra';
+  residence: {
+    dailyRate: number | null;        // €/jour
+    currency: 'EUR';
+    minDays: number | null;          // optionnel
+  };
+  event: {
+    pricePerPerson: number | null;   // €/pers
+    minGuests: number | null;
+  };
+  flags: {
+    highSeason?: boolean;
+    international?: boolean;
+    yacht?: boolean;
+    brigade?: boolean;
+  };
+  notes?: string;                   // optionnel (interne)
+  updatedAt: string;                // ISO
+}
+  
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
