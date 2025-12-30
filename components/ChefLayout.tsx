@@ -91,7 +91,8 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
     { icon: Briefcase, label: 'Missions', path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
     { icon: Euro, label: 'Revenus', path: '/chef/earnings' },
-
+{ icon: Euro, label: 'Tarifs', path: '/chef/pricing' },
+    
     { icon: User, label: 'Identité', path: '/chef/identity' },
     { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
     { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
