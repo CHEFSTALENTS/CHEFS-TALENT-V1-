@@ -145,45 +145,36 @@ export default function ChefPricingPage() {
     );
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-const pricing = {
-  tier: selectedTier, // 'essential' | 'premium' | 'luxury' | 'ultra'
-  residence: {
-    dailyRate: dailyRate ? Number(dailyRate) : null,
-    currency: 'EUR',
-    minDays: minDays ? Number(minDays) : null,
-  },
-  event: {
-    pricePerPerson: pricePerPerson ? Number(pricePerPerson) : null,
-    minGuests: minGuests ? Number(minGuests) : null,
-  },
-  flags: {
-    international: isInternational,
-    yacht: isYacht,
-    brigade: hasBrigade,
-    highSeason: isHighSeason,
-  },
-  notes: notes || '',
-  updatedAt: new Date().toISOString(),
-};
-      
-       const payload: ChefPricing = {
+      // ✅ payload depuis le state (source de vérité)
+      const payload: ChefPricing = {
         ...pricing,
         residence: {
-          dailyRate: pricing.residence.dailyRate,
+          dailyRate: pricing.residence.dailyRate ?? null,
           currency: 'EUR',
-          minDays: pricing.residence.minDays,
+          minDays: pricing.residence.minDays ?? null,
+        },
+        event: {
+          pricePerPerson: pricing.event.pricePerPerson ?? null,
+          minGuests: pricing.event.minGuests ?? null,
+        },
+        flags: {
+          highSeason: !!pricing.flags.highSeason,
+          international: !!pricing.flags.international,
+          yacht: !!pricing.flags.yacht,
+          brigade: !!pricing.flags.brigade,
         },
         updatedAt: new Date().toISOString(),
       };
-      
-      await saveChefProfilePatch({ pricing });
+
+      // ✅ 1 seule écriture DB
       await saveChefProfilePatch({ pricing: payload });
 
-      // update local storage profile as well (si ton auth le supporte)
+      // ✅ update local storage (si dispo)
       const user = auth.getCurrentUser?.();
       if (user?.id) {
         await auth.updateChefProfile?.(user.id, { pricing: payload } as any);
