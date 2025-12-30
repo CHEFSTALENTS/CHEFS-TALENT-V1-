@@ -149,15 +149,6 @@ export default function ChefPricingPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload: ChefPricing = {
-        ...pricing,
-        residence: {
-          dailyRate: pricing.residence.dailyRate,
-          currency: 'EUR',
-          minDays: pricing.residence.minDays,
-        },
-        updatedAt: new Date().toISOString(),
-      };
 const pricing = {
   tier: selectedTier, // 'essential' | 'premium' | 'luxury' | 'ultra'
   residence: {
@@ -178,6 +169,17 @@ const pricing = {
   notes: notes || '',
   updatedAt: new Date().toISOString(),
 };
+      
+       const payload: ChefPricing = {
+        ...pricing,
+        residence: {
+          dailyRate: pricing.residence.dailyRate,
+          currency: 'EUR',
+          minDays: pricing.residence.minDays,
+        },
+        updatedAt: new Date().toISOString(),
+      };
+      
       await saveChefProfilePatch({ pricing });
       await saveChefProfilePatch({ pricing: payload });
 
