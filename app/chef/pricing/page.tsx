@@ -31,23 +31,23 @@ const PRICING_BENCHMARK: Record<PricingTier, {
 }> = {
   essential: {
     label: "Essential",
-    residence: { min: 250, max: 450 },
-    event: { min: 80, max: 130 },
+    residence: { min: 300, max: 450 },
+    event: { min: 60, max: 100 },
   },
   premium: {
     label: "Premium",
-    residence: { min: 450, max: 800 },
-    event: { min: 130, max: 220 },
+    residence: { min: 400, max: 700 },
+    event: { min: 90, max: 150 },
   },
   luxury: {
     label: "Luxury",
-    residence: { min: 800, max: 1500 },
-    event: { min: 220, max: 400 },
+    residence: { min: 600, max: 900 },
+    event: { min: 150, max: 280 },
   },
   ultra: {
     label: "Ultra",
-    residence: { min: 1500, max: 3000 },
-    event: { min: 400, max: 800 },
+    residence: { min: 700, max: 1400 },
+    event: { min: 200, max: 500 },
   },
 };
 
