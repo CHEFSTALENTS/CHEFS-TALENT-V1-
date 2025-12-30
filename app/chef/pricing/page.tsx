@@ -27,7 +27,7 @@ const defaultPricing = (): ChefPricing => ({
 
 async function saveChefProfilePatch(patch: any) {
   const user = auth.getCurrentUser?.();
-  if (!user?.id) throw new Error('No user');
+  if (!user?.id) throw new Error("No user");
 
   // 1) GET existing profile from DB
   const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
@@ -44,15 +44,16 @@ async function saveChefProfilePatch(patch: any) {
   };
 
   // 3) PUT
-  const resPut = await fetch('/api/chef/profile', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+  const resPut = await fetch("/api/chef/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id: user.id, profile: merged }),
   });
 
   if (!resPut.ok) throw new Error(await resPut.text());
   return merged;
 }
+
 
 function toNumberOrNull(v: any): number | null {
   if (v === '' || v === null || v === undefined) return null;
@@ -157,7 +158,27 @@ export default function ChefPricingPage() {
         },
         updatedAt: new Date().toISOString(),
       };
-
+const pricing = {
+  tier: selectedTier, // 'essential' | 'premium' | 'luxury' | 'ultra'
+  residence: {
+    dailyRate: dailyRate ? Number(dailyRate) : null,
+    currency: 'EUR',
+    minDays: minDays ? Number(minDays) : null,
+  },
+  event: {
+    pricePerPerson: pricePerPerson ? Number(pricePerPerson) : null,
+    minGuests: minGuests ? Number(minGuests) : null,
+  },
+  flags: {
+    international: isInternational,
+    yacht: isYacht,
+    brigade: hasBrigade,
+    highSeason: isHighSeason,
+  },
+  notes: notes || '',
+  updatedAt: new Date().toISOString(),
+};
+      await saveChefProfilePatch({ pricing });
       await saveChefProfilePatch({ pricing: payload });
 
       // update local storage profile as well (si ton auth le supporte)
