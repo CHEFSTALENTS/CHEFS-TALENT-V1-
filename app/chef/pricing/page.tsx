@@ -194,12 +194,14 @@ export default function ChefPricingPage() {
 const [mode, setMode] = useState<'simple' | 'target'>('simple');
 const [targetNetPerDay, setTargetNetPerDay] = useState<number | null>(null);
 const [estimatedCostsPerDay, setEstimatedCostsPerDay] = useState<number | null>(null); // ex: transport/logement/temps prep
+  const [pricing, setPricing] = useState<ChefPricing>(defaultPricing());
+
+  
   const suggestion = useMemo(() => {
   if (!pricing.tier) return null;
   return getSuggestedForTier(pricing.tier, pricing.flags);
 }, [pricing.tier, pricing.flags]);
   
-  const [pricing, setPricing] = useState<ChefPricing>(defaultPricing());
 
   // charge depuis le profil local (storage) si présent, sinon on laisse vide
   useEffect(() => {
