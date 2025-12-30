@@ -1,33 +1,15 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-// GET /api/chef/profile?id=UUID
+/**
+ * GET /api/chef/profile?id=UUID
+ * -> { profile: object | null }
+ */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  pricing: {
-  tier: 'essential' | 'premium' | 'luxury' | 'ultra';
-  residence: {
-    dailyRate: number | null;        // €/jour
-    currency: 'EUR';
-    minDays: number | null;          // optionnel
-  };
-  event: {
-    pricePerPerson: number | null;   // €/pers
-    minGuests: number | null;
-  };
-  flags: {
-    highSeason?: boolean;
-    international?: boolean;
-    yacht?: boolean;
-    brigade?: boolean;
-  };
-  notes?: string;                   // optionnel (interne)
-  updatedAt: string;                // ISO
-}
-  
   const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
@@ -38,7 +20,6 @@ export async function GET(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // On renvoie directement le JSON profile (ce que ton front attend)
   return NextResponse.json({ profile: data?.profile ?? null });
 }
 
@@ -46,16 +27,20 @@ async function upsertProfile(req: Request) {
   const supabase = getSupabaseAdmin();
   const body = await req.json();
 
-  const id = body?.id || body?.profile?.id;
-  const email = body?.email || body?.profile?.email || null;
-  const profile = body?.profile || body;
+  // Supporte :
+  // 1) { id, email?, profile }
+  // 2) { profile: { id, email, ... } }
+  // 3) directement { id, email, ... } (profil brut)
+  const id = body?.id ?? body?.profile?.id ?? body?.user_id ?? body?.profile?.user_id;
+  const email = body?.email ?? body?.profile?.email ?? null;
+  const profile = body?.profile ?? body;
 
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const payload = {
     user_id: id,
-    email: email ?? null, 
-    profile: profile ?? {},
+    email,
+    profile: (profile && typeof profile === "object") ? profile : {},
     updated_at: new Date().toISOString(),
   };
 
@@ -67,12 +52,13 @@ async function upsertProfile(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ profile: data.profile });
+  return NextResponse.json({ profile: data?.profile ?? null });
 }
 
 export async function POST(req: Request) {
   return upsertProfile(req);
 }
+
 export async function PUT(req: Request) {
   return upsertProfile(req);
 }
