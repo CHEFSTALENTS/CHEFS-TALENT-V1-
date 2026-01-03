@@ -41,6 +41,26 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       return;
     }
     setUser(currentUser);
+        // ✅ Re-sync status from DB (source de vérité)
+    (async () => {
+      try {
+        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(currentUser.id)}`);
+        const json = await res.json();
+        if (json?.status) {
+          const updated = { ...currentUser, status: json.status };
+          setUser(updated);
+          // update local storage user too
+          auth.setCurrentUser?.(updated); // si tu as cette fonction
+          // sinon fallback:
+          try {
+            localStorage.setItem("currentUser", JSON.stringify(updated));
+          } catch {}
+        }
+      } catch (e) {
+        console.warn("[ChefLayout] status resync failed", e);
+      }
+    })();
+    
 
     // No index
     const meta = document.createElement('meta');
