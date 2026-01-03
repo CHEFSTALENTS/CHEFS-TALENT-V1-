@@ -688,4 +688,5 @@ setCurrentUser(user: any) {
   try {
     localStorage.setItem('currentUser', JSON.stringify(user));
   } catch {}
-};
+},
+  }; 
