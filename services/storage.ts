@@ -592,7 +592,10 @@ export const auth = {
       return { success: false, error: 'Cet email est déjà utilisé.' };
     }
 
-    
+  async getAllChefs(): Promise<ChefUser[]> {
+  await delay(120);
+  return getChefDb().filter(u => u.role === 'chef');
+},  
     const user: ChefUser = {
       id: crypto.randomUUID(),
       email: data.email,
