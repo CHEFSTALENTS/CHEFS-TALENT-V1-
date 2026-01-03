@@ -259,7 +259,7 @@ export default function ChefExperiencePage() {
               <Textarea
                 value={data.certNotes}
                 onChange={(e) => setData({ ...data, certNotes: e.target.value })}
-                placeholder="Ex: STCW valide jusqu’au 09/2027, ENG1 obtenu à Barcelone, HACCP 2024..."
+                placeholder="Ex: Permis B, Permis Bateau ... "
                 className="h-24"
               />
               <p className="text-xs text-stone-400">Ces infos nous aident à mieux vous matcher (yacht, sécurité, conformité).</p>
