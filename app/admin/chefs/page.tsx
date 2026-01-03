@@ -776,8 +776,15 @@ const pricing =
 
 const certs = getCertificationsFromProfile(profile);
   
-const pricingEvent = pricingObj?.event ?? {};
-const pricingResidence = pricingObj?.residence ?? {};
+const pricingEvent = (pricingObj?.event ?? {}) as {
+  pricePerPerson?: number | null;
+  minGuests?: number | null;
+};
+
+const pricingResidence = (pricingObj?.residence ?? {}) as {
+  dailyRate?: number | null;
+  minDays?: number | null;
+};
 
 const minGuests = pricingEvent.minGuests ?? null;
 const minDays = pricingResidence.minDays ?? null;
