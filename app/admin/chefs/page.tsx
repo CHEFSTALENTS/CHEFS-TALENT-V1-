@@ -139,7 +139,114 @@ function formatAvailability(v: any): string {
 
   return String(v);
 }
+/* -------------------- pricing + certifs helpers -------------------- */
 
+type PricingTier = 'essential' | 'premium' | 'luxury' | 'ultra';
+
+function toNumberOrNull(v: any): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getPricingFromProfile(profile: any) {
+  const p: any = normalizeProfile(profile);
+
+  // pricing peut être à plusieurs endroits selon les merges historiques
+  const pricing = (p?.pricing ?? p?.price ?? p?.tarifs ?? null) as any;
+  if (!pricing || typeof pricing !== 'object') return null;
+
+  const tier = (pricing?.tier ?? null) as PricingTier | null;
+
+  const residence = pricing?.residence ?? {};
+  const event = pricing?.event ?? {};
+  const flags = pricing?.flags ?? {};
+
+  return {
+    tier,
+    residence: {
+      dailyRate: toNumberOrNull(residence?.dailyRate),
+      currency: 'EUR' as const,
+      minDays: toNumberOrNull(residence?.minDays),
+    },
+    event: {
+      pricePerPerson: toNumberOrNull(event?.pricePerPerson),
+      minGuests: toNumberOrNull(event?.minGuests),
+    },
+    flags: {
+      highSeason: !!flags?.highSeason,
+      international: !!flags?.international,
+      yacht: !!flags?.yacht,
+      brigade: !!flags?.brigade,
+    },
+    updatedAt: String(pricing?.updatedAt ?? p?.updatedAt ?? new Date().toISOString()),
+  };
+}
+
+function getCertificationsFromProfile(profile: any): Array<{
+  id?: string;
+  label: string;
+  verified?: boolean;
+  expiresAt?: string | null;
+}> {
+  const p: any = normalizeProfile(profile);
+
+  const raw =
+    p?.certifications ??
+    p?.certs ??
+    p?.certifs ??
+    p?.diplomas ??
+    p?.qualifications ??
+    p?.licenses ??
+    [];
+
+  const arr = Array.isArray(raw) ? raw : [];
+
+  return arr
+    .map((c: any) => {
+      if (c === null || c === undefined) return null;
+
+      // si c'est un string simple "HACCP"
+      if (typeof c === 'string') {
+        const label = c.trim();
+        return label ? { label } : null;
+      }
+
+      if (typeof c === 'object') {
+        const label = String(c.label ?? c.name ?? c.title ?? c.value ?? c.id ?? '').trim();
+        if (!label) return null;
+
+        return {
+          id: String(c.id ?? c.slug ?? c.code ?? '').trim() || undefined,
+          label,
+          verified: !!c.verified,
+          expiresAt: c.expiresAt ?? c.expires_at ?? null,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean) as any;
+}
+
+function renderPricingShort(profile: any): string {
+  const pricing = getPricingFromProfile(profile);
+  if (pricing) {
+    const parts: string[] = [];
+    if (pricing.tier) parts.push(String(pricing.tier).toUpperCase());
+    if (pricing.residence?.dailyRate != null) parts.push(`${pricing.residence.dailyRate}€/j`);
+    if (pricing.event?.pricePerPerson != null) parts.push(`${pricing.event.pricePerPerson}€/pers`);
+    return parts.length ? parts.join(' • ') : '—';
+  }
+
+  // fallback legacy
+  const p: any = normalizeProfile(profile);
+  const dailyRate = p.dailyRate ?? p.rateDay ?? p.pricePerDay;
+  const ppp = p.pricePerPerson ?? p.pp ?? p.ratePerPerson;
+  if (dailyRate) return `${dailyRate}€/j`;
+  if (ppp) return `${ppp}€/pers`;
+  return '—';
+}
 /* -------------------- scoring helpers (UNIQUE) -------------------- */
 
 function ensureArray(v: any): string[] {
@@ -438,18 +545,18 @@ export default function AdminChefsPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-white/5">
               <tr className="text-white/70">
-                <th className="text-left p-3 font-medium">Chef</th>
-                <th className="text-left p-3 font-medium">Email</th>
                 <th className="text-left p-3 font-medium">Statut</th>
-                <th className="text-left p-3 font-medium">Score</th>
-                <th className="text-right p-3 font-medium">Actions</th>
+<th className="text-left p-3 font-medium">Tarifs</th>
+<th className="text-left p-3 font-medium">Certifs</th>
+<th className="text-left p-3 font-medium">Score</th>
+<th className="text-right p-3 font-medium">Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {loading && view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={5}>
+                  <td className="p-4 text-white/60" colSpan={7}>
                     Chargement…
                   </td>
                 </tr>
@@ -480,7 +587,30 @@ export default function AdminChefsPage() {
                       <td className="p-3">
                         <ChefStatusBadge status={status} />
                       </td>
+<td className="p-3 text-white/85">
+  <span className="text-xs text-white/80">{renderPricingShort((c as any).profile ?? c)}</span>
+</td>
 
+<td className="p-3">
+  {(() => {
+    const certs = getCertificationsFromProfile((c as any).profile ?? c);
+    if (!certs.length) return <span className="text-xs text-white/40">—</span>;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {certs.slice(0, 3).map((x, i) => (
+          <span
+            key={`${x.label}-${i}`}
+            className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/80"
+            title={x.expiresAt ? `Expire : ${formatDate(x.expiresAt)}` : undefined}
+          >
+            {x.label}{x.verified ? ' ✅' : ''}
+          </span>
+        ))}
+        {certs.length > 3 ? <span className="text-[11px] text-white/40">+{certs.length - 3}</span> : null}
+      </div>
+    );
+  })()}
+</td>
                       <td className="p-3">
                         <ScorePill score={score} />
                       </td>
@@ -625,10 +755,27 @@ function ChefDrawer({
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
-  const dailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
-  const pricePerPerson = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
-  const pricing = dailyRate ? `${dailyRate} €/jour` : pricePerPerson ? `${pricePerPerson} €/pers.` : null;
+  const pricingObj = getPricingFromProfile(profile);
+const legacyDailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
+const legacyPpp = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
 
+const pricing =
+  pricingObj
+    ? [
+        pricingObj.tier ? String(pricingObj.tier).toUpperCase() : null,
+        pricingObj.residence?.dailyRate != null ? `${pricingObj.residence.dailyRate} €/jour` : null,
+        pricingObj.event?.pricePerPerson != null ? `${pricingObj.event.pricePerPerson} €/pers.` : null,
+        pricingObj.residence?.minDays != null ? `min ${pricingObj.residence.minDays} jours` : null,
+        pricingObj.event?.minGuests != null ? `min ${pricingObj.event.minGuests} pers.` : null,
+      ].filter(Boolean).join(' • ')
+    : legacyDailyRate
+    ? `${legacyDailyRate} €/jour`
+    : legacyPpp
+    ? `${legacyPpp} €/pers.`
+    : null;
+
+const certs = getCertificationsFromProfile(profile);
+  
   const minGuests = profile.minGuests ?? profile.minimumGuests;
   const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
 
@@ -648,7 +795,8 @@ function ChefDrawer({
     bio: bioText.length > 30,
     langues: Boolean(Array.isArray(languages) ? languages.length : languages),
     spécialités: Boolean(Array.isArray(specialties) ? specialties.length : specialties),
-    tarifs: Boolean(dailyRate || pricePerPerson),
+tarifs: Boolean(pricingObj?.residence?.dailyRate || pricingObj?.event?.pricePerPerson || legacyDailyRate || legacyPpp),
+certifs: Boolean(certs.length),
     photos: Boolean(hasPhotos),
   };
 
@@ -677,7 +825,7 @@ function ChefDrawer({
             <ChefStatusBadge status={status} />
           </div>
           <div className="ml-auto text-xs text-white/50">
-            Dossier : <span className="text-white/70 font-medium">{checklistOk}/7</span>
+Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys(checklist).length}</span>
           </div>
         </div>
 
@@ -726,17 +874,21 @@ function ChefDrawer({
             </div>
           </Section>
 
-          <Section title="Prix & disponibilité">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow label="Tarif" value={pricing} />
-              <InfoRow label="Min convives" value={minGuests} />
-              <InfoRow label="Max convives" value={maxGuests} />
-              <InfoRow label="Disponibilité" value={formatAvailability(availability)} />
-              <InfoRow label="Mobilité" value={mobilityDisplay} />
-              <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
-            </div>
-          </Section>
-
+         <Section title="Prix, certifs & disponibilité">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <InfoRow label="Tarif" value={pricing} />
+    <InfoRow label="Certifications" value={
+      certs.length
+        ? certs.map((c: any) => `${c.label}${c.verified ? ' ✅' : ''}${c.expiresAt ? ` (exp. ${formatDate(c.expiresAt)})` : ''}`).join(' • ')
+        : '—'
+    } />
+    <InfoRow label="Min convives" value={minGuests} />
+    <InfoRow label="Max convives" value={maxGuests} />
+    <InfoRow label="Disponibilité" value={formatAvailability(availability)} />
+    <InfoRow label="Mobilité" value={mobilityDisplay} />
+    <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
+  </div>
+</Section>
           <Section title="Vérifications (avant approbation)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Identité" value={checklist.identité ? '✅ OK' : '❌ Incomplète'} />
@@ -746,6 +898,7 @@ function ChefDrawer({
               <InfoRow label="Spécialités" value={checklist.spécialités ? '✅ OK' : '❌ Manquantes'} />
               <InfoRow label="Tarifs" value={checklist.tarifs ? '✅ OK' : '❌ Non renseignés'} />
               <InfoRow label="Photos" value={checklist.photos ? '✅ OK' : '❌ Manquantes'} />
+              <InfoRow label="Certifications" value={checklist.certifs ? '✅ OK' : '⚠️ Non renseignées'} />
             </div>
 
             <div className="mt-3 text-xs text-white/45">
