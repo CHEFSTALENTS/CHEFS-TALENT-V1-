@@ -644,7 +644,9 @@ export const auth = {
         error: "Ton compte est en attente de validation par l'équipe Chef Talents.",
       };
     }
-
+setCurrentUser(user: any) {
+  localStorage.setItem("currentUser", JSON.stringify(user));
+}
     setSessionUser(user);
     return { success: true, user };
   },
