@@ -591,7 +591,12 @@ export const auth = {
     if (db.find(u => (u.email || '').toLowerCase() === data.email.toLowerCase())) {
       return { success: false, error: 'Cet email est déjà utilisé.' };
     }
-
+  setCurrentUser(user: any) {
+    try {
+      localStorage.setItem("currentUser", JSON.stringify(user));
+    } catch {}
+  },
+    
     const user: ChefUser = {
       id: crypto.randomUUID(),
       email: data.email,
@@ -644,9 +649,7 @@ export const auth = {
         error: "Ton compte est en attente de validation par l'équipe Chef Talents.",
       };
     }
-setCurrentUser(user: any) {
-  localStorage.setItem("currentUser", JSON.stringify(user));
-}
+
     setSessionUser(user);
     return { success: true, user };
   },
