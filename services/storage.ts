@@ -591,11 +591,7 @@ export const auth = {
     if (db.find(u => (u.email || '').toLowerCase() === data.email.toLowerCase())) {
       return { success: false, error: 'Cet email est déjà utilisé.' };
     }
-  setCurrentUser(user: any) {
-    try {
-      localStorage.setItem("currentUser", JSON.stringify(user));
-    } catch {}
-  },
+
     
     const user: ChefUser = {
       id: crypto.randomUUID(),
@@ -657,7 +653,12 @@ export const auth = {
   getCurrentUser(): ChefUser | null {
     return getSessionUser();
   },
-
+  setCurrentUser(user: any) {
+    try {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    } catch {}
+  },
+  
   async getAllChefs(): Promise<ChefUser[]> {
     await delay(120);
     return getChefDb().filter(u => u.role === 'chef');
