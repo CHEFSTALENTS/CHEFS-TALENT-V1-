@@ -200,13 +200,18 @@ function getCertificationsFromProfile(profile: any): Array<{
     p?.licenses ??
     [];
 
-  const arr = Array.isArray(raw) ? raw : [];
+  // ✅ support: certifications = { items: [...], notes: "..." }
+  const rawItems =
+    Array.isArray(raw) ? raw :
+    (raw && typeof raw === 'object' && Array.isArray((raw as any).items)) ? (raw as any).items :
+    [];
 
-  return arr
+  const arr = Array.isArray(rawItems) ? rawItems : [];
+
+  const items = arr
     .map((c: any) => {
       if (c === null || c === undefined) return null;
 
-      // si c'est un string simple "HACCP"
       if (typeof c === 'string') {
         const label = c.trim();
         return label ? { label } : null;
@@ -226,7 +231,17 @@ function getCertificationsFromProfile(profile: any): Array<{
 
       return null;
     })
-    .filter(Boolean) as any;
+    .filter(Boolean) as any[];
+
+  // ✅ optionnel: si notes existe, on l’affiche comme “badge”
+  const notes =
+    raw && typeof raw === 'object' ? String((raw as any).notes ?? '').trim() : '';
+
+  if (notes) {
+    items.push({ label: `Notes: ${notes}` });
+  }
+
+  return items;
 }
 
 function renderPricingShort(profile: any): string {
