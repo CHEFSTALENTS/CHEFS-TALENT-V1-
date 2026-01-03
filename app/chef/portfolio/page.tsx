@@ -1,21 +1,19 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth } from '../../../services/storage';
-import { Label, Button, Input, Marker } from '../../../components/ui';
-import { Loader2, Plus, X, Image as ImageIcon, Upload } from 'lucide-react';
+import { Label, Button, Marker } from '../../../components/ui';
+import { Loader2, X, Image as ImageIcon, Upload } from 'lucide-react';
 
 async function saveChefProfilePatch(patch: any) {
   const user = auth.getCurrentUser?.();
   if (!user?.id) throw new Error('No user');
 
-  // 1) GET existing profile from DB
   const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
   const json = await resGet.json();
   const current = json?.profile ?? {};
 
-  // 2) merge
   const merged = {
     ...current,
     ...patch,
@@ -24,7 +22,6 @@ async function saveChefProfilePatch(patch: any) {
     updatedAt: new Date().toISOString(),
   };
 
-  // 3) PUT
   const resPut = await fetch('/api/chef/profile', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -47,21 +44,11 @@ async function uploadOne(file: File, userId: string) {
   return json.url as string;
 }
 
-function isValidUrl(u: string) {
-  try {
-    const url = new URL(u);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
 export default function ChefPortfolioPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const [images, setImages] = useState<string[]>([]);
-  const [newUrl, setNewUrl] = useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -70,37 +57,50 @@ export default function ChefPortfolioPage() {
     setImages(imgs);
   }, []);
 
-  const canAddUrl = useMemo(() => {
-    const u = newUrl.trim();
-    return u.length > 0 && isValidUrl(u) && !images.includes(u);
-  }, [newUrl, images]);
-
   const persistImages = async (imgList: string[]) => {
     const user = auth.getCurrentUser?.();
     if (!user?.id) return;
 
-    // DB (Supabase)
     await saveChefProfilePatch({ images: imgList });
-
-    // localStorage (ancien MVP)
     await auth.updateChefProfile?.(user.id, { images: imgList } as any);
   };
 
-  const addImageByUrl = async () => {
-    const u = newUrl.trim();
-    if (!u || !isValidUrl(u) || images.includes(u)) return;
+  const handlePickFiles = () => fileRef.current?.click();
+
+  const handleUploadFiles = async (files: FileList | null) => {
+    const user = auth.getCurrentUser?.();
+    if (!user?.id) return;
+    if (!files || files.length === 0) return;
 
     setLoading(true);
     try {
-      const updated = [...images, u];
+      const urls: string[] = [];
+
+      for (const f of Array.from(files)) {
+        if (!f.type.startsWith('image/')) continue;
+
+        const maxMb = 8;
+        if (f.size > maxMb * 1024 * 1024) continue;
+
+        const url = await uploadOne(f, user.id);
+        if (url && !images.includes(url) && !urls.includes(url)) urls.push(url);
+      }
+
+      if (urls.length === 0) {
+        alert("Aucune image n'a pu être uploadée (format/taille).");
+        return;
+      }
+
+      const updated = [...images, ...urls];
       setImages(updated);
-      setNewUrl('');
       await persistImages(updated);
+
+      if (fileRef.current) fileRef.current.value = '';
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
     } catch (e: any) {
-      alert(e?.message || 'Erreur lors de la sauvegarde');
+      alert(e?.message || "Erreur lors de l'upload");
     } finally {
       setLoading(false);
     }
@@ -122,49 +122,6 @@ export default function ChefPortfolioPage() {
     }
   };
 
-  const handlePickFiles = () => fileRef.current?.click();
-
-  const handleUploadFiles = async (files: FileList | null) => {
-    const user = auth.getCurrentUser?.();
-    if (!user?.id) return;
-    if (!files || files.length === 0) return;
-
-    setLoading(true);
-    try {
-      const urls: string[] = [];
-
-      // upload séquentiel (simple + fiable)
-      for (const f of Array.from(files)) {
-        // garde-fous côté front (le backend re-check aussi)
-        if (!f.type.startsWith('image/')) continue;
-        const maxMb = 8;
-        if (f.size > maxMb * 1024 * 1024) continue;
-
-        const url = await uploadOne(f, user.id);
-        if (url && !images.includes(url) && !urls.includes(url)) urls.push(url);
-      }
-
-      if (urls.length === 0) {
-        alert("Aucune image n'a pu être uploadée (format/taille).");
-        return;
-      }
-
-      const updated = [...images, ...urls];
-      setImages(updated);
-      await persistImages(updated);
-
-      // reset input
-      if (fileRef.current) fileRef.current.value = '';
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2500);
-    } catch (e: any) {
-      alert(e?.message || "Erreur lors de l'upload");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <ChefLayout>
       <div className="max-w-4xl">
@@ -173,9 +130,8 @@ export default function ChefPortfolioPage() {
         <h1 className="text-3xl font-serif text-stone-900 mb-8">Portfolio</h1>
 
         <div className="bg-white p-8 border border-stone-200 space-y-8">
-          {/* Upload */}
           <div className="space-y-2">
-            <Label>Ajouter des photos (recommandé)</Label>
+            <Label>Ajouter des photos</Label>
 
             <input
               ref={fileRef}
@@ -200,20 +156,6 @@ export default function ChefPortfolioPage() {
             </div>
           </div>
 
-          {/* URL fallback (optionnel) */}
-          <div className="flex gap-4 items-end">
-            <div className="flex-grow space-y-2">
-              <Label>Ajouter une image via URL (optionnel)</Label>
-              <Input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://..." />
-              <p className="text-xs text-stone-400">À garder uniquement pour les chefs qui ont déjà leurs images en ligne.</p>
-            </div>
-            <Button type="button" onClick={addImageByUrl} disabled={!canAddUrl || loading} className="mb-0">
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-              Ajouter
-            </Button>
-          </div>
-
-          {/* Tips */}
           <div className="bg-stone-50 p-6 border-t border-b border-stone-100">
             <h4 className="text-sm font-medium text-stone-900 mb-2">Conseils Portfolio</h4>
             <p className="text-sm text-stone-500 font-light">
@@ -222,7 +164,6 @@ export default function ChefPortfolioPage() {
             </p>
           </div>
 
-          {/* Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {images.map((url, idx) => (
               <div
