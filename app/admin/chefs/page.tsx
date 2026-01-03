@@ -776,20 +776,10 @@ const pricing =
 
 const certs = getCertificationsFromProfile(profile);
   
- const minGuests =
-  pricingObj?.event?.minGuests ??
-  profile.minGuests ??
-  profile.minimumGuests ??
-  null;
-
-const minDays =
-  pricingObj?.residence?.minDays ??
-  profile.minDays ??
-  null;
 const pricingEvent = pricingObj?.event ?? {};
 const pricingResidence = pricingObj?.residence ?? {};
 
-  const minGuests = pricingEvent.minGuests ?? null;
+const minGuests = pricingEvent.minGuests ?? null;
 const minDays = pricingResidence.minDays ?? null;
   
   const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
