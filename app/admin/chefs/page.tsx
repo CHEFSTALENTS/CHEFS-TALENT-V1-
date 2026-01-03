@@ -755,27 +755,44 @@ function ChefDrawer({
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
-  const pricingObj = getPricingFromProfile(profile);
-const legacyDailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
-const legacyPpp = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
+    const pricingObj = getPricingFromProfile(profile);
 
-const pricing =
-  pricingObj
-    ? [
-        pricingObj.tier ? String(pricingObj.tier).toUpperCase() : null,
-        pricingObj.residence?.dailyRate != null ? `${pricingObj.residence.dailyRate} €/jour` : null,
-        pricingObj.event?.pricePerPerson != null ? `${pricingObj.event.pricePerPerson} €/pers.` : null,
-        pricingObj.residence?.minDays != null ? `min ${pricingObj.residence.minDays} jours` : null,
-        pricingObj.event?.minGuests != null ? `min ${pricingObj.event.minGuests} pers.` : null,
-      ].filter(Boolean).join(' • ')
-    : legacyDailyRate
-    ? `${legacyDailyRate} €/jour`
-    : legacyPpp
-    ? `${legacyPpp} €/pers.`
-    : null;
+  const legacyDailyRate = profile.dailyRate ?? profile.rateDay ?? profile.pricePerDay;
+  const legacyPpp = profile.pricePerPerson ?? profile.pp ?? profile.ratePerPerson;
 
-const certs = getCertificationsFromProfile(profile);
-  
+  const pricing =
+    pricingObj
+      ? [
+          pricingObj.tier ? String(pricingObj.tier).toUpperCase() : null,
+          pricingObj.residence?.dailyRate != null ? `${pricingObj.residence.dailyRate} €/jour` : null,
+          pricingObj.event?.pricePerPerson != null ? `${pricingObj.event.pricePerPerson} €/pers.` : null,
+          pricingObj.residence?.minDays != null ? `min ${pricingObj.residence.minDays} jours` : null,
+          pricingObj.event?.minGuests != null ? `min ${pricingObj.event.minGuests} pers.` : null,
+        ]
+          .filter(Boolean)
+          .join(' • ')
+      : legacyDailyRate
+      ? `${legacyDailyRate} €/jour`
+      : legacyPpp
+      ? `${legacyPpp} €/pers.`
+      : null;
+
+  const certs = getCertificationsFromProfile(profile);
+
+  // ✅ valeurs affichées dans les cases dédiées (nouveau pricing → fallback legacy)
+  const minGuests =
+    pricingObj?.event?.minGuests ??
+    profile.minGuests ??
+    profile.minimumGuests ??
+    null;
+
+  const minDays =
+    pricingObj?.residence?.minDays ??
+    profile.minDays ??
+    null;
+
+  const minGuestsDisplay = minGuests ?? '—';
+  const minDaysDisplay = minDays ?? '—';
 const pricingEvent = (pricingObj?.event ?? {}) as {
   pricePerPerson?: number | null;
   minGuests?: number | null;
@@ -897,13 +914,20 @@ Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys
          <Section title="Prix, certifs & disponibilité">
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <InfoRow label="Tarif" value={pricing} />
-    <InfoRow label="Certifications" value={
-      certs.length
-        ? certs.map((c: any) => `${c.label}${c.verified ? ' ✅' : ''}${c.expiresAt ? ` (exp. ${formatDate(c.expiresAt)})` : ''}`).join(' • ')
-        : '—'
-    } />
-   <InfoRow label="Min convives (événement)" value={minGuests} />
-<InfoRow label="Min jours (résidence)" value={minDays} />
+
+<InfoRow
+  label="Certifications"
+  value={
+    certs.length
+      ? certs
+          .map((c: any) => `${c.label}${c.verified ? ' ✅' : ''}${c.expiresAt ? ` (exp. ${formatDate(c.expiresAt)})` : ''}`)
+          .join(' • ')
+      : '—'
+  }
+/>
+
+<InfoRow label="Min convives (événement)" value={minGuestsDisplay} />
+<InfoRow label="Min jours (résidence)" value={minDaysDisplay} />
     <InfoRow label="Disponibilité" value={formatAvailability(availability)} />
     <InfoRow label="Mobilité" value={mobilityDisplay} />
     <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
