@@ -625,113 +625,87 @@ export const auth = {
     return { success: true, user };
   },
 
-  async loginChef(
-    email: string,
-    password: string
-  ): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
-    await delay(200);
-    ensureAdminSeed();
+async loginChef(
+  email: string,
+  password: string
+): Promise<{ success: boolean; user?: ChefUser; error?: string }> {
+  await delay(200);
+  ensureAdminSeed();
 
-    const user = getChefDb().find(
-      u => (u.email || '').toLowerCase() === email.toLowerCase() && u.password === password
-    );
+  const user = getChefDb().find(
+    u => (u.email || '').toLowerCase() === email.toLowerCase() && u.password === password
+  );
 
-    if (!user) return { success: false, error: 'Identifiants invalides' };
+  if (!user) return { success: false, error: 'Identifiants invalides' };
 
-    // 🔒 Si ce n’est pas l’admin, on bloque tant que pas active
-    if (!isAdminUser(user) && user.role === 'chef' && user.status !== 'active') {
+  // ✅ 1) RESYNC status depuis la DB (Supabase) via l’API chef (pas besoin d’admin header)
+  try {
+    if (user.id) {
+      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        const profile = json?.profile ?? null;
+
+        // On accepte plusieurs emplacements possibles (au cas où)
+        const dbStatus =
+          profile?.status ??
+          profile?.chefStatus ??
+          profile?.state ??
+          null;
+
+        if (dbStatus) {
+          user.status = dbStatus; // écrase le status local obsolète
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[loginChef] status resync failed (non bloquant)', e);
+  }
+
+  // ✅ 2) Bloquer UNIQUEMENT si vraiment "pending_validation" (ou "paused" si tu veux)
+  // -> le portail doit être accessible en "approved" ET "active"
+  const st = String((user as any).status || '').toLowerCase();
+
+  if (!isAdminUser(user) && user.role === 'chef') {
+    if (st === 'pending_validation') {
       return {
         success: false,
         error: "Ton compte est en attente de validation par l'équipe Chef Talents.",
       };
     }
-
-    setSessionUser(user);
-    return { success: true, user };
-  },
-
-  getCurrentUser(): ChefUser | null {
-    return getSessionUser();
-  },
-  setCurrentUser(user: any) {
-    try {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-    } catch {}
-  },
-  
-  async getAllChefs(): Promise<ChefUser[]> {
-    await delay(120);
-    return getChefDb().filter(u => u.role === 'chef');
-  },
-
-  async updateChefStatus(userId: string, status: ChefUser['status']): Promise<void> {
-    await delay(120);
-    const db = getChefDb();
-    const idx = db.findIndex(u => u.id === userId);
-    if (idx !== -1) {
-      db[idx].status = status;
-      saveChefDb(db);
-
-      // sync session si c’est lui
-      const session = getSessionUser();
-      if (session?.id === userId) setSessionUser(db[idx]);
+    if (st === 'paused') {
+      return {
+        success: false,
+        error: "Ton compte est actuellement en pause. Contacte l'équipe Chef Talents.",
+      };
     }
-  },
+  }
 
-  async updateChefProfile(
-    userId: string,
-    updates: Partial<ChefProfile>
-  ): Promise<ChefUser | null> {
-    await delay(200);
+  // ✅ 3) Persist session + localStorage
+  setSessionUser(user);
+  try {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  } catch {}
 
-    const db = getChefDb();
-    const idx = db.findIndex(u => u.id === userId);
-    if (idx === -1) return null;
+  return { success: true, user };
+},
 
-    const currentUser = db[idx];
-    const updatedProfile = { ...(currentUser.profile ?? {}), ...updates };
+getCurrentUser(): ChefUser | null {
+  // priorité session
+  const session = getSessionUser();
+  if (session) return session;
 
-    const isComplete = !!(
-      (updatedProfile as any).bio &&
-      (updatedProfile as any).yearsExperience &&
-      (updatedProfile as any).baseCity &&
-      (updatedProfile as any).profileType
-    );
+  // fallback localStorage
+  try {
+    const raw = localStorage.getItem('currentUser');
+    return raw ? (JSON.parse(raw) as ChefUser) : null;
+  } catch {
+    return null;
+  }
+},
 
-    const updatedUser: ChefUser = {
-      ...currentUser,
-      profile: updatedProfile,
-      profileCompleted: isComplete,
-    };
-
-    db[idx] = updatedUser;
-    saveChefDb(db);
-
-    // sync session
-    const session = getSessionUser();
-    if (session?.id === userId) setSessionUser(updatedUser);
-
-    return updatedUser;
-  },
-
-  async deleteChefAccount(userId: string): Promise<void> {
-    await delay(120);
-
-    // 1) Supprime le chef
-    saveChefDb(getChefDb().filter(u => u.id !== userId));
-
-    // 2) Supprime ses proposals
-    saveProposalsDb(getProposalsDb().filter(p => p.chefId !== userId));
-
-    // 3) Supprime ses missions
-    saveMissionsDb(getMissionsDb().filter(m => m.chefId !== userId));
-
-    // 4) Clear session si besoin
-    const session = getSessionUser();
-    if (session?.id === userId) clearSessionUser();
-  },
-
-  logout() {
-    clearSessionUser();
-  },
-};
+setCurrentUser(user: any) {
+  try {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  } catch {}
+},
