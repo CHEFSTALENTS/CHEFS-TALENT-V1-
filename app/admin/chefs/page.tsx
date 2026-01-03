@@ -786,8 +786,18 @@ const pricingResidence = (pricingObj?.residence ?? {}) as {
   minDays?: number | null;
 };
 
-const minGuests = pricingEvent.minGuests ?? null;
-const minDays = pricingResidence.minDays ?? null;
+const pricingObj = getPricingFromProfile(profile);
+
+const minGuests =
+  pricingObj?.event?.minGuests ??
+  profile.minGuests ??
+  profile.minimumGuests ??
+  null;
+
+const minDays =
+  pricingObj?.residence?.minDays ??
+  profile.minDays ??
+  null;
   
   const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
 
@@ -908,8 +918,11 @@ Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys
               <InfoRow label="Spécialités" value={checklist.spécialités ? '✅ OK' : '❌ Manquantes'} />
               <InfoRow label="Tarifs" value={checklist.tarifs ? '✅ OK' : '❌ Non renseignés'} />
               <InfoRow label="Photos" value={checklist.photos ? '✅ OK' : '❌ Manquantes'} />
-              <InfoRow label="Certifications" value={checklist.certifs ? '✅ OK' : '⚠️ Non renseignées'} />
-            </div>
+<InfoRow
+  label="Certifications" value={certs.length ? certs.map( (c) =>`${c.label}${c.verified ? ' ✅' : ''}${
+                c.expiresAt ? ` (exp. ${formatDate(c.expiresAt)})` : ''  }` )  .join(' • '): '—'
+  }
+/>            </div>
 
             <div className="mt-3 text-xs text-white/45">
               Dernière mise à jour : {updatedAt ? formatDateTime(updatedAt) : '—'}
