@@ -105,7 +105,7 @@ export default function ChefMissionsPage() {
                 size="sm"
                 variant="outline"
                 className="border-stone-200"
-onClick={() => window.location.assign('/chef/profile')}              >
+onClick={() => window.location.assign('/chef/identity')}              >
                 Compléter mon profil
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
