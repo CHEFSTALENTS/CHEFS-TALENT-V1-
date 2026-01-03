@@ -793,29 +793,7 @@ function ChefDrawer({
 
   const minGuestsDisplay = minGuests ?? '—';
   const minDaysDisplay = minDays ?? '—';
-const pricingEvent = (pricingObj?.event ?? {}) as {
-  pricePerPerson?: number | null;
-  minGuests?: number | null;
-};
 
-const pricingResidence = (pricingObj?.residence ?? {}) as {
-  dailyRate?: number | null;
-  minDays?: number | null;
-};
-
-const pricingObj = getPricingFromProfile(profile);
-
-const minGuests =
-  pricingObj?.event?.minGuests ??
-  profile.minGuests ??
-  profile.minimumGuests ??
-  null;
-
-const minDays =
-  pricingObj?.residence?.minDays ??
-  profile.minDays ??
-  null;
-  
   const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
 
   const mobility = profile.mobility;
