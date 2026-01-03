@@ -194,7 +194,7 @@ export default function ChefProfilePage() {
                   { id: 'private', label: 'Chef Privé', sub: 'Dîners & Événements' },
                   { id: 'residence', label: 'Chef Résidence', sub: 'Séjours & Longue durée' },
                   { id: 'yacht', label: 'Chef Yacht', sub: 'Saison ou Charter' },
-                  { id: 'pastry', label: 'Chef Pâtissier', sub: 'Spécialiste sucré' },
+              
                 ].map((opt) => (
                   <label
                     key={opt.id}
