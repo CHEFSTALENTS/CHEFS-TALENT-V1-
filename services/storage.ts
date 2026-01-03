@@ -633,55 +633,37 @@ async loginChef(
   ensureAdminSeed();
 
   const user = getChefDb().find(
-    u => (u.email || '').toLowerCase() === email.toLowerCase() && u.password === password
+    (u) => (u.email || '').toLowerCase() === email.toLowerCase() && u.password === password
   );
 
   if (!user) return { success: false, error: 'Identifiants invalides' };
 
-  // ✅ 1) RESYNC status depuis la DB (Supabase) via l’API chef (pas besoin d’admin header)
+  // ✅ RESYNC status depuis Supabase (non bloquant)
   try {
     if (user.id) {
       const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         const profile = json?.profile ?? null;
-
-        // On accepte plusieurs emplacements possibles (au cas où)
-        const dbStatus =
-          profile?.status ??
-          profile?.chefStatus ??
-          profile?.state ??
-          null;
-
-        if (dbStatus) {
-          user.status = dbStatus; // écrase le status local obsolète
-        }
+        const dbStatus = profile?.status ?? profile?.chefStatus ?? profile?.state ?? null;
+        if (dbStatus) user.status = dbStatus;
       }
     }
   } catch (e) {
     console.warn('[loginChef] status resync failed (non bloquant)', e);
   }
 
-  // ✅ 2) Bloquer UNIQUEMENT si vraiment "pending_validation" (ou "paused" si tu veux)
-  // -> le portail doit être accessible en "approved" ET "active"
   const st = String((user as any).status || '').toLowerCase();
 
   if (!isAdminUser(user) && user.role === 'chef') {
     if (st === 'pending_validation') {
-      return {
-        success: false,
-        error: "Ton compte est en attente de validation par l'équipe Chef Talents.",
-      };
+      return { success: false, error: "Ton compte est en attente de validation par l'équipe Chef Talents." };
     }
     if (st === 'paused') {
-      return {
-        success: false,
-        error: "Ton compte est actuellement en pause. Contacte l'équipe Chef Talents.",
-      };
+      return { success: false, error: "Ton compte est actuellement en pause. Contacte l'équipe Chef Talents." };
     }
   }
 
-  // ✅ 3) Persist session + localStorage
   setSessionUser(user);
   try {
     localStorage.setItem('currentUser', JSON.stringify(user));
@@ -691,11 +673,9 @@ async loginChef(
 },
 
 getCurrentUser(): ChefUser | null {
-  // priorité session
   const session = getSessionUser();
   if (session) return session;
 
-  // fallback localStorage
   try {
     const raw = localStorage.getItem('currentUser');
     return raw ? (JSON.parse(raw) as ChefUser) : null;
