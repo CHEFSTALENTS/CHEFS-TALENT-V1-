@@ -776,9 +776,22 @@ const pricing =
 
 const certs = getCertificationsFromProfile(profile);
   
-  const minGuests = profile.minGuests ?? profile.minimumGuests;
-  const maxGuests = profile.maxGuests ?? profile.maxPax ?? profile.capacity;
+ const minGuests =
+  pricingObj?.event?.minGuests ??
+  profile.minGuests ??
+  profile.minimumGuests ??
+  null;
 
+const minDays =
+  pricingObj?.residence?.minDays ??
+  profile.minDays ??
+  null;
+const pricingEvent = pricingObj?.event ?? {};
+const pricingResidence = pricingObj?.residence ?? {};
+
+  const minGuests = pricingEvent.minGuests ?? null;
+const minDays = pricingResidence.minDays ?? null;
+  
   const availability = profile.availability ?? profile.availableFrom ?? profile.calendarNote ?? profile.preferredPeriods;
 
   const mobility = profile.mobility;
@@ -882,8 +895,8 @@ Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys
         ? certs.map((c: any) => `${c.label}${c.verified ? ' ✅' : ''}${c.expiresAt ? ` (exp. ${formatDate(c.expiresAt)})` : ''}`).join(' • ')
         : '—'
     } />
-    <InfoRow label="Min convives" value={minGuests} />
-    <InfoRow label="Max convives" value={maxGuests} />
+   <InfoRow label="Min convives (événement)" value={minGuests} />
+<InfoRow label="Min jours (résidence)" value={minDays} />
     <InfoRow label="Disponibilité" value={formatAvailability(availability)} />
     <InfoRow label="Mobilité" value={mobilityDisplay} />
     <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
