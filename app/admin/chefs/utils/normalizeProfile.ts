@@ -114,10 +114,7 @@ export function normalizeProfile(raw: any) {
 
   const bioRaw = firstNonEmpty((p as any).bio, (p as any).about, (p as any).description, (p as any).biography, (p as any).bio_long, (p as any).bioLong);
   const bio = unwrapText(bioRaw);
-
-  const servicesRaw = firstNonEmpty((p as any).services, (p as any).serviceTypes, (p as any).service_types);
-  const services = Array.isArray(servicesRaw) ? servicesRaw : unwrapText(servicesRaw);
-
+  
   const mobilityRaw = firstNonEmpty(
   (p as any).mobility,
   (p as any).travel,
@@ -158,7 +155,6 @@ const images = ensureStringArray(imagesRaw);
     profileType,
     seniorityLevel,
     bio,
-    services,
     mobility,
     images,
     location,
