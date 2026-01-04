@@ -93,7 +93,7 @@ async function saveChefProfilePatch(patch: any) {
   if (!user?.id) throw new Error("No user");
 
   // 1) GET existing profile from DB
-  const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);  { cache: 'no-store' })
+  const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);  { cache: 'no-store' }
   const json = await resGet.json();
   const current = json?.profile ?? {};
 
