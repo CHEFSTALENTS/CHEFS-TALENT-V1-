@@ -146,10 +146,14 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
         0
     ) || 0;
 
-  const images =
-    (profile as any).images ??
-    (profile as any).portfolioImages ??
-    [];
+ const imagesRaw =
+  (profile as any).photos ??
+  (profile as any).images ??
+  (profile as any).gallery ??
+  (profile as any).portfolioImages ??
+  [];
+
+const hasImages = Array.isArray(imagesRaw) && imagesRaw.filter(Boolean).length > 0;
 
   const photoUrl =
     (profile as any).photoUrl ??
@@ -160,7 +164,6 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
   const website = String((profile as any).website ?? '').trim();
   const portfolioUrl = String((profile as any).portfolioUrl ?? '').trim();
 
-  const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
 
   const items: Array<{
     key: string;
