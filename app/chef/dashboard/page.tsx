@@ -101,8 +101,41 @@ export default function ChefDashboardPage() {
   }, [onboardingProfile, settingsProfile, user]);
 
   // ✅ Score unique
-  const { score } = useMemo(() => computeChefScore(mergedProfile ?? {}), [mergedProfile]);
+const profileForScore = useMemo(() => {
+  const p: any = mergedProfile ?? {};
 
+  const city =
+    String(
+      p.city ??
+      p.baseCity ??
+      p.location?.baseCity ??
+      (typeof p.location === 'string' ? p.location : '')
+    )
+      .split(',')[0]
+      .trim();
+
+  return {
+    name: String(p.name ?? '').trim(),
+    phone: String(p.phone ?? '').trim(),
+    city,
+    country: String(p.country ?? p.location?.country ?? '').trim(),
+    bio: String(p.bio ?? '').trim(),
+    yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
+
+    cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
+    specialties: Array.isArray(p.specialties) ? p.specialties : [],
+    languages: Array.isArray(p.languages) ? p.languages : [],
+
+    instagram: String(p.instagram ?? '').trim(),
+    website: String(p.website ?? '').trim(),
+    portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
+
+    // 🔥 important : le score regarde souvent avatarUrl
+    avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? '').trim(),
+  };
+}, [mergedProfile]);
+
+const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
   // ✅ Checks “Tableau de bord” alignés sur tes champs réels (settings + anciens)
   const checks = useMemo(() => {
     const bio = (mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
@@ -421,3 +454,7 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
+
+<pre className="text-xs text-stone-500">
+  {JSON.stringify(profileForScore, null, 2)}
+</pre>
