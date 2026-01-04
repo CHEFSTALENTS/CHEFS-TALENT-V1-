@@ -1,6 +1,28 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
+export async function PUT(req: Request) {
+  const body = await req.json();
+  const id = body?.id;
+  const profile = body?.profile ?? {};
+
+  // status actuel
+  const currentStatus = String(profile?.status ?? 'draft');
+
+  // 👇 calc complétion “éligibilité validation”
+  const { ok } = isProfileCompleteForValidation(profile);
+
+  // ✅ auto-transition draft -> pending_validation
+  const nextStatus =
+    currentStatus === 'draft' && ok ? 'pending_validation' : currentStatus;
+
+  const merged = {
+    ...profile,
+    status: nextStatus,
+    updatedAt: new Date().toISOString(),
+  };
+}
 /**
  * GET /api/chef/profile?id=UUID
  * -> { profile: object | null }
