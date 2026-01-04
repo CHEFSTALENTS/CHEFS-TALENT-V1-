@@ -50,7 +50,7 @@ export default function ChefDashboardPage() {
         if (!u?.id) return;
 
         // 1) DB (source de vérité)
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`);
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`); { cache: 'no-store' }
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
