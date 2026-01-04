@@ -75,7 +75,6 @@ export default function ChefSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ChefProfile>({});
-  import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
   const [notice, setNotice] = useState<string | null>(null);
 const scoreInput = useMemo(() => {
   const p: any = profile ?? {};
