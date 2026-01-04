@@ -21,6 +21,7 @@ import {
   MapPinned,
   Calendar,
   SlidersHorizontal,
+  DollarSign
 } from 'lucide-react';
 import { computeChefScore } from '@/lib/chefScore';
 
