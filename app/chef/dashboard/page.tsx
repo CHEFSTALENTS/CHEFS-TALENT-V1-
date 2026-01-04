@@ -25,7 +25,7 @@ import {
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
 const completion = useMemo(() => {
-  const { details } = isProfileCompleteForValidation(profile);
+const { details } = isProfileCompleteForValidation(mergedProfile ?? {});
   const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
   const ok = items.filter(i => i.ok).length;
   const total = items.length;
