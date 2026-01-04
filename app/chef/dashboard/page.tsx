@@ -455,6 +455,3 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-<pre className="text-xs text-stone-500">
-  {JSON.stringify(profileForScore, null, 2)}
-</pre>
