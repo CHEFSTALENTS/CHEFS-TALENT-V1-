@@ -61,7 +61,7 @@ export default function ChefAvailabilityPage() {
           return;
         }
 
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`); { cache: 'no-store' }
         const json = await res.json();
         const fromDb: ChefProfile | null = json?.profile ?? null;
 
