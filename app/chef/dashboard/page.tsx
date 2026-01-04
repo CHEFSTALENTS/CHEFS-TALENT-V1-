@@ -22,6 +22,16 @@ import {
   DollarSign,
 } from 'lucide-react';
 
+import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
+
+const completion = useMemo(() => {
+  const { details } = isProfileCompleteForValidation(profile);
+  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
+  const ok = items.filter(i => i.ok).length;
+  const total = items.length;
+  return { ok, total, score: Math.round((ok / total) * 100), details };
+}, [profile]);
+
 const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
 function safeReadLS<T>(key: string): T | null {
