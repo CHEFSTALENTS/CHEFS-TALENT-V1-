@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-function isValid(area: ‘admin’ | ‘chef’ | ‘public’, code: string) {
+type Area = 'admin' | 'chef' | 'public';
+
+function isValid(area: Area, code: string) {
   const c = (code || '').trim();
   if (!c) return false;
 
@@ -13,7 +15,7 @@ function isValid(area: ‘admin’ | ‘chef’ | ‘public’, code: string) {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const area = (body?.area || '') as 'admin' | 'chef' | 'public';
+  const area = (body?.area || '') as Area;
   const code = String(body?.code || '');
   const next = String(body?.next || '/');
 
@@ -27,7 +29,6 @@ export async function POST(req: Request) {
 
   const res = NextResponse.json({ ok: true });
 
-  // cookies httpOnly (sécurisé, pas accessible JS)
   const cookieName =
     area === 'admin' ? 'ct_gate_admin' : area === 'chef' ? 'ct_gate_chef' : 'ct_gate_public';
 
@@ -39,7 +40,5 @@ export async function POST(req: Request) {
     maxAge: 60 * 60 * 24 * 7, // 7 jours
   });
 
-  // on renvoie aussi la destination
-  res.headers.set('x-next', next);
   return res;
 }
