@@ -19,6 +19,7 @@ import {
   Crown,
   Sparkles,
   Lock,
+  DollarSign,
 } from 'lucide-react';
 
 const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
@@ -115,12 +116,34 @@ export default function ChefDashboardPage() {
         !!(mergedProfile as any).baseCity?.trim());
 
     const experienceOk = (years ?? 0) > 0 || bio.length >= 80;
+    
+const images =
+  (mergedProfile as any).images ??
+  (mergedProfile as any).photos ??
+  (mergedProfile as any).gallery ??
+  (mergedProfile as any).portfolioImages ??
+  [];
 
-    const portfolioOk =
-      !!mergedProfile.portfolioUrl?.trim() ||
-      !!mergedProfile.instagram?.trim() ||
-      !!mergedProfile.website?.trim();
+const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
 
+const portfolioOk =
+  hasImages ||
+  !!String((mergedProfile as any).photoUrl ?? mergedProfile.avatarUrl ?? '').trim() ||
+  !!String(mergedProfile.portfolioUrl ?? '').trim() ||
+  !!String(mergedProfile.instagram ?? '').trim() ||
+  !!String(mergedProfile.website ?? '').trim();
+
+const pricing = (mergedProfile as any).pricing ?? null;
+
+const hasPricing =
+  !!pricing &&
+  (
+    Number(pricing?.residence?.dailyRate ?? 0) > 0 ||
+    Number(pricing?.event?.pricePerPerson ?? 0) > 0 ||
+    Number((mergedProfile as any).dailyRate ?? 0) > 0 ||
+    Number((mergedProfile as any).pricePerPerson ?? 0) > 0
+  );
+    
     const mobilityOk =
       !!mergedProfile.location?.baseCity?.trim() ||
       !!(mergedProfile as any).baseCity?.trim() ||
@@ -158,6 +181,15 @@ export default function ChefDashboardPage() {
         done: portfolioOk,
         icon: ImageIcon,
       },
+      {
+  key: 'pricing',
+  title: 'Tarifs',
+  desc: 'Prix / jour ou prix / personne',
+  path: '/chef/pricing',
+  done: hasPricing,
+  icon: DollarSign, // (pense à l'import)
+},
+      
       {
         key: 'mobility',
         title: 'Zone & Mobilité',
