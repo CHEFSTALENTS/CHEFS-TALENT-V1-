@@ -2,27 +2,6 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
-export async function PUT(req: Request) {
-  const body = await req.json();
-  const id = body?.id;
-  const profile = body?.profile ?? {};
-
-  // status actuel
-  const currentStatus = String(profile?.status ?? 'draft');
-
-  // 👇 calc complétion “éligibilité validation”
-  const { ok } = isProfileCompleteForValidation(profile);
-
-  // ✅ auto-transition draft -> pending_validation
-  const nextStatus =
-    currentStatus === 'draft' && ok ? 'pending_validation' : currentStatus;
-
-  const merged = {
-    ...profile,
-    status: nextStatus,
-    updatedAt: new Date().toISOString(),
-  };
-}
 /**
  * GET /api/chef/profile?id=UUID
  * -> { profile: object | null }
@@ -56,13 +35,23 @@ async function upsertProfile(req: Request) {
   const id = body?.id ?? body?.profile?.id ?? body?.user_id ?? body?.profile?.user_id;
   const email = body?.email ?? body?.profile?.email ?? null;
   const profile = body?.profile ?? body;
+// ✅ auto-transition draft -> pending_validation si profil éligible
+const currentStatus = String((profile as any)?.status ?? 'draft');
+const { ok } = isProfileCompleteForValidation(profile);
 
+const nextStatus =
+  currentStatus === 'draft' && ok ? 'pending_validation' : currentStatus;
+
+const profileForDb =
+  profile && typeof profile === 'object'
+    ? { ...profile, status: nextStatus, updatedAt: new Date().toISOString() }
+    : { status: nextStatus, updatedAt: new Date().toISOString() };
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const payload = {
     user_id: id,
     email,
-    profile: (profile && typeof profile === "object") ? profile : {},
+profile: profileForDb,
     updated_at: new Date().toISOString(),
   };
 
