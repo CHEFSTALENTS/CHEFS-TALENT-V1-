@@ -24,14 +24,6 @@ import {
 
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
-const completion = useMemo(() => {
-const { details } = isProfileCompleteForValidation(mergedProfile ?? {});
-  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
-  const ok = items.filter(i => i.ok).length;
-  const total = items.length;
-  return { ok, total, score: Math.round((ok / total) * 100), details };
-}, [profile]);
-
 const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
 function safeReadLS<T>(key: string): T | null {
@@ -60,7 +52,7 @@ export default function ChefDashboardPage() {
         if (!u?.id) return;
 
         // 1) DB (source de vérité)
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`); { cache: 'no-store' }
+const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
@@ -109,7 +101,15 @@ export default function ChefDashboardPage() {
       name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
     };
   }, [onboardingProfile, settingsProfile, user]);
-
+  
+const completion = useMemo(() => {
+  const { details } = isProfileCompleteForValidation(mergedProfile ?? {});
+  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
+  const ok = items.filter(i => i.ok).length;
+  const total = items.length || 1;
+  return { ok, total, score: Math.round((ok / total) * 100), details };
+}, [mergedProfile]);
+  
   // ✅ Score unique
 const profileForScore = useMemo(() => {
   const p: any = mergedProfile ?? {};
