@@ -71,7 +71,7 @@ export default function ChefPreferencesPage() {
         }
 
         // 1) Lire le profil depuis la DB
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`), { cache: 'no-store' });
         const json = await res.json();
         const fromDb: ChefProfile | null = json?.profile ?? null;
 
