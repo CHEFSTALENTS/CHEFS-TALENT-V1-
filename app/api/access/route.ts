@@ -1,26 +1,45 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
+function isValid(area: ‘admin’ | ‘chef’ | ‘public’, code: string) {
+  const c = (code || '').trim();
+  if (!c) return false;
+
+  if (area === 'admin') return c === process.env.ADMIN_CODE;
+  if (area === 'chef') return c === process.env.CHEF_CODE;
+  return c === process.env.PUBLIC_CODE;
+}
+
 export async function POST(req: Request) {
-  const { code } = await req.json().catch(() => ({ code: '' }));
+  const body = await req.json().catch(() => ({}));
+  const area = (body?.area || '') as 'admin' | 'chef' | 'public';
+  const code = String(body?.code || '');
+  const next = String(body?.next || '/');
 
-  const expected = (process.env.SITE_ACCESS_CODE || '').trim();
-  const entered = String(code || '').trim();
-
-  if (!expected) {
-    return NextResponse.json({ ok: false, error: 'SITE_ACCESS_CODE manquant' }, { status: 500 });
+  if (!['admin', 'chef', 'public'].includes(area)) {
+    return NextResponse.json({ error: 'Bad area' }, { status: 400 });
   }
 
-  if (entered !== expected) {
-    return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isValid(area, code)) {
+    return NextResponse.json({ error: 'Invalid code' }, { status: 401 });
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set('ct_access', '1', {
+
+  // cookies httpOnly (sécurisé, pas accessible JS)
+  const cookieName =
+    area === 'admin' ? 'ct_gate_admin' : area === 'chef' ? 'ct_gate_chef' : 'ct_gate_public';
+
+  res.cookies.set(cookieName, '1', {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 7, // 7 jours
   });
+
+  // on renvoie aussi la destination
+  res.headers.set('x-next', next);
   return res;
 }
