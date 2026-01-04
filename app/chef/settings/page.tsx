@@ -103,7 +103,7 @@ const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput
       }
 
       // 1) on lit en DB
-      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`);
+      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`); { cache: 'no-store'}
       const json = await res.json();
       const fromDb = json?.profile ?? null;
 
