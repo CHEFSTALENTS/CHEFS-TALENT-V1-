@@ -24,7 +24,15 @@ import {
   DollarSign
 } from 'lucide-react';
 import { computeChefScore } from '@/lib/chefScore';
+import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
+const completion = useMemo(() => {
+  const { details } = isProfileCompleteForValidation(profile);
+  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
+  const ok = items.filter(i => i.ok).length;
+  const total = items.length;
+  return { ok, total, score: Math.round((ok / total) * 100), details };
+}, [profile]);
 // ...
 
 type ChefProfile = {
