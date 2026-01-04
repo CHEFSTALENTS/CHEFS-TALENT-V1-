@@ -741,9 +741,6 @@ function ChefDrawer({
   const specialties = profile.specialties;
   const cuisines = profile.cuisines;
 
-  const services = profile.services;
-  const servicesDisplay = Array.isArray(services) ? services.join(', ') : services;
-
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
@@ -872,7 +869,6 @@ Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys
               <InfoRow label="Niveau" value={humanizeSeniority(seniority)} />
               <InfoRow label="Spécialités" value={specialties} />
               <InfoRow label="Cuisines / styles" value={cuisines} />
-              <InfoRow label="Services" value={servicesDisplay} />
             </div>
 
             <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
