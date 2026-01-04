@@ -26,14 +26,6 @@ import {
 import { computeChefScore } from '@/lib/chefScore';
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
-const completion = useMemo(() => {
-  const { details } = isProfileCompleteForValidation(profile);
-  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
-  const ok = items.filter(i => i.ok).length;
-  const total = items.length;
-  return { ok, total, score: Math.round((ok / total) * 100), details };
-}, [profile]);
-// ...
 
 type ChefProfile = {
   id?: string;
@@ -83,6 +75,7 @@ export default function ChefSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ChefProfile>({});
+  import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
   const [notice, setNotice] = useState<string | null>(null);
 const scoreInput = useMemo(() => {
   const p: any = profile ?? {};
@@ -94,7 +87,15 @@ const scoreInput = useMemo(() => {
     images: p.images ?? p.photos ?? p.gallery ?? p.portfolioImages ?? [],
   };
 }, [profile]);
-
+  
+const completion = useMemo(() => {
+  const { details } = isProfileCompleteForValidation(profile);
+  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
+  const ok = items.filter(i => i.ok).length;
+  const total = items.length;
+  return { ok, total, score: Math.round((ok / total) * 100), details };
+}, [profile]);
+  
 const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput]);
 
  useEffect(() => {
