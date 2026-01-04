@@ -1,7 +1,6 @@
 // app/admin/chefs/utils/normalizeProfile.ts
 
 import type { ChefUser } from '@/types';
-import type { ChefProfile } from '@/lib/chefScore';
 
 function ensureArray(v: any): string[] {
   if (!v) return [];
@@ -14,35 +13,15 @@ function ensureArray(v: any): string[] {
   return [];
 }
 
-function toChefProfileForScore(raw: any): ChefProfile {
-  // ici tu peux utiliser ton normalizeProfile(raw) si tu veux,
-  // mais ensuite il faut MAPPER vers ChefProfile
-  const p = normalizeProfile(raw);
-
-  const firstName = String(p.firstName ?? '').trim();
-  const lastName = String(p.lastName ?? '').trim();
-  const name = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : String(p.name ?? '').trim();
-
-  // ta "location" peut être "Paris, Londres" -> on prend la 1ère ville pour city
-  const loc = typeof p.location === 'string' ? p.location : '';
-  const city = String(p.city ?? p.baseCity ?? loc.split(',')[0] ?? '').trim();
-
-  return {
-    name,
-    phone: String(p.phone ?? '').trim(),
-    city,
-    country: String(p.country ?? '').trim(),
-    bio: String(p.bio ?? '').trim(),
-
-    cuisines: ensureArray(p.cuisines),
-    specialties: ensureArray(p.specialties),
-    languages: ensureArray(p.languages),
-
-    instagram: String(p.instagram ?? p.instagramUrl ?? '').trim(),
-    website: String(p.website ?? p.site ?? '').trim(),
-    portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? p.driveUrl ?? p.drive ?? '').trim(),
-    avatarUrl: String(p.avatarUrl ?? p.avatar ?? '').trim(),
-  };
+function ensureStringArray(v: any): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map((x) => String(x ?? '').trim()).filter(Boolean);
+  if (typeof v === 'string') return [v.trim()].filter(Boolean);
+  if (typeof v === 'object') {
+    const u = String(v.url ?? v.publicUrl ?? v.path ?? '').trim();
+    return u ? [u] : [];
+  }
+  return [];
 }
 /* -------------------- types -------------------- */
 
@@ -140,19 +119,25 @@ export function normalizeProfile(raw: any) {
   const services = Array.isArray(servicesRaw) ? servicesRaw : unwrapText(servicesRaw);
 
   const mobilityRaw = firstNonEmpty(
-    (p as any).mobility,
-    (p as any).travel,
-    (p as any).zones,
-    (p as any).coverageZones,
-    (p as any).coverage_zones,
-    (p as any).coverageZonesText,
-    (p as any).coverage_zones_text,
-    (p as any).radius
-  );
-  const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
+  (p as any).mobility,
+  (p as any).travel,
+  (p as any).radius,
+  (p as any).travelRadiusKm,
+  (p as any).internationalMobility
+);
+const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
 
-  const images = firstNonEmpty((p as any).photos, (p as any).images, (p as any).gallery);
-
+  const baseCity = firstNonEmpty(
+  (p as any).location?.baseCity,
+  (p as any).baseCity,
+  (p as any).base_city,
+  (p as any).city,
+  (p as any).ville
+);
+  
+const imagesRaw = firstNonEmpty((p as any).photos, (p as any).images, (p as any).gallery);
+const images = ensureStringArray(imagesRaw);
+  
   const locationRaw = firstNonEmpty((p as any).location, (p as any).baseCity, (p as any).base_city, (p as any).city, (p as any).ville, (p as any).address);
   const location = isBrowserLocationObject(locationRaw)
     ? firstNonEmpty((p as any).baseCity, (p as any).base_city, (p as any).city, (p as any).ville, (p as any).address)
