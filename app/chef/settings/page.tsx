@@ -60,6 +60,16 @@ const STORAGE_KEY = 'ct_chef_profile_v1';
 // si tu avais une ancienne clé utilisée ailleurs, tu peux en ajouter ici :
 const FALLBACK_KEYS = ['ct_chef_profile', 'chef_profile', 'ct_chef_v1'];
 
+function isPricingComplete(p: any) {
+  const pricing = p?.pricing ?? null;
+  const dailyRate = pricing?.residence?.dailyRate;
+  const ppp = pricing?.event?.pricePerPerson;
+
+  const okDaily = typeof dailyRate === 'number' && dailyRate > 0;
+  const okPpp = typeof ppp === 'number' && ppp > 0;
+
+  return okDaily || okPpp;
+}
 export default function ChefSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -200,7 +210,16 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
       href: '/chef/mobility',
       icon: MapPinned,
     },
-
+    
+    {
+      key: 'pricing',
+      label: 'Tarifs',
+      ok: isPricingComplete(profile),
+      hint: 'Prix / jour ou prix / personne',
+      href: '/chef/pricing',
+      icon: DollarSign, 
+    },
+    
     {
       key: 'availability',
       label: 'Disponibilités',
@@ -238,8 +257,8 @@ const { score, rules } = useMemo(() => computeChefScore(profile ?? {}), [profile
     return { label: 'À compléter', tone: 'stone' as const, icon: Lock };
   }, [completion.score]);
 
-  const canBecomeFounder = completion.score >= 70;
-
+const canBecomeFounder = completion.score >= 70 && isPricingComplete(profile);
+  
 const saveProfile = async (patch: ChefProfile) => {
   setSaving(true);
   setNotice(null);
