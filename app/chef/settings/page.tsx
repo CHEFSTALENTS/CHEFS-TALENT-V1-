@@ -87,12 +87,12 @@ const scoreInput = useMemo(() => {
   };
 }, [profile]);
   
-const completion = useMemo(() => {
-  const { details } = isProfileCompleteForValidation(profile);
-  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: v }));
-  const ok = items.filter(i => i.ok).length;
-  const total = items.length;
-  return { ok, total, score: Math.round((ok / total) * 100), details };
+const validationCompletion = useMemo(() => {
+  const { details, ok } = isProfileCompleteForValidation(profile ?? {});
+  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
+  const okCount = items.filter(i => i.ok).length;
+  const total = items.length || 1;
+  return { ok, okCount, total, score: Math.round((okCount / total) * 100), details };
 }, [profile]);
   
 const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput]);
@@ -111,7 +111,9 @@ const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput
       }
 
       // 1) on lit en DB
-      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`); { cache: 'no-store'}
+const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, {
+  cache: 'no-store',
+});
       const json = await res.json();
       const fromDb = json?.profile ?? null;
 
