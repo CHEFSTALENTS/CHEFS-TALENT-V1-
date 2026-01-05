@@ -74,8 +74,12 @@ async function ensureChefProfileExists(params: {
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) throw new Error(await res.text());
-}
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`ensureChefProfileExists failed: ${res.status} ${txt}`);
+  }
+
+  // ✅ IMPORTANT : return bien *dans* la fonction
   return res.json(); // { profile }
 }
 
