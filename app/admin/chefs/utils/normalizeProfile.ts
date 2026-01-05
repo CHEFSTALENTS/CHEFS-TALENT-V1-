@@ -119,7 +119,83 @@ export function normalizeProfile(raw: any) {
   const languagesRaw = firstNonEmpty((p as any).languages, (p as any).langues);
   const specialtiesRaw = firstNonEmpty((p as any).specialties, (p as any).speciality);
   const cuisinesRaw = firstNonEmpty((p as any).cuisines, (p as any).cuisineTypes, (p as any).cuisine_types, (p as any).styles, (p as any).style);
+const formatsRaw = firstNonEmpty((p as any).formats, (p as any).formatsMastered, (p as any).format_mastered);
+let formats = ensureArray(formatsRaw);
 
+// missionTypes déjà (tu l’as commencé) :
+const missionTypesRaw = firstNonEmpty(
+  (p as any).missionTypes,
+  (p as any).mission_types,
+  (p as any).missions
+);
+let missionTypes = ensureArray(missionTypesRaw);
+
+// legacy fallback depuis specialties si formats/missionTypes vides
+const legacySpecialties = ensureArray(firstNonEmpty((p as any).specialties, (p as any).speciality));
+
+const MISSION_KEYWORDS: Record<string, string> = {
+  'yacht': 'yacht',
+  'yachting': 'yacht',
+  'chalet': 'chalet',
+  'résidence': 'residence',
+  'residence': 'residence',
+  'séjour': 'residence',
+  'sejour': 'residence',
+  'event': 'event_catering',
+  'catering': 'event_catering',
+  'traiteur': 'event_catering',
+  'one shot': 'one_shot',
+  'oneshot': 'one_shot',
+  'ponctuel': 'one_shot',
+  'dîner': 'one_shot',
+  'diner': 'one_shot',
+};
+
+const FORMAT_PRESET = [
+  'Fine dining',
+  'Family style',
+  'Brunch',
+  'Menu dégustation',
+];
+
+function classifyLegacySpecialties(items: string[]) {
+  const fmt: string[] = [];
+  const missions: string[] = [];
+  const keep: string[] = [];
+
+  for (const it of items) {
+    const low = it.toLowerCase();
+
+    // mission keywords
+    const foundMission = Object.keys(MISSION_KEYWORDS).find(k => low.includes(k));
+    if (foundMission) {
+      missions.push(MISSION_KEYWORDS[foundMission]);
+      continue;
+    }
+
+    // formats known
+    const foundFmt = FORMAT_PRESET.find(f => f.toLowerCase() === low);
+    if (foundFmt) {
+      fmt.push(foundFmt);
+      continue;
+    }
+
+    // sinon on garde en "formats" (mais clean)
+    keep.push(it);
+  }
+
+  return { fmt, missions, keep };
+}
+
+if (!formats.length || !missionTypes.length) {
+  const { fmt, missions, keep } = classifyLegacySpecialties(legacySpecialties);
+  if (!formats.length) formats = keep.length ? keep : fmt;
+  if (!missionTypes.length) missionTypes = missions;
+}
+
+formats = Array.from(new Set(formats.map(s => String(s).trim()).filter(Boolean)));
+missionTypes = Array.from(new Set(missionTypes.map(s => String(s).trim()).filter(Boolean)));
+  
   const languages = ensureArray(languagesRaw);
   const specialties = ensureArray(specialtiesRaw);
   const cuisines = ensureArray(cuisinesRaw);
@@ -195,8 +271,8 @@ export function normalizeProfile(raw: any) {
 
     // ✅ arrays propres
     languages,
-    specialties,
     cuisines,
+    formats,
     missionTypes,
 
     profileType,
