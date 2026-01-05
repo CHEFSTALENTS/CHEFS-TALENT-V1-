@@ -141,10 +141,6 @@ export default function ChefProfilePage() {
           // ✅ on persiste les 2 pour compat
           photoUrl: data.photoUrl || undefined,
           avatarUrl: data.photoUrl || undefined,
-          languages: data.languages
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
           profileType: data.profileType,
           seniorityLevel: data.seniorityLevel,
         });
