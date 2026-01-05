@@ -738,10 +738,10 @@ function ChefDrawer({
   const profileType = profile.profileType;
   const seniority = profile.seniorityLevel;
 
-  const specialties = profile.specialties;
-  const cuisines = profile.cuisines;
-const missionTypes = (profile as any).missionTypes ?? (profile as any).mission_types ?? (profile as any).missions ?? null;
-  
+    const cuisines = profile.cuisines;
+  const formats = profile.formats ?? profile.formatsMastered ?? [];
+const missionTypes = profile.missionTypes ?? [];
+
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
@@ -868,9 +868,9 @@ Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Type de profil" value={humanizeProfileType(profileType)} />
               <InfoRow label="Niveau" value={humanizeSeniority(seniority)} />
-              <InfoRow label="Spécialités" value={specialties} />
+<InfoRow label="Formats maîtrisés" value={formats} />
+<InfoRow label="Missions souhaitées" value={missionTypes} />
               <InfoRow label="Cuisines / styles" value={cuisines} />
-              <InfoRow label="Missions souhaitées" value={missionTypes} />
             </div>
 
             <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
