@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth, api } from '../../../services/storage';
-import { Marker, Label, Button } from '../../../components/ui';
+import { Marker, Label, Button, Input } from '../../../components/ui';
 import {
   Sparkles,
   ShieldCheck,
@@ -21,18 +21,13 @@ import {
   MapPinned,
   Calendar,
   SlidersHorizontal,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
 import { computeChefScore } from '@/lib/chefScore';
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
-
-'use client';
-
-import { useState } from 'react';
 import { supabase } from '@/services/supabaseClient';
-import { Button, Input, Label } from '@/components/ui';
 
-export function PasswordSection() {
+function PasswordSection() {
   const [pw1, setPw1] = useState('');
   const [pw2, setPw2] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,7 +55,7 @@ export function PasswordSection() {
   };
 
   return (
-    <div className="bg-white border border-stone-200 p-6 space-y-4">
+    <div className="bg-white border border-stone-200 p-6 space-y-4 rounded-2xl">
       <div>
         <Label>Mot de passe</Label>
         <p className="text-xs text-stone-500 mt-1">
@@ -70,12 +65,22 @@ export function PasswordSection() {
 
       <div className="space-y-2">
         <Label>Nouveau mot de passe</Label>
-        <Input type="password" value={pw1} onChange={(e) => setPw1(e.target.value)} placeholder="8+ caractères" />
+        <Input
+          type="password"
+          value={pw1}
+          onChange={(e) => setPw1((e.target as HTMLInputElement).value)}
+          placeholder="8+ caractères"
+        />
       </div>
 
       <div className="space-y-2">
         <Label>Confirmer</Label>
-        <Input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Répéter" />
+        <Input
+          type="password"
+          value={pw2}
+          onChange={(e) => setPw2((e.target as HTMLInputElement).value)}
+          placeholder="Répéter"
+        />
       </div>
 
       {msg && <div className="text-sm text-stone-600">{msg}</div>}
