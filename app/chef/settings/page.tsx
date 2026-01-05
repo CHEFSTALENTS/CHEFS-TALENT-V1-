@@ -26,6 +26,66 @@ import {
 import { computeChefScore } from '@/lib/chefScore';
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 
+'use client';
+
+import { useState } from 'react';
+import { supabase } from '@/services/supabaseClient';
+import { Button, Input, Label } from '@/components/ui';
+
+export function PasswordSection() {
+  const [pw1, setPw1] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const onSave = async () => {
+    setMsg(null);
+
+    if (pw1.length < 8) return setMsg('Mot de passe trop court (8+ caractères).');
+    if (pw1 !== pw2) return setMsg('Les mots de passe ne correspondent pas.');
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+
+      setPw1('');
+      setPw2('');
+      setMsg('✅ Mot de passe mis à jour.');
+    } catch (e: any) {
+      setMsg(e?.message || 'Erreur lors de la mise à jour.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-stone-200 p-6 space-y-4">
+      <div>
+        <Label>Mot de passe</Label>
+        <p className="text-xs text-stone-500 mt-1">
+          Après votre première connexion via lien magique, vous pouvez définir un mot de passe pour vous reconnecter plus facilement.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Nouveau mot de passe</Label>
+        <Input type="password" value={pw1} onChange={(e) => setPw1(e.target.value)} placeholder="8+ caractères" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Confirmer</Label>
+        <Input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Répéter" />
+      </div>
+
+      {msg && <div className="text-sm text-stone-600">{msg}</div>}
+
+      <Button onClick={onSave} disabled={loading} className="bg-stone-900 hover:bg-stone-800">
+        {loading ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
+      </Button>
+    </div>
+  );
+}
 
 type ChefProfile = {
   id?: string;
@@ -86,6 +146,7 @@ const scoreInput = useMemo(() => {
     images: p.images ?? p.photos ?? p.gallery ?? p.portfolioImages ?? [],
   };
 }, [profile]);
+  
   
 const validationCompletion = useMemo(() => {
   const { details, ok } = isProfileCompleteForValidation(profile ?? {});
