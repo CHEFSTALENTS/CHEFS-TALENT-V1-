@@ -43,11 +43,11 @@ export default function ChefSignupPage() {
     );
 
     // 2) envoie le Magic Link (OTP)
-   await supabase.auth.signInWithOtp({
+await supabase.auth.signInWithOtp({
   email,
   options: {
-    shouldCreateUser: true,
-    emailRedirectTo: 'https://chefstalents.com/chef/auth/callback?next=/chef/dashboard',
+    emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
+    shouldCreateUser: true, // signup
   },
 });
 
