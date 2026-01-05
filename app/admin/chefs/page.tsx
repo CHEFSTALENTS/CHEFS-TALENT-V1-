@@ -739,6 +739,7 @@ function ChefDrawer({
   const seniority = profile.seniorityLevel;
 
     const cuisines = profile.cuisines;
+  const specialties = profile.specialties;
   const formats = profile.formats ?? profile.formatsMastered ?? [];
 const missionTypes = profile.missionTypes ?? [];
 
