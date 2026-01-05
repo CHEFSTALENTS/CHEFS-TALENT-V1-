@@ -44,7 +44,6 @@ export default function ChefExperiencePage() {
   const [data, setData] = useState({
     yearsExperience: 0,
     bio: '',
-    specialties: '',
     environments: [] as string[],
 
     // ✅ NEW: certifications
@@ -65,7 +64,6 @@ export default function ChefExperiencePage() {
       setData({
         yearsExperience: Number(prof.yearsExperience || 0),
         bio: String(prof.bio || ''),
-        specialties: Array.isArray(prof.specialties) ? prof.specialties.join(', ') : String(prof.specialties || ''),
         environments: Array.isArray(prof.environments) ? prof.environments : [],
 
         certItems,
@@ -132,7 +130,6 @@ export default function ChefExperiencePage() {
         yearsExperience: Number.isFinite(Number(data.yearsExperience)) ? Number(data.yearsExperience) : 0,
         bio: String(data.bio || ''),
         environments: Array.isArray(data.environments) ? data.environments : [],
-        specialties: String(data.specialties || '')
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
@@ -173,7 +170,7 @@ export default function ChefExperiencePage() {
             <Label>Années d'expérience (Cuisine)</Label>
             <Input
               type="number"
-              min={0}
+              min={}
               value={data.yearsExperience}
               onChange={(e) => {
                 const n = parseInt(e.target.value || '0', 10);
@@ -214,15 +211,6 @@ export default function ChefExperiencePage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Spécialités Culinaires</Label>
-            <Input
-              value={data.specialties}
-              onChange={(e) => setData({ ...data, specialties: e.target.value })}
-              placeholder="Méditerranéenne, Japonaise, Pâtisserie..."
-            />
-            <p className="text-xs text-stone-400">Séparez par des virgules.</p>
-          </div>
 
           {/* ✅ NEW: Certifications */}
           <div className="space-y-4 pt-6 border-t border-stone-100">
