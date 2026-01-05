@@ -25,16 +25,10 @@ import {
   DollarSign,
 } from 'lucide-react';
 
-type PendingProfile = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  createdAt?: string;
-};
+/** ========= Helpers (garde si déjà existants plus bas) ========= */
+const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
 type AnyProfile = Record<string, any>;
-
-const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
 function safeReadLS<T>(key: string): T | null {
   try {
@@ -46,9 +40,17 @@ function safeReadLS<T>(key: string): T | null {
   }
 }
 
+/** ========= Types ========= */
+type PendingProfile = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  createdAt?: string;
+};
+
 /**
- * Crée/patch un chef_profile (si absent) au moment où le chef arrive via Magic Link,
- * + s'assure que user_roles contient "chef".
+ * Crée/merge un profil minimal côté serveur via /api/chef/profile
+ * (pas d'accès direct DB côté client -> évite les soucis RLS + schéma)
  */
 async function ensureChefProfileExists(params: {
   userId: string;
@@ -57,47 +59,32 @@ async function ensureChefProfileExists(params: {
 }) {
   const { userId, email, pending } = params;
 
-  // 1) Vérifie si un profil existe déjà
-  const { data: existing, error: selErr } = await supabase
-    .from('chef_profiles')
-    .select('id,email,firstName,lastName')
-    .eq('id', userId)
-    .maybeSingle();
+  const firstName = pending?.firstName?.trim() || null;
+  const lastName = pending?.lastName?.trim() || null;
 
-  if (selErr) throw selErr;
-
-  const firstName = pending?.firstName?.trim();
-  const lastName = pending?.lastName?.trim();
-
-  if (!existing) {
-    // CREATE minimal
-    const payload: AnyProfile = {
-      id: userId,
+  const payload = {
+    id: userId,
+    email: email || null,
+    profile: {
+      firstName,
+      lastName,
       email: email || null,
-      firstName: firstName || null,
-      lastName: lastName || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+      createdAt: pending?.createdAt || new Date().toISOString(),
+    },
+  };
 
-    const { error: insErr } = await supabase.from('chef_profiles').insert(payload);
-    if (insErr) throw insErr;
-  } else {
-    // PATCH (uniquement si champs vides)
-    const patch: AnyProfile = { updated_at: new Date().toISOString() };
+  const res = await fetch('/api/chef/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
-    if (!existing.email && email) patch.email = email;
-    if (!existing.firstName && firstName) patch.firstName = firstName;
-    if (!existing.lastName && lastName) patch.lastName = lastName;
-
-    if (Object.keys(patch).length > 1) {
-      const { error: updErr } = await supabase.from('chef_profiles').update(patch).eq('id', userId);
-      if (updErr) throw updErr;
-    }
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`ensureChefProfileExists failed: ${res.status} ${txt}`);
   }
 
-  // 2) Assure le role chef
-  await supabase.from('user_roles').upsert({ user_id: userId, role: 'chef' });
+  return res.json(); // { profile }
 }
 
 export default function ChefDashboardPage() {
@@ -106,7 +93,12 @@ export default function ChefDashboardPage() {
   const [booting, setBooting] = useState(true);
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
-  // A) Boot Magic Link: session supabase + création/patch profil + role
+  /**
+   * A) Boot Magic Link
+   * - récupère session supabase
+   * - envoie le pending profile (LS) à l’API pour créer/merge dans chef_profiles
+   * - cleanup LS
+   */
   useEffect(() => {
     let cancelled = false;
 
@@ -128,11 +120,11 @@ export default function ChefDashboardPage() {
         });
 
         localStorage.removeItem('chef_pending_profile');
-     } catch (e: any) {
-  console.error('[Dashboard boot] error:', e?.message || e, e);
-} finally {
-  if (!cancelled) setBooting(false);
-}
+      } catch (e: any) {
+        console.error('[Dashboard boot] error:', e?.message || e, e);
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
     })();
 
     return () => {
@@ -140,7 +132,11 @@ export default function ChefDashboardPage() {
     };
   }, []);
 
-  // B) Charger le profil pour l’UI (DB -> fallback localStorage)
+  /**
+   * B) Charger le profil pour l’UI
+   * - source de vérité: DB via /api/chef/profile?id=
+   * - fallback: localStorage (ancien système)
+   */
   useEffect(() => {
     let cancelled = false;
 
@@ -157,7 +153,7 @@ export default function ChefDashboardPage() {
           if (fromDb) setSettingsProfile(fromDb);
           else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
         }
-      } catch {
+      } catch (e) {
         if (!cancelled) setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
       }
     })();
@@ -177,10 +173,12 @@ export default function ChefDashboardPage() {
     pastry: 'Chef Pâtissier',
   };
 
-  // Profil "onboarding" (historique)
+  // Profil historique (onboarding)
   const onboardingProfile: AnyProfile = (user as any).profile || {};
 
-  // ✅ Source de vérité unique : onboarding + settings(DB/LS)
+  /**
+   * ✅ Source de vérité unique : onboarding + settings(DB/LS)
+   */
   const mergedProfile = useMemo<AnyProfile>(() => {
     const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
 
@@ -192,10 +190,11 @@ export default function ChefDashboardPage() {
     };
   }, [onboardingProfile, settingsProfile, user]);
 
-  // completion (si tu t’en sers ailleurs)
-  useMemo(() => {
-    isProfileCompleteForValidation(mergedProfile ?? {});
+  // si tu en as besoin ailleurs (validation)
+  const completion = useMemo(() => {
+    return isProfileCompleteForValidation(mergedProfile ?? {});
   }, [mergedProfile]);
+}
 
   // ✅ Score unique
   const profileForScore = useMemo(() => {
