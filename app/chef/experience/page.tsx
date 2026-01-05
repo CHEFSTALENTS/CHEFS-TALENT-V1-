@@ -30,9 +30,7 @@ const CERTS: { id: CertificationKey; label: string; hint?: string }[] = [
 function ensureArray(v: any): string[] {
   if (!v) return [];
   if (Array.isArray(v)) return v.map(String).map((s) => s.trim()).filter(Boolean);
-  if (typeof v === 'string') {
-    return v.split(',').map((s) => s.trim()).filter(Boolean);
-  }
+  if (typeof v === 'string') return v.split(',').map((s) => s.trim()).filter(Boolean);
   return [];
 }
 
@@ -46,15 +44,14 @@ export default function ChefExperiencePage() {
     bio: '',
     environments: [] as string[],
 
-    // ✅ NEW: certifications
     certItems: [] as CertificationKey[],
     certNotes: '',
   });
 
   useEffect(() => {
     const user = auth.getCurrentUser?.();
-    if (user && user.profile) {
-      const prof: any = user.profile;
+    if (user && (user as any).profile) {
+      const prof: any = (user as any).profile;
 
       const existingCert = prof?.certifications ?? {};
       const certItems = ensureArray(existingCert?.items)
@@ -64,7 +61,7 @@ export default function ChefExperiencePage() {
       setData({
         yearsExperience: Number(prof.yearsExperience || 0),
         bio: String(prof.bio || ''),
-        environments: Array.isArray(prof.environments) ? prof.environments : [],
+        environments: Array.isArray(prof.environments) ? prof.environments : ensureArray(prof.environments),
 
         certItems,
         certNotes: String(existingCert?.notes || ''),
@@ -105,14 +102,18 @@ export default function ChefExperiencePage() {
   const toggleEnv = (env: string) => {
     setData((prev) => ({
       ...prev,
-      environments: prev.environments.includes(env) ? prev.environments.filter((e) => e !== env) : [...prev.environments, env],
+      environments: prev.environments.includes(env)
+        ? prev.environments.filter((e) => e !== env)
+        : [...prev.environments, env],
     }));
   };
 
   const toggleCert = (id: CertificationKey) => {
     setData((prev) => ({
       ...prev,
-      certItems: prev.certItems.includes(id) ? prev.certItems.filter((x) => x !== id) : [...prev.certItems, id],
+      certItems: prev.certItems.includes(id)
+        ? prev.certItems.filter((x) => x !== id)
+        : [...prev.certItems, id],
     }));
   };
 
@@ -124,17 +125,22 @@ export default function ChefExperiencePage() {
 
     try {
       const user = auth.getCurrentUser?.();
-      if (!user?.id) throw new Error("Utilisateur introuvable (auth.getCurrentUser).");
+      if (!user?.id) throw new Error('Utilisateur introuvable (auth.getCurrentUser).');
+
+      // ✅ Normalize environments safely (array OR comma string)
+      const environments = Array.isArray(data.environments)
+        ? data.environments.map(String).map((s) => s.trim()).filter(Boolean)
+        : String((data as any).environments ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
 
       const patch = {
         yearsExperience: Number.isFinite(Number(data.yearsExperience)) ? Number(data.yearsExperience) : 0,
         bio: String(data.bio || ''),
-        environments: Array.isArray(data.environments) ? data.environments : [],
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        environments,
 
-        // ✅ NEW: certifications stored as object
+        // ✅ Certifications stored as object
         certifications: {
           items: (data.certItems || []).map(String),
           notes: String(data.certNotes || '').trim() || undefined,
@@ -142,10 +148,10 @@ export default function ChefExperiencePage() {
         },
       };
 
-      // ✅ 1) Enregistrer en DB (Supabase) via API
+      // ✅ 1) DB
       await saveChefProfilePatch(patch);
 
-      // ✅ 2) Garder ton storage local cohérent (UX / affichage immédiat)
+      // ✅ 2) local storage / UX
       await auth.updateChefProfile?.(user.id, patch);
 
       setSuccess(true);
@@ -170,7 +176,7 @@ export default function ChefExperiencePage() {
             <Label>Années d'expérience (Cuisine)</Label>
             <Input
               type="number"
-              min={}
+              min={0}
               value={data.yearsExperience}
               onChange={(e) => {
                 const n = parseInt(e.target.value || '0', 10);
@@ -185,7 +191,7 @@ export default function ChefExperiencePage() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { id: 'restaurant', label: 'Restaurant Gastronomique' },
-                { id: 'hotel', label: "Hôtellerie de Luxe" },
+                { id: 'hotel', label: 'Hôtellerie de Luxe' },
                 { id: 'private_villa', label: 'Villa Privée' },
                 { id: 'yacht', label: 'Yachting (>30m)' },
                 { id: 'chalet', label: 'Chalet Montagne' },
@@ -194,14 +200,23 @@ export default function ChefExperiencePage() {
                 <label
                   key={env.id}
                   className={`flex items-center justify-between p-4 border cursor-pointer transition-colors ${
-                    data.environments.includes(env.id) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+                    data.environments.includes(env.id)
+                      ? 'border-stone-900 bg-stone-50'
+                      : 'border-stone-200 hover:border-stone-300'
                   }`}
                 >
                   <span className="text-sm font-medium text-stone-800">{env.label}</span>
-                  <input type="checkbox" className="hidden" checked={data.environments.includes(env.id)} onChange={() => toggleEnv(env.id)} />
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={data.environments.includes(env.id)}
+                    onChange={() => toggleEnv(env.id)}
+                  />
                   <div
                     className={`w-4 h-4 border flex items-center justify-center ${
-                      data.environments.includes(env.id) ? 'bg-stone-900 border-stone-900' : 'border-stone-300'
+                      data.environments.includes(env.id)
+                        ? 'bg-stone-900 border-stone-900'
+                        : 'border-stone-300'
                     }`}
                   >
                     {data.environments.includes(env.id) && <div className="w-1.5 h-1.5 bg-white" />}
@@ -211,8 +226,7 @@ export default function ChefExperiencePage() {
             </div>
           </div>
 
-
-          {/* ✅ NEW: Certifications */}
+          {/* Certifications */}
           <div className="space-y-4 pt-6 border-t border-stone-100">
             <Label>Diplômes & certifications</Label>
 
@@ -232,8 +246,17 @@ export default function ChefExperiencePage() {
                         {c.hint ? <div className="text-xs text-stone-500 mt-1">{c.hint}</div> : null}
                       </div>
 
-                      <input type="checkbox" className="hidden" checked={checked} onChange={() => toggleCert(c.id)} />
-                      <div className={`w-4 h-4 border flex items-center justify-center ${checked ? 'bg-stone-900 border-stone-900' : 'border-stone-300'}`}>
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={checked}
+                        onChange={() => toggleCert(c.id)}
+                      />
+                      <div
+                        className={`w-4 h-4 border flex items-center justify-center ${
+                          checked ? 'bg-stone-900 border-stone-900' : 'border-stone-300'
+                        }`}
+                      >
                         {checked ? <div className="w-1.5 h-1.5 bg-white" /> : null}
                       </div>
                     </div>
@@ -247,10 +270,12 @@ export default function ChefExperiencePage() {
               <Textarea
                 value={data.certNotes}
                 onChange={(e) => setData({ ...data, certNotes: e.target.value })}
-                placeholder="Ex: Permis B, Permis Bateau ... "
+                placeholder="Ex: Permis B, Permis bateau, etc."
                 className="h-24"
               />
-              <p className="text-xs text-stone-400">Ces infos nous aident à mieux vous matcher (yacht, sécurité, conformité).</p>
+              <p className="text-xs text-stone-400">
+                Ces infos nous aident à mieux vous matcher (yacht, sécurité, conformité).
+              </p>
             </div>
           </div>
 
