@@ -23,7 +23,136 @@ import {
 } from 'lucide-react';
 
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/services/supabaseClient';
 
+type PendingProfile = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  createdAt?: string;
+};
+
+export default function ChefDashboardPage() {
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function boot() {
+      try {
+        // 1) session Supabase (Magic Link)
+        const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr) throw sessionErr;
+
+        const user = sessionData?.session?.user;
+        if (!user?.id) {
+          // pas connecté -> renvoie vers login (ou affiche un message)
+          // window.location.href = '/chef/login';
+          return;
+        }
+
+        // 2) pending profile stocké au signup
+        const raw = localStorage.getItem('chef_pending_profile');
+        const pending: PendingProfile | null = raw ? JSON.parse(raw) : null;
+
+        // 3) créer/patcher le profil en base si besoin
+        await ensureChefProfileExists({
+          userId: user.id,
+          email: user.email ?? pending?.email ?? '',
+          pending,
+        });
+
+        // cleanup
+        localStorage.removeItem('chef_pending_profile');
+      } catch (e) {
+        console.error('[Dashboard boot] error:', e);
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
+    }
+
+    boot();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (booting) return <div className="p-8">Chargement...</div>;
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl">Dashboard Chef</h1>
+      {/* ton dashboard existant */}
+    </div>
+  );
+}
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/services/supabaseClient';
+
+type PendingProfile = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  createdAt?: string;
+};
+
+export default function ChefDashboardPage() {
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function boot() {
+      try {
+        // 1) session Supabase (Magic Link)
+        const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr) throw sessionErr;
+
+        const user = sessionData?.session?.user;
+        if (!user?.id) {
+          // pas connecté -> renvoie vers login (ou affiche un message)
+          // window.location.href = '/chef/login';
+          return;
+        }
+
+        // 2) pending profile stocké au signup
+        const raw = localStorage.getItem('chef_pending_profile');
+        const pending: PendingProfile | null = raw ? JSON.parse(raw) : null;
+
+        // 3) créer/patcher le profil en base si besoin
+        await ensureChefProfileExists({
+          userId: user.id,
+          email: user.email ?? pending?.email ?? '',
+          pending,
+        });
+
+        // cleanup
+        localStorage.removeItem('chef_pending_profile');
+      } catch (e) {
+        console.error('[Dashboard boot] error:', e);
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
+    }
+
+    boot();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (booting) return <div className="p-8">Chargement...</div>;
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl">Dashboard Chef</h1>
+      {/* ton dashboard existant */}
+    </div>
+  );
+}
 const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
 function safeReadLS<T>(key: string): T | null {
