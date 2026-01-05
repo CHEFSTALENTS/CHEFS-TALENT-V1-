@@ -90,7 +90,6 @@ function isBrowserLocationObject(v: any) {
 }
 
 /* -------------------- normalizeProfile -------------------- */
-
 export function normalizeProfile(raw: any) {
   const p = isPlainObject(raw) ? { ...raw } : {};
 
@@ -115,12 +114,23 @@ export function normalizeProfile(raw: any) {
     (p as any).telephone
   );
 
-  // ✅ Arrays normalisés
-    const languagesRaw = firstNonEmpty((p as any).languages, (p as any).langues);
-  const specialtiesRaw = firstNonEmpty((p as any).specialties, (p as any).speciality);
-  const cuisinesRaw = firstNonEmpty((p as any).cuisines, (p as any).cuisineTypes, (p as any).cuisine_types, (p as any).styles, (p as any).style);
+  // ✅ arrays sources
+  const languagesRaw = firstNonEmpty((p as any).languages, (p as any).langues);
 
-  // ✅ NEW : formats maîtrisés (ex "Fine dining", "Brunch"...)
+  // ⚠️ "specialties" legacy : souvent pollué (mission + format + style)
+  // On le lit pour fallback uniquement (pas pour matcher cuisine)
+  const specialtiesRaw = firstNonEmpty((p as any).specialties, (p as any).speciality);
+
+  // ✅ Cuisine / styles (c’est CE champ qui doit porter le style culinaire)
+  const cuisinesRaw = firstNonEmpty(
+    (p as any).cuisines,
+    (p as any).cuisineTypes,
+    (p as any).cuisine_types,
+    (p as any).styles,
+    (p as any).style
+  );
+
+  // ✅ Formats de service (fine dining, brunch, dégustation…)
   const formatsRaw = firstNonEmpty(
     (p as any).formats,
     (p as any).formatsMastered,
@@ -128,7 +138,7 @@ export function normalizeProfile(raw: any) {
     (p as any).serviceFormats
   );
 
-  // ✅ NEW : types de missions souhaitées (multi-select)
+  // ✅ Types de missions souhaitées
   const missionTypesRaw = firstNonEmpty(
     (p as any).missionTypes,
     (p as any).mission_types,
@@ -140,15 +150,15 @@ export function normalizeProfile(raw: any) {
     (p as any).mission_types_wanted
   );
 
+  // ✅ arrays normalisées
   const languages = ensureArray(languagesRaw);
-  const specialties = ensureArray(specialtiesRaw);
   const cuisines = ensureArray(cuisinesRaw);
 
   let formats = ensureArray(formatsRaw);
   let missionTypes = ensureArray(missionTypesRaw);
 
-  // legacy fallback depuis specialties si formats/missionTypes vides
-  const legacySpecialties = ensureArray(firstNonEmpty((p as any).specialties, (p as any).speciality));
+  // legacy: on parse l'ancien "specialties" UNIQUEMENT pour remplir formats/missionTypes si vides
+  const legacySpecialties = ensureArray(specialtiesRaw);
 
   const MISSION_KEYWORDS: Record<string, string> = {
     yacht: 'yacht',
@@ -176,27 +186,31 @@ export function normalizeProfile(raw: any) {
     const keep: string[] = [];
 
     for (const it of items) {
-      const low = it.toLowerCase();
+      const low = String(it || '').toLowerCase().trim();
+      if (!low) continue;
 
+      // mission keywords
       const foundMission = Object.keys(MISSION_KEYWORDS).find((k) => low.includes(k));
       if (foundMission) {
         missions.push(MISSION_KEYWORDS[foundMission]);
         continue;
       }
 
+      // formats connus
       const foundFmt = FORMAT_PRESET.find((f) => f.toLowerCase() === low);
       if (foundFmt) {
         fmt.push(foundFmt);
         continue;
       }
 
-      // sinon on garde en formats (mais clean)
-      keep.push(it);
+      // sinon -> on garde en "formats" (mais clean) si vraiment besoin
+      keep.push(String(it).trim());
     }
 
     return { fmt, missions, keep };
   }
 
+  // fallback uniquement si l'UI n'a pas encore rempli les champs propres
   if (!formats.length || !missionTypes.length) {
     const { fmt, missions, keep } = classifyLegacySpecialties(legacySpecialties);
     if (!formats.length) formats = keep.length ? keep : fmt;
@@ -206,24 +220,6 @@ export function normalizeProfile(raw: any) {
   // dedupe final
   formats = Array.from(new Set(formats.map((s) => String(s).trim()).filter(Boolean)));
   missionTypes = Array.from(new Set(missionTypes.map((s) => String(s).trim()).filter(Boolean)));
-  
-  const languages = ensureArray(languagesRaw);
-  const specialties = ensureArray(specialtiesRaw);
-  const cuisines = ensureArray(cuisinesRaw);
-
-  // ✅ NEW : types de missions (multi-select)
-    const missionTypesRaw = firstNonEmpty(
-    (p as any).missionTypes,
-    (p as any).mission_types,
-    (p as any).missions,
-    (p as any).missionPreferences,
-    (p as any).desiredMissions,
-    (p as any).desiredMissionTypes,
-    (p as any).typesOfMissions,
-    (p as any).mission_types_wanted
-  );
-
-  const missionTypes = ensureArray(missionTypesRaw);
 
   const bioRaw = firstNonEmpty(
     (p as any).bio,
@@ -245,7 +241,9 @@ export function normalizeProfile(raw: any) {
   const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
 
   // (bonus utile admin)
-  const coverageZones = ensureArray(firstNonEmpty((p as any).coverageZones, (p as any).location?.coverageZones, (p as any).coverage_zones));
+  const coverageZones = ensureArray(
+    firstNonEmpty((p as any).coverageZones, (p as any).location?.coverageZones, (p as any).coverage_zones)
+  );
 
   const baseCity = firstNonEmpty(
     (p as any).location?.baseCity,
@@ -255,7 +253,12 @@ export function normalizeProfile(raw: any) {
     (p as any).ville
   );
 
-  const imagesRaw = firstNonEmpty((p as any).photos, (p as any).images, (p as any).gallery, (p as any).portfolioImages);
+  const imagesRaw = firstNonEmpty(
+    (p as any).photos,
+    (p as any).images,
+    (p as any).gallery,
+    (p as any).portfolioImages
+  );
   const images = ensureStringArray(imagesRaw);
 
   const locationRaw = firstNonEmpty(
@@ -280,11 +283,11 @@ export function normalizeProfile(raw: any) {
     email,
     phone,
 
-    // ✅ arrays propres
+    // ✅ matching propre
     languages,
-    cuisines,
-    formats,
-    missionTypes,
+    cuisines,     // style culinaire
+    formats,      // format de service
+    missionTypes, // type de mission
 
     profileType,
     seniorityLevel,
@@ -292,11 +295,13 @@ export function normalizeProfile(raw: any) {
     mobility,
     coverageZones,
     baseCity,
-
     images,
     location,
     created_at,
     updated_at,
+
+    // ⚠️ Si tu veux encore exposer l'ancien champ (sinon supprime)
+    // specialties: ensureArray(specialtiesRaw),
   };
 }
 
