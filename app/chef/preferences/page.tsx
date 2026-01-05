@@ -146,43 +146,43 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    setSuccess(false);
+  setSaving(true);
+  setSuccess(false);
 
-    try {
-      const user = auth.getCurrentUser?.();
-      if (!user?.id) throw new Error('No user');
+  try {
+    const user = auth.getCurrentUser?.();
+    if (!user?.id) throw new Error('No user');
 
-      // IMPORTANT : on MERGE avec le profil DB pour ne rien écraser
-      const merged: ChefProfile = {
-        ...baseProfile,
-        id: user.id,
-        email: user.email,
-        cuisines: uniq(cuisines),
-        languages: uniq(languages),
-        specialties: uniq(specialties),
-        missionTypes: uniq(missionTypes), // ✅ NEW
-        updatedAt: new Date().toISOString(),
-      };
+    // IMPORTANT : on MERGE avec le profil DB pour ne rien écraser
+    const merged: ChefProfile = {
+      ...baseProfile,
+      id: user.id,
+      email: user.email,
+      cuisines: uniq(cuisines),
+      languages: uniq(languages),
+      specialties: uniq(specialties),
+      missionTypes: uniq(missionTypes), // ✅ NEW
+      updatedAt: new Date().toISOString(),
+    };
 
-      const res = await fetch('/api/chef/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: user.id, profile: merged }),
-      });
+    const res = await fetch('/api/chef/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: user.id, profile: merged }),
+    });
 
-      if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await res.text());
 
-      setBaseProfile(merged);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2500);
-    } catch (e) {
-      console.error('PREFERENCES SAVE ERROR', e);
-      alert("Erreur d’enregistrement (check console)");
-    } finally {
-      setSaving(false);
-    }
-
+    setBaseProfile(merged);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 2500);
+  } catch (e) {
+    console.error('PREFERENCES SAVE ERROR', e);
+    alert("Erreur d’enregistrement (check console)");
+  } finally {
+    setSaving(false);
+  }
+};
   return (
     <ChefLayout>
       <div className="max-w-3xl">
@@ -239,8 +239,7 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
     <p className="text-xs text-stone-500">Choisis ce que tu veux recevoir (utilisé pour le matching).</p>
   )}
 </div>
-                ) : null}
-              </div>
+
 
               {/* Cuisines */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
