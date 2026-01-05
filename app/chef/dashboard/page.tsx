@@ -447,6 +447,39 @@ function ActionCard({
   path: string;
   done: boolean;
 }) {
+   return (
+    <ChefLayout>
+      {!isReady ? (
+        <div className="p-8">
+          {booting ? 'Chargement…' : 'Non connecté.'}
+        </div>
+      ) : (
+        <div className="space-y-12 animate-in fade-in duration-700">
+          {/* 👇 COLLE ICI TOUT TON DASHBOARD EXISTANT (le contenu que tu avais dans <ChefLayout>) */}
+          {/* Exemple : Welcome Header, Score banner, Alerts, Cards, etc. */}
+        </div>
+      )}
+    </ChefLayout>
+  );
+}
+
+/* =======================
+   Helpers UI (hors composant)
+   ======================= */
+
+function ActionCard({
+  icon: Icon,
+  title,
+  desc,
+  path,
+  done,
+}: {
+  icon: any;
+  title: string;
+  desc: string;
+  path: string;
+  done: boolean;
+}) {
   return (
     <Link
       href={path}
