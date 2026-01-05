@@ -1,12 +1,10 @@
-import { Suspense } from 'react';
-import ChefAuthCallbackClient from './ChefAuthCallbackClient';
+import React, { Suspense } from 'react';
+import CallbackClient from './CallbackClient';
 
-export const dynamic = 'force-dynamic';
-
-export default function ChefAuthCallbackPage() {
+export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={<div className="p-8">Connexion en cours…</div>}>
-      <ChefAuthCallbackClient />
+    <Suspense fallback={<div className="p-8">Connexion…</div>}>
+      <CallbackClient />
     </Suspense>
   );
 }
