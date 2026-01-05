@@ -128,11 +128,11 @@ export default function ChefDashboardPage() {
         });
 
         localStorage.removeItem('chef_pending_profile');
-      } catch (e) {
-        console.error('[Dashboard boot] error:', e);
-      } finally {
-        if (!cancelled) setBooting(false);
-      }
+     } catch (e: any) {
+  console.error('[Dashboard boot] error:', e?.message || e, e);
+} finally {
+  if (!cancelled) setBooting(false);
+}
     })();
 
     return () => {
