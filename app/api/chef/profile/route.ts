@@ -8,8 +8,9 @@ import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
+  const id = searchParams.get("id") ?? searchParams.get("userId");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
 
   const supabase = getSupabaseAdmin();
 
@@ -29,29 +30,53 @@ async function upsertProfile(req: Request) {
   const body = await req.json();
 
   // Supporte :
-  // 1) { id, email?, profile }
-  // 2) { profile: { id, email, ... } }
-  // 3) directement { id, email, ... } (profil brut)
-  const id = body?.id ?? body?.profile?.id ?? body?.user_id ?? body?.profile?.user_id;
-  const email = body?.email ?? body?.profile?.email ?? null;
-  const profile = body?.profile ?? body;
-// ✅ auto-transition draft -> pending_validation si profil éligible
-const currentStatus = String((profile as any)?.status ?? 'draft');
-const { ok } = isProfileCompleteForValidation(profile);
+  // - { id, email?, profile }
+  // - { userId, email?, profile }
+  // - { user_id, email?, profile }
+  // - { profile: { id | userId | user_id, email, ... } }
+  // - { id, email, ... } (profil brut)
+  const id =
+    body?.id ??
+    body?.userId ??
+    body?.user_id ??
+    body?.profile?.id ??
+    body?.profile?.userId ??
+    body?.profile?.user_id;
 
-const nextStatus =
-  currentStatus === 'draft' && ok ? 'pending_validation' : currentStatus;
-
-const profileForDb =
-  profile && typeof profile === 'object'
-    ? { ...profile, status: nextStatus, updatedAt: new Date().toISOString() }
-    : { status: nextStatus, updatedAt: new Date().toISOString() };
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const email =
+    body?.email ??
+    body?.profile?.email ??
+    null;
+
+  // ✅ On ne stocke QUE le profil
+  // Si body.profile existe -> c’est la source de vérité
+  // Sinon -> on enlève les clés wrapper connues
+  let profileRaw = body?.profile ?? body;
+
+  if (!body?.profile && profileRaw && typeof profileRaw === "object") {
+    // enlève les wrappers
+    const { id, userId, user_id, email, pending, ...rest } = profileRaw as any;
+    profileRaw = rest;
+  }
+
+  // ✅ auto-transition draft -> pending_validation si profil éligible
+  const currentStatus = String((profileRaw as any)?.status ?? "draft");
+  const { ok } = isProfileCompleteForValidation(profileRaw);
+
+  const nextStatus =
+    currentStatus === "draft" && ok ? "pending_validation" : currentStatus;
+
+  const profileForDb =
+    profileRaw && typeof profileRaw === "object"
+      ? { ...profileRaw, status: nextStatus, updatedAt: new Date().toISOString() }
+      : { status: nextStatus, updatedAt: new Date().toISOString() };
 
   const payload = {
     user_id: id,
     email,
-profile: profileForDb,
+    profile: profileForDb,
     updated_at: new Date().toISOString(),
   };
 
