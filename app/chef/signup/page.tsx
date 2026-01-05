@@ -29,32 +29,36 @@ export default function ChefSignupPage() {
   setError('');
 
   try {
-    // 1) On garde les infos pour créer/patcher le profil après validation email
+    const { firstName, lastName, email } = formData;
+
+    // 1) stocke le mini profil pour bootstrap au dashboard
     localStorage.setItem(
       'chef_pending_profile',
       JSON.stringify({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
+        firstName,
+        lastName,
+        email,
         createdAt: new Date().toISOString(),
       })
     );
 
-    // 2) Magic link → callback (qui finira la session)
+    // 2) envoie le Magic Link (OTP)
     const { error } = await supabase.auth.signInWithOtp({
-      email: formData.email,
+      email,
       options: {
+        // callback => redirige ensuite vers /chef/dashboard
         emailRedirectTo: 'https://chefstalents.com/chef/auth/callback?next=/chef/dashboard',
       },
     });
 
     if (error) throw error;
 
-    // 3) UX: tu peux garder la page et afficher une explication
-    router.push('/chef/login?checkEmail=1');
-  } catch (e: any) {
-    console.error('[signup otp] error:', e);
-    setError(e?.message || 'Une erreur est survenue');
+    // 3) feedback UX
+    setError('');
+    alert("✅ Lien envoyé par email. Clique dessus pour accéder à ton Dashboard.");
+  } catch (err: any) {
+    console.error(err);
+    setError(err?.message || 'Une erreur est survenue');
   } finally {
     setLoading(false);
   }
