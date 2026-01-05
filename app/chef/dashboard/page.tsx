@@ -157,8 +157,6 @@ export default function ChefDashboardPage() {
     };
   }, [sbUserId]);
 
-  if (booting) return <div className="p-8">Chargement...</div>;
-  if (!appUser) return <div className="p-8">Non connecté.</div>;
 
   const profileTypeLabels: Record<string, string> = {
     private: 'Chef Privé',
@@ -169,16 +167,22 @@ export default function ChefDashboardPage() {
 
   const onboardingProfile: AnyProfile = (appUser as any).profile || {};
 
-  const mergedProfile = useMemo<AnyProfile>(() => {
+  return (
+  <ChefLayout>
+    {!isReady ? (
+      <div className="p-8">
+        {booting ? 'Chargement…' : 'Non connecté.'}
+      </div>
+    ) : (
+      <div className="space-y-12 animate-in fade-in duration-700">
+        {/* 👇 ici tu remets TOUT ton dashboard existant tel quel */}
+        ...
+      </div>
+    )}
+  </ChefLayout>
+);Profile = useMemo<AnyProfile>(() => {
     const fullName = `${(appUser as any)?.firstName || ''} ${(appUser as any)?.lastName || ''}`.trim();
 
-    return {
-      ...onboardingProfile,
-      ...(settingsProfile ?? {}),
-      email: (settingsProfile as any)?.email ?? (appUser as any)?.email ?? onboardingProfile.email,
-      name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
-    };
-  }, [onboardingProfile, settingsProfile, appUser]);
 
   // Completion
   const completion = useMemo(() => {
@@ -194,6 +198,8 @@ export default function ChefDashboardPage() {
     )
       .split(',')[0]
       .trim();
+
+    const isReady = !booting && !!appUser;
 
     return {
       name: String(p.name ?? '').trim(),
