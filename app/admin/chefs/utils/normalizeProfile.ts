@@ -23,6 +23,7 @@ function ensureStringArray(v: any): string[] {
   }
   return [];
 }
+
 /* -------------------- types -------------------- */
 
 export type AdminChefLike = ChefUser & {
@@ -106,36 +107,74 @@ export function normalizeProfile(raw: any) {
     (p as any).experience_level
   );
 
-  const phone = firstNonEmpty((p as any).phone, (p as any).phoneNumber, (p as any).phone_number, (p as any).tel, (p as any).telephone);
+  const phone = firstNonEmpty(
+    (p as any).phone,
+    (p as any).phoneNumber,
+    (p as any).phone_number,
+    (p as any).tel,
+    (p as any).telephone
+  );
 
-  const languages = firstNonEmpty((p as any).languages, (p as any).langues);
-  const specialties = firstNonEmpty((p as any).specialties, (p as any).speciality);
-  const cuisines = firstNonEmpty((p as any).cuisines, (p as any).cuisineTypes, (p as any).cuisine_types, (p as any).styles, (p as any).style);
+  // ✅ Arrays normalisés
+  const languagesRaw = firstNonEmpty((p as any).languages, (p as any).langues);
+  const specialtiesRaw = firstNonEmpty((p as any).specialties, (p as any).speciality);
+  const cuisinesRaw = firstNonEmpty((p as any).cuisines, (p as any).cuisineTypes, (p as any).cuisine_types, (p as any).styles, (p as any).style);
 
-  const bioRaw = firstNonEmpty((p as any).bio, (p as any).about, (p as any).description, (p as any).biography, (p as any).bio_long, (p as any).bioLong);
+  const languages = ensureArray(languagesRaw);
+  const specialties = ensureArray(specialtiesRaw);
+  const cuisines = ensureArray(cuisinesRaw);
+
+  // ✅ NEW : types de missions (multi-select)
+  const missionTypesRaw = firstNonEmpty(
+    (p as any).missionTypes,
+    (p as any).missions,
+    (p as any).mission_types,
+    (p as any).wantedMissions,
+    (p as any).wantedMissionTypes
+  );
+  const missionTypes = ensureArray(missionTypesRaw);
+
+  const bioRaw = firstNonEmpty(
+    (p as any).bio,
+    (p as any).about,
+    (p as any).description,
+    (p as any).biography,
+    (p as any).bio_long,
+    (p as any).bioLong
+  );
   const bio = unwrapText(bioRaw);
-  
+
   const mobilityRaw = firstNonEmpty(
-  (p as any).mobility,
-  (p as any).travel,
-  (p as any).radius,
-  (p as any).travelRadiusKm,
-  (p as any).internationalMobility
-);
-const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
+    (p as any).mobility,
+    (p as any).travel,
+    (p as any).radius,
+    (p as any).travelRadiusKm,
+    (p as any).internationalMobility
+  );
+  const mobility = Array.isArray(mobilityRaw) ? mobilityRaw : unwrapText(mobilityRaw);
+
+  // (bonus utile admin)
+  const coverageZones = ensureArray(firstNonEmpty((p as any).coverageZones, (p as any).location?.coverageZones, (p as any).coverage_zones));
 
   const baseCity = firstNonEmpty(
-  (p as any).location?.baseCity,
-  (p as any).baseCity,
-  (p as any).base_city,
-  (p as any).city,
-  (p as any).ville
-);
-  
-const imagesRaw = firstNonEmpty((p as any).photos, (p as any).images, (p as any).gallery);
-const images = ensureStringArray(imagesRaw);
-  
-  const locationRaw = firstNonEmpty((p as any).location, (p as any).baseCity, (p as any).base_city, (p as any).city, (p as any).ville, (p as any).address);
+    (p as any).location?.baseCity,
+    (p as any).baseCity,
+    (p as any).base_city,
+    (p as any).city,
+    (p as any).ville
+  );
+
+  const imagesRaw = firstNonEmpty((p as any).photos, (p as any).images, (p as any).gallery, (p as any).portfolioImages);
+  const images = ensureStringArray(imagesRaw);
+
+  const locationRaw = firstNonEmpty(
+    (p as any).location,
+    (p as any).baseCity,
+    (p as any).base_city,
+    (p as any).city,
+    (p as any).ville,
+    (p as any).address
+  );
   const location = isBrowserLocationObject(locationRaw)
     ? firstNonEmpty((p as any).baseCity, (p as any).base_city, (p as any).city, (p as any).ville, (p as any).address)
     : locationRaw;
@@ -149,13 +188,20 @@ const images = ensureStringArray(imagesRaw);
     lastName,
     email,
     phone,
+
+    // ✅ arrays propres
     languages,
     specialties,
     cuisines,
+    missionTypes,
+
     profileType,
     seniorityLevel,
     bio,
     mobility,
+    coverageZones,
+    baseCity,
+
     images,
     location,
     created_at,
@@ -169,10 +215,12 @@ export function getNormalizedChef(c: AdminChefLike, detail: any | null = null) {
   const raw = (detail?.profile ?? detail ?? (c as any)?.profile ?? c ?? {}) as any;
   const profile = normalizeProfile(raw);
 
-  const email = String(firstNonEmpty(detail?.email, (c as any).email, profile.email, '') || '').trim().toLowerCase();
+  const email = String(firstNonEmpty(detail?.email, (c as any).email, profile.email, '') || '')
+    .trim()
+    .toLowerCase();
 
-  const firstName = String(firstNonEmpty(detail?.firstName, (c as any).firstName, profile.firstName, '') || '').trim();
-  const lastName = String(firstNonEmpty(detail?.lastName, (c as any).lastName, profile.lastName, '') || '').trim();
+  const firstName = String(firstNonEmpty(detail?.firstName, (c as any).firstName, (profile as any).firstName, '') || '').trim();
+  const lastName = String(firstNonEmpty(detail?.lastName, (c as any).lastName, (profile as any).lastName, '') || '').trim();
   const fullName = `${firstName} ${lastName}`.trim() || 'Chef';
 
   const createdIso = String(
