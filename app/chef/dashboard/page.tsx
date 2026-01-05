@@ -57,15 +57,12 @@ async function ensureChefProfileExists(params: {
 }) {
   const { userId, email, pending } = params;
 
-  const firstName = pending?.firstName?.trim() || null;
-  const lastName = pending?.lastName?.trim() || null;
-
   const payload = {
     id: userId,
     email: email || null,
     profile: {
-      firstName,
-      lastName,
+      firstName: pending?.firstName?.trim() || null,
+      lastName: pending?.lastName?.trim() || null,
       email: email || null,
       createdAt: pending?.createdAt || new Date().toISOString(),
     },
@@ -77,11 +74,8 @@ async function ensureChefProfileExists(params: {
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`ensureChefProfileExists failed: ${res.status} ${txt}`);
-  }
-
+  if (!res.ok) throw new Error(await res.text());
+}
   return res.json(); // { profile }
 }
 
@@ -95,50 +89,35 @@ export default function ChefDashboardPage() {
 
   // A) Boot Magic Link (session supabase + ensure profile)
   useEffect(() => {
-    let cancelled = false;
+  let cancelled = false;
 
-    (async () => {
-      try {
-        const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-        if (sessionErr) throw sessionErr;
+  (async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const sbUser = data?.session?.user;
+      if (!sbUser?.id) return;
 
-        const sbUser = sessionData?.session?.user;
-        if (!sbUser?.id) {
-          // pas de session Supabase -> pas prêt
-          if (!cancelled) {
-            setIsReady(false);
-            setBooting(false);
-          }
-          return;
-        }
+      const raw = localStorage.getItem('chef_pending_profile');
+      const pending: PendingProfile | null = raw ? JSON.parse(raw) : null;
 
-        if (!cancelled) {
-          setSbUserId(sbUser.id);
-          setIsReady(true);
-        }
+      await ensureChefProfileExists({
+        userId: sbUser.id,
+        email: sbUser.email ?? pending?.email ?? '',
+        pending,
+      });
 
-        const raw = localStorage.getItem('chef_pending_profile');
-        const pending: PendingProfile | null = raw ? JSON.parse(raw) : null;
+      localStorage.removeItem('chef_pending_profile');
+    } catch (e) {
+      console.error('[Dashboard boot] error:', e);
+    } finally {
+      if (!cancelled) setBooting(false);
+    }
+  })();
 
-        await ensureChefProfileExists({
-          userId: sbUser.id,
-          email: sbUser.email ?? pending?.email ?? '',
-          pending,
-        });
-
-        localStorage.removeItem('chef_pending_profile');
-      } catch (e: any) {
-        console.error('[Dashboard boot] error:', e?.message || e, e);
-        if (!cancelled) setIsReady(false);
-      } finally {
-        if (!cancelled) setBooting(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   // B) Charger le profil pour l’UI (DB -> fallback localStorage)
   useEffect(() => {
