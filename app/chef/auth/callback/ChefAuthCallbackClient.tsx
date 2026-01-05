@@ -1,50 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
-export default function ChefAuthCallbackClient() {
+export default function CallbackClient() {
   const router = useRouter();
-  const search = useSearchParams();
-  const [error, setError] = useState<string>('');
+  const sp = useSearchParams();
+  const [msg, setMsg] = useState('Validation du lien…');
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const code = search.get('code');
+        const next = sp.get('next') || '/chef/dashboard';
+
+        // 1) Supabase PKCE: on récupère le "code" dans l’URL
+        const code = sp.get('code');
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         }
 
-        const next = search.get('next') || '/chef/dashboard';
+        // 2) Vérifie qu'on a bien une session
+        const { data, error: sessErr } = await supabase.auth.getSession();
+        if (sessErr) throw sessErr;
+
+        if (!data.session) {
+          setMsg("Impossible d’ouvrir la session. Le lien a peut-être expiré.");
+          return;
+        }
+
         if (!cancelled) router.replace(next);
       } catch (e: any) {
-        console.error('[auth callback] error', e);
-        if (!cancelled) setError(e?.message || 'Erreur de connexion');
+        console.error('[auth callback] error:', e);
+        setMsg(e?.message || "Erreur lors de l’authentification.");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [router, search]);
+  }, [router, sp]);
 
-  if (error) {
-    return (
-      <div className="p-8">
-        <h1 className="text-xl font-semibold">Erreur</h1>
-        <p className="mt-2 text-stone-600">{error}</p>
-        <p className="mt-4 text-sm text-stone-500">
-          Réessaie depuis <a className="underline" href="/chef/login">/chef/login</a>.
-        </p>
-      </div>
-    );
-  }
-
-  return <div className="p-8">Connexion en cours…</div>;
+  return <div className="p-8">{msg}</div>;
 }
