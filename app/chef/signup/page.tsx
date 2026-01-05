@@ -24,68 +24,43 @@ export default function ChefSignupPage() {
   const [magicSent, setMagicSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setMagicSent(false);
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const email = String(formData.email || '').trim().toLowerCase();
-      const firstName = String(formData.firstName || '').trim();
-      const lastName = String(formData.lastName || '').trim();
+  try {
+    // 1) On garde les infos en "pending" (servira à créer le chef_profile après login)
+    localStorage.setItem(
+      'chef_pending_profile',
+      JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        createdAt: new Date().toISOString(),
+      })
+    );
 
-      if (!email) throw new Error('Email requis.');
+    // 2) Magic link -> redirige vers NOTRE callback, pas direct dashboard
+    const emailRedirectTo =
+      `${window.location.origin}/chef/auth/callback?next=/chef/dashboard`;
 
-      /**
-       * ✅ (Optionnel mais utile) : on garde le prénom/nom côté navigateur,
-       * pour pouvoir compléter/créer le profil automatiquement au Dashboard
-       * une fois que le chef aura cliqué son lien et sera authentifié.
-       */
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'chef_pending_profile',
-          JSON.stringify({
-            firstName,
-            lastName,
-            email,
-            createdAt: new Date().toISOString(),
-          })
-        );
-      }
+    const { error } = await supabase.auth.signInWithOtp({
+      email: formData.email,
+      options: { emailRedirectTo },
+    });
 
-      /**
-       * ✅ MAGIC LINK (OTP)
-       * - Supabase envoie un email avec un lien sécurisé
-       * - Quand le chef clique, il est connecté et redirigé vers /chef/dashboard
-       *
-       * IMPORTANT:
-       * - L’emailRedirectTo doit être un domaine autorisé dans Supabase Auth settings
-       * - Le chef reçoit le lien par EMAIL (inbox/spams)
-       */
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: 'https://chefstalents.com/chef/dashboard',
-        },
-      });
+    if (error) throw error;
 
-      if (error) throw error;
-
-      // ✅ On confirme à l’écran que le lien est envoyé
-      setMagicSent(true);
-
-      /**
-       * UX:
-       * - On ne push pas tout de suite sur /chef/dashboard car il n’est PAS connecté tant qu’il n’a pas cliqué l’email.
-       * - Après clic sur le lien, Supabase le connecte et le redirige automatiquement vers /chef/dashboard.
-       */
-    } catch (err: any) {
-      console.error('[ChefSignupPage] Magic link error:', err);
-      setError(err?.message || 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 3) UX : on affiche un message (tu peux le faire via un state)
+    // Ici simple : redirige vers login avec une note
+    router.push('/chef/login?check_email=1');
+  } catch (err: any) {
+    console.error('SIGNUP OTP ERROR', err);
+    setError(err?.message || 'Une erreur est survenue');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
