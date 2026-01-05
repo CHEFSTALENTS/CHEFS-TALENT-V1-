@@ -125,7 +125,7 @@ export function normalizeProfile(raw: any) {
   const cuisines = ensureArray(cuisinesRaw);
 
   // ✅ NEW : types de missions (multi-select)
-  c  const missionTypesRaw = firstNonEmpty(
+    const missionTypesRaw = firstNonEmpty(
     (p as any).missionTypes,
     (p as any).mission_types,
     (p as any).missions,
