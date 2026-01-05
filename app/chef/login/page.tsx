@@ -33,7 +33,12 @@ export default function ChefLoginPage() {
 
     setError(res.error || 'Identifiants invalides');
   };
-
+await supabase.auth.signInWithOtp({
+  email,
+  options: {
+    emailRedirectTo: 'https://chefstalents.com/chef/auth/callback?next=/chef/dashboard',
+  },
+});
   return (
     <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
       <div className="w-full max-w-md bg-white p-12 border border-stone-200 shadow-sm space-y-8">
