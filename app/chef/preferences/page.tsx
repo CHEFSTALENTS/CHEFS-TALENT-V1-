@@ -47,7 +47,7 @@ const MISSION_TYPES_PRESET = [
   { key: 'yacht', label: 'Yacht' },
   { key: 'event_catering', label: 'Event / catering' },
 ];
-];
+
 
 function normalizeList(v: any): string[] {
   if (!v) return [];
