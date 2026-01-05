@@ -105,7 +105,7 @@ export default function ChefSignupPage() {
                 <Label>Prénom</Label>
                 <Input
                   required
-                  placeholder="ex : Thomas"
+                  placeholder="ex : Jean"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 />
@@ -114,7 +114,7 @@ export default function ChefSignupPage() {
                 <Label>Nom</Label>
                 <Input
                   required
-                  placeholder="ex : Delcroix"
+                  placeholder="ex : Dupont"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 />
