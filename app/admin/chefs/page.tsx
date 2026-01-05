@@ -740,7 +740,8 @@ function ChefDrawer({
 
   const specialties = profile.specialties;
   const cuisines = profile.cuisines;
-
+const missionTypes = (profile as any).missionTypes ?? (profile as any).mission_types ?? (profile as any).missions ?? null;
+  
   const bio = profile.bio;
   const bioText = String(bio ?? '').trim();
 
