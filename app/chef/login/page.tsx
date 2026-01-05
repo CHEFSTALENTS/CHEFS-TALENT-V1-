@@ -1,84 +1,77 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Button, Input, Marker, Label } from '@/components/ui';
-import { auth, isAdminUser } from '@/services/storage';
-import { Loader2 } from 'lucide-react';
+import { supabase } from '@/services/supabaseClient';
 
 export default function ChefLoginPage() {
-  const router = useRouter();
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMsg(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return setMsg('Veuillez entrer un email.');
+
     setLoading(true);
-    setError('');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          // IMPORTANT : doit être dans Supabase > Auth > URL Configuration (Redirect URLs)
+          emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
+        },
+      });
 
-    const res = await auth.loginChef(formData.email, formData.password);
-    setLoading(false);
+      if (error) throw error;
 
-    if (res.success) {
-      // ✅ si c’est ton admin (email fixe), on va au bureau admin
-      if (isAdminUser?.(res.user)) {
-        router.push('/admin');
-        return;
-      }
-      router.push('/chef/dashboard');
-      return;
+      setMsg('✅ Lien envoyé. Vérifiez vos emails (et les spams).');
+    } catch (e: any) {
+      setMsg(e?.message || 'Erreur lors de l’envoi du lien.');
+    } finally {
+      setLoading(false);
     }
-
-    setError(res.error || 'Identifiants invalides');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 p-6">
-      <div className="w-full max-w-md bg-white p-12 border border-stone-200 shadow-sm space-y-8">
-        <div className="text-center">
-          <Marker className="mx-auto" />
-          <Label>Espace Chef</Label>
-          <h1 className="text-3xl font-serif text-stone-900 mt-4">Connexion</h1>
+    <div className="min-h-[70vh] flex items-center justify-center px-6">
+      <div className="w-full max-w-md border border-stone-200 bg-white p-8">
+        <div className="text-center mb-8">
+          <div className="text-xs tracking-widest uppercase text-stone-400">Espace Chef</div>
+          <h1 className="text-3xl font-serif text-stone-900 mt-2">Connexion</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={onSendMagicLink} className="space-y-5">
           <div className="space-y-2">
-            <Label>Email</Label>
-            <Input
+            <label className="text-xs uppercase tracking-widest text-stone-400">Email</label>
+            <input
+              className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
               type="email"
-              required
-              value={formData.email}
-              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ex: chef@exemple.com"
+              autoComplete="email"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Mot de passe</Label>
-            <Input
-              type="password"
-              required
-              value={formData.password}
-              onChange={e => setFormData({ ...formData, password: e.target.value })}
-            />
-          </div>
+          {msg && <div className="text-sm text-stone-600">{msg}</div>}
 
-          {error && (
-            <p className="text-red-500 text-sm bg-red-50 p-3 border border-red-100">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" /> : 'Se connecter'}
-          </Button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-stone-900 text-white py-3 hover:bg-stone-800 disabled:opacity-50"
+          >
+            {loading ? 'Envoi…' : 'Recevoir un lien de connexion'}
+          </button>
         </form>
 
-        <div className="text-center border-t border-stone-100 pt-8">
-          <p className="text-stone-400 text-sm mb-4">Pas encore membre ?</p>
-          <Link href="/chef/signup">
-            <Button variant="outline" className="w-full">Créer un compte</Button>
+        <div className="text-center mt-6 text-xs text-stone-500">
+          Pas encore de compte ?{' '}
+          <Link href="/chef/signup" className="underline">
+            Créer un compte
           </Link>
         </div>
       </div>
