@@ -431,7 +431,7 @@ export default function ChefDashboardPage() {
         </div>
       </div>
     </ChefLayout>
-  );
+   );
 }
 
 function ActionCard({
@@ -501,7 +501,6 @@ function ActionCard({
     </Link>
   );
 }
-
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     pending_validation: 'bg-stone-100 text-stone-600',
