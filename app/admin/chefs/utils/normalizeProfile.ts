@@ -116,85 +116,96 @@ export function normalizeProfile(raw: any) {
   );
 
   // ✅ Arrays normalisés
-  const languagesRaw = firstNonEmpty((p as any).languages, (p as any).langues);
+    const languagesRaw = firstNonEmpty((p as any).languages, (p as any).langues);
   const specialtiesRaw = firstNonEmpty((p as any).specialties, (p as any).speciality);
   const cuisinesRaw = firstNonEmpty((p as any).cuisines, (p as any).cuisineTypes, (p as any).cuisine_types, (p as any).styles, (p as any).style);
-const formatsRaw = firstNonEmpty((p as any).formats, (p as any).formatsMastered, (p as any).format_mastered);
-let formats = ensureArray(formatsRaw);
 
-// missionTypes déjà (tu l’as commencé) :
-const missionTypesRaw = firstNonEmpty(
-  (p as any).missionTypes,
-  (p as any).mission_types,
-  (p as any).missions
-);
-let missionTypes = ensureArray(missionTypesRaw);
+  // ✅ NEW : formats maîtrisés (ex "Fine dining", "Brunch"...)
+  const formatsRaw = firstNonEmpty(
+    (p as any).formats,
+    (p as any).formatsMastered,
+    (p as any).format_mastered,
+    (p as any).serviceFormats
+  );
 
-// legacy fallback depuis specialties si formats/missionTypes vides
-const legacySpecialties = ensureArray(firstNonEmpty((p as any).specialties, (p as any).speciality));
+  // ✅ NEW : types de missions souhaitées (multi-select)
+  const missionTypesRaw = firstNonEmpty(
+    (p as any).missionTypes,
+    (p as any).mission_types,
+    (p as any).missions,
+    (p as any).missionPreferences,
+    (p as any).desiredMissions,
+    (p as any).desiredMissionTypes,
+    (p as any).typesOfMissions,
+    (p as any).mission_types_wanted
+  );
 
-const MISSION_KEYWORDS: Record<string, string> = {
-  'yacht': 'yacht',
-  'yachting': 'yacht',
-  'chalet': 'chalet',
-  'résidence': 'residence',
-  'residence': 'residence',
-  'séjour': 'residence',
-  'sejour': 'residence',
-  'event': 'event_catering',
-  'catering': 'event_catering',
-  'traiteur': 'event_catering',
-  'one shot': 'one_shot',
-  'oneshot': 'one_shot',
-  'ponctuel': 'one_shot',
-  'dîner': 'one_shot',
-  'diner': 'one_shot',
-};
+  const languages = ensureArray(languagesRaw);
+  const specialties = ensureArray(specialtiesRaw);
+  const cuisines = ensureArray(cuisinesRaw);
 
-const FORMAT_PRESET = [
-  'Fine dining',
-  'Family style',
-  'Brunch',
-  'Menu dégustation',
-];
+  let formats = ensureArray(formatsRaw);
+  let missionTypes = ensureArray(missionTypesRaw);
 
-function classifyLegacySpecialties(items: string[]) {
-  const fmt: string[] = [];
-  const missions: string[] = [];
-  const keep: string[] = [];
+  // legacy fallback depuis specialties si formats/missionTypes vides
+  const legacySpecialties = ensureArray(firstNonEmpty((p as any).specialties, (p as any).speciality));
 
-  for (const it of items) {
-    const low = it.toLowerCase();
+  const MISSION_KEYWORDS: Record<string, string> = {
+    yacht: 'yacht',
+    yachting: 'yacht',
+    chalet: 'chalet',
+    résidence: 'residence',
+    residence: 'residence',
+    séjour: 'residence',
+    sejour: 'residence',
+    event: 'event_catering',
+    catering: 'event_catering',
+    traiteur: 'event_catering',
+    'one shot': 'one_shot',
+    oneshot: 'one_shot',
+    ponctuel: 'one_shot',
+    dîner: 'one_shot',
+    diner: 'one_shot',
+  };
 
-    // mission keywords
-    const foundMission = Object.keys(MISSION_KEYWORDS).find(k => low.includes(k));
-    if (foundMission) {
-      missions.push(MISSION_KEYWORDS[foundMission]);
-      continue;
+  const FORMAT_PRESET = ['Fine dining', 'Family style', 'Brunch', 'Menu dégustation'];
+
+  function classifyLegacySpecialties(items: string[]) {
+    const fmt: string[] = [];
+    const missions: string[] = [];
+    const keep: string[] = [];
+
+    for (const it of items) {
+      const low = it.toLowerCase();
+
+      const foundMission = Object.keys(MISSION_KEYWORDS).find((k) => low.includes(k));
+      if (foundMission) {
+        missions.push(MISSION_KEYWORDS[foundMission]);
+        continue;
+      }
+
+      const foundFmt = FORMAT_PRESET.find((f) => f.toLowerCase() === low);
+      if (foundFmt) {
+        fmt.push(foundFmt);
+        continue;
+      }
+
+      // sinon on garde en formats (mais clean)
+      keep.push(it);
     }
 
-    // formats known
-    const foundFmt = FORMAT_PRESET.find(f => f.toLowerCase() === low);
-    if (foundFmt) {
-      fmt.push(foundFmt);
-      continue;
-    }
-
-    // sinon on garde en "formats" (mais clean)
-    keep.push(it);
+    return { fmt, missions, keep };
   }
 
-  return { fmt, missions, keep };
-}
+  if (!formats.length || !missionTypes.length) {
+    const { fmt, missions, keep } = classifyLegacySpecialties(legacySpecialties);
+    if (!formats.length) formats = keep.length ? keep : fmt;
+    if (!missionTypes.length) missionTypes = missions;
+  }
 
-if (!formats.length || !missionTypes.length) {
-  const { fmt, missions, keep } = classifyLegacySpecialties(legacySpecialties);
-  if (!formats.length) formats = keep.length ? keep : fmt;
-  if (!missionTypes.length) missionTypes = missions;
-}
-
-formats = Array.from(new Set(formats.map(s => String(s).trim()).filter(Boolean)));
-missionTypes = Array.from(new Set(missionTypes.map(s => String(s).trim()).filter(Boolean)));
+  // dedupe final
+  formats = Array.from(new Set(formats.map((s) => String(s).trim()).filter(Boolean)));
+  missionTypes = Array.from(new Set(missionTypes.map((s) => String(s).trim()).filter(Boolean)));
   
   const languages = ensureArray(languagesRaw);
   const specialties = ensureArray(specialtiesRaw);
