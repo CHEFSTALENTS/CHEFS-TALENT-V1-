@@ -9,9 +9,10 @@ import { Loader2 } from 'lucide-react';
 type ChefProfile = {
   id?: string;
   email?: string;
-  cuisines?: string[] | string;
-  languages?: string[] | string;
-  specialties?: string[] | string;
+  cuisines?: string[];
+  languages?: string[];
+  specialties?: string[];
+  missionTypes?: string[]; // ✅ NEW
   updatedAt?: string;
   [key: string]: any;
 };
@@ -40,25 +41,28 @@ const SPECIALTIES_PRESET = [
   'Menu dégustation',
 ];
 
-/* ---------------- helpers ---------------- */
+// ✅ NEW : types de missions
+const MISSION_TYPES: Array<{ key: string; label: string; desc?: string }> = [
+  { key: 'one_shot', label: 'Prestation ponctuelle', desc: 'Dîner / journée / event court' },
+  { key: 'residence', label: 'Résidence / séjour', desc: 'Plusieurs jours (villa, hôtel, etc.)' },
+  { key: 'yacht', label: 'Yacht', desc: 'Chef embarqué' },
+  { key: 'event', label: 'Événement / catering', desc: 'Cocktail, réception, corporate…' },
+  { key: 'chalet', label: 'Chalet / montagne', desc: 'Saison / séjours montagne' },
+];
 
 function normalizeList(v: any): string[] {
   if (!v) return [];
-  if (Array.isArray(v)) return v.map(String).map(s => s.trim()).filter(Boolean);
-  if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
+  if (Array.isArray(v)) return v.map(String).map((s) => s.trim()).filter(Boolean);
+  if (typeof v === 'string') return v.split(',').map((s) => s.trim()).filter(Boolean);
   return [];
 }
 
 function uniq(arr: string[]) {
-  return Array.from(new Set(arr.map(s => s.trim()).filter(Boolean)));
+  return Array.from(new Set(arr.map((s) => s.trim()).filter(Boolean)));
 }
 
 function toggle(list: string[], value: string) {
-  return list.includes(value) ? list.filter(v => v !== value) : [...list, value];
-}
-
-function isPreset(list: string[], v: string) {
-  return list.includes(v);
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
 export default function ChefPreferencesPage() {
@@ -66,15 +70,15 @@ export default function ChefPreferencesPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // profil DB (source de vérité) pour MERGE à l’enregistrement
   const [baseProfile, setBaseProfile] = useState<ChefProfile>({});
 
-  // states UI
   const [cuisines, setCuisines] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [missionTypes, setMissionTypes] = useState<string[]>([]);
 
   const [customCuisine, setCustomCuisine] = useState('');
+  const [customLanguage, setCustomLanguage] = useState('');
   const [customSpecialty, setCustomSpecialty] = useState('');
 
   useEffect(() => {
@@ -89,23 +93,24 @@ export default function ChefPreferencesPage() {
           return;
         }
 
-        // ✅ DB (no-store) — important pour éviter les incohérences/caches
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, {
-          cache: 'no-store',
-        });
+        // ✅ Lire le profil depuis la DB (no-store)
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const fromDb: ChefProfile | null = json?.profile ?? null;
 
         const p: ChefProfile = fromDb ?? { id: user.id, email: user.email };
 
+        const initialCuisines = uniq(normalizeList(p.cuisines ?? (p as any)?.cuisineTypes ?? (p as any)?.styles));
+        const initialLanguages = uniq(normalizeList(p.languages ?? (p as any)?.langues));
+        const initialSpecialties = uniq(normalizeList(p.specialties ?? (p as any)?.speciality));
+        const initialMissionTypes = uniq(normalizeList((p as any)?.missionTypes ?? (p as any)?.missions ?? (p as any)?.mission_types));
+
         if (!cancelled) {
           setBaseProfile(p);
-
-          // ✅ tolérant (string OU array)
-          setCuisines(uniq(normalizeList(p.cuisines)));
-          setLanguages(uniq(normalizeList(p.languages ?? (p as any).langues)));
-          setSpecialties(uniq(normalizeList(p.specialties)));
-
+          setCuisines(initialCuisines);
+          setLanguages(initialLanguages);
+          setSpecialties(initialSpecialties);
+          setMissionTypes(initialMissionTypes);
           setLoading(false);
         }
       } catch (e) {
@@ -119,34 +124,26 @@ export default function ChefPreferencesPage() {
     };
   }, []);
 
-  // ✅ minimum requis pour checklist (1 cuisine + 1 langue)
-  const canSave = useMemo(() => cuisines.length >= 1 && languages.length >= 1, [cuisines, languages]);
+  // ✅ On rend le choix des missions obligatoire pour le matching
+  const canSave = useMemo(() => {
+    return cuisines.length >= 1 && languages.length >= 1 && missionTypes.length >= 1;
+  }, [cuisines, languages, missionTypes]);
 
-  // champs "autres langues" = tout ce qui n’est pas dans le preset
-  const customLanguagesValue = useMemo(() => {
-    return languages.filter(l => !isPreset(LANGUAGES_PRESET, l)).join(', ');
-  }, [languages]);
-
-  const addCustomCuisine = () => {
-    const v = customCuisine.trim();
+  const addCustom = (kind: 'cuisine' | 'language' | 'specialty') => {
+    const raw = kind === 'cuisine' ? customCuisine : kind === 'language' ? customLanguage : customSpecialty;
+    const v = raw.trim();
     if (!v) return;
-    setCuisines(prev => uniq(prev.includes(v) ? prev : [...prev, v]));
-    setCustomCuisine('');
-  };
 
-  const addCustomSpecialty = () => {
-    const v = customSpecialty.trim();
-    if (!v) return;
-    setSpecialties(prev => uniq(prev.includes(v) ? prev : [...prev, v]));
-    setCustomSpecialty('');
-  };
-
-  const onCustomLanguagesChange = (raw: string) => {
-    // garde les presets déjà sélectionnés
-    const keptPreset = languages.filter(l => isPreset(LANGUAGES_PRESET, l));
-    // remplace uniquement les customs
-    const custom = normalizeList(raw).filter(l => !isPreset(LANGUAGES_PRESET, l));
-    setLanguages(uniq([...keptPreset, ...custom]));
+    if (kind === 'cuisine') {
+      setCuisines((prev) => (prev.includes(v) ? prev : [...prev, v]));
+      setCustomCuisine('');
+    } else if (kind === 'language') {
+      setLanguages((prev) => (prev.includes(v) ? prev : [...prev, v]));
+      setCustomLanguage('');
+    } else {
+      setSpecialties((prev) => (prev.includes(v) ? prev : [...prev, v]));
+      setCustomSpecialty('');
+    }
   };
 
   const handleSave = async () => {
@@ -157,8 +154,7 @@ export default function ChefPreferencesPage() {
       const user = auth.getCurrentUser?.();
       if (!user?.id) throw new Error('No user');
 
-      // ✅ IMPORTANT : on MERGE avec le profil DB pour ne rien écraser
-      // ✅ on stocke cuisines/languages/specialties TOUJOURS en array (pas string)
+      // IMPORTANT : on MERGE avec le profil DB pour ne rien écraser
       const merged: ChefProfile = {
         ...baseProfile,
         id: user.id,
@@ -166,6 +162,7 @@ export default function ChefPreferencesPage() {
         cuisines: uniq(cuisines),
         languages: uniq(languages),
         specialties: uniq(specialties),
+        missionTypes: uniq(missionTypes), // ✅ NEW
         updatedAt: new Date().toISOString(),
       };
 
@@ -193,7 +190,7 @@ export default function ChefPreferencesPage() {
       <div className="max-w-3xl">
         <Marker />
         <Label>Préférences</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Cuisines & Langues</h1>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">Matching</h1>
 
         <div className="space-y-8 bg-white p-8 border border-stone-200">
           {loading ? (
@@ -202,20 +199,63 @@ export default function ChefPreferencesPage() {
             </div>
           ) : (
             <>
-              {/* Cuisines */}
+              {/* ✅ Types de missions */}
               <div className="space-y-3">
-                <Label>Cuisines (min. 1)</Label>
+                <Label>Types de missions souhaitées (min. 1)</Label>
+                <p className="text-xs text-stone-500">
+                  Sélectionne les missions que tu souhaites recevoir. Cela guide le matching.
+                </p>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {MISSION_TYPES.map((m) => {
+                    const on = missionTypes.includes(m.key);
+                    return (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => setMissionTypes((prev) => toggle(prev, m.key))}
+                        className={`p-4 border text-left transition ${
+                          on ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-stone-900">{m.label}</div>
+                        {m.desc ? <div className="text-xs text-stone-500 mt-1">{m.desc}</div> : null}
+                        <div className="text-xs text-stone-500 mt-2">{on ? 'Sélectionné' : 'Cliquer'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {missionTypes.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {missionTypes.map((k) => {
+                      const label = MISSION_TYPES.find((x) => x.key === k)?.label ?? k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setMissionTypes((prev) => prev.filter((v) => v !== k))}
+                          className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
+                        >
+                          {label} ✕
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Cuisines */}
+              <div className="space-y-3 pt-6 border-t border-stone-100">
+                <Label>Cuisines (min. 1)</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {CUISINES_PRESET.map(x => (
+                  {CUISINES_PRESET.map((x) => (
                     <button
                       key={x}
                       type="button"
-                      onClick={() => setCuisines(prev => uniq(toggle(prev, x)))}
+                      onClick={() => setCuisines((prev) => toggle(prev, x))}
                       className={`p-3 border text-left transition ${
-                        cuisines.includes(x)
-                          ? 'border-stone-900 bg-stone-50'
-                          : 'border-stone-200 hover:border-stone-300'
+                        cuisines.includes(x) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                       }`}
                     >
                       <div className="text-sm font-medium text-stone-900">{x}</div>
@@ -225,23 +265,19 @@ export default function ChefPreferencesPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Input
-                    value={customCuisine}
-                    onChange={e => setCustomCuisine(e.target.value)}
-                    placeholder="Ajouter une cuisine…"
-                  />
-                  <Button type="button" onClick={addCustomCuisine}>
+                  <Input value={customCuisine} onChange={(e) => setCustomCuisine(e.target.value)} placeholder="Ajouter une cuisine…" />
+                  <Button type="button" onClick={() => addCustom('cuisine')}>
                     Ajouter
                   </Button>
                 </div>
 
                 {cuisines.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {cuisines.map(x => (
+                    {cuisines.map((x) => (
                       <button
                         key={x}
                         type="button"
-                        onClick={() => setCuisines(prev => prev.filter(v => v !== x))}
+                        onClick={() => setCuisines((prev) => prev.filter((v) => v !== x))}
                         className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
                       >
                         {x} ✕
@@ -254,17 +290,14 @@ export default function ChefPreferencesPage() {
               {/* Langues */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
                 <Label>Langues (min. 1)</Label>
-
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {LANGUAGES_PRESET.map(x => (
+                  {LANGUAGES_PRESET.map((x) => (
                     <button
                       key={x}
                       type="button"
-                      onClick={() => setLanguages(prev => uniq(toggle(prev, x)))}
+                      onClick={() => setLanguages((prev) => toggle(prev, x))}
                       className={`p-3 border text-left transition ${
-                        languages.includes(x)
-                          ? 'border-stone-900 bg-stone-50'
-                          : 'border-stone-200 hover:border-stone-300'
+                        languages.includes(x) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                       }`}
                     >
                       <div className="text-sm font-medium text-stone-900">{x}</div>
@@ -273,24 +306,20 @@ export default function ChefPreferencesPage() {
                   ))}
                 </div>
 
-                {/* ✅ Autres langues (CSV) */}
-                <div className="space-y-2">
-                  <Label>Autres langues (optionnel)</Label>
-                  <Input
-                    value={customLanguagesValue}
-                    onChange={e => onCustomLanguagesChange(e.target.value)}
-                    placeholder="Portugais, Russe..."
-                  />
-                  <p className="text-xs text-stone-400">Sépare par des virgules. Les langues “preset” restent en boutons.</p>
+                <div className="flex gap-2">
+                  <Input value={customLanguage} onChange={(e) => setCustomLanguage(e.target.value)} placeholder="Ajouter une langue…" />
+                  <Button type="button" onClick={() => addCustom('language')}>
+                    Ajouter
+                  </Button>
                 </div>
 
                 {languages.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {languages.map(x => (
+                    {languages.map((x) => (
                       <button
                         key={x}
                         type="button"
-                        onClick={() => setLanguages(prev => prev.filter(v => v !== x))}
+                        onClick={() => setLanguages((prev) => prev.filter((v) => v !== x))}
                         className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
                       >
                         {x} ✕
@@ -303,13 +332,12 @@ export default function ChefPreferencesPage() {
               {/* Spécialités (optionnel) */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
                 <Label>Spécialités (optionnel)</Label>
-
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {SPECIALTIES_PRESET.map(x => (
+                  {SPECIALTIES_PRESET.map((x) => (
                     <button
                       key={x}
                       type="button"
-                      onClick={() => setSpecialties(prev => uniq(toggle(prev, x)))}
+                      onClick={() => setSpecialties((prev) => toggle(prev, x))}
                       className={`p-3 border text-left transition ${
                         specialties.includes(x)
                           ? 'border-stone-900 bg-stone-50'
@@ -325,21 +353,21 @@ export default function ChefPreferencesPage() {
                 <div className="flex gap-2">
                   <Input
                     value={customSpecialty}
-                    onChange={e => setCustomSpecialty(e.target.value)}
+                    onChange={(e) => setCustomSpecialty(e.target.value)}
                     placeholder="Ajouter une spécialité…"
                   />
-                  <Button type="button" onClick={addCustomSpecialty}>
+                  <Button type="button" onClick={() => addCustom('specialty')}>
                     Ajouter
                   </Button>
                 </div>
 
                 {specialties.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {specialties.map(x => (
+                    {specialties.map((x) => (
                       <button
                         key={x}
                         type="button"
-                        onClick={() => setSpecialties(prev => prev.filter(v => v !== x))}
+                        onClick={() => setSpecialties((prev) => prev.filter((v) => v !== x))}
                         className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
                       >
                         {x} ✕
@@ -354,7 +382,7 @@ export default function ChefPreferencesPage() {
                 <div className="text-xs text-stone-500">
                   Checklist :{' '}
                   <span className={canSave ? 'text-green-700' : 'text-stone-500'}>
-                    {canSave ? 'OK ✅' : 'Il faut 1 cuisine + 1 langue'}
+                    {canSave ? 'OK ✅' : 'Il faut 1 mission + 1 cuisine + 1 langue'}
                   </span>
                   {success ? <span className="ml-2 text-green-700">Enregistré ✅</span> : null}
                 </div>
