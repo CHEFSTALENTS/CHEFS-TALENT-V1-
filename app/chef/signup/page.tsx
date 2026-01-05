@@ -29,7 +29,7 @@ export default function ChefSignupPage() {
   setError('');
 
   try {
-    // 1) On garde les infos en "pending" (servira à créer le chef_profile après login)
+    // 1) On garde les infos pour créer/patcher le profil après validation email
     localStorage.setItem(
       'chef_pending_profile',
       JSON.stringify({
@@ -40,28 +40,26 @@ export default function ChefSignupPage() {
       })
     );
 
-    // 2) Magic link -> redirige vers NOTRE callback, pas direct dashboard
-    const emailRedirectTo =
-      `${window.location.origin}/chef/auth/callback?next=/chef/dashboard`;
-
+    // 2) Magic link → callback (qui finira la session)
     const { error } = await supabase.auth.signInWithOtp({
       email: formData.email,
-      options: { emailRedirectTo },
+      options: {
+        emailRedirectTo: 'https://chefstalents.com/chef/auth/callback?next=/chef/dashboard',
+      },
     });
 
     if (error) throw error;
 
-    // 3) UX : on affiche un message (tu peux le faire via un state)
-    // Ici simple : redirige vers login avec une note
-    router.push('/chef/login?check_email=1');
-  } catch (err: any) {
-    console.error('SIGNUP OTP ERROR', err);
-    setError(err?.message || 'Une erreur est survenue');
+    // 3) UX: tu peux garder la page et afficher une explication
+    router.push('/chef/login?checkEmail=1');
+  } catch (e: any) {
+    console.error('[signup otp] error:', e);
+    setError(e?.message || 'Une erreur est survenue');
   } finally {
     setLoading(false);
   }
 };
-
+  
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
       {/* Left: calm premium panel */}
