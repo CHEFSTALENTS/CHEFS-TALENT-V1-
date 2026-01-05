@@ -150,10 +150,6 @@ export default function ChefProfilePage() {
           phone: data.phone,
           photoUrl: data.photoUrl || undefined,
           avatarUrl: data.photoUrl || undefined,
-          languages: data.languages
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
           profileType: data.profileType,
           seniorityLevel: data.seniorityLevel,
         } as any);
