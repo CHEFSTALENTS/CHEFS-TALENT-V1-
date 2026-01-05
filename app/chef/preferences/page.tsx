@@ -41,13 +41,12 @@ const SPECIALTIES_PRESET = [
   'Menu dégustation',
 ];
 
-// ✅ NEW : types de missions
-const MISSION_TYPES: Array<{ key: string; label: string; desc?: string }> = [
-  { key: 'one_shot', label: 'Prestation ponctuelle', desc: 'Dîner / journée / event court' },
-  { key: 'residence', label: 'Résidence / séjour', desc: 'Plusieurs jours (villa, hôtel, etc.)' },
-  { key: 'yacht', label: 'Yacht', desc: 'Chef embarqué' },
-  { key: 'event', label: 'Événement / catering', desc: 'Cocktail, réception, corporate…' },
-  { key: 'chalet', label: 'Chalet / montagne', desc: 'Saison / séjours montagne' },
+const MISSION_TYPES_PRESET = [
+  { key: 'one_shot', label: 'One-shot (déjeuner / dîner' },
+  { key: 'residence', label: 'Résidence (villa / chalet )' },
+  { key: 'yacht', label: 'Yacht' },
+  { key: 'event_catering', label: 'Event / catering' },
+];
 ];
 
 function normalizeList(v: any): string[] {
@@ -75,8 +74,8 @@ export default function ChefPreferencesPage() {
   const [cuisines, setCuisines] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
-  const [missionTypes, setMissionTypes] = useState<string[]>([]);
-
+const [missionTypes, setMissionTypes] = useState<string[]>([]);
+  
   const [customCuisine, setCustomCuisine] = useState('');
   const [customLanguage, setCustomLanguage] = useState('');
   const [customSpecialty, setCustomSpecialty] = useState('');
@@ -110,7 +109,7 @@ export default function ChefPreferencesPage() {
           setCuisines(initialCuisines);
           setLanguages(initialLanguages);
           setSpecialties(initialSpecialties);
-          setMissionTypes(initialMissionTypes);
+setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission_types ?? (p as any).missions)));
           setLoading(false);
         }
       } catch (e) {
@@ -199,49 +198,48 @@ export default function ChefPreferencesPage() {
             </div>
           ) : (
             <>
-              {/* ✅ Types de missions */}
-              <div className="space-y-3">
-                <Label>Types de missions souhaitées (min. 1)</Label>
-                <p className="text-xs text-stone-500">
-                  Sélectionne les missions que tu souhaites recevoir. Cela guide le matching.
-                </p>
+              {/* Types de missions souhaitées */}
+<div className="space-y-3 pt-6 border-t border-stone-100">
+  <Label>Types de missions souhaitées</Label>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    {MISSION_TYPES_PRESET.map(x => {
+      const on = missionTypes.includes(x.key);
+      return (
+        <button
+          key={x.key}
+          type="button"
+          onClick={() => setMissionTypes(prev => toggle(prev, x.key))}
+          className={`p-3 border text-left transition ${
+            on ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+          }`}
+        >
+          <div className="text-sm font-medium text-stone-900">{x.label}</div>
+          <div className="text-xs text-stone-500">{on ? 'Sélectionné' : 'Cliquer'}</div>
+        </button>
+      );
+    })}
+  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {MISSION_TYPES.map((m) => {
-                    const on = missionTypes.includes(m.key);
-                    return (
-                      <button
-                        key={m.key}
-                        type="button"
-                        onClick={() => setMissionTypes((prev) => toggle(prev, m.key))}
-                        className={`p-4 border text-left transition ${
-                          on ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
-                        }`}
-                      >
-                        <div className="text-sm font-medium text-stone-900">{m.label}</div>
-                        {m.desc ? <div className="text-xs text-stone-500 mt-1">{m.desc}</div> : null}
-                        <div className="text-xs text-stone-500 mt-2">{on ? 'Sélectionné' : 'Cliquer'}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {missionTypes.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {missionTypes.map((k) => {
-                      const label = MISSION_TYPES.find((x) => x.key === k)?.label ?? k;
-                      return (
-                        <button
-                          key={k}
-                          type="button"
-                          onClick={() => setMissionTypes((prev) => prev.filter((v) => v !== k))}
-                          className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
-                        >
-                          {label} ✕
-                        </button>
-                      );
-                    })}
-                  </div>
+  {missionTypes.length > 0 ? (
+    <div className="flex flex-wrap gap-2">
+      {missionTypes.map(k => {
+        const label = MISSION_TYPES_PRESET.find(x => x.key === k)?.label ?? k;
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setMissionTypes(prev => prev.filter(v => v !== k))}
+            className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
+          >
+            {label} ✕
+          </button>
+        );
+      })}
+    </div>
+  ) : (
+    <p className="text-xs text-stone-500">Choisis ce que tu veux recevoir (utilisé pour le matching).</p>
+  )}
+</div>
                 ) : null}
               </div>
 
