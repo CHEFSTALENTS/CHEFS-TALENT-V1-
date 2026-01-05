@@ -35,7 +35,12 @@ export default function ChefLoginPage() {
       setLoading(false);
     }
   };
-
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) router.replace('/chef/dashboard');
+  });
+}, []);
+  
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
       <div className="w-full max-w-md border border-stone-200 bg-white p-8">
