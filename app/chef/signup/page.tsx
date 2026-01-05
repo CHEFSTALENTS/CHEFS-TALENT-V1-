@@ -4,30 +4,87 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
-import { auth } from '../../../services/storage';
 import { Loader2, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { supabase } from '@/services/supabaseClient';
 
 export default function ChefSignupPage() {
   const router = useRouter();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
+    password: '', // ⚠️ Conservé dans l’UI (comme demandé), mais non utilisé en Magic Link
   });
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // ✅ NEW: état “email envoyé”
+  const [magicSent, setMagicSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMagicSent(false);
 
-    const res = await auth.registerChef(formData);
-    setLoading(false);
+    try {
+      const email = String(formData.email || '').trim().toLowerCase();
+      const firstName = String(formData.firstName || '').trim();
+      const lastName = String(formData.lastName || '').trim();
 
-    if (res.success) router.push('/chef/dashboard');
-    else setError(res.error || 'Une erreur est survenue');
+      if (!email) throw new Error('Email requis.');
+
+      /**
+       * ✅ (Optionnel mais utile) : on garde le prénom/nom côté navigateur,
+       * pour pouvoir compléter/créer le profil automatiquement au Dashboard
+       * une fois que le chef aura cliqué son lien et sera authentifié.
+       */
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'chef_pending_profile',
+          JSON.stringify({
+            firstName,
+            lastName,
+            email,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      }
+
+      /**
+       * ✅ MAGIC LINK (OTP)
+       * - Supabase envoie un email avec un lien sécurisé
+       * - Quand le chef clique, il est connecté et redirigé vers /chef/dashboard
+       *
+       * IMPORTANT:
+       * - L’emailRedirectTo doit être un domaine autorisé dans Supabase Auth settings
+       * - Le chef reçoit le lien par EMAIL (inbox/spams)
+       */
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: 'https://chefstalents.com/chef/dashboard',
+        },
+      });
+
+      if (error) throw error;
+
+      // ✅ On confirme à l’écran que le lien est envoyé
+      setMagicSent(true);
+
+      /**
+       * UX:
+       * - On ne push pas tout de suite sur /chef/dashboard car il n’est PAS connecté tant qu’il n’a pas cliqué l’email.
+       * - Après clic sur le lien, Supabase le connecte et le redirige automatiquement vers /chef/dashboard.
+       */
+    } catch (err: any) {
+      console.error('[ChefSignupPage] Magic link error:', err);
+      setError(err?.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,8 +198,25 @@ export default function ChefSignupPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
-              <div className="text-xs text-stone-400">🔒 Accès privé • votre profil ne sera pas public.</div>
+              {/* ✅ Explication claire sans changer l’UI */}
+              <div className="text-xs text-stone-400">
+                🔒 Accès privé • connexion par lien sécurisé (Magic Link).<br />
+                <span className="text-stone-400/90">
+                  (Le mot de passe est conservé ici pour l’instant, mais l’accès se fait via le lien reçu par email.)
+                </span>
+              </div>
             </div>
+
+            {/* ✅ NEW: message succès Magic Link */}
+            {magicSent && !error && (
+              <p className="text-green-700 text-sm bg-green-50 p-3 border border-green-100 rounded-xl">
+                ✅ Lien de connexion envoyé à <b>{formData.email}</b>. <br />
+                Ouvrez votre email et cliquez sur le lien pour accéder à votre Dashboard.
+                <span className="block text-xs text-stone-500 mt-2">
+                  Astuce : vérifiez les spams si vous ne le voyez pas.
+                </span>
+              </p>
+            )}
 
             {error && (
               <p className="text-red-600 text-sm bg-red-50 p-3 border border-red-100 rounded-xl">
