@@ -21,7 +21,6 @@ export default function ChefProfilePage() {
     phone: '',
     // ✅ on garde photoUrl en state pour compat legacy, mais on ne saisit plus d’URL : on set via upload
     photoUrl: '',
-    languages: '',
     profileType: 'private' as ChefProfileType,
     seniorityLevel: 'confirmed' as ChefSeniority,
   });
@@ -37,7 +36,6 @@ export default function ChefProfilePage() {
         phone: p.phone || '',
         // ✅ supporte avatarUrl ou photoUrl selon historique
         photoUrl: p.avatarUrl || p.photoUrl || '',
-        languages: Array.isArray(p.languages) ? p.languages.join(', ') : '',
         profileType: p.profileType || 'private',
         seniorityLevel: p.seniorityLevel || 'confirmed',
       });
@@ -284,15 +282,7 @@ export default function ChefProfilePage() {
               <Input value={data.phone} onChange={(e) => setData({ ...data, phone: e.target.value })} placeholder="+33 6..." />
             </div>
 
-            <div className="space-y-2">
-              <Label>Langues parlées</Label>
-              <Input
-                value={data.languages}
-                onChange={(e) => setData({ ...data, languages: e.target.value })}
-                placeholder="Français, Anglais, Italien..."
-              />
-              <p className="text-xs text-stone-400">Séparez les langues par des virgules.</p>
-            </div>
+  
 
             {/* ✅ Photo de profil : upload ONLY */}
             <div className="space-y-2">
