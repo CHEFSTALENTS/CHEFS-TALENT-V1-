@@ -69,7 +69,9 @@ export default function ChefDashboardPage() {
         console.error('[Dashboard boot] error:', e);
       } finally {
         if (!cancelled) setBooting(false);
-      }
+      }  
+      // C) assurer le role chef
+  await supabase.from('user_roles').upsert({ user_id: userId, role: 'chef' });
     }
 
     boot();
