@@ -43,13 +43,13 @@ export default function ChefSignupPage() {
     );
 
     // 2) envoie le Magic Link (OTP)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // callback => redirige ensuite vers /chef/dashboard
-        emailRedirectTo: 'https://chefstalents.com/chef/auth/callback?next=/chef/dashboard',
-      },
-    });
+   await supabase.auth.signInWithOtp({
+  email,
+  options: {
+    shouldCreateUser: true,
+    emailRedirectTo: 'https://chefstalents.com/chef/auth/callback?next=/chef/dashboard',
+  },
+});
 
     if (error) throw error;
 
