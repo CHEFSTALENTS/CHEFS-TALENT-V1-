@@ -1,46 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
 export default function CallbackClient() {
   const router = useRouter();
   const sp = useSearchParams();
-  const [msg, setMsg] = useState('Connexion en cours…');
+  const next = sp.get('next') || '/chef/dashboard';
 
   useEffect(() => {
-    let cancelled = false;
-
     (async () => {
-      try {
-        // Supabase (PKCE) renvoie souvent un ?code=...
-        const code = sp.get('code');
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        } else {
-          // fallback: parfois session déjà posée
-          const { error } = await supabase.auth.getSession();
-          if (error) throw error;
-        }
-
-        if (!cancelled) router.replace('/chef/dashboard');
-      } catch (e: any) {
-        console.error('[auth callback] error', e);
-        if (!cancelled) setMsg(e?.message || 'Erreur de connexion');
-      }
+      // Avec Supabase v2, la session est généralement déjà créée après callback.
+      // On check juste et on redirige.
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) router.replace(next);
+      else router.replace('/chef/login');
     })();
+  }, [router, next]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [router, sp]);
-
-  return (
-    <div className="p-8">
-      <div className="text-sm text-stone-600">{msg}</div>
-    </div>
-  );
+  return <div className="p-8">Connexion…</div>;
 }
