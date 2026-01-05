@@ -47,19 +47,26 @@ function safeReadLS<T>(key: string): T | null {
 }
 
 /**
- * Crée/merge un profil minimal via ton API (service role).
- * IMPORTANT: on ne touche plus la DB direct côté client.
+ * Boot helper: crée/merge un profil minimal en DB via ton API
+ * (on évite d’écrire direct Supabase client -> RLS / sécurité)
  */
-async function ensureChefProfileExists(params: { userId: string; email: string; pending: PendingProfile | null }) {
+async function ensureChefProfileExists(params: {
+  userId: string;
+  email: string;
+  pending: PendingProfile | null;
+}) {
   const { userId, email, pending } = params;
+
+  const firstName = pending?.firstName?.trim() || null;
+  const lastName = pending?.lastName?.trim() || null;
 
   const payload = {
     id: userId,
     email: email || null,
     profile: {
-      firstName: pending?.firstName?.trim() || null,
-      lastName: pending?.lastName?.trim() || null,
-      email: email || pending?.email || null,
+      firstName,
+      lastName,
+      email: email || null,
       createdAt: pending?.createdAt || new Date().toISOString(),
     },
   };
@@ -75,20 +82,18 @@ async function ensureChefProfileExists(params: { userId: string; email: string; 
     throw new Error(`ensureChefProfileExists failed: ${res.status} ${txt}`);
   }
 
-  return res.json();
+  return res.json(); // { profile }
 }
 
 export default function ChefDashboardPage() {
-  // App user (ancien système) + fallback supabase
-  const [appUser, setAppUser] = useState<any>(() => auth.getCurrentUser?.() ?? null);
+  const user = auth.getCurrentUser();
 
   const [booting, setBooting] = useState(true);
-  const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const [sbUserId, setSbUserId] = useState<string | null>(null);
+  const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
-  /**
-   * A) Boot Magic Link
-   */
+  // A) Boot Magic Link (session supabase + ensure profile)
   useEffect(() => {
     let cancelled = false;
 
@@ -98,9 +103,19 @@ export default function ChefDashboardPage() {
         if (sessionErr) throw sessionErr;
 
         const sbUser = sessionData?.session?.user;
-        if (!sbUser?.id) return;
+        if (!sbUser?.id) {
+          // pas de session Supabase -> pas prêt
+          if (!cancelled) {
+            setIsReady(false);
+            setBooting(false);
+          }
+          return;
+        }
 
-        setSbUserId(sbUser.id);
+        if (!cancelled) {
+          setSbUserId(sbUser.id);
+          setIsReady(true);
+        }
 
         const raw = localStorage.getItem('chef_pending_profile');
         const pending: PendingProfile | null = raw ? JSON.parse(raw) : null;
@@ -112,11 +127,9 @@ export default function ChefDashboardPage() {
         });
 
         localStorage.removeItem('chef_pending_profile');
-
-        // fallback user objet si ton "auth" local n'est pas rempli par Supabase
-        setAppUser((prev: any) => prev ?? { id: sbUser.id, email: sbUser.email, status: 'draft' });
       } catch (e: any) {
         console.error('[Dashboard boot] error:', e?.message || e, e);
+        if (!cancelled) setIsReady(false);
       } finally {
         if (!cancelled) setBooting(false);
       }
@@ -127,16 +140,13 @@ export default function ChefDashboardPage() {
     };
   }, []);
 
-  /**
-   * B) Charger le profil pour l’UI (DB -> fallback localStorage)
-   */
+  // B) Charger le profil pour l’UI (DB -> fallback localStorage)
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const u = auth.getCurrentUser?.();
-        const id = u?.id || sbUserId;
+        const id = sbUserId || auth.getCurrentUser?.()?.id;
         if (!id) return;
 
         const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
@@ -157,6 +167,14 @@ export default function ChefDashboardPage() {
     };
   }, [sbUserId]);
 
+  // Si ton auth legacy n'est pas prêt, on ne crashe pas
+  if (!user) {
+    return (
+      <ChefLayout>
+        <div className="p-8">{booting ? 'Chargement…' : 'Non connecté.'}</div>
+      </ChefLayout>
+    );
+  }
 
   const profileTypeLabels: Record<string, string> = {
     private: 'Chef Privé',
@@ -165,41 +183,38 @@ export default function ChefDashboardPage() {
     pastry: 'Chef Pâtissier',
   };
 
-  const onboardingProfile: AnyProfile = (appUser as any).profile || {};
+  // Profil "onboarding" (historique)
+  const onboardingProfile: AnyProfile = (user as any).profile || {};
 
-  return (
-  <ChefLayout>
-    {!isReady ? (
-      <div className="p-8">
-        {booting ? 'Chargement…' : 'Non connecté.'}
-      </div>
-    ) : (
-      <div className="space-y-12 animate-in fade-in duration-700">
-        {/* 👇 ici tu remets TOUT ton dashboard existant tel quel */}
-        ...
-      </div>
-    )}
-  </ChefLayout>
-);Profile = useMemo<AnyProfile>(() => {
-    const fullName = `${(appUser as any)?.firstName || ''} ${(appUser as any)?.lastName || ''}`.trim();
+  // Source de vérité : onboarding + settings(DB/LS)
+  const mergedProfile = useMemo<AnyProfile>(() => {
+    const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
 
+    return {
+      ...onboardingProfile,
+      ...(settingsProfile ?? {}),
+      email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
+      name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
+    };
+  }, [onboardingProfile, settingsProfile, user]);
 
-  // Completion
+  // completion (si tu t’en sers ailleurs)
   const completion = useMemo(() => {
-    return isProfileCompleteForValidation(mergedProfile ?? {});
+    const { ok, details } = isProfileCompleteForValidation(mergedProfile ?? {});
+    const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
+    const done = items.filter((i) => i.ok).length;
+    const total = items.length || 1;
+    return { ok, done, total, score: Math.round((done / total) * 100), details };
   }, [mergedProfile]);
 
-  // Score
+  // Score unique
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
-
     const city = String(
       p.city ?? p.baseCity ?? p.location?.baseCity ?? (typeof p.location === 'string' ? p.location : '')
     )
       .split(',')[0]
       .trim();
-
-    const isReady = !booting && !!appUser;
 
     return {
       name: String(p.name ?? '').trim(),
@@ -208,9 +223,11 @@ export default function ChefDashboardPage() {
       country: String(p.country ?? p.location?.country ?? '').trim(),
       bio: String(p.bio ?? '').trim(),
       yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
+
       cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
       specialties: Array.isArray(p.specialties) ? p.specialties : [],
       languages: Array.isArray(p.languages) ? p.languages : [],
+
       instagram: String(p.instagram ?? '').trim(),
       website: String(p.website ?? '').trim(),
       portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
@@ -220,10 +237,10 @@ export default function ChefDashboardPage() {
 
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
-  // Checks
+  // Checks dashboard
   const checks = useMemo(() => {
     const bio = String(mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
-    const years = (mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0) as number;
+    const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
 
     const identityOk =
       !!String(mergedProfile.name ?? '').trim() &&
@@ -232,7 +249,7 @@ export default function ChefDashboardPage() {
         !!String(mergedProfile.location?.baseCity ?? '').trim() ||
         !!String((mergedProfile as any).baseCity ?? '').trim());
 
-    const experienceOk = (years ?? 0) > 0 || bio.length >= 80;
+    const experienceOk = (Number(years) || 0) > 0 || bio.length >= 80;
 
     const images =
       (mergedProfile as any).images ??
@@ -251,7 +268,6 @@ export default function ChefDashboardPage() {
       !!String(mergedProfile.website ?? '').trim();
 
     const pricing = (mergedProfile as any).pricing ?? null;
-
     const hasPricing =
       !!pricing &&
       (Number(pricing?.residence?.dailyRate ?? 0) > 0 ||
@@ -295,177 +311,144 @@ export default function ChefDashboardPage() {
 
   return (
     <ChefLayout>
-      <div className="space-y-12 animate-in fade-in duration-700">
-        {/* Welcome Header */}
-        <div className="flex items-end justify-between border-b border-stone-200 pb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Label className="mb-0">Tableau de bord</Label>
-
-              {(appUser as any).plan === 'pro' && (appUser as any).planStatus === 'active' && (
-                <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-bronze border border-bronze px-2 py-0.5 rounded-full">
-                  <Crown className="w-3 h-3" /> Pro
-                </span>
-              )}
-
-              <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">
-                <TierIcon className="w-3 h-3" />
-                {tier.label}
-              </span>
-            </div>
-
-            <h1 className="text-4xl font-serif text-stone-900 mt-2">
-              Bonjour, Chef {(appUser as any).lastName || (mergedProfile?.name?.split(' ').slice(-1)[0] ?? '')}.
-            </h1>
-
-            {(mergedProfile as any)?.profileType && (
-              <p className="text-stone-500 mt-2 font-light">
-                Profil : {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
-                <span className="mx-2">•</span>
-                {(mergedProfile as any)?.seniorityLevel
-                  ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
-                    String((mergedProfile as any).seniorityLevel).slice(1)
-                  : ''}
-              </p>
-            )}
-          </div>
-
-          <div className="text-right">
-            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
-            <StatusBadge status={String((appUser as any).status || '')} />
-          </div>
-        </div>
-
-        {/* Score banner */}
-        <div className="bg-white border border-stone-200 p-8 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-stone-600" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-stone-400">Score profil</div>
-                  <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}/100</div>
-                </div>
-
-                <span className="ml-auto text-xs text-stone-500">
-                  Checklist : <span className="font-medium text-stone-900">{progress}%</span>
-                </span>
-              </div>
-
-              <div className="w-full bg-stone-100 h-1">
-                <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
-              </div>
-
-              <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link href="/chef/settings">
-                <Button className="bg-stone-900 hover:bg-stone-800">
-                  Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Alerts */}
-        {String((appUser as any).status) === 'pending_validation' && (
-          <div className="bg-white border border-stone-200 p-8 shadow-sm">
-            <div className="flex items-start gap-6">
-              <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? (
-                  <Clock className="w-6 h-6 text-stone-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-bronze" />
-                )}
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-xl font-serif text-stone-900">
-                  {score >= 70 ? "Dossier en cours d'examen" : 'Complétez votre profil pour activation'}
-                </h3>
-                <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
-                  {score >= 70
-                    ? "Votre profil est prêt. Notre équipe examine votre dossier. Vous recevrez une notification sous 48h."
-                    : 'Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.'}
-                </p>
-
-                {score < 70 && (
-                  <div className="w-full bg-stone-100 h-1 mt-4">
-                    <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subscription Coming Soon */}
-        <div className="bg-stone-50 border border-stone-200 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex gap-6 items-start">
-            <div className="w-12 h-12 bg-white border border-stone-100 flex items-center justify-center rounded-full shrink-0">
-              <Sparkles className="w-5 h-5 text-stone-400" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-serif text-stone-900">Abonnement (à venir)</h3>
-              <p className="text-stone-500 font-light text-sm max-w-lg">
-                Chef Talents est actuellement gratuit pour les chefs. Une offre d’abonnement optionnelle pourra arriver plus tard (outils,
-                visibilité, automatisations…).
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" disabled className="whitespace-nowrap opacity-50">
-            Bientôt disponible
-          </Button>
-        </div>
-
-        {/* Action List */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {checks.map((c) => (
-            <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
-          ))}
-        </div>
-      </div>
-    </ChefLayout>
-   );
-}
-
-function ActionCard({
-  icon: Icon,
-  title,
-  desc,
-  path,
-  done,
-}: {
-  icon: any;
-  title: string;
-  desc: string;
-  path: string;
-  done: boolean;
-}) {
-   return (
-    <ChefLayout>
       {!isReady ? (
-        <div className="p-8">
-          {booting ? 'Chargement…' : 'Non connecté.'}
-        </div>
+        <div className="p-8">{booting ? 'Chargement…' : 'Non connecté.'}</div>
       ) : (
         <div className="space-y-12 animate-in fade-in duration-700">
-          {/* 👇 COLLE ICI TOUT TON DASHBOARD EXISTANT (le contenu que tu avais dans <ChefLayout>) */}
-          {/* Exemple : Welcome Header, Score banner, Alerts, Cards, etc. */}
+          {/* Welcome Header */}
+          <div className="flex items-end justify-between border-b border-stone-200 pb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <Label className="mb-0">Tableau de bord</Label>
+
+                {(user as any).plan === 'pro' && (user as any).planStatus === 'active' && (
+                  <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-bronze border border-bronze px-2 py-0.5 rounded-full">
+                    <Crown className="w-3 h-3" /> Pro
+                  </span>
+                )}
+
+                <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">
+                  <TierIcon className="w-3 h-3" />
+                  {tier.label}
+                </span>
+              </div>
+
+              <h1 className="text-4xl font-serif text-stone-900 mt-2">
+                Bonjour, Chef {(user as any).lastName || (mergedProfile?.name?.split(' ').slice(-1)[0] ?? '')}.
+              </h1>
+
+              {(mergedProfile as any)?.profileType && (
+                <p className="text-stone-500 mt-2 font-light">
+                  Profil : {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
+                  <span className="mx-2">•</span>
+                  {(mergedProfile as any)?.seniorityLevel
+                    ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
+                      String((mergedProfile as any).seniorityLevel).slice(1)
+                    : ''}
+                </p>
+              )}
+            </div>
+
+            <div className="text-right">
+              <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
+              <StatusBadge status={String((user as any).status || '')} />
+            </div>
+          </div>
+
+          {/* Score banner */}
+          <div className="bg-white border border-stone-200 p-8 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-stone-600" />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-stone-400">Score profil</div>
+                    <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}/100</div>
+                  </div>
+
+                  <span className="ml-auto text-xs text-stone-500">
+                    Checklist : <span className="font-medium text-stone-900">{progress}%</span>
+                  </span>
+                </div>
+
+                <div className="w-full bg-stone-100 h-1">
+                  <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
+                </div>
+
+                <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
+                  Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link href="/chef/settings">
+                  <Button className="bg-stone-900 hover:bg-stone-800">
+                    Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Alerts */}
+          {String((user as any).status) === 'pending_validation' && (
+            <div className="bg-white border border-stone-200 p-8 shadow-sm">
+              <div className="flex items-start gap-6">
+                <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
+                  {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-xl font-serif text-stone-900">{score >= 70 ? "Dossier en cours d'examen" : 'Complétez votre profil pour activation'}</h3>
+                  <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
+                    {score >= 70
+                      ? "Votre profil est prêt. Notre équipe examine votre dossier. Vous recevrez une notification sous 48h."
+                      : 'Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.'}
+                  </p>
+
+                  {score < 70 && (
+                    <div className="w-full bg-stone-100 h-1 mt-4">
+                      <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Subscription Coming Soon */}
+          <div className="bg-stone-50 border border-stone-200 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex gap-6 items-start">
+              <div className="w-12 h-12 bg-white border border-stone-100 flex items-center justify-center rounded-full shrink-0">
+                <Sparkles className="w-5 h-5 text-stone-400" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-serif text-stone-900">Abonnement (à venir)</h3>
+                <p className="text-stone-500 font-light text-sm max-w-lg">
+                  Chef Talents est actuellement gratuit pour les chefs. Une offre d’abonnement optionnelle pourra arriver plus tard (outils, visibilité, automatisations…).
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" disabled className="whitespace-nowrap opacity-50">
+              Bientôt disponible
+            </Button>
+          </div>
+
+          {/* Action List */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {checks.map((c) => (
+              <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
+            ))}
+          </div>
+
+          {/* (optionnel) debug completion */}
+          {/* <pre className="text-xs opacity-50">{JSON.stringify(completion, null, 2)}</pre> */}
         </div>
       )}
     </ChefLayout>
   );
 }
-
-/* =======================
-   Helpers UI (hors composant)
-   ======================= */
 
 function ActionCard({
   icon: Icon,
@@ -493,14 +476,17 @@ function ActionCard({
           <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />
         )}
       </div>
+
       <h3 className="text-lg font-serif text-stone-900 mb-2">{title}</h3>
       <p className="text-sm text-stone-500 font-light mb-6">{desc}</p>
+
       <div className="text-xs uppercase tracking-widest text-stone-400 group-hover:text-stone-900 flex items-center gap-2">
         {done ? 'Modifier' : 'Compléter'} <ArrowRight className="w-3 h-3" />
       </div>
     </Link>
   );
 }
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     pending_validation: 'bg-stone-100 text-stone-600',
