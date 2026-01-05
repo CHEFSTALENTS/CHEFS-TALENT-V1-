@@ -182,7 +182,6 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
     } finally {
       setSaving(false);
     }
-  };
 
   return (
     <ChefLayout>
