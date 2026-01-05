@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
 export default function ChefLoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // ✅ Si déjà connecté (session existante), on envoie direct au dashboard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/chef/dashboard');
+    });
+  }, [router]);
 
   const onSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +31,7 @@ export default function ChefLoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
         options: {
-          // IMPORTANT : doit être dans Supabase > Auth > URL Configuration (Redirect URLs)
+          // ✅ doit être autorisé dans Supabase > Auth > URL Configuration > Redirect URLs
           emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
         },
       });
@@ -35,12 +45,7 @@ export default function ChefLoginPage() {
       setLoading(false);
     }
   };
-useEffect(() => {
-  supabase.auth.getSession().then(({ data }) => {
-    if (data.session) router.replace('/chef/dashboard');
-  });
-}, []);
-  
+
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
       <div className="w-full max-w-md border border-stone-200 bg-white p-8">
