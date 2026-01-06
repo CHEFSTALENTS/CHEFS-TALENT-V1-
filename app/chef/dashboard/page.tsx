@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth } from '../../../services/storage';
 import { Label, Button } from '../../../components/ui';
+import { supabase } from '@/services/supabaseClient';
 import { computeChefScore } from '@/lib/chefScore';
 import {
   CheckCircle2,
