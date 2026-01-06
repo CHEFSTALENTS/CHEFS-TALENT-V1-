@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
@@ -14,66 +14,87 @@ export default function ChefSignupPage() {
     firstName: '',
     lastName: '',
     email: '',
-    password: '', // ⚠️ Conservé dans l’UI (comme demandé), mais non utilisé en Magic Link
+    password: '',
   });
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // ✅ NEW: état “email envoyé”
-const [magicSent, setMagicSent] = useState(false);
-  
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
-  setMagicSent(false);
+  // ✅ état “compte créé”
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  try {
-    const firstName = formData.firstName.trim();
-    const lastName = formData.lastName.trim();
-    const email = formData.email.trim().toLowerCase();
-
-    if (!email) throw new Error("Veuillez entrer un email valide.");
-
-    // 1) stocke le mini profil pour bootstrap au dashboard
-    localStorage.setItem(
-      'chef_pending_profile',
-      JSON.stringify({
-        firstName,
-        lastName,
-        email,
-        createdAt: new Date().toISOString(),
-      })
-    );
-
-    // 2) envoie le Magic Link (OTP)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // ⚠️ IMPORTANT : ce callback doit CONVERTIR le hash en session (on le corrige juste après)
-        emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
-        shouldCreateUser: true,
-      },
+  // ✅ Si déjà connecté, on renvoie au dashboard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/chef/dashboard');
     });
+  }, [router]);
 
-    if (error) throw error;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccessMsg(null);
 
-    // 3) feedback UX (plus d'alert)
-    setMagicSent(true);
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || 'Une erreur est survenue');
-  } finally {
-    setLoading(false);
-  }
-};
-  
+    try {
+      const firstName = formData.firstName.trim();
+      const lastName = formData.lastName.trim();
+      const email = formData.email.trim().toLowerCase();
+      const password = formData.password;
+
+      if (!email) throw new Error('Veuillez entrer un email.');
+      if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+
+      // 1) stocke le mini profil (utile pour bootstrap DB profile plus tard si tu veux)
+      localStorage.setItem(
+        'chef_pending_profile',
+        JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          createdAt: new Date().toISOString(),
+        })
+      );
+
+      // 2) ✅ SignUp email + password => crée une ligne dans auth.users
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          // metadata (optionnel mais utile)
+          data: {
+            firstName,
+            lastName,
+            role: 'chef',
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      // 3) Si confirmation email OFF => session immédiate => dashboard
+      if (data?.session) {
+        router.replace('/chef/dashboard');
+        return;
+      }
+
+      // 4) Si confirmation email ON => pas de session : afficher message + aller login
+      setSuccessMsg(
+        `✅ Compte créé. Vérifiez votre email (${email}) pour confirmer, puis connectez-vous.`
+      );
+      setTimeout(() => router.replace('/chef/login'), 900);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
-      {/* Left: calm premium panel */}
+      {/* Left */}
       <div className="hidden md:block relative overflow-hidden bg-stone-950">
-        {/* ✅ Background via CSS => pas d'icône "image cassée" */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-35"
           style={{
@@ -83,7 +104,6 @@ const [magicSent, setMagicSent] = useState(false);
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/55 to-black/70" />
 
-        {/* ✅ Contenu centré */}
         <div className="absolute inset-0 p-12 flex items-center justify-center">
           <div className="max-w-lg text-center">
             <div className="text-[10px] uppercase tracking-[0.35em] text-stone-200/80">
@@ -123,7 +143,7 @@ const [magicSent, setMagicSent] = useState(false);
         </div>
       </div>
 
-      {/* Right: form */}
+      {/* Right */}
       <div className="flex items-center justify-center p-8 md:p-24">
         <div className="w-full max-w-md space-y-7">
           <div className="text-center md:text-left">
@@ -180,23 +200,14 @@ const [magicSent, setMagicSent] = useState(false);
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
-              {/* ✅ Explication claire sans changer l’UI */}
               <div className="text-xs text-stone-400">
-                🔒 Accès privé • connexion par lien sécurisé (Magic Link).<br />
-                <span className="text-stone-400/90">
-                  (Le mot de passe est conservé ici pour l’instant, mais l’accès se fait via le lien reçu par email.)
-                </span>
+                🔒 Accès privé • connexion par email + mot de passe.
               </div>
             </div>
 
-            {/* ✅ NEW: message succès Magic Link */}
-            {magicSent && !error && (
+            {successMsg && !error && (
               <p className="text-green-700 text-sm bg-green-50 p-3 border border-green-100 rounded-xl">
-                ✅ Lien de connexion envoyé à <b>{formData.email}</b>. <br />
-                Ouvrez votre email et cliquez sur le lien pour accéder à votre Dashboard.
-                <span className="block text-xs text-stone-500 mt-2">
-                  Astuce : vérifiez les spams si vous ne le voyez pas.
-                </span>
+                {successMsg}
               </p>
             )}
 
