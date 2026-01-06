@@ -19,111 +19,85 @@ export default function ChefSignupPage() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // ✅ Si déjà connecté, on renvoie au dashboard
+  // ✅ Si déjà connecté -> dashboard (uniquement côté navigateur)
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+
+    (async () => {
+      // guard SSR
+      if (typeof window === 'undefined') return;
+
+      const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (data.session) router.replace('/chef/dashboard');
-    });
+
+      if (data.session) {
+        router.replace('/chef/dashboard');
+      }
+    })();
+
     return () => {
       mounted = false;
     };
   }, [router]);
 
-  // ✅ pose le cookie gate chef (middleware) si ton endpoint existe
-  const ensureChefGateCookie = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccessMsg(null);
+
     try {
-      // ton middleware autorise /api/access
-      // adapte si ton endpoint est différent (mais chez toi c'est /api/access)
-      await fetch('/api/access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ area: 'chef' }),
-        cache: 'no-store',
+      const firstName = formData.firstName.trim();
+      const lastName = formData.lastName.trim();
+      const email = formData.email.trim().toLowerCase();
+      const password = formData.password;
+
+      if (!email) throw new Error('Veuillez entrer un email.');
+      if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+
+      // ✅ localStorage seulement navigateur
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'chef_pending_profile',
+          JSON.stringify({
+            firstName,
+            lastName,
+            email,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      }
+
+      // ✅ SignUp email + password (email confirmation OFF -> session directe)
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { firstName, lastName, role: 'chef' },
+        },
       });
-    } catch {
-      // silencieux: si ça échoue, on laisse quand même tenter le dashboard
+
+      if (signUpError) throw signUpError;
+
+      // ✅ Si session dispo -> go dashboard
+      if (data?.session) {
+        router.replace('/chef/dashboard');
+        return;
+      }
+
+      // ⚠️ Si un jour tu réactives email confirmation
+      setSuccessMsg(`✅ Compte créé. Connectez-vous avec votre email + mot de passe.`);
+      setTimeout(() => router.replace('/chef/login'), 800);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
-  setSuccessMsg(null);
-
-  try {
-    const firstName = formData.firstName.trim();
-    const lastName = formData.lastName.trim();
-    const email = formData.email.trim().toLowerCase();
-    const password = formData.password;
-
-    if (!email) throw new Error('Veuillez entrer un email.');
-    if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
-
-    // 1) stocke le mini profil (optionnel mais utile)
-    localStorage.setItem(
-      'chef_pending_profile',
-      JSON.stringify({
-        firstName,
-        lastName,
-        email,
-        createdAt: new Date().toISOString(),
-      })
-    );
-
-    // 2) SignUp
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { firstName, lastName, role: 'chef' },
-      },
-    });
-
-    if (signUpError) throw signUpError;
-
-    // ✅ 3) Si Supabase renvoie déjà une session → go dashboard
-    if (signUpData?.session) {
-      router.replace('/chef/dashboard');
-      return;
-    }
-
-    // ✅ 4) Sinon : on force une session en login email/password
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) throw signInError;
-
-    if (signInData?.session) {
-      router.replace('/chef/dashboard');
-      return;
-    }
-// ✅ pose le cookie gate chef (middleware)
-await fetch('/api/access', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ area: 'chef' }),
-  cache: 'no-store',
-});
-    
-    // Si malgré tout pas de session (cas rare)
-    setSuccessMsg(`✅ Compte créé, mais connexion impossible automatiquement. Réessayez.`);
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || 'Une erreur est survenue');
-  } finally {
-    setLoading(false);
-  }
-};
-  router.replace('/chef/dashboard');
-  
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
       {/* Left */}
