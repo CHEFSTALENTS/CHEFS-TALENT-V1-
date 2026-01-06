@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth } from '../../../services/storage';
@@ -44,7 +44,9 @@ export default function ChefDashboardPage() {
   const user = auth.getCurrentUser();
 const router = useRouter();
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
-
+const [booting, setBooting] = useState(true);
+const [sbUser, setSbUser] = useState<any | null>(null);
+  
   useEffect(() => {
     let cancelled = false;
 
