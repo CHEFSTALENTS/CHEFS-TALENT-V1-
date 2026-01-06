@@ -42,61 +42,78 @@ export default function ChefSignupPage() {
     };
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccessMsg(null);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+  setSuccessMsg(null);
 
-    try {
-      const firstName = formData.firstName.trim();
-      const lastName = formData.lastName.trim();
-      const email = formData.email.trim().toLowerCase();
-      const password = formData.password;
+  try {
+    const firstName = formData.firstName.trim();
+    const lastName = formData.lastName.trim();
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
 
-      if (!email) throw new Error('Veuillez entrer un email.');
-      if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+    if (!email) throw new Error('Veuillez entrer un email.');
+    if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
 
-      // ✅ localStorage seulement navigateur
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'chef_pending_profile',
-          JSON.stringify({
-            firstName,
-            lastName,
-            email,
-            createdAt: new Date().toISOString(),
-          })
-        );
-      }
-
-      // ✅ SignUp email + password (email confirmation OFF -> session directe)
-      const { data, error: signUpError } = await supabase.auth.signUp({
+    // stocke mini profil (optionnel)
+    localStorage.setItem(
+      'chef_pending_profile',
+      JSON.stringify({
+        firstName,
+        lastName,
         email,
-        password,
-        options: {
-          data: { firstName, lastName, role: 'chef' },
-        },
-      });
+        createdAt: new Date().toISOString(),
+      })
+    );
 
-      if (signUpError) throw signUpError;
+    // 1) Sign up
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { firstName, lastName, role: 'chef' },
+      },
+    });
 
-      // ✅ Si session dispo -> go dashboard
-      if (data?.session) {
-        router.replace('/chef/dashboard');
-        return;
-      }
+    if (signUpError) throw signUpError;
 
-      // ⚠️ Si un jour tu réactives email confirmation
-      setSuccessMsg(`✅ Compte créé. Connectez-vous avec votre email + mot de passe.`);
-      setTimeout(() => router.replace('/chef/login'), 800);
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
+    // 2) Si Supabase renvoie déjà une session => go dashboard
+    if (signUpData?.session) {
+      router.replace('/chef/dashboard');
+      return;
     }
-  };
+
+    // 3) ✅ Sinon, on FORCE la session via login (stop la boucle chez tes parents)
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      // Si jamais email confirmation est encore ON, tu le verras ici
+      setSuccessMsg(
+        `✅ Compte créé. Si vous ne pouvez pas vous connecter, vérifiez vos emails (${email}) pour confirmer.`
+      );
+      return;
+    }
+
+    if (signInData?.session) {
+      router.replace('/chef/dashboard');
+      return;
+    }
+
+    // fallback
+    setSuccessMsg('✅ Compte créé. Connectez-vous pour accéder au Dashboard.');
+    router.replace('/chef/login');
+  } catch (err: any) {
+    console.error(err);
+    setError(err?.message || 'Une erreur est survenue');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
