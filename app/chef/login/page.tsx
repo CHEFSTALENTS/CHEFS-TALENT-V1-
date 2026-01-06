@@ -5,18 +5,37 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
+// ✅ Empêche Next de tenter du pre-render/export statique sur cette page
+export const dynamic = 'force-dynamic';
+
 export default function ChefLoginPage() {
   const router = useRouter();
 
+  const [checking, setChecking] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  // ✅ Si déjà connecté -> dashboard (sans clignotement)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/chef/dashboard');
-    });
+    let alive = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
+
+      if (data?.session?.user) {
+        router.replace('/chef/dashboard');
+        return;
+      }
+
+      setChecking(false);
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, [router]);
 
   const onLogin = async (e: React.FormEvent) => {
@@ -35,7 +54,10 @@ export default function ChefLoginPage() {
       });
 
       if (error) throw error;
-      if (!data?.session) throw new Error('Session non créée.');
+
+      // ✅ sécurité: si session pas instant, on re-check
+      const session = data?.session ?? (await supabase.auth.getSession()).data.session;
+      if (!session?.user) throw new Error('Session non créée.');
 
       router.replace('/chef/dashboard');
     } catch (e: any) {
@@ -44,6 +66,15 @@ export default function ChefLoginPage() {
       setLoading(false);
     }
   };
+
+  // ✅ écran de vérif session (évite page blanche / blink)
+  if (checking) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-6">
+        <div className="text-sm text-stone-500">Chargement…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
