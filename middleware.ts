@@ -29,7 +29,6 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith('/api/access')) return NextResponse.next();
 
   const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
-  const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
 
   // ✅ Admin protégé
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
@@ -41,9 +40,6 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
     return NextResponse.next();
   }
-
-  // ✅ Public (si tu veux encore le cacher)
-  if (!hasPublic) return redirectToAccess(req, 'public');
 
   return NextResponse.next();
 }
