@@ -1,23 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
 export default function ChefLoginPage() {
-  const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-
-  // ✅ Si déjà connecté (session existante), on envoie direct au dashboard
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/chef/dashboard');
-    });
-  }, [router]);
 
   const onSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +21,12 @@ export default function ChefLoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
         options: {
-          // ✅ doit être autorisé dans Supabase > Auth > URL Configuration > Redirect URLs
           emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
+          shouldCreateUser: false, // login = ne crée pas de compte
         },
       });
 
       if (error) throw error;
-
       setMsg('✅ Lien envoyé. Vérifiez vos emails (et les spams).');
     } catch (e: any) {
       setMsg(e?.message || 'Erreur lors de l’envoi du lien.');
