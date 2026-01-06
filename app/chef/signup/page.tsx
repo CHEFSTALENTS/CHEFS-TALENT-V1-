@@ -1,165 +1,83 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
+import { auth } from '../../../services/storage';
 import { Loader2, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
-import { supabase } from '@/services/supabaseClient';
 
 export default function ChefSignupPage() {
   const router = useRouter();
-
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
   });
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // ✅ Si déjà connecté -> dashboard (uniquement côté navigateur)
-  useEffect(() => {
-    let mounted = true;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-    (async () => {
-      // guard SSR
-      if (typeof window === 'undefined') return;
-
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-
-      if (data.session) {
-        router.replace('/chef/dashboard');
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [router]);
-
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
-  setSuccessMsg(null);
-
-  try {
-    const firstName = formData.firstName.trim();
-    const lastName = formData.lastName.trim();
-    const email = formData.email.trim().toLowerCase();
-    const password = formData.password;
-
-    if (!email) throw new Error('Veuillez entrer un email.');
-    if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
-
-    // stocke mini profil (optionnel)
-    localStorage.setItem(
-      'chef_pending_profile',
-      JSON.stringify({
-        firstName,
-        lastName,
-        email,
-        createdAt: new Date().toISOString(),
-      })
-    );
-
-    // 1) Sign up
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { firstName, lastName, role: 'chef' },
-      },
-    });
-
-    if (signUpError) throw signUpError;
-
-    // 2) Si Supabase renvoie déjà une session => go dashboard
-    if (signUpData?.session) {
-      router.replace('/chef/dashboard');
-      return;
-    }
-
-    // 3) ✅ Sinon, on FORCE la session via login (stop la boucle chez tes parents)
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      // Si jamais email confirmation est encore ON, tu le verras ici
-      setSuccessMsg(
-        `✅ Compte créé. Si vous ne pouvez pas vous connecter, vérifiez vos emails (${email}) pour confirmer.`
-      );
-      return;
-    }
-
-    if (signInData?.session) {
-      router.replace('/chef/dashboard');
-      return;
-    }
-
-    // fallback
-    setSuccessMsg('✅ Compte créé. Connectez-vous pour accéder au Dashboard.');
-    router.replace('/chef/login');
-  } catch (err: any) {
-    console.error(err);
-    setError(err?.message || 'Une erreur est survenue');
-  } finally {
+    const res = await auth.registerChef(formData);
     setLoading(false);
-  }
-};
+
+    if (res.success) {
+      router.push('/chef/dashboard');
+    } else {
+      setError(res.error || 'Une erreur est survenue');
+    }
+  };
 
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
-      {/* Left */}
-      <div className="hidden md:block relative overflow-hidden bg-stone-950">
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-35"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=2070&auto=format&fit=crop')",
-          }}
+      {/* Left: calm premium panel */}
+      <div className="hidden md:block bg-stone-950 relative overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1556910103-1c02745a30bf?q=80&w=2070&auto=format&fit=crop"
+          className="absolute inset-0 w-full h-full object-cover opacity-35"
+          alt="Kitchen"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/55 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/55 to-black/70" />
 
-        <div className="absolute inset-0 p-12 flex items-center justify-center">
-          <div className="max-w-lg text-center">
-            <div className="text-[10px] uppercase tracking-[0.35em] text-stone-200/80">
+        <div className="absolute inset-0 p-12 flex flex-col justify-between text-white">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.35em] text-stone-300">
               Chef Talents • Accès privé
             </div>
 
-            <h2 className="text-4xl font-serif mt-6 leading-tight text-stone-50">
+            <h2 className="text-4xl font-serif mt-6 leading-tight">
               Un réseau discret,
               <br />
               des missions premium.
             </h2>
 
-            <p className="mt-5 text-stone-100/80 font-light leading-relaxed">
+            <p className="text-stone-300 font-light mt-5 max-w-md leading-relaxed">
               Villas, résidences et yachts. Matching selon vos disponibilités, demandes qualifiées.
             </p>
 
-            <div className="mt-8 space-y-3 text-sm text-stone-100/80 inline-block text-left">
+            <div className="mt-8 space-y-3 text-sm text-stone-200">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-stone-200/80" />
+                <Sparkles className="w-4 h-4 text-stone-300" />
                 <span>Accès aux missions dès l’ouverture</span>
               </div>
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-stone-200/80" />
+                <ShieldCheck className="w-4 h-4 text-stone-300" />
                 <span>Profil non public • données protégées</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-stone-200/80" />
-                <span>Inscription en 2 minutes (profil à compléter ensuite)</span>
+                <CheckCircle2 className="w-4 h-4 text-stone-300" />
+                <span>Inscription en 2 minutes (profil complet ensuite)</span>
               </div>
             </div>
+          </div>
 
-            <div className="mt-10 text-xs text-stone-200/70 flex items-center justify-center gap-2">
+          <div className="text-xs text-stone-400">
+            <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4" />
               <span>Ce lien est réservé aux chefs invités.</span>
             </div>
@@ -167,7 +85,7 @@ export default function ChefSignupPage() {
         </div>
       </div>
 
-      {/* Right */}
+      {/* Right: form */}
       <div className="flex items-center justify-center p-8 md:p-24">
         <div className="w-full max-w-md space-y-7">
           <div className="text-center md:text-left">
@@ -175,10 +93,28 @@ export default function ChefSignupPage() {
             <Label>Candidature Chef</Label>
 
             <div className="mt-4 space-y-2">
-              <h1 className="text-3xl font-serif text-stone-900">Créer votre compte</h1>
+              <h1 className="text-3xl font-serif text-stone-900">Créer votre accès</h1>
               <p className="text-sm text-stone-500 font-light leading-relaxed">
-                Créez votre accès, puis complétez votre profil depuis votre Dashboard.
+                Étape 1/3 — Compte. <span className="text-stone-700">Vous complèterez votre profil juste après.</span>
               </p>
+            </div>
+          </div>
+
+          <div className="border border-stone-200 bg-white rounded-2xl p-4">
+            <div className="text-xs uppercase tracking-widest text-stone-400">Après création</div>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+              <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="text-stone-900 font-medium">2/3</div>
+                <div className="text-stone-500">Profil</div>
+              </div>
+              <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="text-stone-900 font-medium">3/3</div>
+                <div className="text-stone-500">Tarifs</div>
+              </div>
+              <div className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="text-stone-900 font-medium">Validation</div>
+                <div className="text-stone-500">Admin</div>
+              </div>
             </div>
           </div>
 
@@ -188,7 +124,7 @@ export default function ChefSignupPage() {
                 <Label>Prénom</Label>
                 <Input
                   required
-                  placeholder="ex : Jean"
+                  placeholder="ex : Thomas"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 />
@@ -197,7 +133,7 @@ export default function ChefSignupPage() {
                 <Label>Nom</Label>
                 <Input
                   required
-                  placeholder="ex : Dupont"
+                  placeholder="ex : Delcroix"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 />
@@ -224,14 +160,10 @@ export default function ChefSignupPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
-              <div className="text-xs text-stone-400">🔒 Accès privé • connexion par email + mot de passe.</div>
+              <div className="text-xs text-stone-400">
+                🔒 Accès privé • votre profil ne sera pas visible publiquement.
+              </div>
             </div>
-
-            {successMsg && !error && (
-              <p className="text-green-700 text-sm bg-green-50 p-3 border border-green-100 rounded-xl">
-                {successMsg}
-              </p>
-            )}
 
             {error && (
               <p className="text-red-600 text-sm bg-red-50 p-3 border border-red-100 rounded-xl">
@@ -243,7 +175,11 @@ export default function ChefSignupPage() {
               {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Commencer mon inscription'}
             </Button>
 
-            <div className="text-center pt-2">
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs text-stone-500">
+                Besoin d’aide ? <span className="text-stone-700">Contact admin</span>
+              </div>
+
               <Link
                 href="/chef/login"
                 className="text-xs text-stone-600 hover:text-stone-900 border-b border-transparent hover:border-stone-900 transition-all"
