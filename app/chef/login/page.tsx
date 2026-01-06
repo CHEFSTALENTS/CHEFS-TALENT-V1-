@@ -21,7 +21,7 @@ export default function ChefLoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
+emailRedirectTo: `${window.location.origin}/chef/auth/callback`,
           shouldCreateUser: false, // login = ne crée pas de compte
         },
       });
