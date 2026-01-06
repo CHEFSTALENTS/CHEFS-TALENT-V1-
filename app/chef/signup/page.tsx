@@ -6,124 +6,77 @@ import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
 import { auth } from '../../../services/storage';
 import { Loader2, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { supabase } from '@/services/supabaseClient';
 
 export default function ChefSignupPage() {
   const router = useRouter();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
   });
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/services/supabaseClient';
-
-export default function ChefLoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  // Si déjà connecté -> dashboard
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/chef/dashboard');
-    });
-  }, [router]);
-
-  const onLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg(null);
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) return setMsg('Veuillez entrer un email.');
-    if (!password) return setMsg('Veuillez entrer votre mot de passe.');
-
     setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
-      if (error) throw error;
-      if (!data?.session) throw new Error('Session non créée.');
+    setError('');
 
-      router.replace('/chef/dashboard');
-    } catch (e: any) {
-      setMsg(e?.message || 'Erreur de connexion.');
+    try {
+      const firstName = formData.firstName.trim();
+      const lastName = formData.lastName.trim();
+      const email = formData.email.trim().toLowerCase();
+      const password = formData.password;
+
+      if (!email) throw new Error('Veuillez entrer un email.');
+      if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+
+      // 1) pending profile (optionnel)
+      localStorage.setItem(
+        'chef_pending_profile',
+        JSON.stringify({ firstName, lastName, email, createdAt: new Date().toISOString() })
+      );
+
+      // 2) signup supabase (crée auth.users + session si email confirmation OFF)
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { firstName, lastName, role: 'chef' },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      // 3) si session créée => go dashboard
+      if (data?.session?.user?.id) {
+        // si tu as un système local auth, tu peux sync ici (facultatif)
+        try {
+          await auth.refresh?.();
+        } catch {}
+
+        router.replace('/chef/dashboard');
+        return;
+      }
+
+      // Si pas de session, c’est que la confirmation email est ON
+      throw new Error("Compte créé mais session absente (vérifie que l'email confirmation est bien désactivée).");
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-6">
-      <div className="w-full max-w-md border border-stone-200 bg-white p-8">
-        <div className="text-center mb-8">
-          <div className="text-xs tracking-widest uppercase text-stone-400">Espace Chef</div>
-          <h1 className="text-3xl font-serif text-stone-900 mt-2">Connexion</h1>
-        </div>
-
-        <form onSubmit={onLogin} className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-widest text-stone-400">Email</label>
-            <input
-              className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ex: chef@exemple.com"
-              autoComplete="email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-widest text-stone-400">Mot de passe</label>
-            <input
-              className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Votre mot de passe"
-              autoComplete="current-password"
-            />
-          </div>
-
-          {msg && <div className="text-sm text-stone-600">{msg}</div>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-stone-900 text-white py-3 hover:bg-stone-800 disabled:opacity-50"
-          >
-            {loading ? 'Connexion…' : 'Se connecter'}
-          </button>
-        </form>
-
-        <div className="text-center mt-6 text-xs text-stone-500">
-          Pas encore de compte ?{' '}
-          <Link href="/chef/signup" className="underline">
-            Créer un compte
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-  return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
-      {/* Left: calm premium panel */}
+      {/* Left */}
       <div className="hidden md:block relative overflow-hidden bg-stone-950">
-        {/* ✅ Background via CSS => pas d'icône "image cassée" */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-35"
           style={{
@@ -133,7 +86,6 @@ export default function ChefLoginPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/55 to-black/70" />
 
-        {/* ✅ Contenu centré */}
         <div className="absolute inset-0 p-12 flex items-center justify-center">
           <div className="max-w-lg text-center">
             <div className="text-[10px] uppercase tracking-[0.35em] text-stone-200/80">
@@ -173,7 +125,7 @@ export default function ChefLoginPage() {
         </div>
       </div>
 
-      {/* Right: form */}
+      {/* Right */}
       <div className="flex items-center justify-center p-8 md:p-24">
         <div className="w-full max-w-md space-y-7">
           <div className="text-center md:text-left">
