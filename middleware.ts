@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
+function redirectToAccess(req: NextRequest, area: 'admin' | 'chef' | 'public') {
   const url = req.nextUrl.clone();
   const next = req.nextUrl.pathname + req.nextUrl.search;
 
@@ -28,23 +28,21 @@ export function middleware(req: NextRequest) {
   // Autoriser l’API access
   if (pathname.startsWith('/api/access')) return NextResponse.next();
 
-  // ✅ IMPORTANT :
-  // On NE gate PLUS la zone /chef ici.
-  // Le login/password Supabase doit gérer l'accès (pages + API).
-  if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
-    return NextResponse.next();
-  }
-
   const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
   const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
 
-  // ✅ Admin
+  // ✅ Admin (on garde le gate)
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (hasAdmin) return NextResponse.next();
     return redirectToAccess(req, 'admin');
   }
 
-  // ✅ Public (tout le reste)
+  // ✅ CHEF : on laisse passer (auth gérée par Supabase dans les pages)
+  if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
+    return NextResponse.next();
+  }
+
+  // ✅ Public (optionnel)
   if (!hasPublic) {
     return redirectToAccess(req, 'public');
   }
