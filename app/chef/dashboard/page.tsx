@@ -35,7 +35,32 @@ export default function ChefDashboardPage() {
       alive = false;
     };
   }, [router]);
+const didNav = useRef(false);
 
+useEffect(() => {
+  let alive = true;
+
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!alive) return;
+
+    const hasSession = !!data?.session;
+
+    // 🔒 évite la boucle
+    if (didNav.current) return;
+
+    if (!hasSession) {
+      didNav.current = true;
+      router.replace('/chef/login');
+      return;
+    }
+
+    setSbUser(data.session.user);
+    setBooting(false);
+  })();
+
+  return () => { alive = false; };
+}, [router]);
   // 2) Profil DB
   useEffect(() => {
     if (!sbUser?.id) return;
