@@ -33,45 +33,6 @@ type PendingProfile = {
   email?: string;
   createdAt?: string;
 };
-const [authReady, setAuthReady] = useState(false);
-
-useEffect(() => {
-  let mounted = true;
-
-  const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-    if (!mounted) return;
-
-    if (event === 'INITIAL_SESSION') {
-      setAuthReady(true);
-      if (!session?.user) router.replace('/chef/login');
-      else setSbUser(session.user);
-    }
-
-    if (event === 'SIGNED_OUT') {
-      router.replace('/chef/login');
-    }
-
-    if (event === 'SIGNED_IN') {
-      setSbUser(session?.user ?? null);
-    }
-  });
-
-  supabase.auth.getSession().catch(() => {});
-
-  return () => {
-    mounted = false;
-    sub.subscription.unsubscribe();
-  };
-}, [router]);
-
-// UI loading
-if (!authReady) {
-  return (
-    <ChefLayout>
-      <div className="p-8">Chargement…</div>
-    </ChefLayout>
-  );
-}
 
 type AnyProfile = Record<string, any>;
 
@@ -120,56 +81,35 @@ async function ensureChefProfileExists(params: {
   return res.json();
 }
 
-/** pose le cookie gate chef (middleware) si ton endpoint existe */
-async function ensureChefGateCookie() {
-  try {
-    await fetch('/api/access', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ area: 'chef' }),
-      cache: 'no-store',
-    });
-  } catch {
-    // silencieux
-  }
-}
-
 export default function ChefDashboardPage() {
   const router = useRouter();
 
-  const [booting, setBooting] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const [sbUser, setSbUser] = useState<any | null>(null);
+
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
   // anti double-call ensure profile
   const profileBootRef = useRef<Record<string, boolean>>({});
 
-  // 1) ✅ Source de vérité = Supabase session
+  // 1) Boot session supabase (source de vérité)
   useEffect(() => {
     let cancelled = false;
     let unsub: { unsubscribe: () => void } | null = null;
 
-    const finish = () => {
-      if (!cancelled) setBooting(false);
-    };
-
-    const handleUser = async (user: any | null) => {
+    const setUser = async (user: any | null) => {
       if (cancelled) return;
 
-      // ❌ pas de session => on va SIGNUP (pas login)
-    if (!user?.id) {
-  setSbUser(null);
-  finish();
-  return; // laisse le middleware / le user décider
-}
+      setSbUser(user ?? null);
+      setAuthReady(true);
 
-      // ✅ session ok
-      setSbUser(user);
+      // pas de session => redirect vers login (après authReady)
+      if (!user?.id) {
+        router.replace('/chef/login');
+        return;
+      }
 
-      // ✅ cookie gate chef (middleware)
-      await ensureChefGateCookie();
-
-      // ✅ Ensure profile (1 seule fois)
+      // ensure profile une seule fois
       if (!profileBootRef.current[user.id]) {
         profileBootRef.current[user.id] = true;
         try {
@@ -187,8 +127,6 @@ export default function ChefDashboardPage() {
           console.error('[Dashboard] ensure profile error:', e);
         }
       }
-
-      finish();
     };
 
     (async () => {
@@ -196,17 +134,18 @@ export default function ChefDashboardPage() {
         const { data, error } = await supabase.auth.getSession();
         if (error) console.error('[Dashboard] getSession error:', error);
 
-        await handleUser(data?.session?.user ?? null);
+        await setUser(data?.session?.user ?? null);
 
         const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-          handleUser(session?.user ?? null);
+          setUser(session?.user ?? null);
         });
 
         unsub = sub?.subscription ?? null;
       } catch (e) {
         console.error('[Dashboard] boot fatal:', e);
-        finish();
-        router.replace('/chef/signup');
+        setAuthReady(true);
+        setSbUser(null);
+        router.replace('/chef/login');
       }
     })();
 
@@ -218,7 +157,7 @@ export default function ChefDashboardPage() {
     };
   }, [router]);
 
-  // 2) Load profil DB (si session ok)
+  // 2) Charger profil (DB -> fallback LS)
   useEffect(() => {
     let cancelled = false;
 
@@ -226,7 +165,9 @@ export default function ChefDashboardPage() {
       try {
         if (!sbUser?.id) return;
 
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, {
+          cache: 'no-store',
+        });
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
@@ -243,8 +184,8 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser?.id]);
 
-  // UI loading
-  if (booting) {
+  // ✅ UI loading (DANS le composant => plus d’erreur build)
+  if (!authReady) {
     return (
       <ChefLayout>
         <div className="p-8">Chargement…</div>
@@ -252,7 +193,7 @@ export default function ChefDashboardPage() {
     );
   }
 
-  // si pas de session, on laisse le redirect faire son job
+  // si pas de session : on laisse le router.replace faire son job
   if (!sbUser?.id) {
     return (
       <ChefLayout>
@@ -269,7 +210,7 @@ export default function ChefDashboardPage() {
     pastry: 'Chef Pâtissier',
   };
 
-  // merged profile = DB/LS + infos supabase
+  // merged profile = DB/LS + email supabase
   const mergedProfile = useMemo<AnyProfile>(() => {
     const p = settingsProfile ?? {};
     const fullName = `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim();
@@ -277,7 +218,7 @@ export default function ChefDashboardPage() {
     return {
       ...p,
       email: p?.email ?? sbUser?.email ?? '',
-      name: p?.name ?? (fullName || p?.name || ''),
+      name: p?.name ?? (fullName || ''),
     };
   }, [settingsProfile, sbUser?.email]);
 
@@ -313,7 +254,10 @@ export default function ChefDashboardPage() {
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
   const checks = useMemo(() => {
-    const bio = String(mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
+    const bio = String(
+      mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? ''
+    ).trim();
+
     const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
 
     const identityOk =
@@ -449,7 +393,7 @@ export default function ChefDashboardPage() {
           </div>
         </div>
 
-        {/* Alerts */}
+        {/* Alert */}
         {score < 70 && (
           <div className="bg-white border border-stone-200 p-8 shadow-sm">
             <div className="flex items-start gap-6">
