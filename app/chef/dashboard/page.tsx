@@ -48,23 +48,9 @@ function safeReadLS<T>(key: string): T | null {
   }
 }
 
-const [sessionReady, setSessionReady] = useState(false);
-
-useEffect(() => {
-  supabase.auth.getSession().then(({ data }) => {
-    setSessionReady(true);
-    if (!data.session) {
-      window.location.href = '/chef/login';
-    }
-  });
-}, []);
-
-if (!sessionReady) {
-  return <ChefLayout><div className="p-8">Chargement…</div></ChefLayout>;
-}
-
 /**
  * Boot helper: crée/merge un profil minimal en DB via ton API
+ * (on évite d’écrire direct Supabase client -> RLS / sécurité)
  */
 async function ensureChefProfileExists(params: {
   userId: string;
@@ -123,11 +109,12 @@ export default function ChefDashboardPage() {
     const handleSession = async (sessionUser: any | null) => {
       if (cancelled) return;
 
-      // Pas connecté
+      // Pas connecté => redirect login (propre, sans clignote)
       if (!sessionUser?.id) {
         setSbUser(null);
         setIsReady(false);
         setBooting(false);
+        router.replace('/chef/login');
         return;
       }
 
@@ -135,7 +122,7 @@ export default function ChefDashboardPage() {
       setSbUser(sessionUser);
       setIsReady(true);
 
-      // Ensure profile 1 fois
+      // Ensure profile 1 fois / user
       if (!profileBootRef.current[sessionUser.id]) {
         profileBootRef.current[sessionUser.id] = true;
 
@@ -160,11 +147,13 @@ export default function ChefDashboardPage() {
 
     (async () => {
       try {
+        // 1) Session initiale
         const { data, error } = await supabase.auth.getSession();
         if (error) console.error('[Dashboard boot] getSession error:', error);
 
         await handleSession(data?.session?.user ?? null);
 
+        // 2) Écoute les changements (magic link, refresh, logout)
         const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
           handleSession(session?.user ?? null);
         });
@@ -182,19 +171,11 @@ export default function ChefDashboardPage() {
         unsub?.unsubscribe?.();
       } catch {}
     };
-  }, []);
+  }, [router]);
 
   /**
-   * Redirect si non connecté (après boot)
-   */
-  useEffect(() => {
-    if (!booting && !isReady) {
-      router.replace('/chef/login');
-    }
-  }, [booting, isReady, router]);
-
-  /**
-   * B) Charger profil DB après session OK
+   * B) Charger le profil pour l’UI (DB -> fallback localStorage)
+   * (uniquement quand on est connecté)
    */
   useEffect(() => {
     let cancelled = false;
@@ -212,8 +193,7 @@ export default function ChefDashboardPage() {
           if (fromDb) setSettingsProfile(fromDb);
           else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
         }
-      } catch (e) {
-        console.error('[Dashboard] load profile error:', e);
+      } catch {
         if (!cancelled) setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
       }
     })();
@@ -223,7 +203,7 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser?.id]);
 
-  // UI loading
+  // ✅ guards d'affichage stables (anti-flicker)
   if (booting) {
     return (
       <ChefLayout>
@@ -232,7 +212,6 @@ export default function ChefDashboardPage() {
     );
   }
 
-  // Si pas ready, on laisse le redirect faire (évite clignotement)
   if (!isReady || !sbUser?.id) {
     return (
       <ChefLayout>
@@ -248,21 +227,18 @@ export default function ChefDashboardPage() {
     pastry: 'Chef Pâtissier',
   };
 
-  // ✅ Source de vérité : settingsProfile (DB/LS) + infos session (email)
+  // 👉 source de vérité côté dashboard = DB/LS (pas de legacy auth ici)
   const mergedProfile = useMemo<AnyProfile>(() => {
-    const p: AnyProfile = settingsProfile ?? {};
-
+    const p = settingsProfile ?? {};
     const fullName = String(p?.name ?? '').trim();
-    const fallbackName =
-      [p?.firstName, p?.lastName].filter(Boolean).join(' ').trim() || fullName || 'Chef';
-
     return {
       ...p,
+      name: fullName,
       email: p?.email ?? sbUser?.email ?? '',
-      name: p?.name ?? fallbackName,
     };
   }, [settingsProfile, sbUser?.email]);
 
+  // completion (si tu t’en sers ailleurs)
   const completion = useMemo(() => {
     const { ok, details } = isProfileCompleteForValidation(mergedProfile ?? {});
     const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
@@ -271,6 +247,7 @@ export default function ChefDashboardPage() {
     return { ok, done, total, score: Math.round((done / total) * 100), details };
   }, [mergedProfile]);
 
+  // Score unique
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
     const city = String(
@@ -286,9 +263,11 @@ export default function ChefDashboardPage() {
       country: String(p.country ?? p.location?.country ?? '').trim(),
       bio: String(p.bio ?? '').trim(),
       yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
+
       cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
       specialties: Array.isArray(p.specialties) ? p.specialties : [],
       languages: Array.isArray(p.languages) ? p.languages : [],
+
       instagram: String(p.instagram ?? '').trim(),
       website: String(p.website ?? '').trim(),
       portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
@@ -298,46 +277,53 @@ export default function ChefDashboardPage() {
 
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
+  // Checks dashboard
   const checks = useMemo(() => {
-    const bio = String(mergedProfile.bio ?? mergedProfile.about ?? mergedProfile.description ?? '').trim();
-    const years = mergedProfile.yearsExperience ?? mergedProfile.experienceYears ?? 0;
+    const bio = String(mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
+    const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
 
     const identityOk =
       !!String(mergedProfile.name ?? '').trim() &&
       !!String(mergedProfile.phone ?? '').trim() &&
       (!!String(mergedProfile.city ?? '').trim() ||
         !!String(mergedProfile.location?.baseCity ?? '').trim() ||
-        !!String(mergedProfile.baseCity ?? '').trim());
+        !!String((mergedProfile as any).baseCity ?? '').trim());
 
     const experienceOk = (Number(years) || 0) > 0 || bio.length >= 80;
 
     const images =
-      mergedProfile.images ?? mergedProfile.photos ?? mergedProfile.gallery ?? mergedProfile.portfolioImages ?? [];
+      (mergedProfile as any).images ??
+      (mergedProfile as any).photos ??
+      (mergedProfile as any).gallery ??
+      (mergedProfile as any).portfolioImages ??
+      [];
+
     const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
 
     const portfolioOk =
       hasImages ||
-      !!String(mergedProfile.photoUrl ?? mergedProfile.avatarUrl ?? '').trim() ||
+      !!String((mergedProfile as any).photoUrl ?? mergedProfile.avatarUrl ?? '').trim() ||
       !!String(mergedProfile.portfolioUrl ?? '').trim() ||
       !!String(mergedProfile.instagram ?? '').trim() ||
       !!String(mergedProfile.website ?? '').trim();
 
-    const pricing = mergedProfile.pricing ?? null;
+    const pricing = (mergedProfile as any).pricing ?? null;
     const hasPricing =
       !!pricing &&
       (Number(pricing?.residence?.dailyRate ?? 0) > 0 ||
         Number(pricing?.event?.pricePerPerson ?? 0) > 0 ||
-        Number(mergedProfile.dailyRate ?? 0) > 0 ||
-        Number(mergedProfile.pricePerPerson ?? 0) > 0);
+        Number((mergedProfile as any).dailyRate ?? 0) > 0 ||
+        Number((mergedProfile as any).pricePerPerson ?? 0) > 0);
 
     const mobilityOk =
       !!String(mergedProfile.location?.baseCity ?? '').trim() ||
-      !!String(mergedProfile.baseCity ?? '').trim() ||
+      !!String((mergedProfile as any).baseCity ?? '').trim() ||
       mergedProfile.location?.internationalMobility === true ||
       (mergedProfile.location?.coverageZones?.length ?? 0) > 0 ||
-      (mergedProfile.coverageZones?.length ?? 0) > 0;
+      ((mergedProfile as any).coverageZones?.length ?? 0) > 0;
 
     const preferencesOk = (mergedProfile.cuisines?.length ?? 0) >= 1 && (mergedProfile.languages?.length ?? 0) >= 1;
+
     const availabilityOk = true;
 
     return [
@@ -363,14 +349,6 @@ export default function ChefDashboardPage() {
 
   const TierIcon = tier.icon;
 
-  // ✅ ton statut doit venir du profil DB (pas du user legacy)
-  const status = String(mergedProfile?.status ?? '');
-
-  const lastNameForHello =
-    String(mergedProfile?.lastName ?? '').trim() ||
-    String(mergedProfile?.name ?? '').trim().split(' ').slice(-1)[0] ||
-    '';
-
   return (
     <ChefLayout>
       <div className="space-y-12 animate-in fade-in duration-700">
@@ -387,7 +365,7 @@ export default function ChefDashboardPage() {
             </div>
 
             <h1 className="text-4xl font-serif text-stone-900 mt-2">
-              Bonjour, Chef {lastNameForHello}.
+              Bonjour, Chef {String(mergedProfile?.name ?? '').split(' ').slice(-1)[0] || ''}.
             </h1>
 
             {(mergedProfile as any)?.profileType && (
@@ -404,7 +382,7 @@ export default function ChefDashboardPage() {
 
           <div className="text-right">
             <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
-            <StatusBadge status={status} />
+            <StatusBadge status={String((mergedProfile as any).status || '')} />
           </div>
         </div>
 
@@ -446,15 +424,11 @@ export default function ChefDashboardPage() {
         </div>
 
         {/* Status Alerts */}
-        {String(status) === 'pending_validation' && (
+        {String((mergedProfile as any).status) === 'pending_validation' && (
           <div className="bg-white border border-stone-200 p-8 shadow-sm">
             <div className="flex items-start gap-6">
               <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? (
-                  <Clock className="w-6 h-6 text-stone-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-bronze" />
-                )}
+                {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
               </div>
               <div className="space-y-4">
                 <h3 className="text-xl font-serif text-stone-900">
@@ -501,8 +475,8 @@ export default function ChefDashboardPage() {
           ))}
         </div>
 
-        {/* debug si besoin */}
-        {/* <pre className="text-xs opacity-50">{JSON.stringify({ completion, mergedProfile }, null, 2)}</pre> */}
+        {/* debug completion optionnel */}
+        {/* <pre className="text-xs opacity-50">{JSON.stringify(completion, null, 2)}</pre> */}
       </div>
     </ChefLayout>
   );
