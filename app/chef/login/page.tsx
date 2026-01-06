@@ -10,30 +10,13 @@ export default function ChefLoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // ✅ Si session déjà existante => dashboard, sinon on affiche la page
   useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-
-      if (data.session) {
-        router.replace('/chef/dashboard');
-        return;
-      }
-
-      setChecking(false);
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/chef/dashboard');
+    });
   }, [router]);
 
   const onLogin = async (e: React.FormEvent) => {
@@ -52,24 +35,15 @@ export default function ChefLoginPage() {
       });
 
       if (error) throw error;
+      if (!data?.session) throw new Error('Session non créée.');
 
-      // ✅ session OK => dashboard
-      if (data.session) router.replace('/chef/dashboard');
-      else setMsg("Connexion impossible (pas de session).");
+      router.replace('/chef/dashboard');
     } catch (e: any) {
-      setMsg(e?.message || 'Identifiants invalides.');
+      setMsg(e?.message || 'Erreur de connexion.');
     } finally {
       setLoading(false);
     }
   };
-
-  if (checking) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center px-6">
-        <div className="text-sm text-stone-600">Chargement…</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
