@@ -6,6 +6,7 @@ import { ChefLayout } from '../../../components/ChefLayout';
 import { auth } from '../../../services/storage';
 import { Label, Button } from '../../../components/ui';
 import { supabase } from '@/services/supabaseClient';
+import { useRouter } from 'next/navigation';
 import { computeChefScore } from '@/lib/chefScore';
 import {
   CheckCircle2,
@@ -41,7 +42,7 @@ type AnyProfile = Record<string, any>;
 
 export default function ChefDashboardPage() {
   const user = auth.getCurrentUser();
-
+const router = useRouter();
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
   useEffect(() => {
