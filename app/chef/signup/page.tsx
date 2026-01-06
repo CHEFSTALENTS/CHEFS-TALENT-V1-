@@ -51,66 +51,71 @@ export default function ChefSignupPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccessMsg(null);
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+  setSuccessMsg(null);
 
-    try {
-      const firstName = formData.firstName.trim();
-      const lastName = formData.lastName.trim();
-      const email = formData.email.trim().toLowerCase();
-      const password = formData.password;
+  try {
+    const firstName = formData.firstName.trim();
+    const lastName = formData.lastName.trim();
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
 
-      if (!firstName || !lastName) throw new Error('Veuillez renseigner prénom et nom.');
-      if (!email) throw new Error('Veuillez entrer un email.');
-      if (!password || password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+    if (!email) throw new Error('Veuillez entrer un email.');
+    if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
 
-      // 1) stocke le mini profil (bootstrap DB profile si besoin plus tard)
-      localStorage.setItem(
-        'chef_pending_profile',
-        JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          createdAt: new Date().toISOString(),
-        })
-      );
-
-      // 2) ✅ SignUp email + password
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // 1) stocke le mini profil (optionnel mais utile)
+    localStorage.setItem(
+      'chef_pending_profile',
+      JSON.stringify({
+        firstName,
+        lastName,
         email,
-        password,
-        options: {
-          data: {
-            firstName,
-            lastName,
-            role: 'chef',
-          },
-        },
-      });
-      if (signUpError) throw signUpError;
+        createdAt: new Date().toISOString(),
+      })
+    );
 
-      // 3) ✅ Fallback: s’il n’y a pas de session, on force un sign-in immédiat
-      // (selon config/cookies, session peut être null même avec confirmation OFF)
-      if (!signUpData?.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
-      }
+    // 2) SignUp
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { firstName, lastName, role: 'chef' },
+      },
+    });
 
-      // 4) ✅ Gate cookie chef (si ton middleware le demande)
-      await ensureChefGateCookie();
+    if (signUpError) throw signUpError;
 
-      // 5) ✅ Redirect direct dashboard
+    // ✅ 3) Si Supabase renvoie déjà une session → go dashboard
+    if (signUpData?.session) {
       router.replace('/chef/dashboard');
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
 
+    // ✅ 4) Sinon : on force une session en login email/password
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) throw signInError;
+
+    if (signInData?.session) {
+      router.replace('/chef/dashboard');
+      return;
+    }
+
+    // Si malgré tout pas de session (cas rare)
+    setSuccessMsg(`✅ Compte créé, mais connexion impossible automatiquement. Réessayez.`);
+  } catch (err: any) {
+    console.error(err);
+    setError(err?.message || 'Une erreur est survenue');
+  } finally {
+    setLoading(false);
+  }
+};
+  
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
       {/* Left */}
