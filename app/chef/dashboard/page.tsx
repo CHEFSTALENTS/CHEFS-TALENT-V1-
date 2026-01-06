@@ -48,6 +48,21 @@ function safeReadLS<T>(key: string): T | null {
   }
 }
 
+const [sessionReady, setSessionReady] = useState(false);
+
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setSessionReady(true);
+    if (!data.session) {
+      window.location.href = '/chef/login';
+    }
+  });
+}, []);
+
+if (!sessionReady) {
+  return <ChefLayout><div className="p-8">Chargement…</div></ChefLayout>;
+}
+
 /**
  * Boot helper: crée/merge un profil minimal en DB via ton API
  */
