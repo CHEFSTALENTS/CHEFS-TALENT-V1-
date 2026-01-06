@@ -85,7 +85,26 @@ const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, { ca
     yacht: 'Chef Yacht',
     pastry: 'Chef Pâtissier',
   };
+useEffect(() => {
+  let mounted = true;
 
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!mounted) return;
+
+    if (!data.session) {
+      router.replace('/chef/login');
+      return;
+    }
+
+    setSbUser(data.session.user);
+    setBooting(false);
+  })();
+
+  return () => {
+    mounted = false;
+  };
+}, [router]);
   // Profil "onboarding" (historique)
   const onboardingProfile: AnyProfile = (user as any).profile || {};
 
