@@ -81,6 +81,20 @@ async function ensureChefProfileExists(params: {
   return res.json();
 }
 
+/** pose le cookie gate chef (middleware) si ton endpoint existe */
+async function ensureChefGateCookie() {
+  try {
+    await fetch('/api/access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ area: 'chef' }),
+      cache: 'no-store',
+    });
+  } catch {
+    // silencieux
+  }
+}
+
 export default function ChefDashboardPage() {
   const router = useRouter();
 
@@ -103,17 +117,21 @@ export default function ChefDashboardPage() {
     const handleUser = async (user: any | null) => {
       if (cancelled) return;
 
+      // ❌ pas de session => on va SIGNUP (pas login)
       if (!user?.id) {
         setSbUser(null);
         finish();
-        // IMPORTANT: on redirect seulement une fois qu’on a fini de boot
-        router.replace('/chef/login');
+        router.replace('/chef/signup');
         return;
       }
 
+      // ✅ session ok
       setSbUser(user);
 
-      // Ensure profile (1 seule fois)
+      // ✅ cookie gate chef (middleware)
+      await ensureChefGateCookie();
+
+      // ✅ Ensure profile (1 seule fois)
       if (!profileBootRef.current[user.id]) {
         profileBootRef.current[user.id] = true;
         try {
@@ -150,7 +168,7 @@ export default function ChefDashboardPage() {
       } catch (e) {
         console.error('[Dashboard] boot fatal:', e);
         finish();
-        router.replace('/chef/login');
+        router.replace('/chef/signup');
       }
     })();
 
