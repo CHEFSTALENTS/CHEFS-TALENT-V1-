@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-function redirectToAccess(req: NextRequest, area: 'admin' | 'chef' | 'public') {
+function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
   const url = req.nextUrl.clone();
   const next = req.nextUrl.pathname + req.nextUrl.search;
 
@@ -31,13 +31,14 @@ export function middleware(req: NextRequest) {
   const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
   const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
 
-  // ✅ Admin (on garde le gate)
+  // ✅ Admin protégé
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (hasAdmin) return NextResponse.next();
     return redirectToAccess(req, 'admin');
   }
 
-  // ✅ CHEF : on laisse passer (auth gérée par Supabase dans les pages)
+  // ✅ IMPORTANT : on NE BLOQUE PLUS /chef ici
+  // Car la session Supabase est côté client (localStorage) et le middleware ne peut pas la lire.
   if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
     return NextResponse.next();
   }
