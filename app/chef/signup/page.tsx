@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
-import { auth } from '../../../services/storage';
 import { Loader2, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 
@@ -17,62 +16,74 @@ export default function ChefSignupPage() {
     email: '',
     password: '',
   });
-const { data, error } = await supabase.auth.signUp({ email, password });
-if (error) throw error;
 
-const userId = data.user?.id;
-if (!userId) throw new Error("Pas d'user renvoyé par Supabase");
-  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
-      const firstName = formData.firstName.trim();
-      const lastName = formData.lastName.trim();
       const email = formData.email.trim().toLowerCase();
       const password = formData.password;
 
-      if (!email) throw new Error('Veuillez entrer un email.');
-      if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+      if (!email) throw new Error('Email manquant.');
+      if (!password || password.length < 8) throw new Error('Mot de passe: 8+ caractères.');
 
-      // 1) pending profile (optionnel)
-      localStorage.setItem(
-        'chef_pending_profile',
-        JSON.stringify({ firstName, lastName, email, createdAt: new Date().toISOString() })
-      );
-
-      // 2) signup supabase (crée auth.users + session si email confirmation OFF)
+      // ✅ 1) Création du vrai compte Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { firstName, lastName, role: 'chef' },
+          data: {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            role: 'chef',
+          },
         },
       });
 
       if (signUpError) throw signUpError;
 
-      // 3) si session créée => go dashboard
-      if (data?.session?.user?.id) {
-        // si tu as un système local auth, tu peux sync ici (facultatif)
-        try {
-          await auth.refresh?.();
-        } catch {}
-
-        router.replace('/chef/dashboard');
+      const userId = data.user?.id;
+      if (!userId) {
+        // Cas fréquent si "email confirmation" activé: user peut être null selon config
+        // On redirige vers login + message
+        router.replace('/chef/login?checkEmail=1');
         return;
       }
 
-      // Si pas de session, c’est que la confirmation email est ON
-      throw new Error("Compte créé mais session absente (vérifie que l'email confirmation est bien désactivée).");
+      // ✅ 2) Optionnel: créer le profil en DB (si ton endpoint existe)
+      // (si tu n'as pas encore /api/chef/profile, commente ce bloc)
+      await fetch('/api/chef/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          profile: {
+            id: userId,
+            email,
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+
+      // ✅ 3) Redirection
+      // Si confirmation email ON, l'utilisateur n'aura pas de session -> login
+      // Sinon il peut être direct dashboard
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        router.replace('/chef/dashboard');
+      } else {
+        router.replace('/chef/login?justSignedUp=1');
+      }
     } catch (err: any) {
-      console.error(err);
-      setError(err?.message || 'Une erreur est survenue');
+      setError(err?.message || 'Erreur lors de la création du compte.');
     } finally {
       setLoading(false);
     }
