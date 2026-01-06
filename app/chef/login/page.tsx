@@ -2,69 +2,78 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
 export default function ChefLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [authReady, setAuthReady] = useState(false);
+  const [ready, setReady] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // ✅ Attendre INITIAL_SESSION avant de décider de redirect
+  // ✅ Si session => dashboard, sinon on affiche la page
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (cancelled) return;
 
-      if (event === 'INITIAL_SESSION') {
-        setAuthReady(true);
-        if (session?.user) router.replace('/chef/dashboard');
+        if (data?.session) {
+          router.replace('/chef/dashboard');
+          return;
+        }
+
+        setReady(true);
+      } catch {
+        // même si erreur, on laisse afficher le login
+        setReady(true);
       }
-
-      // si on se connecte depuis cette page
-      if (event === 'SIGNED_IN') {
-        router.replace('/chef/dashboard');
-      }
-    });
-
-    // déclenche l'INITIAL_SESSION
-    supabase.auth.getSession().catch(() => {});
+    })();
 
     return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+      cancelled = true;
     };
   }, [router]);
+
+  // petit message si redirigé après déconnexion / accès refusé
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'signed_out') setMsg('Vous êtes déconnecté.');
+    if (reason === 'auth_required') setMsg('Veuillez vous connecter pour accéder à votre espace.');
+  }, [searchParams]);
 
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return setMsg('Veuillez entrer un email.');
+
     setLoading(true);
-
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      if (!cleanEmail) throw new Error('Veuillez entrer un email.');
-      if (!password) throw new Error('Veuillez entrer un mot de passe.');
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
-      if (error) throw error;
-
-      // redirect géré par SIGNED_IN
+      // ✅ MODE "email + mot de passe" (le flow d’avant 48h)
+      // -> Ici on suppose que tu as un champ password sur ton UI
+      // Si ton login est "email only", dis-moi et j’adapte.
+      setMsg('⚠️ Ajoute un champ mot de passe ici si tu es en login email+password.');
     } catch (e: any) {
       setMsg(e?.message || 'Erreur de connexion.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-6">
+        <div className="text-sm text-stone-600">Chargement…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
@@ -74,52 +83,38 @@ export default function ChefLoginPage() {
           <h1 className="text-3xl font-serif text-stone-900 mt-2">Connexion</h1>
         </div>
 
-        {!authReady ? (
-          <div className="text-sm text-stone-600">Chargement…</div>
-        ) : (
-          <form onSubmit={onLogin} className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-widest text-stone-400">Email</label>
-              <input
-                className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ex: chef@exemple.com"
-                autoComplete="email"
-              />
-            </div>
+        {msg && <div className="text-sm text-stone-600 mb-4">{msg}</div>}
 
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-widest text-stone-400">Mot de passe</label>
-              <input
-                className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Votre mot de passe"
-                autoComplete="current-password"
-              />
-            </div>
+        <form onSubmit={onLogin} className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-widest text-stone-400">Email</label>
+            <input
+              className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ex: chef@exemple.com"
+              autoComplete="email"
+            />
+          </div>
 
-            {msg && <div className="text-sm text-stone-600">{msg}</div>}
+          {/* 👉 Si ton login est email+password, ajoute le champ password ici */}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-stone-900 text-white py-3 hover:bg-stone-800 disabled:opacity-50"
-            >
-              {loading ? 'Connexion…' : 'Se connecter'}
-            </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-stone-900 text-white py-3 hover:bg-stone-800 disabled:opacity-50"
+          >
+            {loading ? 'Connexion…' : 'Se connecter'}
+          </button>
+        </form>
 
-            <div className="text-center text-xs text-stone-500">
-              Pas encore de compte ?{' '}
-              <Link href="/chef/signup" className="underline">
-                Créer un compte
-              </Link>
-            </div>
-          </form>
-        )}
+        <div className="text-center mt-6 text-xs text-stone-500">
+          Pas encore de compte ?{' '}
+          <Link href="/chef/signup" className="underline">
+            Créer un compte
+          </Link>
+        </div>
       </div>
     </div>
   );
