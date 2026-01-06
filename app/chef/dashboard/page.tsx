@@ -326,12 +326,12 @@ const hasPricing =
     return { label: 'À compléter', icon: Lock };
   }, [score]);
 
-  const TierIcon = tier.icon;
+   const TierIcon = tier.icon;
 
   return (
     <ChefLayout>
       <div className="space-y-12 animate-in fade-in duration-700">
-        {/* Welcome Header */}
+        {/* Header */}
         <div className="flex items-end justify-between border-b border-stone-200 pb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -371,7 +371,7 @@ const hasPricing =
           </div>
         </div>
 
-        {/* Score banner */}
+        {/* Score */}
         <div className="bg-white border border-stone-200 p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-3 flex-1">
@@ -408,62 +408,16 @@ const hasPricing =
           </div>
         </div>
 
-        {/* Status Alerts */}
-        {String((user as any).status) === 'pending_validation' && (
-          <div className="bg-white border border-stone-200 p-8 shadow-sm">
-            <div className="flex items-start gap-6">
-              <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-xl font-serif text-stone-900">
-                  {score >= 70 ? "Dossier en cours d'examen" : 'Complétez votre profil pour activation'}
-                </h3>
-                <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
-                  {score >= 70
-                    ? "Votre profil est prêt. Notre équipe examine votre dossier. Vous recevrez une notification sous 48h."
-                    : 'Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.'}
-                </p>
-
-                {score < 70 && (
-                  <div className="w-full bg-stone-100 h-1 mt-4">
-                    <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subscription Coming Soon - Informational */}
-        <div className="bg-stone-50 border border-stone-200 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex gap-6 items-start">
-            <div className="w-12 h-12 bg-white border border-stone-100 flex items-center justify-center rounded-full shrink-0">
-              <Sparkles className="w-5 h-5 text-stone-400" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-serif text-stone-900">Abonnement (à venir)</h3>
-              <p className="text-stone-500 font-light text-sm max-w-lg">
-                Chef Talents est actuellement gratuit pour les chefs. Une offre d’abonnement optionnelle pourra arriver plus tard (outils,
-                visibilité, automatisations…).
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" disabled className="whitespace-nowrap opacity-50">
-            Bientôt disponible
-          </Button>
-        </div>
-
-        {/* Action List */}
+        {/* Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {checks.map(c => (
+          {checks.map((c: any) => (
             <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
           ))}
         </div>
       </div>
     </ChefLayout>
   );
-}
+} // ✅ IMPORTANT : fermeture UNIQUE du composant
 
 function ActionCard({
   icon: Icon,
@@ -479,44 +433,25 @@ function ActionCard({
   done: boolean;
 }) {
   return (
-    <Link href={path} className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300">
+    <Link
+      href={path}
+      className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300"
+    >
       <div className="flex justify-between items-start mb-6">
         <Icon className={`w-6 h-6 ${done ? 'text-stone-900' : 'text-stone-300'}`} strokeWidth={1.5} />
-        {done ? <CheckCircle2 className="w-5 h-5 text-stone-900" /> : <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />}
+        {done ? (
+          <CheckCircle2 className="w-5 h-5 text-stone-900" />
+        ) : (
+          <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />
+        )}
       </div>
+
       <h3 className="text-lg font-serif text-stone-900 mb-2">{title}</h3>
       <p className="text-sm text-stone-500 font-light mb-6">{desc}</p>
+
       <div className="text-xs uppercase tracking-widest text-stone-400 group-hover:text-stone-900 flex items-center gap-2">
         {done ? 'Modifier' : 'Compléter'} <ArrowRight className="w-3 h-3" />
       </div>
     </Link>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending_validation: 'bg-stone-100 text-stone-600',
-    approved: 'bg-stone-800 text-white',
-    active: 'bg-stone-900 text-white',
-    paused: 'bg-stone-200 text-stone-400',
-  };
-
-  const labels: Record<string, string> = {
-    pending_validation: 'En Attente',
-    approved: 'Validé',
-    active: 'Actif',
-    paused: 'En Pause',
-  };
-
-  const s = (status || '').toLowerCase();
-
-  return (
-    <span
-      className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
-        styles[s] || styles.pending_validation
-      }`}
-    >
-      {labels[s] || s || '—'}
-    </span>
   );
 }
