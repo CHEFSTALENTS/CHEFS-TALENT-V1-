@@ -2,19 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
 export default function ChefLoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // ✅ Si session => dashboard, sinon on affiche la page
+  // ✅ 1) Si session => dashboard. Sinon => on affiche la page.
   useEffect(() => {
     let cancelled = false;
 
@@ -30,7 +29,6 @@ export default function ChefLoginPage() {
 
         setReady(true);
       } catch {
-        // même si erreur, on laisse afficher le login
         setReady(true);
       }
     })();
@@ -40,12 +38,15 @@ export default function ChefLoginPage() {
     };
   }, [router]);
 
-  // petit message si redirigé après déconnexion / accès refusé
+  // ✅ 2) Message optionnel (sans useSearchParams)
   useEffect(() => {
-    const reason = searchParams.get('reason');
-    if (reason === 'signed_out') setMsg('Vous êtes déconnecté.');
-    if (reason === 'auth_required') setMsg('Veuillez vous connecter pour accéder à votre espace.');
-  }, [searchParams]);
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const reason = sp.get('reason');
+      if (reason === 'signed_out') setMsg('Vous êtes déconnecté.');
+      if (reason === 'auth_required') setMsg('Veuillez vous connecter pour accéder à votre espace.');
+    } catch {}
+  }, []);
 
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,10 +57,10 @@ export default function ChefLoginPage() {
 
     setLoading(true);
     try {
-      // ✅ MODE "email + mot de passe" (le flow d’avant 48h)
-      // -> Ici on suppose que tu as un champ password sur ton UI
-      // Si ton login est "email only", dis-moi et j’adapte.
-      setMsg('⚠️ Ajoute un champ mot de passe ici si tu es en login email+password.');
+      // 🔥 IMPORTANT :
+      // Ici tu dois remettre TON flow email+mot de passe (signInWithPassword)
+      // Je laisse volontairement une erreur claire si tu n’as pas encore le champ password.
+      setMsg("Ajoute le champ 'mot de passe' + signInWithPassword ici.");
     } catch (e: any) {
       setMsg(e?.message || 'Erreur de connexion.');
     } finally {
@@ -98,7 +99,7 @@ export default function ChefLoginPage() {
             />
           </div>
 
-          {/* 👉 Si ton login est email+password, ajoute le champ password ici */}
+          {/* 👉 Ajoute ici le champ password si tu es en email+password */}
 
           <button
             type="submit"
