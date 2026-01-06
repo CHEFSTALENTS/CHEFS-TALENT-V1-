@@ -17,7 +17,12 @@ export default function ChefSignupPage() {
     email: '',
     password: '',
   });
+const { data, error } = await supabase.auth.signUp({ email, password });
+if (error) throw error;
 
+const userId = data.user?.id;
+if (!userId) throw new Error("Pas d'user renvoyé par Supabase");
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
