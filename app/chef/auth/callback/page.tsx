@@ -4,6 +4,18 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
+function parseHashParams(hash: string) {
+  // hash = "#access_token=...&refresh_token=...&token_type=bearer&expires_in=3600"
+  const h = hash.startsWith('#') ? hash.slice(1) : hash;
+  const params = new URLSearchParams(h);
+  return {
+    access_token: params.get('access_token'),
+    refresh_token: params.get('refresh_token'),
+    token_type: params.get('token_type'),
+    expires_in: params.get('expires_in'),
+  };
+}
+
 export default function ChefAuthCallbackPage() {
   const router = useRouter();
   const [msg, setMsg] = useState('Connexion en cours…');
@@ -13,27 +25,26 @@ export default function ChefAuthCallbackPage() {
 
     (async () => {
       try {
-        // 0) Si Supabase t’envoie un code (PKCE), il est dans ?code=
         const url = new URL(window.location.href);
         const code = url.searchParams.get('code');
 
+        // 1) ✅ PKCE flow (?code=...)
         if (code) {
-          // ✅ PKCE flow
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
 
-          // Nettoie l’URL (retire le code)
+          // Nettoie l’URL
           window.history.replaceState({}, document.title, '/chef/auth/callback');
-
         } else {
-          // 1) Sinon, ancien flow: #access_token=...
-          const hasHashToken =
-            typeof window !== 'undefined' &&
-            window.location.hash &&
-            window.location.hash.includes('access_token=');
+          // 2) ✅ Implicit flow (#access_token=...)
+          const hash = window.location.hash || '';
+          const { access_token, refresh_token } = parseHashParams(hash);
 
-          if (hasHashToken) {
-            const { error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+          if (access_token && refresh_token) {
+            const { error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
             if (error) throw error;
 
             // Nettoie l’URL (retire le hash)
@@ -41,17 +52,15 @@ export default function ChefAuthCallbackPage() {
           }
         }
 
-        // 2) Vérifie que la session est bien stockée
+        // 3) Vérifie qu’on a bien une session persistée
         const { data: s } = await supabase.auth.getSession();
         const userId = s?.session?.user?.id;
 
         if (userId) {
-          // ✅ Important: replace => évite de revenir au callback via "back"
           router.replace('/chef/dashboard');
           return;
         }
 
-        // 3) Pas de session => lien expiré / mauvais domaine / redirect non autorisé
         setMsg('Lien invalide ou expiré. Redirection…');
         setTimeout(() => {
           if (!cancelled) router.replace('/chef/login');
