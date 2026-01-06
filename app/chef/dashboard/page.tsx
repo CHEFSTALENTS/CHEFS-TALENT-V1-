@@ -14,7 +14,7 @@ export default function ChefDashboardPage() {
   const [booting, setBooting] = useState(true);
   const [sbUser, setSbUser] = useState<any | null>(null);
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
-
+console.log('DASHBOARD render', new Date().toISOString());
   // 1) Session
   useEffect(() => {
     let alive = true;
