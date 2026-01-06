@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { auth, api } from '../services/storage';
 import { ChefUser } from '../types';
+import { supabase } from '@/services/supabaseClient';
 import {
   LogOut,
   LayoutDashboard,
@@ -34,32 +35,57 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    const currentUser = auth.getCurrentUser();
-    if (!currentUser) {
-      router.push('/chef/login');
+ useEffect(() => {
+  let alive = true;
+
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!alive) return;
+
+    const sbUser = data.session?.user ?? null;
+
+    // ✅ si pas de session => login
+    if (!sbUser) {
+      router.replace('/chef/login');
       return;
     }
-    setUser(currentUser);
-        // ✅ Re-sync status from DB (source de vérité)
-    (async () => {
-      try {
-        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(currentUser.id)}`);
-        const json = await res.json();
-        if (json?.status) {
-          const updated = { ...currentUser, status: json.status };
-          setUser(updated);
-          // update local storage user too
-          auth.setCurrentUser?.(updated); // si tu as cette fonction
-          // sinon fallback:
-          try {
-            localStorage.setItem("currentUser", JSON.stringify(updated));
-          } catch {}
-        }
-      } catch (e) {
-        console.warn("[ChefLayout] status resync failed", e);
-      }
-    })();
+
+    // ✅ On construit un "user" compatible UI à partir de Supabase
+    const pseudoUser: any = {
+      id: sbUser.id,
+      email: sbUser.email ?? '',
+      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+      status: 'draft',
+    };
+
+    setUser(pseudoUser);
+
+    // (optionnel) resync status depuis DB
+    try {
+      const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (alive && json?.status) setUser((prev: any) => ({ ...prev, status: json.status }));
+    } catch {}
+  })();
+
+  const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+    const sbUser = session?.user ?? null;
+    if (!sbUser) router.replace('/chef/login');
+  });
+
+  // robots noindex (ok)
+  const meta = document.createElement('meta');
+  meta.name = 'robots';
+  meta.content = 'noindex, nofollow';
+  document.head.appendChild(meta);
+
+  return () => {
+    alive = false;
+    sub.subscription.unsubscribe();
+    if (document.head.contains(meta)) document.head.removeChild(meta);
+  };
+}, [router]);
     
 
     // No index
@@ -100,10 +126,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [mobileOpen]);
 
-  const handleLogout = () => {
-    auth.logout();
-    router.push('/');
-  };
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  router.replace('/chef/login');
+};
 
   if (!user) return null;
 
