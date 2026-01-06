@@ -10,28 +10,12 @@ type ChefProfileMobility = {
   baseCity?: string;
   travelRadiusKm?: number;
   internationalMobility?: boolean;
-  coverageZones?: string[];
   location?: {
     baseCity?: string;
     travelRadiusKm?: number;
     internationalMobility?: boolean;
-    coverageZones?: string[];
   };
 };
-
-const ZONES = [
-  "Paris / Île-de-France",
-  "Côte d'Azur / Monaco",
-  'Provence / Alpilles',
-  'Alpes (Courchevel, Megève)',
-  'Suisse (Genève, Gstaad)',
-  'Ibiza / Baléares',
-  'Londres',
-  'Italie (Milan, Rome, Toscane)',
-  'Espagne (Barcelone, Marbella)',
-  'Moyen-Orient (Dubaï, Doha)',
-  'International',
-] as const;
 
 function normalizeStr(v: any) {
   return String(v || '').trim();
@@ -48,7 +32,6 @@ function getSuggestedZones(baseCity: string, radiusKm: number, international: bo
 
   const suggested: string[] = [];
 
-  // Heuristiques simples (pas de géocoding, mais très lisible et efficace)
   const isParis = key.includes('paris') || key.includes('île-de-france') || key.includes('ile de france');
   const isRiviera =
     key.includes('nice') ||
@@ -77,9 +60,19 @@ function getSuggestedZones(baseCity: string, radiusKm: number, international: bo
     key.includes('geneve') ||
     key.includes('genève');
 
-  const isSwiss = key.includes('geneve') || key.includes('genève') || key.includes('lausanne') || key.includes('gstaad') || key.includes('zurich');
+  const isSwiss =
+    key.includes('geneve') ||
+    key.includes('genève') ||
+    key.includes('lausanne') ||
+    key.includes('gstaad') ||
+    key.includes('zurich');
 
-  const isIbiza = key.includes('ibiza') || key.includes('balear') || key.includes('palma') || key.includes('majorque') || key.includes('mallorca');
+  const isIbiza =
+    key.includes('ibiza') ||
+    key.includes('balear') ||
+    key.includes('palma') ||
+    key.includes('majorque') ||
+    key.includes('mallorca');
 
   const isLondon = key.includes('london') || key.includes('londres');
 
@@ -97,22 +90,16 @@ function getSuggestedZones(baseCity: string, radiusKm: number, international: bo
   if (isItaly) suggested.push('Italie (Milan, Rome, Toscane)');
   if (isSpain) suggested.push('Espagne (Barcelone, Marbella)');
 
-  // Si radius grand, on peut ajouter une zone “proche” pertinente
   if (radiusKm >= 300) {
-    // Paris => Alpes / Suisse souvent demandés
     if (isParis) suggested.push('Alpes (Courchevel, Megève)', 'Suisse (Genève, Gstaad)');
-    // Côte d'Azur => Provence + Italie + Suisse
     if (isRiviera) suggested.push('Provence / Alpilles', 'Italie (Milan, Rome, Toscane)', 'Suisse (Genève, Gstaad)');
-    // Provence => Côte d'Azur + Alpes
     if (isProvence) suggested.push("Côte d'Azur / Monaco", 'Alpes (Courchevel, Megève)');
   }
 
   if (international) suggested.push('International');
 
-  // fallback si rien reconnu
   if (suggested.length === 0) {
     if (international) return ['International'];
-    // sinon on propose les 2 zones “générales” qui parlent à tout le monde
     return ["Paris / Île-de-France", "Côte d'Azur / Monaco"];
   }
 
@@ -127,7 +114,6 @@ export default function ChefMobilityPage() {
     baseCity: '',
     travelRadiusKm: 50,
     internationalMobility: false,
-    coverageZones: [] as string[],
   });
 
   useEffect(() => {
@@ -138,7 +124,6 @@ export default function ChefMobilityPage() {
       baseCity: p.location?.baseCity ?? p.baseCity ?? '',
       travelRadiusKm: p.location?.travelRadiusKm ?? p.travelRadiusKm ?? 50,
       internationalMobility: p.location?.internationalMobility ?? p.internationalMobility ?? false,
-      coverageZones: (p.location?.coverageZones ?? p.coverageZones ?? []) as string[],
     });
   }, []);
 
@@ -146,25 +131,14 @@ export default function ChefMobilityPage() {
     return getSuggestedZones(data.baseCity, Number(data.travelRadiusKm || 0), !!data.internationalMobility);
   }, [data.baseCity, data.travelRadiusKm, data.internationalMobility]);
 
-  const toggleZone = (zone: string) => {
-    setData((prev) => ({
-      ...prev,
-      coverageZones: prev.coverageZones.includes(zone)
-        ? prev.coverageZones.filter((z) => z !== zone)
-        : [...prev.coverageZones, zone],
-    }));
-  };
-
   async function saveChefProfilePatch(patch: any) {
     const user = auth.getCurrentUser?.();
     if (!user?.id) throw new Error('No user');
 
-    // 1) GET existing profile from DB
     const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
     const json = await resGet.json();
     const current = json?.profile ?? {};
 
-    // 2) merge
     const merged = {
       ...current,
       ...patch,
@@ -173,7 +147,6 @@ export default function ChefMobilityPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    // 3) PUT
     const resPut = await fetch('/api/chef/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -184,13 +157,6 @@ export default function ChefMobilityPage() {
     return merged;
   }
 
-  const applySuggested = () => {
-    setData((prev) => ({
-      ...prev,
-      coverageZones: uniq(suggestedZones),
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -200,25 +166,20 @@ export default function ChefMobilityPage() {
       if (!user?.id) throw new Error('No user');
 
       const patch = {
-        // ✅ on garde location comme source de vérité
+        // ✅ source de vérité
         location: {
           baseCity: normalizeStr(data.baseCity),
           travelRadiusKm: Number(data.travelRadiusKm || 0),
           internationalMobility: !!data.internationalMobility,
-          coverageZones: uniq(data.coverageZones),
         },
 
-        // ✅ compat: certains écrans lisent encore ces champs au top-level
+        // ✅ compat legacy (si d’autres pages lisent encore top-level)
         baseCity: normalizeStr(data.baseCity),
         travelRadiusKm: Number(data.travelRadiusKm || 0),
         internationalMobility: !!data.internationalMobility,
-        coverageZones: uniq(data.coverageZones),
       };
 
-      // ✅ DB (merge)
       await saveChefProfilePatch(patch);
-
-      // ✅ local sync (UX)
       await auth.updateChefProfile?.(user.id, patch as any);
 
       setSuccess(true);
@@ -247,7 +208,7 @@ export default function ChefMobilityPage() {
               placeholder="Ex: Paris, Nice, Genève..."
             />
             <p className="text-xs text-stone-400">
-              Cette ville sert à suggérer automatiquement des zones de couverture.
+              Cette ville sert à suggérer automatiquement des zones.
             </p>
           </div>
 
@@ -283,21 +244,19 @@ export default function ChefMobilityPage() {
             </div>
           </label>
 
-          {/* ✅ Suggested zones */}
+          {/* ✅ Zones suggérées (affichage uniquement) */}
           <div className="space-y-3 pt-4 border-t border-stone-100">
             <div className="flex items-center justify-between gap-3">
               <Label>Zones suggérées</Label>
-              <Button type="button" onClick={applySuggested} className="w-auto px-4" disabled={suggestedZones.length === 0}>
-                Appliquer
+              {/* bouton conservé mais devient informatif */}
+              <Button type="button" disabled className="w-auto px-4 opacity-50 cursor-not-allowed">
+                Auto
               </Button>
             </div>
 
             <div className="flex flex-wrap gap-2">
               {suggestedZones.map((z) => (
-                <span
-                  key={z}
-                  className="text-xs px-2.5 py-1 border border-stone-200 bg-stone-50 text-stone-700"
-                >
+                <span key={z} className="text-xs px-2.5 py-1 border border-stone-200 bg-stone-50 text-stone-700">
                   {z}
                 </span>
               ))}
@@ -307,40 +266,8 @@ export default function ChefMobilityPage() {
             </div>
 
             <p className="text-xs text-stone-400">
-              Tu peux appliquer puis ajuster manuellement en dessous.
+              Les zones suggérées sont calculées automatiquement à partir de votre ville et de votre rayon.
             </p>
-          </div>
-
-          {/* ✅ All zones */}
-          <div className="space-y-4 pt-4 border-t border-stone-100">
-            <Label>Zones de Couverture (sélection)</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {ZONES.map((zone) => (
-                <label
-                  key={zone}
-                  className={`flex items-center justify-between p-4 border cursor-pointer transition-colors ${
-                    data.coverageZones.includes(zone) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
-                  }`}
-                >
-                  <span className="text-sm font-medium text-stone-800">{zone}</span>
-
-                  <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={data.coverageZones.includes(zone)}
-                    onChange={() => toggleZone(zone)}
-                  />
-
-                  <div
-                    className={`w-4 h-4 border flex items-center justify-center ${
-                      data.coverageZones.includes(zone) ? 'bg-stone-900 border-stone-900' : 'border-stone-300'
-                    }`}
-                  >
-                    {data.coverageZones.includes(zone) && <div className="w-1.5 h-1.5 bg-white" />}
-                  </div>
-                </label>
-              ))}
-            </div>
           </div>
 
           <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
