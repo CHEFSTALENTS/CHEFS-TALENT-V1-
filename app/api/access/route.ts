@@ -27,10 +27,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid code' }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true, next });
 
   const cookieName =
-    area === 'admin' ? 'ct_gate_admin';
+    area === 'admin'
+      ? 'ct_gate_admin'
+      : area === 'chef'
+      ? 'ct_gate_chef'
+      : 'ct_gate_public';
 
   res.cookies.set(cookieName, '1', {
     httpOnly: true,
