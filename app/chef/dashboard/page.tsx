@@ -48,10 +48,7 @@ function safeReadLS<T>(key: string): T | null {
   }
 }
 
-/**
- * Boot helper: crée/merge un profil minimal en DB via ton API
- * (on évite d’écrire direct Supabase client -> RLS / sécurité)
- */
+/** crée/merge un profil minimal via ton API */
 async function ensureChefProfileExists(params: {
   userId: string;
   email: string;
@@ -81,87 +78,79 @@ async function ensureChefProfileExists(params: {
     throw new Error(`ensureChefProfileExists failed: ${res.status} ${txt}`);
   }
 
-  return res.json(); // { profile }
+  return res.json();
 }
 
 export default function ChefDashboardPage() {
   const router = useRouter();
 
   const [booting, setBooting] = useState(true);
-  const [isReady, setIsReady] = useState(false);
-
-  // user supabase (source de vérité)
   const [sbUser, setSbUser] = useState<any | null>(null);
-
-  // profil (DB / fallback LS)
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
   // anti double-call ensure profile
   const profileBootRef = useRef<Record<string, boolean>>({});
 
-  /**
-   * A) Boot session Supabase + ensure profile + anti-flicker
-   */
+  // 1) ✅ Source de vérité = Supabase session
   useEffect(() => {
     let cancelled = false;
     let unsub: { unsubscribe: () => void } | null = null;
 
-    const handleSession = async (sessionUser: any | null) => {
+    const finish = () => {
+      if (!cancelled) setBooting(false);
+    };
+
+    const handleUser = async (user: any | null) => {
       if (cancelled) return;
 
-      // Pas connecté => redirect login (propre, sans clignote)
-      if (!sessionUser?.id) {
+      if (!user?.id) {
         setSbUser(null);
-        setIsReady(false);
-        setBooting(false);
+        finish();
+        // IMPORTANT: on redirect seulement une fois qu’on a fini de boot
         router.replace('/chef/login');
         return;
       }
 
-      // Connecté
-      setSbUser(sessionUser);
-      setIsReady(true);
+      setSbUser(user);
 
-      // Ensure profile 1 fois / user
-      if (!profileBootRef.current[sessionUser.id]) {
-        profileBootRef.current[sessionUser.id] = true;
-
+      // Ensure profile (1 seule fois)
+      if (!profileBootRef.current[user.id]) {
+        profileBootRef.current[user.id] = true;
         try {
           const raw = localStorage.getItem('chef_pending_profile');
           const pending: PendingProfile | null = raw ? JSON.parse(raw) : null;
 
           await ensureChefProfileExists({
-            userId: sessionUser.id,
-            email: sessionUser.email ?? pending?.email ?? '',
+            userId: user.id,
+            email: user.email ?? pending?.email ?? '',
             pending,
           });
 
           localStorage.removeItem('chef_pending_profile');
         } catch (e) {
-          console.error('[Dashboard boot] ensure profile error:', e);
+          console.error('[Dashboard] ensure profile error:', e);
         }
       }
 
-      if (!cancelled) setBooting(false);
+      finish();
     };
 
     (async () => {
       try {
-        // 1) Session initiale
         const { data, error } = await supabase.auth.getSession();
-        if (error) console.error('[Dashboard boot] getSession error:', error);
+        if (error) console.error('[Dashboard] getSession error:', error);
 
-        await handleSession(data?.session?.user ?? null);
+        await handleUser(data?.session?.user ?? null);
 
-        // 2) Écoute les changements (magic link, refresh, logout)
         const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-          handleSession(session?.user ?? null);
+          handleUser(session?.user ?? null);
         });
 
         unsub = sub?.subscription ?? null;
       } catch (e) {
-        console.error('[Dashboard boot] fatal error:', e);
-        if (!cancelled) setBooting(false);
+        console.error('[Dashboard] boot fatal:', e);
+        finish();
+        router.replace('/chef/login');
       }
     })();
 
@@ -173,25 +162,20 @@ export default function ChefDashboardPage() {
     };
   }, [router]);
 
-  /**
-   * B) Charger le profil pour l’UI (DB -> fallback localStorage)
-   * (uniquement quand on est connecté)
-   */
+  // 2) Load profil DB (si session ok)
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const id = sbUser?.id;
-        if (!id) return;
+        if (!sbUser?.id) return;
 
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
         if (!cancelled) {
-          if (fromDb) setSettingsProfile(fromDb);
-          else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
+          setSettingsProfile(fromDb || safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
         }
       } catch {
         if (!cancelled) setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
@@ -203,7 +187,7 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser?.id]);
 
-  // ✅ guards d'affichage stables (anti-flicker)
+  // UI loading
   if (booting) {
     return (
       <ChefLayout>
@@ -212,7 +196,8 @@ export default function ChefDashboardPage() {
     );
   }
 
-  if (!isReady || !sbUser?.id) {
+  // si pas de session, on laisse le redirect faire son job
+  if (!sbUser?.id) {
     return (
       <ChefLayout>
         <div className="p-8">Redirection…</div>
@@ -220,6 +205,7 @@ export default function ChefDashboardPage() {
     );
   }
 
+  // Labels
   const profileTypeLabels: Record<string, string> = {
     private: 'Chef Privé',
     residence: 'Chef Résidence',
@@ -227,34 +213,29 @@ export default function ChefDashboardPage() {
     pastry: 'Chef Pâtissier',
   };
 
-  // 👉 source de vérité côté dashboard = DB/LS (pas de legacy auth ici)
+  // merged profile = DB/LS + infos supabase
   const mergedProfile = useMemo<AnyProfile>(() => {
     const p = settingsProfile ?? {};
-    const fullName = String(p?.name ?? '').trim();
+    const fullName = `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim();
+
     return {
       ...p,
-      name: fullName,
       email: p?.email ?? sbUser?.email ?? '',
+      name: p?.name ?? (fullName || p?.name || ''),
     };
   }, [settingsProfile, sbUser?.email]);
 
-  // completion (si tu t’en sers ailleurs)
   const completion = useMemo(() => {
     const { ok, details } = isProfileCompleteForValidation(mergedProfile ?? {});
     const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
     const done = items.filter((i) => i.ok).length;
     const total = items.length || 1;
-    return { ok, done, total, score: Math.round((done / total) * 100), details };
+    return { ok, done, total, score: Math.round((done / total) * 100) };
   }, [mergedProfile]);
 
-  // Score unique
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
-    const city = String(
-      p.city ?? p.baseCity ?? p.location?.baseCity ?? (typeof p.location === 'string' ? p.location : '')
-    )
-      .split(',')[0]
-      .trim();
+    const city = String(p.city ?? p.baseCity ?? p.location?.baseCity ?? '').split(',')[0].trim();
 
     return {
       name: String(p.name ?? '').trim(),
@@ -263,11 +244,9 @@ export default function ChefDashboardPage() {
       country: String(p.country ?? p.location?.country ?? '').trim(),
       bio: String(p.bio ?? '').trim(),
       yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
-
       cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
       specialties: Array.isArray(p.specialties) ? p.specialties : [],
       languages: Array.isArray(p.languages) ? p.languages : [],
-
       instagram: String(p.instagram ?? '').trim(),
       website: String(p.website ?? '').trim(),
       portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
@@ -277,7 +256,6 @@ export default function ChefDashboardPage() {
 
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
-  // Checks dashboard
   const checks = useMemo(() => {
     const bio = String(mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
     const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
@@ -285,9 +263,7 @@ export default function ChefDashboardPage() {
     const identityOk =
       !!String(mergedProfile.name ?? '').trim() &&
       !!String(mergedProfile.phone ?? '').trim() &&
-      (!!String(mergedProfile.city ?? '').trim() ||
-        !!String(mergedProfile.location?.baseCity ?? '').trim() ||
-        !!String((mergedProfile as any).baseCity ?? '').trim());
+      (!!String(mergedProfile.city ?? '').trim() || !!String(mergedProfile.location?.baseCity ?? '').trim());
 
     const experienceOk = (Number(years) || 0) > 0 || bio.length >= 80;
 
@@ -297,7 +273,6 @@ export default function ChefDashboardPage() {
       (mergedProfile as any).gallery ??
       (mergedProfile as any).portfolioImages ??
       [];
-
     const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
 
     const portfolioOk =
@@ -317,14 +292,10 @@ export default function ChefDashboardPage() {
 
     const mobilityOk =
       !!String(mergedProfile.location?.baseCity ?? '').trim() ||
-      !!String((mergedProfile as any).baseCity ?? '').trim() ||
       mergedProfile.location?.internationalMobility === true ||
-      (mergedProfile.location?.coverageZones?.length ?? 0) > 0 ||
-      ((mergedProfile as any).coverageZones?.length ?? 0) > 0;
+      (mergedProfile.location?.coverageZones?.length ?? 0) > 0;
 
     const preferencesOk = (mergedProfile.cuisines?.length ?? 0) >= 1 && (mergedProfile.languages?.length ?? 0) >= 1;
-
-    const availabilityOk = true;
 
     return [
       { key: 'identity', title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
@@ -332,7 +303,7 @@ export default function ChefDashboardPage() {
       { key: 'portfolio', title: 'Portfolio / Photos', desc: 'Lien Drive / site / Notion.', path: '/chef/portfolio', done: portfolioOk, icon: ImageIcon },
       { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
       { key: 'mobility', title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
-      { key: 'availability', title: 'Disponibilités', desc: 'Ouverture des missions bientôt.', path: '/chef/availability', done: availabilityOk, icon: Calendar },
+      { key: 'availability', title: 'Disponibilités', desc: 'Ouverture des missions bientôt.', path: '/chef/availability', done: true, icon: Calendar },
       { key: 'preferences', title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
     ];
   }, [mergedProfile]);
@@ -352,7 +323,7 @@ export default function ChefDashboardPage() {
   return (
     <ChefLayout>
       <div className="space-y-12 animate-in fade-in duration-700">
-        {/* Welcome Header */}
+        {/* Header */}
         <div className="flex items-end justify-between border-b border-stone-200 pb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -365,28 +336,23 @@ export default function ChefDashboardPage() {
             </div>
 
             <h1 className="text-4xl font-serif text-stone-900 mt-2">
-              Bonjour, Chef {String(mergedProfile?.name ?? '').split(' ').slice(-1)[0] || ''}.
+              Bonjour, Chef {(mergedProfile?.name?.split(' ').slice(-1)[0] ?? '')}.
             </h1>
 
             {(mergedProfile as any)?.profileType && (
               <p className="text-stone-500 mt-2 font-light">
                 Profil : {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
-                <span className="mx-2">•</span>
-                {(mergedProfile as any)?.seniorityLevel
-                  ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
-                    String((mergedProfile as any).seniorityLevel).slice(1)
-                  : ''}
               </p>
             )}
           </div>
 
           <div className="text-right">
-            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
-            <StatusBadge status={String((mergedProfile as any).status || '')} />
+            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Compte</span>
+            <span className="text-xs text-stone-600">{sbUser?.email}</span>
           </div>
         </div>
 
-        {/* Score banner */}
+        {/* Score */}
         <div className="bg-white border border-stone-200 p-8 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-3 flex-1">
@@ -409,7 +375,11 @@ export default function ChefDashboardPage() {
               </div>
 
               <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
+                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour être prioritaire au lancement.
+              </p>
+
+              <p className="text-xs text-stone-400">
+                Complétion validation : {completion.score}% ({completion.done}/{completion.total})
               </p>
             </div>
 
@@ -423,60 +393,29 @@ export default function ChefDashboardPage() {
           </div>
         </div>
 
-        {/* Status Alerts */}
-        {String((mergedProfile as any).status) === 'pending_validation' && (
+        {/* Alerts */}
+        {score < 70 && (
           <div className="bg-white border border-stone-200 p-8 shadow-sm">
             <div className="flex items-start gap-6">
               <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
+                <AlertTriangle className="w-6 h-6 text-bronze" />
               </div>
-              <div className="space-y-4">
-                <h3 className="text-xl font-serif text-stone-900">
-                  {score >= 70 ? "Dossier en cours d'examen" : 'Complétez votre profil pour activation'}
-                </h3>
+              <div className="space-y-2">
+                <h3 className="text-xl font-serif text-stone-900">Complétez votre profil</h3>
                 <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
-                  {score >= 70
-                    ? "Votre profil est prêt. Notre équipe examine votre dossier. Vous recevrez une notification sous 48h."
-                    : 'Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.'}
+                  Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.
                 </p>
-
-                {score < 70 && (
-                  <div className="w-full bg-stone-100 h-1 mt-4">
-                    <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
-                  </div>
-                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Subscription Coming Soon */}
-        <div className="bg-stone-50 border border-stone-200 p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex gap-6 items-start">
-            <div className="w-12 h-12 bg-white border border-stone-100 flex items-center justify-center rounded-full shrink-0">
-              <Sparkles className="w-5 h-5 text-stone-400" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-serif text-stone-900">Abonnement (à venir)</h3>
-              <p className="text-stone-500 font-light text-sm max-w-lg">
-                Chef Talents est actuellement gratuit pour les chefs. Une offre d’abonnement optionnelle pourra arriver plus tard (outils, visibilité, automatisations…).
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" disabled className="whitespace-nowrap opacity-50">
-            Bientôt disponible
-          </Button>
-        </div>
-
-        {/* Action List */}
+        {/* Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {checks.map((c) => (
             <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
           ))}
         </div>
-
-        {/* debug completion optionnel */}
-        {/* <pre className="text-xs opacity-50">{JSON.stringify(completion, null, 2)}</pre> */}
       </div>
     </ChefLayout>
   );
@@ -516,33 +455,5 @@ function ActionCard({
         {done ? 'Modifier' : 'Compléter'} <ArrowRight className="w-3 h-3" />
       </div>
     </Link>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending_validation: 'bg-stone-100 text-stone-600',
-    approved: 'bg-stone-800 text-white',
-    active: 'bg-stone-900 text-white',
-    paused: 'bg-stone-200 text-stone-400',
-  };
-
-  const labels: Record<string, string> = {
-    pending_validation: 'En Attente',
-    approved: 'Validé',
-    active: 'Actif',
-    paused: 'En Pause',
-  };
-
-  const s = (status || '').toLowerCase();
-
-  return (
-    <span
-      className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
-        styles[s] || styles.pending_validation
-      }`}
-    >
-      {labels[s] || s || '—'}
-    </span>
   );
 }
