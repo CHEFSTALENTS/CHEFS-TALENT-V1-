@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const res = NextResponse.json({ ok: true });
 
   const cookieName =
-    area === 'admin' ? 'ct_gate_admin' : area === 'chef' ? 'ct_gate_chef' : 'ct_gate_public';
+    area === 'admin' ? 'ct_gate_admin';
 
   res.cookies.set(cookieName, '1', {
     httpOnly: true,
