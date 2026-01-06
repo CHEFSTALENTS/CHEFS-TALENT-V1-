@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 import { ChefLayout } from '../../../components/ChefLayout';
 import { auth } from '../../../services/storage';
 import { Label, Button } from '../../../components/ui';
 import { supabase } from '@/services/supabaseClient';
-import { useRouter } from 'next/navigation';
+
 import { computeChefScore } from '@/lib/chefScore';
+import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
+
 import {
   CheckCircle2,
   Clock,
@@ -24,7 +28,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 
-import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
+type AnyProfile = Record<string, any>;
 
 const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
@@ -38,93 +42,122 @@ function safeReadLS<T>(key: string): T | null {
   }
 }
 
-type AnyProfile = Record<string, any>;
-
 export default function ChefDashboardPage() {
-  const user = auth.getCurrentUser();
-const router = useRouter();
+  const router = useRouter();
+
+  // legacy user (si tu en as encore besoin pour l’onboarding)
+  const user = auth.getCurrentUser?.();
+
+  const [booting, setBooting] = useState(true);
+  const [sbUser, setSbUser] = useState<any | null>(null);
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
-const [booting, setBooting] = useState(true);
-const [sbUser, setSbUser] = useState<any | null>(null);
-  
+
+  // 1) ✅ Boot session Supabase (source de vérité)
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error) console.error('[dashboard] getSession error', error);
+
+        const session = data?.session ?? null;
+
+        if (!session?.user?.id) {
+          setSbUser(null);
+          setBooting(false);
+          router.replace('/chef/login');
+          return;
+        }
+
+        setSbUser(session.user);
+        setBooting(false);
+      } catch (e) {
+        console.error('[dashboard] boot error', e);
+        if (!mounted) return;
+        setSbUser(null);
+        setBooting(false);
+        router.replace('/chef/login');
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  // 2) ✅ Charge profil DB (quand on a sbUser)
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const u = auth.getCurrentUser?.();
-        if (!u?.id) return;
+        if (!sbUser?.id) return;
 
-        // 1) DB (source de vérité)
-const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
         if (!cancelled) {
-          if (fromDb) {
-            setSettingsProfile(fromDb);
-          } else {
-            // 2) fallback localStorage
-            const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-            setSettingsProfile(fromLS);
-          }
+          if (fromDb) setSettingsProfile(fromDb);
+          else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
         }
-      } catch {
-        // fallback localStorage
-        const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-        if (!cancelled) setSettingsProfile(fromLS);
+      } catch (e) {
+        console.error('[dashboard] profile fetch error', e);
+        if (!cancelled) setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sbUser?.id]);
 
-  if (!user) return null;
+  // 3) ✅ UI states (APRES hooks)
+  if (booting) {
+    return (
+      <ChefLayout>
+        <div className="p-8">Chargement…</div>
+      </ChefLayout>
+    );
+  }
 
+  // si pas connecté, on laisse le redirect agir
+  if (!sbUser?.id) {
+    return (
+      <ChefLayout>
+        <div className="p-8">Redirection…</div>
+      </ChefLayout>
+    );
+  }
+
+  // Labels
   const profileTypeLabels: Record<string, string> = {
     private: 'Chef Privé',
     residence: 'Chef Résidence',
     yacht: 'Chef Yacht',
     pastry: 'Chef Pâtissier',
   };
-useEffect(() => {
-  let mounted = true;
 
-  (async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!mounted) return;
+  // Profil "onboarding" (legacy)
+  const onboardingProfile: AnyProfile = (user as any)?.profile || {};
 
-    if (!data.session) {
-      router.replace('/chef/login');
-      return;
-    }
-
-    setSbUser(data.session.user);
-    setBooting(false);
-  })();
-
-  return () => {
-    mounted = false;
-  };
-}, [router]);
-  // Profil "onboarding" (historique)
-  const onboardingProfile: AnyProfile = (user as any).profile || {};
-
-  // ✅ Source de vérité unique : on fusionne onboarding + settings (DB/LS)
+  // ✅ Source de vérité unique : settingsProfile (DB/LS) + onboarding en fallback
   const mergedProfile = useMemo<AnyProfile>(() => {
     const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
 
     return {
       ...onboardingProfile,
       ...(settingsProfile ?? {}),
-      // fallbacks utiles
-      email: (settingsProfile as any)?.email ?? (user as any)?.email ?? onboardingProfile.email,
+      email: (settingsProfile as any)?.email ?? sbUser?.email ?? (user as any)?.email ?? onboardingProfile.email,
       name: (settingsProfile as any)?.name ?? (fullName || onboardingProfile.name),
     };
-  }, [onboardingProfile, settingsProfile, user]);
-  
+  }, [onboardingProfile, settingsProfile, sbUser?.email, user]);
+
+  // ⬇️ À partir d’ici, tu peux garder TON code actuel (computeChefScore, checks, render etc.)
+  // ...
+}
 const completion = useMemo(() => {
   const { details } = isProfileCompleteForValidation(mergedProfile ?? {});
   const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
