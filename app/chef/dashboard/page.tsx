@@ -33,6 +33,45 @@ type PendingProfile = {
   email?: string;
   createdAt?: string;
 };
+const [authReady, setAuthReady] = useState(false);
+
+useEffect(() => {
+  let mounted = true;
+
+  const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+    if (!mounted) return;
+
+    if (event === 'INITIAL_SESSION') {
+      setAuthReady(true);
+      if (!session?.user) router.replace('/chef/login');
+      else setSbUser(session.user);
+    }
+
+    if (event === 'SIGNED_OUT') {
+      router.replace('/chef/login');
+    }
+
+    if (event === 'SIGNED_IN') {
+      setSbUser(session?.user ?? null);
+    }
+  });
+
+  supabase.auth.getSession().catch(() => {});
+
+  return () => {
+    mounted = false;
+    sub.subscription.unsubscribe();
+  };
+}, [router]);
+
+// UI loading
+if (!authReady) {
+  return (
+    <ChefLayout>
+      <div className="p-8">Chargement…</div>
+    </ChefLayout>
+  );
+}
 
 type AnyProfile = Record<string, any>;
 
