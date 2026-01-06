@@ -46,11 +46,10 @@ if (
   return NextResponse.next();
 }
   
-  // ✅ IMPORTANT : on NE BLOQUE PLUS /chef ici
-  // Car la session Supabase est côté client (localStorage) et le middleware ne peut pas la lire.
-  if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
-    return NextResponse.next();
-  }
+ // ✅ Chefs : on laisse passer (auth gérée par Supabase côté client)
+if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
+  return NextResponse.next();
+}
 
   // ✅ Public (optionnel)
   if (!hasPublic) {
