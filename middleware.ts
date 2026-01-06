@@ -36,7 +36,16 @@ export function middleware(req: NextRequest) {
     if (hasAdmin) return NextResponse.next();
     return redirectToAccess(req, 'admin');
   }
-
+  
+// ✅ Autoriser les pages d'auth chef sans gate cookie
+if (
+  pathname === '/chef/signup' ||
+  pathname === '/chef/login' ||
+  pathname.startsWith('/chef/auth') // si tu l’utilises encore
+) {
+  return NextResponse.next();
+}
+  
   // ✅ IMPORTANT : on NE BLOQUE PLUS /chef ici
   // Car la session Supabase est côté client (localStorage) et le middleware ne peut pas la lire.
   if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
