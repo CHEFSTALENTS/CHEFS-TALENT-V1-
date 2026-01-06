@@ -20,15 +20,35 @@ export default function ChefSignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // ✅ état “compte créé”
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // ✅ Si déjà connecté, on renvoie au dashboard
   useEffect(() => {
+    let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
       if (data.session) router.replace('/chef/dashboard');
     });
+    return () => {
+      mounted = false;
+    };
   }, [router]);
+
+  // ✅ pose le cookie gate chef (middleware) si ton endpoint existe
+  const ensureChefGateCookie = async () => {
+    try {
+      // ton middleware autorise /api/access
+      // adapte si ton endpoint est différent (mais chez toi c'est /api/access)
+      await fetch('/api/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area: 'chef' }),
+        cache: 'no-store',
+      });
+    } catch {
+      // silencieux: si ça échoue, on laisse quand même tenter le dashboard
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,10 +62,11 @@ export default function ChefSignupPage() {
       const email = formData.email.trim().toLowerCase();
       const password = formData.password;
 
+      if (!firstName || !lastName) throw new Error('Veuillez renseigner prénom et nom.');
       if (!email) throw new Error('Veuillez entrer un email.');
-      if (password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
+      if (!password || password.length < 8) throw new Error('Mot de passe trop court (8+ caractères).');
 
-      // 1) stocke le mini profil (utile pour bootstrap DB profile plus tard si tu veux)
+      // 1) stocke le mini profil (bootstrap DB profile si besoin plus tard)
       localStorage.setItem(
         'chef_pending_profile',
         JSON.stringify({
@@ -56,12 +77,11 @@ export default function ChefSignupPage() {
         })
       );
 
-      // 2) ✅ SignUp email + password => crée une ligne dans auth.users
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // 2) ✅ SignUp email + password
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          // metadata (optionnel mais utile)
           data: {
             firstName,
             lastName,
@@ -69,20 +89,20 @@ export default function ChefSignupPage() {
           },
         },
       });
-
       if (signUpError) throw signUpError;
 
-      // 3) Si confirmation email OFF => session immédiate => dashboard
-      if (data?.session) {
-        router.replace('/chef/dashboard');
-        return;
+      // 3) ✅ Fallback: s’il n’y a pas de session, on force un sign-in immédiat
+      // (selon config/cookies, session peut être null même avec confirmation OFF)
+      if (!signUpData?.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
       }
 
-      // 4) Si confirmation email ON => pas de session : afficher message + aller login
-      setSuccessMsg(
-        `✅ Compte créé. Vérifiez votre email (${email}) pour confirmer, puis connectez-vous.`
-      );
-      setTimeout(() => router.replace('/chef/login'), 900);
+      // 4) ✅ Gate cookie chef (si ton middleware le demande)
+      await ensureChefGateCookie();
+
+      // 5) ✅ Redirect direct dashboard
+      router.replace('/chef/dashboard');
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Une erreur est survenue');
@@ -200,9 +220,7 @@ export default function ChefSignupPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
-              <div className="text-xs text-stone-400">
-                🔒 Accès privé • connexion par email + mot de passe.
-              </div>
+              <div className="text-xs text-stone-400">🔒 Accès privé • connexion par email + mot de passe.</div>
             </div>
 
             {successMsg && !error && (
