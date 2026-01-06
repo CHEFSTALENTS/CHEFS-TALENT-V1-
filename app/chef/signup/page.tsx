@@ -105,7 +105,14 @@ export default function ChefSignupPage() {
       router.replace('/chef/dashboard');
       return;
     }
-
+// ✅ pose le cookie gate chef (middleware)
+await fetch('/api/access', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ area: 'chef' }),
+  cache: 'no-store',
+});
+    
     // Si malgré tout pas de session (cas rare)
     setSuccessMsg(`✅ Compte créé, mais connexion impossible automatiquement. Réessayez.`);
   } catch (err: any) {
@@ -115,6 +122,7 @@ export default function ChefSignupPage() {
     setLoading(false);
   }
 };
+  router.replace('/chef/dashboard');
   
   return (
     <div className="min-h-screen grid md:grid-cols-2 bg-paper">
