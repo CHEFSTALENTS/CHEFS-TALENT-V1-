@@ -21,15 +21,13 @@ import {
   Image as ImageIcon,
   Map,
   Calendar,
-  AlertTriangle,
-  Crown,
   Sparkles,
+  Crown,
   Lock,
   DollarSign,
 } from 'lucide-react';
 
 type AnyProfile = Record<string, any>;
-
 const SETTINGS_STORAGE_KEY = 'ct_chef_profile_v1';
 
 function safeReadLS<T>(key: string): T | null {
@@ -37,116 +35,78 @@ function safeReadLS<T>(key: string): T | null {
     const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
+
+// Composant simple pour le statut
+const StatusBadge = ({ status }: { status: string }) => (
+  <span className="px-3 py-1 bg-stone-100 rounded-full text-[10px] font-bold uppercase tracking-widest text-stone-600 border border-stone-200">
+    {status || 'Incomplet'}
+  </span>
+);
 
 export default function ChefDashboardPage() {
   const router = useRouter();
 
-  // legacy user (si tu en as encore besoin pour l’onboarding)
-  const user = auth.getCurrentUser?.();
-
+  // 1. États
   const [booting, setBooting] = useState(true);
   const [sbUser, setSbUser] = useState<any | null>(null);
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
 
-  // 1) ✅ Boot session Supabase (source de vérité)
+  // 2. LOGIQUE DE PROTECTION (Source de vérité Supabase)
   useEffect(() => {
     let mounted = true;
 
-    (async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (!mounted) return;
-        if (error) console.error('[dashboard] getSession error', error);
-
-        const session = data?.session ?? null;
-
-        if (!session?.user?.id) {
-          setSbUser(null);
-          setBooting(false);
-          router.replace('/chef/login');
-          return;
-        }
-
-        setSbUser(session.user);
-        setBooting(false);
-      } catch (e) {
-        console.error('[dashboard] boot error', e);
-        if (!mounted) return;
-        setSbUser(null);
-        setBooting(false);
-        router.replace('/chef/login');
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        if (mounted) router.replace('/chef/login');
+        return;
       }
-    })();
 
-    return () => {
-      mounted = false;
+      if (mounted) {
+        setSbUser(session.user);
+        setBooting(false); // On libère l'affichage seulement si session OK
+      }
+    }
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) router.replace('/chef/login');
+    });
+
+    return () => { 
+      mounted = false; 
+      subscription.unsubscribe(); 
     };
   }, [router]);
 
-  // 2) ✅ Charge profil DB (quand on a sbUser)
+  // 3. CHARGEMENT PROFIL (Ta structure actuelle)
   useEffect(() => {
-    let cancelled = false;
-
+    if (!sbUser?.id) return;
     (async () => {
       try {
-        if (!sbUser?.id) return;
-
         const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
-        const fromDb = json?.profile ?? null;
-
-        if (!cancelled) {
-          if (fromDb) setSettingsProfile(fromDb);
-          else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
-        }
+        if (json?.profile) setSettingsProfile(json.profile);
+        else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
       } catch (e) {
-        console.error('[dashboard] profile fetch error', e);
-        if (!cancelled) setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
+        setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [sbUser?.id]);
 
-  // 3) ✅ UI states (APRES hooks)
-  if (booting) {
-    return (
-      <ChefLayout>
-        <div className="p-8">Chargement…</div>
-      </ChefLayout>
-    );
-  }
+  // PROTECTION RENDU
+  if (booting || !sbUser) return null;
 
-  // si pas connecté, on laisse le redirect agir
-  if (!sbUser?.id) {
-    return (
-      <ChefLayout>
-        <div className="p-8">Redirection…</div>
-      </ChefLayout>
-    );
-  }
-
-  // Labels
-  const profileTypeLabels: Record<string, string> = {
-    private: 'Chef Privé',
-    residence: 'Chef Résidence',
-    yacht: 'Chef Yacht',
-    pastry: 'Chef Pâtissier',
-  };
-
-  // Profil "onboarding" (legacy)
+  // 4. TA STRUCTURE DE DONNÉES ACTUELLE (Gardée à 100%)
+  const user = auth.getCurrentUser?.();
   const onboardingProfile: AnyProfile = (user as any)?.profile || {};
 
-  // ✅ Source de vérité unique : settingsProfile (DB/LS) + onboarding en fallback
   const mergedProfile = useMemo<AnyProfile>(() => {
     const fullName = `${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim();
-
     return {
       ...onboardingProfile,
       ...(settingsProfile ?? {}),
@@ -155,300 +115,115 @@ export default function ChefDashboardPage() {
     };
   }, [onboardingProfile, settingsProfile, sbUser?.email, user]);
 
-  // ⬇️ À partir d’ici, tu peux garder TON code actuel (computeChefScore, checks, render etc.)
-  // ...
-}
-const completion = useMemo(() => {
-  const { details } = isProfileCompleteForValidation(mergedProfile ?? {});
-  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
-  const ok = items.filter(i => i.ok).length;
-  const total = items.length || 1;
-  return { ok, total, score: Math.round((ok / total) * 100), details };
-}, [mergedProfile]);
-  
-  // ✅ Score unique
-const profileForScore = useMemo(() => {
-  const p: any = mergedProfile ?? {};
-
-  const city =
-    String(
-      p.city ??
-      p.baseCity ??
-      p.location?.baseCity ??
-      (typeof p.location === 'string' ? p.location : '')
-    )
-      .split(',')[0]
-      .trim();
-
-  return {
-    name: String(p.name ?? '').trim(),
-    phone: String(p.phone ?? '').trim(),
-    city,
-    country: String(p.country ?? p.location?.country ?? '').trim(),
-    bio: String(p.bio ?? '').trim(),
-    yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
-
-    cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
-    specialties: Array.isArray(p.specialties) ? p.specialties : [],
-    languages: Array.isArray(p.languages) ? p.languages : [],
-
-    instagram: String(p.instagram ?? '').trim(),
-    website: String(p.website ?? '').trim(),
-    portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
-
-    // 🔥 important : le score regarde souvent avatarUrl
-    avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? '').trim(),
+  const profileTypeLabels: Record<string, string> = {
+    private: 'Chef Privé',
+    residence: 'Chef Résidence',
+    yacht: 'Chef Yacht',
+    pastry: 'Chef Pâtissier',
   };
-}, [mergedProfile]);
 
-const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
-  // ✅ Checks “Tableau de bord” alignés sur tes champs réels (settings + anciens)
+  const profileForScore = useMemo(() => {
+    const p: any = mergedProfile ?? {};
+    const city = String(p.city ?? p.baseCity ?? p.location?.baseCity ?? '').split(',')[0].trim();
+    return {
+      name: String(p.name ?? '').trim(),
+      phone: String(p.phone ?? '').trim(),
+      city,
+      country: String(p.country ?? p.location?.country ?? '').trim(),
+      bio: String(p.bio ?? '').trim(),
+      yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
+      cuisines: Array.isArray(p.cuisines) ? p.cuisines : [],
+      specialties: Array.isArray(p.specialties) ? p.specialties : [],
+      languages: Array.isArray(p.languages) ? p.languages : [],
+      instagram: String(p.instagram ?? '').trim(),
+      website: String(p.website ?? '').trim(),
+      portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
+      avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? '').trim(),
+    };
+  }, [mergedProfile]);
+
+  const { score } = computeChefScore(profileForScore);
+
   const checks = useMemo(() => {
-    const bio = (mergedProfile.bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
-    const years = mergedProfile.yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
-
-    const identityOk =
-      !!mergedProfile.name?.trim() &&
-      !!mergedProfile.phone?.trim() &&
-      (!!mergedProfile.city?.trim() ||
-        !!mergedProfile.location?.baseCity?.trim() ||
-        !!(mergedProfile as any).baseCity?.trim());
-
-    const experienceOk = (years ?? 0) > 0 || bio.length >= 80;
+    const p = mergedProfile;
+    const bio = (p.bio ?? (p as any).about ?? '').trim();
+    const years = p.yearsExperience ?? 0;
+    const images = (p as any).images ?? (p as any).photos ?? [];
     
-const images =
-  (mergedProfile as any).images ??
-  (mergedProfile as any).photos ??
-  (mergedProfile as any).gallery ??
-  (mergedProfile as any).portfolioImages ??
-  [];
-
-const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
-
-const portfolioOk =
-  hasImages ||
-  !!String((mergedProfile as any).photoUrl ?? mergedProfile.avatarUrl ?? '').trim() ||
-  !!String(mergedProfile.portfolioUrl ?? '').trim() ||
-  !!String(mergedProfile.instagram ?? '').trim() ||
-  !!String(mergedProfile.website ?? '').trim();
-
-const pricing = (mergedProfile as any).pricing ?? null;
-
-const hasPricing =
-  !!pricing &&
-  (
-    Number(pricing?.residence?.dailyRate ?? 0) > 0 ||
-    Number(pricing?.event?.pricePerPerson ?? 0) > 0 ||
-    Number((mergedProfile as any).dailyRate ?? 0) > 0 ||
-    Number((mergedProfile as any).pricePerPerson ?? 0) > 0
-  );
-    
-    const mobilityOk =
-      !!mergedProfile.location?.baseCity?.trim() ||
-      !!(mergedProfile as any).baseCity?.trim() ||
-      mergedProfile.location?.internationalMobility === true ||
-      (mergedProfile.location?.coverageZones?.length ?? 0) > 0 ||
-      ((mergedProfile as any).coverageZones?.length ?? 0) > 0;
-
-    const preferencesOk = (mergedProfile.cuisines?.length ?? 0) >= 1 && (mergedProfile.languages?.length ?? 0) >= 1;
-
-    // dispo non-bloquante au lancement (tu peux la connecter plus tard)
-    const availabilityOk = true;
+    const pricing = (p as any).pricing ?? null;
+    const hasPricing = !!pricing && (Number(pricing?.residence?.dailyRate) > 0 || Number(pricing?.event?.pricePerPerson) > 0);
 
     return [
-      {
-        key: 'identity',
-        title: 'Identité & Coordonnées',
-        desc: 'Nom, téléphone, ville…',
-        path: '/chef/identity',
-        done: identityOk,
-        icon: User,
-      },
-      {
-        key: 'experience',
-        title: 'Expérience',
-        desc: 'Bio + expérience',
-        path: '/chef/experience',
-        done: experienceOk,
-        icon: ChefHat,
-      },
-      {
-        key: 'portfolio',
-        title: 'Portfolio / Photos',
-        desc: 'Lien Drive / site / Notion.',
-        path: '/chef/portfolio',
-        done: portfolioOk,
-        icon: ImageIcon,
-      },
-      {
-  key: 'pricing',
-  title: 'Tarifs',
-  desc: 'Prix / jour ou prix / personne',
-  path: '/chef/pricing',
-  done: hasPricing,
-  icon: DollarSign, // (pense à l'import)
-},
-      
-      {
-        key: 'mobility',
-        title: 'Zone & Mobilité',
-        desc: 'Zones, déplacements',
-        path: '/chef/mobility',
-        done: mobilityOk,
-        icon: Map,
-      },
-      {
-        key: 'availability',
-        title: 'Disponibilités',
-        desc: 'Ouverture des missions bientôt.',
-        path: '/chef/availability',
-        done: availabilityOk,
-        icon: Calendar,
-      },
-      {
-        key: 'preferences',
-        title: 'Préférences',
-        desc: 'Cuisines + langues',
-        path: '/chef/preferences',
-        done: preferencesOk,
-        icon: Sparkles,
-      },
+      { key: 'identity', title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: !!p.name?.trim() && !!p.phone?.trim(), icon: User },
+      { key: 'experience', title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: years > 0 || bio.length >= 80, icon: ChefHat },
+      { key: 'portfolio', title: 'Portfolio / Photos', desc: 'Lien Drive / site / Instagram', path: '/chef/portfolio', done: images.length > 0 || !!p.avatarUrl, icon: ImageIcon },
+      { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
+      { key: 'mobility', title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: !!p.location?.baseCity, icon: Map },
+      { key: 'preferences', title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: (p.cuisines?.length ?? 0) >= 1, icon: Sparkles },
     ];
   }, [mergedProfile]);
 
-  const completedCount = checks.filter(c => c.done).length;
-  const progress = Math.round((completedCount / checks.length) * 100);
-
-  const tier = useMemo(() => {
-    if (score >= 90) return { label: 'Priorité MAX', icon: Crown };
-    if (score >= 70) return { label: 'Prioritaire', icon: Sparkles };
-    if (score >= 40) return { label: 'En progression', icon: Clock };
-    return { label: 'À compléter', icon: Lock };
-  }, [score]);
-
-   const TierIcon = tier.icon;
+  const progress = Math.round((checks.filter(c => c.done).length / checks.length) * 100);
+  const tier = score >= 70 ? { label: 'Prioritaire', icon: Sparkles } : { label: 'À compléter', icon: Lock };
+  const TierIcon = tier.icon;
 
   return (
     <ChefLayout>
       <div className="space-y-12 animate-in fade-in duration-700">
-        {/* Header */}
         <div className="flex items-end justify-between border-b border-stone-200 pb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Label className="mb-0">Tableau de bord</Label>
-
-              {(user as any).plan === 'pro' && (user as any).planStatus === 'active' && (
-                <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-bronze border border-bronze px-2 py-0.5 rounded-full">
-                  <Crown className="w-3 h-3" /> Pro
-                </span>
-              )}
-
               <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">
-                <TierIcon className="w-3 h-3" />
-                {tier.label}
+                <TierIcon className="w-3 h-3" /> {tier.label}
               </span>
             </div>
-
             <h1 className="text-4xl font-serif text-stone-900 mt-2">
-              Bonjour, Chef {(user as any).lastName || (mergedProfile?.name?.split(' ').slice(-1)[0] ?? '')}.
+              Bonjour, Chef {(user as any)?.lastName || ''}.
             </h1>
-
-            {(mergedProfile as any)?.profileType && (
-              <p className="text-stone-500 mt-2 font-light">
-                Profil : {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
-                <span className="mx-2">•</span>
-                {(mergedProfile as any)?.seniorityLevel
-                  ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
-                    String((mergedProfile as any).seniorityLevel).slice(1)
-                  : ''}
-              </p>
-            )}
           </div>
-
           <div className="text-right">
-            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
-            <StatusBadge status={String((user as any).status || '')} />
+            <StatusBadge status={String((user as any)?.status || '')} />
           </div>
         </div>
 
-        {/* Score */}
         <div className="bg-white border border-stone-200 p-8 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-3 flex-1">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex-1 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-stone-600" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-stone-400">Score profil</div>
-                  <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}/100</div>
-                </div>
-
-                <span className="ml-auto text-xs text-stone-500">
-                  Checklist : <span className="font-medium text-stone-900">{progress}%</span>
-                </span>
+                <Sparkles className="w-5 h-5 text-stone-600" />
+                <div className="text-2xl font-serif">{score}/100</div>
+                <span className="ml-auto text-xs text-stone-500">Checklist : {progress}%</span>
               </div>
-
               <div className="w-full bg-stone-100 h-1">
-                <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
+                <div className="bg-stone-900 h-1 transition-all" style={{ width: `${score}%` }} />
               </div>
-
-              <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
-              </p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Link href="/chef/settings">
-                <Button className="bg-stone-900 hover:bg-stone-800">
-                  Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
+            <Link href="/chef/settings">
+              <Button className="bg-stone-900 text-white hover:bg-stone-800">Compléter le profil <ArrowRight className="w-4 h-4 ml-2" /></Button>
+            </Link>
           </div>
         </div>
 
-        {/* Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {checks.map((c: any) => (
-            <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
+          {checks.map((c) => (
+            <ActionCard key={c.key} {...c} />
           ))}
         </div>
       </div>
     </ChefLayout>
   );
-} // ✅ IMPORTANT : fermeture UNIQUE du composant
+}
 
-function ActionCard({
-  icon: Icon,
-  title,
-  desc,
-  path,
-  done,
-}: {
-  icon: any;
-  title: string;
-  desc: string;
-  path: string;
-  done: boolean;
-}) {
+function ActionCard({ icon: Icon, title, desc, path, done }: any) {
   return (
-    <Link
-      href={path}
-      className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300"
-    >
+    <Link href={path} className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all">
       <div className="flex justify-between items-start mb-6">
-        <Icon className={`w-6 h-6 ${done ? 'text-stone-900' : 'text-stone-300'}`} strokeWidth={1.5} />
-        {done ? (
-          <CheckCircle2 className="w-5 h-5 text-stone-900" />
-        ) : (
-          <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />
-        )}
+        <Icon className={`w-6 h-6 ${done ? 'text-stone-900' : 'text-stone-300'}`} />
+        {done ? <CheckCircle2 className="w-5 h-5 text-stone-900" /> : <div className="w-5 h-5 rounded-full border border-stone-200" />}
       </div>
-
-      <h3 className="text-lg font-serif text-stone-900 mb-2">{title}</h3>
+      <h3 className="text-lg font-serif mb-2">{title}</h3>
       <p className="text-sm text-stone-500 font-light mb-6">{desc}</p>
-
       <div className="text-xs uppercase tracking-widest text-stone-400 group-hover:text-stone-900 flex items-center gap-2">
         {done ? 'Modifier' : 'Compléter'} <ArrowRight className="w-3 h-3" />
       </div>
