@@ -42,7 +42,7 @@ const SPECIALTIES_PRESET = [
 ];
 
 const MISSION_TYPES_PRESET = [
-  { key: 'one_shot', label: 'One-shot (déjeuner / dîner' },
+  { key: 'one_shot', label: 'Ponctuelle ( déjeuner / dîner )' },
   { key: 'residence', label: 'Résidence (villa / chalet )' },
   { key: 'yacht', label: 'Yacht' },
   { key: 'event_catering', label: 'Event / catering' },
