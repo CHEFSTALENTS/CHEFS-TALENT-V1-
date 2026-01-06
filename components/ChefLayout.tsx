@@ -3,9 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { auth, api } from '../services/storage';
-import { ChefUser } from '../types';
 import { supabase } from '@/services/supabaseClient';
+import { ChefUser } from '../types';
 import {
   LogOut,
   LayoutDashboard,
@@ -22,6 +21,9 @@ import {
   X,
 } from 'lucide-react';
 
+// (OPTIONNEL) si tu as encore ce service et qu'il marche sans auth localStorage
+import { api } from '../services/storage';
+
 interface ChefLayoutProps {
   children?: React.ReactNode;
 }
@@ -29,84 +31,74 @@ interface ChefLayoutProps {
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
+
   const [user, setUser] = useState<ChefUser | null>(null);
   const [offeredCount, setOfferedCount] = useState(0);
-
-  // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
- useEffect(() => {
-  let alive = true;
+  // ✅ Auth + user bootstrap (SUPABASE source de vérité)
+  useEffect(() => {
+    let alive = true;
 
-  (async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!alive) return;
-
-    const sbUser = data.session?.user ?? null;
-
-    // ✅ si pas de session => login
-    if (!sbUser) {
-      router.replace('/chef/login');
-      return;
-    }
-
-    // ✅ On construit un "user" compatible UI à partir de Supabase
-    const pseudoUser: any = {
-      id: sbUser.id,
-      email: sbUser.email ?? '',
-      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
-      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-      status: 'draft',
-    };
-
-    setUser(pseudoUser);
-
-    // (optionnel) resync status depuis DB
-    try {
-      const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-      const json = await res.json();
-      if (alive && json?.status) setUser((prev: any) => ({ ...prev, status: json.status }));
-    } catch {}
-  })();
-
-  const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-    const sbUser = session?.user ?? null;
-    if (!sbUser) router.replace('/chef/login');
-  });
-
-  // robots noindex (ok)
-  const meta = document.createElement('meta');
-  meta.name = 'robots';
-  meta.content = 'noindex, nofollow';
-  document.head.appendChild(meta);
-
-  return () => {
-    alive = false;
-    sub.subscription.unsubscribe();
-    if (document.head.contains(meta)) document.head.removeChild(meta);
-  };
-}, [router]);
-    
-
-    // No index
+    // noindex
     const meta = document.createElement('meta');
     meta.name = 'robots';
     meta.content = 'noindex, nofollow';
     document.head.appendChild(meta);
 
-    const fetchOffers = async () => {
+    const boot = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
+
+      const sbUser = data.session?.user ?? null;
+
+      if (!sbUser) {
+        router.replace('/chef/login');
+        return;
+      }
+
+      const pseudoUser: any = {
+        id: sbUser.id,
+        email: sbUser.email ?? '',
+        firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+        lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+        status: 'draft',
+      };
+
+      setUser(pseudoUser);
+
+      // ✅ Resync status depuis DB (chef_profiles.profile.status)
       try {
-        const missions = await api.getChefMissions(currentUser.id);
-        const offers = missions.filter(m => m.status === 'offered');
-        setOfferedCount(offers.length);
-      } catch (e) {
-        console.error('fetchOffers error', e);
+        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, {
+          cache: 'no-store',
+        });
+        const json = await res.json();
+        if (alive && json?.status) {
+          setUser((prev: any) => (prev ? { ...prev, status: json.status } : prev));
+        }
+      } catch {}
+
+      // ✅ (OPTIONNEL) Compteur d’offres
+      try {
+        // Si api.getChefMissions dépend de l'ancien auth localStorage, commente ce bloc.
+        const missions = await api.getChefMissions(sbUser.id);
+        const offers = Array.isArray(missions) ? missions.filter((m: any) => m?.status === 'offered') : [];
+        if (alive) setOfferedCount(offers.length);
+      } catch {
+        // pas bloquant
       }
     };
 
-    fetchOffers();
+    boot();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const sbUser = session?.user ?? null;
+      if (!sbUser) router.replace('/chef/login');
+    });
 
     return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
       if (document.head.contains(meta)) document.head.removeChild(meta);
     };
   }, [router]);
@@ -126,10 +118,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [mobileOpen]);
 
-const handleLogout = async () => {
-  await supabase.auth.signOut();
-  router.replace('/chef/login');
-};
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace('/chef/login');
+  };
 
   if (!user) return null;
 
@@ -137,8 +129,7 @@ const handleLogout = async () => {
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
     { icon: Briefcase, label: 'Missions', path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
     { icon: Euro, label: 'Revenus', path: '/chef/earnings' },
-{ icon: Euro, label: 'Tarifs', path: '/chef/pricing' },
-    
+    { icon: Euro, label: 'Tarifs', path: '/chef/pricing' },
     { icon: User, label: 'Identité', path: '/chef/identity' },
     { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
     { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
@@ -158,7 +149,7 @@ const handleLogout = async () => {
       </div>
 
       <nav className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} space-y-1`}>
-        {navItems.map(item => {
+        {navItems.map((item) => {
           const isActive = pathname === item.path;
           const Icon = item.icon;
           const isProfileStart = item.path === '/chef/identity';
@@ -213,10 +204,9 @@ const handleLogout = async () => {
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
-      {/* Mobile header (menu à droite + titre centré) */}
+      {/* Mobile header */}
       <div className="md:hidden sticky top-0 z-20 bg-stone-50/95 backdrop-blur border-b border-stone-200">
         <div className="relative flex items-center px-4 py-3">
-          {/* Centre parfait */}
           <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
             <div className="text-xs uppercase tracking-widest text-stone-400">Chef Portal</div>
             <div className="text-sm font-medium text-stone-900 truncate max-w-[220px]">
@@ -224,7 +214,6 @@ const handleLogout = async () => {
             </div>
           </div>
 
-          {/* Droite : menu + logout */}
           <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
@@ -247,24 +236,19 @@ const handleLogout = async () => {
         </div>
       </div>
 
-      {/* Desktop layout */}
       <div className="flex">
-        {/* Desktop sidebar */}
         <aside className="hidden md:flex w-64 bg-stone-900 text-stone-300 flex-shrink-0 flex-col fixed h-full z-10">
           <SidebarContent />
         </aside>
 
-        {/* Mobile drawer */}
         {mobileOpen ? (
           <div className="md:hidden fixed inset-0 z-30">
-            {/* Backdrop */}
             <button
               type="button"
               className="absolute inset-0 bg-black/40"
               onClick={() => setMobileOpen(false)}
               aria-label="Fermer le menu"
             />
-            {/* Panel */}
             <div className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-stone-900 text-stone-300 shadow-2xl">
               <div className="flex items-center justify-between p-4 border-b border-stone-800">
                 <div className="text-stone-50 font-serif text-lg">CHEF TALENTS</div>
@@ -282,7 +266,6 @@ const handleLogout = async () => {
           </div>
         ) : null}
 
-        {/* Main content */}
         <main className="flex-1 md:ml-64 px-4 py-6 md:p-12">
           <div className="max-w-4xl mx-auto">{children}</div>
         </main>
