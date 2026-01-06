@@ -8,17 +8,14 @@ export async function GET(req: Request) {
 
   const supabase = getSupabaseAdmin();
 
-  // status source de vérité = table "chefs" OU "chef_users" selon ton schema
-  // D'après tes captures, tu utilises ChefUser et status pending_validation/approved/active
-
-  // 👉 ICI: adapte le nom de table si besoin
   const { data, error } = await supabase
-    .from("chefs") // <-- si ta table s'appelle autrement, remplace
-    .select("status")
-    .eq("id", id)
+    .from("chef_profiles")
+    .select("profile")
+    .eq("user_id", id)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ status: data?.status ?? null });
+  const status = (data?.profile as any)?.status ?? null;
+  return NextResponse.json({ status });
 }
