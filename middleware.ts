@@ -1,41 +1,49 @@
-// middleware.ts
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
+  const url = req.nextUrl.clone();
+  const next = req.nextUrl.pathname + req.nextUrl.search;
+
+  url.pathname = '/access';
+  url.searchParams.set('area', area);
+  url.searchParams.set('next', next);
+
+  return NextResponse.redirect(url);
+}
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Toujours laisser passer
+  // Laisser passer la page d'accès + assets + next internals
   if (
+    pathname.startsWith('/access') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.startsWith('/robots') ||
-    pathname.startsWith('/sitemap') ||
-    pathname.startsWith('/chef') ||          // 🔥 IMPORTANT
-    pathname.startsWith('/api/chef')          // 🔥 IMPORTANT
+    pathname.startsWith('/robots.txt') ||
+    pathname.startsWith('/sitemap')
   ) {
     return NextResponse.next();
   }
 
-  // 🔐 Admin uniquement
-  if (pathname.startsWith('/admin')) {
-    const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
-    if (!hasAdmin) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/access';
-      url.searchParams.set('area', 'admin');
-      return NextResponse.redirect(url);
-    }
+  // Autoriser l’API access
+  if (pathname.startsWith('/api/access')) return NextResponse.next();
+
+  const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
+  const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
+
+  // ✅ Admin protégé
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (hasAdmin) return NextResponse.next();
+    return redirectToAccess(req, 'admin');
   }
 
-  // 🌍 Public (si tu veux le garder fermé)
-  const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
-  if (!hasPublic) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/access';
-    url.searchParams.set('area', 'public');
-    return NextResponse.redirect(url);
+  // ✅ Chefs : ON LAISSE PASSER (sinon loops)
+  if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
+    return NextResponse.next();
   }
+
+  // ✅ Public (si tu veux encore le cacher)
+  if (!hasPublic) return redirectToAccess(req, 'public');
 
   return NextResponse.next();
 }
