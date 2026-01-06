@@ -118,12 +118,11 @@ export default function ChefDashboardPage() {
       if (cancelled) return;
 
       // ❌ pas de session => on va SIGNUP (pas login)
-      if (!user?.id) {
-        setSbUser(null);
-        finish();
-        router.replace('/chef/signup');
-        return;
-      }
+    if (!user?.id) {
+  setSbUser(null);
+  finish();
+  return; // laisse le middleware / le user décider
+}
 
       // ✅ session ok
       setSbUser(user);
