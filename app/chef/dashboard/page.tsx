@@ -37,9 +37,17 @@ function safeReadLS<T>(key: string): T | null {
 type AnyProfile = Record<string, any>;
 
 export default function ChefDashboardPage() {
-  const user = auth.getCurrentUser();
+  const [user, setUser] = useState<any>(null);
+  const [booting, setBooting] = useState(true);
 
   const [settingsProfile, setSettingsProfile] = useState<AnyProfile | null>(null);
+
+  useEffect(() => {
+    // charge user depuis ton storage (une seule fois)
+    const u = auth.getCurrentUser?.();
+    setUser(u ?? null);
+    setBooting(false);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,24 +57,19 @@ export default function ChefDashboardPage() {
         const u = auth.getCurrentUser?.();
         if (!u?.id) return;
 
-        // 1) DB (source de vérité)
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`); { cache: 'no-store' }
+        const res = await fetch(
+          `/api/chef/profile?id=${encodeURIComponent(u.id)}`,
+          { cache: 'no-store' }
+        );
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
         if (!cancelled) {
-          if (fromDb) {
-            setSettingsProfile(fromDb);
-          } else {
-            // 2) fallback localStorage
-            const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-            setSettingsProfile(fromLS);
-          }
+          if (fromDb) setSettingsProfile(fromDb);
+          else setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
         }
       } catch {
-        // fallback localStorage
-        const fromLS = safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY);
-        if (!cancelled) setSettingsProfile(fromLS);
+        if (!cancelled) setSettingsProfile(safeReadLS<AnyProfile>(SETTINGS_STORAGE_KEY));
       }
     })();
 
@@ -75,7 +78,24 @@ export default function ChefDashboardPage() {
     };
   }, []);
 
-  if (!user) return null;
+    if (booting) {
+    return (
+      <ChefLayout>
+        <div className="p-8">Chargement…</div>
+      </ChefLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <ChefLayout>
+        <div className="p-8">Session expirée. Merci de vous reconnecter.</div>
+        <div className="p-8 pt-0">
+          <Link href="/chef/login" className="underline">Aller au login</Link>
+        </div>
+      </ChefLayout>
+    );
+  }
 
   const profileTypeLabels: Record<string, string> = {
     private: 'Chef Privé',
