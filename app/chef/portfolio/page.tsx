@@ -81,7 +81,11 @@ export default function ChefPortfolioPage() {
         const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const p: any = json?.profile ?? {};
-
+        
+const MIN_PORTFOLIO = 5;
+const photoCount = images.filter(Boolean).length;
+const isPortfolioValid = photoCount >= MIN_PORTFOLIO;
+        
         const imgs = Array.isArray(p.images) ? p.images.map(String).filter(Boolean) : [];
         const ig = String(p.instagramUrl ?? p.instagram ?? p.socialInstagram ?? '').trim();
         const web = String(p.websiteUrl ?? p.website ?? p.siteUrl ?? '').trim();
@@ -259,10 +263,11 @@ export default function ChefPortfolioPage() {
           {/* Message important */}
           <div className="p-5 border border-stone-200 bg-stone-50">
             <div className="text-sm font-medium text-stone-900 mb-1">📸 Important</div>
-            <p className="text-sm text-stone-600">
-              Ces photos servent à mettre en avant votre profil. Choisissez des plats <b>bien dressés</b>, nets et bien éclairés :
-              elles pourront être vues par le client lorsque votre profil sera proposé pour une mission.
-            </p>
+            <p className="text-sm text-stone-500 font-light">
+  Ces photos servent à mettre en avant votre profil auprès des clients.
+  Choisissez des plats bien dressés, bien éclairés, sans filtres excessifs.
+  <b className="ml-1">Minimum 5 photos</b> pour valider votre portfolio.
+</p>
           </div>
 
           {/* Liens */}
@@ -306,7 +311,19 @@ export default function ChefPortfolioPage() {
           {/* Upload photos */}
           <div className="space-y-2 pt-4 border-t border-stone-100">
             <Label>Ajouter des photos (upload uniquement)</Label>
+<div className="text-xs text-stone-500">
+  JPG/PNG/WebP • max 8MB / image • idéal : 5 à 10 photos
+  <span className={`ml-2 font-medium ${isPortfolioValid ? 'text-green-700' : 'text-amber-700'}`}>
+    ({photoCount}/{MIN_PORTFOLIO})
+  </span>
+</div>
 
+<div className="mt-2 text-xs text-stone-500">
+  {isPortfolioValid
+    ? '✅ Portfolio validé (5 photos minimum).'
+    : `⚠️ Ajoute encore ${Math.max(0, MIN_PORTFOLIO - photoCount)} photo(s) pour valider ton portfolio.`}
+</div>
+            
             <input
               ref={fileRef}
               type="file"
