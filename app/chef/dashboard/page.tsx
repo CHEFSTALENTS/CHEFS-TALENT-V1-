@@ -25,21 +25,12 @@ import {
 
 type AnyProfile = Record<string, any>;
 
-/* ✅ helpers au scope du module (disponibles partout dans le fichier) */
+/* ✅ helpers au scope du module */
 const MIN_PORTFOLIO_PHOTOS = 5;
 
 function getPortfolioPhotosCount(p: any): number {
-  const imgs =
-    p?.images ??
-    p?.photos ??
-    p?.gallery ??
-    p?.portfolioImages ??
-    [];
+  const imgs = p?.images ?? p?.photos ?? p?.gallery ?? p?.portfolioImages ?? [];
   return Array.isArray(imgs) ? imgs.filter(Boolean).length : 0;
-}
-
-function isPortfolioValid(p: any): boolean {
-  return getPortfolioPhotosCount(p) >= MIN_PORTFOLIO_PHOTOS;
 }
 
 export default function ChefDashboardPage() {
@@ -86,7 +77,7 @@ export default function ChefDashboardPage() {
     };
   }, [router]);
 
-  // 2) Charger profil DB (chef_profiles.profile)
+  // 2) Charger profil DB
   useEffect(() => {
     if (!sbUser?.id) return;
     let cancelled = false;
@@ -125,13 +116,9 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser, settingsProfile]);
 
-  // 4) Score
+  // 4) Score (⚠️ ton computeChefScore ne compte pas les photos)
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
-
-    // ✅ dispo si tu veux l’afficher dans le dashboard
-    const photoCount = getPortfolioPhotosCount(p);
-    const portfolioOk = isPortfolioValid(p);
 
     const city = String(
       p.city ??
@@ -154,91 +141,115 @@ export default function ChefDashboardPage() {
       specialties: Array.isArray(p.specialties) ? p.specialties : [],
       languages: Array.isArray(p.languages) ? p.languages : [],
 
-      // ⚠️ ton computeChefScore actuel ne compte pas les photos.
-      // Il compte portfolioUrl/instagram/website.
       instagram: String(p.instagram ?? '').trim(),
       website: String(p.website ?? '').trim(),
       portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
 
       avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? '').trim(),
-
-      // (optionnel) si tu veux l’utiliser ailleurs dans la page
-      photoCount,
-      portfolioOk,
     };
   }, [mergedProfile]);
 
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
- 
-}
-  // 5) checks
+  // 5) Checks (dashboard)
   const checks = useMemo(() => {
-    const bio = String((mergedProfile as any).bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
-    const years = (mergedProfile as any).yearsExperience ?? (mergedProfile as any).experienceYears ?? 0;
+    const p: any = mergedProfile ?? {};
+
+    const bio = String(p.bio ?? p.about ?? p.description ?? '').trim();
+    const years = p.yearsExperience ?? p.experienceYears ?? 0;
 
     const identityOk =
-      !!String((mergedProfile as any).name ?? '').trim() &&
-      !!String((mergedProfile as any).phone ?? '').trim() &&
-      (!!String((mergedProfile as any).city ?? '').trim() ||
-        !!String((mergedProfile as any).location?.baseCity ?? '').trim() ||
-        !!String((mergedProfile as any).baseCity ?? '').trim());
+      !!String(p.name ?? '').trim() &&
+      !!String(p.phone ?? '').trim() &&
+      (!!String(p.city ?? '').trim() ||
+        !!String(p.location?.baseCity ?? '').trim() ||
+        !!String(p.baseCity ?? '').trim());
 
-    const experienceOk = (Number(years ?? 0) > 0) || bio.length >= 80;
+    const experienceOk = Number(years ?? 0) > 0 || bio.length >= 80;
 
-    const images =
-      (mergedProfile as any).images ??
-      (mergedProfile as any).photos ??
-      (mergedProfile as any).gallery ??
-      (mergedProfile as any).portfolioImages ??
-      [];
-    const hasImages = Array.isArray(images) && images.filter(Boolean).length > 0;
+    // ✅ Portfolio = min 5 photos (nouvelle règle)
+    const photoCount = getPortfolioPhotosCount(p);
+    const portfolioOk = photoCount >= MIN_PORTFOLIO_PHOTOS;
 
-    const portfolioOk =
-      hasImages ||
-      !!String((mergedProfile as any).photoUrl ?? (mergedProfile as any).avatarUrl ?? '').trim() ||
-      !!String((mergedProfile as any).portfolioUrl ?? '').trim() ||
-      !!String((mergedProfile as any).instagram ?? '').trim() ||
-      !!String((mergedProfile as any).website ?? '').trim();
-
-    const pricing = (mergedProfile as any).pricing ?? null;
+    const pricing = p.pricing ?? null;
     const hasPricing =
       !!pricing &&
       (Number(pricing?.residence?.dailyRate ?? 0) > 0 ||
         Number(pricing?.event?.pricePerPerson ?? 0) > 0 ||
-        Number((mergedProfile as any).dailyRate ?? 0) > 0 ||
-        Number((mergedProfile as any).pricePerPerson ?? 0) > 0);
+        Number(p.dailyRate ?? 0) > 0 ||
+        Number(p.pricePerPerson ?? 0) > 0);
 
     const mobilityOk =
-      !!String((mergedProfile as any).location?.baseCity ?? '').trim() ||
-      !!String((mergedProfile as any).baseCity ?? '').trim() ||
-      (mergedProfile as any).location?.internationalMobility === true ||
-      ((mergedProfile as any).location?.coverageZones?.length ?? 0) > 0 ||
-      ((mergedProfile as any).coverageZones?.length ?? 0) > 0;
+      !!String(p.location?.baseCity ?? '').trim() ||
+      !!String(p.baseCity ?? '').trim() ||
+      p.location?.internationalMobility === true ||
+      (p.location?.coverageZones?.length ?? 0) > 0 ||
+      (p.coverageZones?.length ?? 0) > 0;
 
-    const preferencesOk =
-      ((mergedProfile as any).cuisines?.length ?? 0) >= 1 &&
-      ((mergedProfile as any).languages?.length ?? 0) >= 1;
+    const preferencesOk = (p.cuisines?.length ?? 0) >= 1 && (p.languages?.length ?? 0) >= 1;
 
     const availabilityOk = true;
 
-   return [
-  { key: 'identity', title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
-  { key: 'experience', title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: experienceOk, icon: ChefHat },
-  {key: 'portfolio',
-    title: 'Portfolio',
-    desc: portfolioOk
-      ? `OK (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`
-      : `Min. ${MIN_PORTFOLIO_PHOTOS} photos (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`,
-    path: '/chef/portfolio',
-    done: portfolioOk,
-    icon: ImageIcon,
-  },
-  { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
-  { key: 'mobility', title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
-  { key: 'availability', title: 'Disponibilités', desc: 'Ouverture des missions bientôt.', path: '/chef/availability', done: availabilityOk, icon: Calendar },
-  { key: 'preferences', title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
-];
+    return [
+      {
+        key: 'identity',
+        title: 'Identité & Coordonnées',
+        desc: 'Nom, téléphone, ville…',
+        path: '/chef/identity',
+        done: identityOk,
+        icon: User,
+      },
+      {
+        key: 'experience',
+        title: 'Expérience',
+        desc: 'Bio + expérience',
+        path: '/chef/experience',
+        done: experienceOk,
+        icon: ChefHat,
+      },
+      {
+        key: 'portfolio',
+        title: 'Portfolio',
+        desc: portfolioOk
+          ? `OK (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`
+          : `Min. ${MIN_PORTFOLIO_PHOTOS} photos (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`,
+        path: '/chef/portfolio',
+        done: portfolioOk,
+        icon: ImageIcon,
+      },
+      {
+        key: 'pricing',
+        title: 'Tarifs',
+        desc: 'Prix / jour ou prix / personne',
+        path: '/chef/pricing',
+        done: hasPricing,
+        icon: DollarSign,
+      },
+      {
+        key: 'mobility',
+        title: 'Zone & Mobilité',
+        desc: 'Zones, déplacements',
+        path: '/chef/mobility',
+        done: mobilityOk,
+        icon: Map,
+      },
+      {
+        key: 'availability',
+        title: 'Disponibilités',
+        desc: 'Ouverture des missions bientôt.',
+        path: '/chef/availability',
+        done: availabilityOk,
+        icon: Calendar,
+      },
+      {
+        key: 'preferences',
+        title: 'Préférences',
+        desc: 'Cuisines + langues',
+        path: '/chef/preferences',
+        done: preferencesOk,
+        icon: Sparkles,
+      },
+    ];
   }, [mergedProfile]);
 
   const completedCount = checks.filter((c) => c.done).length;
@@ -285,12 +296,17 @@ export default function ChefDashboardPage() {
             </div>
 
             <h1 className="text-4xl font-serif text-stone-900 mt-2">
-              Bonjour, Chef {(mergedProfile as any).lastName || String((mergedProfile as any).name ?? '').split(' ').slice(-1)[0] || ''}.
+              Bonjour, Chef{' '}
+              {(mergedProfile as any).lastName ||
+                String((mergedProfile as any).name ?? '').split(' ').slice(-1)[0] ||
+                ''}
+              .
             </h1>
 
             {(mergedProfile as any)?.profileType && (
               <p className="text-stone-500 mt-2 font-light">
-                Profil : {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
+                Profil :{' '}
+                {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
                 <span className="mx-2">•</span>
                 {(mergedProfile as any)?.seniorityLevel
                   ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
@@ -301,7 +317,9 @@ export default function ChefDashboardPage() {
           </div>
 
           <div className="text-right">
-            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
+            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">
+              Statut du compte
+            </span>
             <StatusBadge status={String((mergedProfile as any).status || '')} />
           </div>
         </div>
@@ -329,7 +347,8 @@ export default function ChefDashboardPage() {
               </div>
 
               <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les premiers matchs lors du lancement.
+                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les
+                premiers matchs lors du lancement.
               </p>
             </div>
 
@@ -348,7 +367,11 @@ export default function ChefDashboardPage() {
           <div className="bg-white border border-stone-200 p-8 shadow-sm">
             <div className="flex items-start gap-6">
               <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
+                {score >= 70 ? (
+                  <Clock className="w-6 h-6 text-stone-600" />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-bronze" />
+                )}
               </div>
               <div className="space-y-4">
                 <h3 className="text-xl font-serif text-stone-900">
@@ -395,10 +418,17 @@ function ActionCard({
   done: boolean;
 }) {
   return (
-    <Link href={path} className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300">
+    <Link
+      href={path}
+      className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300"
+    >
       <div className="flex justify-between items-start mb-6">
         <Icon className={`w-6 h-6 ${done ? 'text-stone-900' : 'text-stone-300'}`} strokeWidth={1.5} />
-        {done ? <CheckCircle2 className="w-5 h-5 text-stone-900" /> : <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />}
+        {done ? (
+          <CheckCircle2 className="w-5 h-5 text-stone-900" />
+        ) : (
+          <div className="w-5 h-5 rounded-full border border-stone-200 group-hover:border-stone-400" />
+        )}
       </div>
       <h3 className="text-lg font-serif text-stone-900 mb-2">{title}</h3>
       <p className="text-sm text-stone-500 font-light mb-6">{desc}</p>
