@@ -2,10 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {  ChefLayout } from '../../../components/ChefLayout';
+import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info, X } from 'lucide-react';
 
 type ChefProfileMobility = {
   baseCity?: string;
@@ -61,9 +61,19 @@ function getSuggestedZones(baseCity: string, radiusKm: number, international: bo
     key.includes('geneve') ||
     key.includes('genève');
 
-  const isSwiss = key.includes('geneve') || key.includes('genève') || key.includes('lausanne') || key.includes('gstaad') || key.includes('zurich');
+  const isSwiss =
+    key.includes('geneve') ||
+    key.includes('genève') ||
+    key.includes('lausanne') ||
+    key.includes('gstaad') ||
+    key.includes('zurich');
 
-  const isIbiza = key.includes('ibiza') || key.includes('balear') || key.includes('palma') || key.includes('majorque') || key.includes('mallorca');
+  const isIbiza =
+    key.includes('ibiza') ||
+    key.includes('balear') ||
+    key.includes('palma') ||
+    key.includes('majorque') ||
+    key.includes('mallorca');
 
   const isLondon = key.includes('london') || key.includes('londres');
 
@@ -97,6 +107,72 @@ function getSuggestedZones(baseCity: string, radiusKm: number, international: bo
   return uniq(suggested);
 }
 
+/* ----------------- Modal info (simple, sans dépendance) ----------------- */
+
+function InfoModal({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center" role="dialog" aria-modal="true">
+      {/* overlay (clic outside) */}
+      <button
+        type="button"
+        aria-label="Fermer"
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
+
+      {/* panel */}
+      <div className="relative w-[92vw] max-w-xl rounded-2xl bg-white border border-stone-200 shadow-xl">
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-stone-100">
+          <div>
+            <div className="text-sm font-semibold text-stone-900">{title}</div>
+            <div className="text-xs text-stone-500 mt-1">
+              Nous utilisons ces infos pour te proposer les missions les plus pertinentes.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition"
+            aria-label="Fermer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 text-sm text-stone-700">{children}</div>
+
+        <div className="p-5 pt-0 flex justify-end">
+          <Button type="button" onClick={onClose} className="bg-stone-900 hover:bg-stone-800">
+            J’ai compris
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ChefMobilityPage() {
   const router = useRouter();
 
@@ -117,6 +193,8 @@ export default function ChefMobilityPage() {
     travelRadiusKm: 50,
     internationalMobility: false,
   });
+
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // 0) Boot session
   useEffect(() => {
@@ -186,6 +264,17 @@ export default function ChefMobilityPage() {
     return getSuggestedZones(data.baseCity, Number(data.travelRadiusKm || 0), !!data.internationalMobility);
   }, [data.baseCity, data.travelRadiusKm, data.internationalMobility]);
 
+  // petit “résumé” clair pour que le chef comprenne
+  const positioning = useMemo(() => {
+    const r = Number(data.travelRadiusKm || 0);
+    const intl = !!data.internationalMobility;
+
+    if (intl) return { label: 'International', desc: 'Très visible : missions premium + déplacements.' };
+    if (r >= 300) return { label: 'Large / multi-zones', desc: 'Très visible : résidences/saisons et missions multi-destinations.' };
+    if (r >= 150) return { label: 'Régional', desc: 'Visible : missions dans plusieurs zones autour de ta base.' };
+    return { label: 'Local', desc: 'Priorité : missions proches de ta ville de base.' };
+  }, [data.travelRadiusKm, data.internationalMobility]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -251,7 +340,58 @@ export default function ChefMobilityPage() {
       <div className="max-w-2xl">
         <Marker />
         <Label>Logistique</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Zone & Mobilité</h1>
+
+        {/* Titre + (i) */}
+        <div className="flex items-center gap-3 mb-8">
+          <h1 className="text-3xl font-serif text-stone-900">Zone & Mobilité</h1>
+
+          <button
+            type="button"
+            onClick={() => setInfoOpen(true)}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-stone-200 bg-white hover:bg-stone-50 transition"
+            aria-label="Informations"
+            title="Comment ça marche ?"
+          >
+            <Info className="w-4 h-4 text-stone-600" />
+          </button>
+        </div>
+
+        {/* Popup info */}
+        <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} title="Comment tu es positionné grâce à ta mobilité">
+          <div className="space-y-3">
+            <div>
+              <div className="font-medium text-stone-900">1) Ville de base</div>
+              <div className="text-stone-600">
+                Elle sert de point de départ. On te propose en priorité des missions proches de cette zone.
+              </div>
+            </div>
+
+            <div>
+              <div className="font-medium text-stone-900">2) Rayon (km)</div>
+              <div className="text-stone-600">
+                Plus ton rayon est grand, plus tu apparais sur des missions (ex: villas, chalets, résidences, event).
+              </div>
+              <div className="text-xs text-stone-500 mt-1">
+                Repères : 50km = local • 150km = régional • 300km+ = multi-zones
+              </div>
+            </div>
+
+            <div>
+              <div className="font-medium text-stone-900">3) Mobilité internationale</div>
+              <div className="text-stone-600">
+                Active si tu es prêt à voyager (missions premium : yachts, saisons, résidences longues).
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+              <div className="font-medium text-stone-900">✅ Important</div>
+              <div className="text-stone-700 mt-1">Tu restes libre d’accepter ou refuser une mission à tout moment.</div>
+              <div className="text-xs text-stone-500 mt-2">
+                Les “zones suggérées” ci-dessous sont une aide automatique (pas un engagement).
+              </div>
+            </div>
+          </div>
+        </InfoModal>
 
         <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 border border-stone-200">
           {loading ? (
@@ -260,6 +400,13 @@ export default function ChefMobilityPage() {
             </div>
           ) : (
             <>
+              {/* résumé positionnement */}
+              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+                <div className="text-xs uppercase tracking-widest text-stone-500">Positionnement actuel</div>
+                <div className="mt-1 text-lg font-semibold text-stone-900">{positioning.label}</div>
+                <div className="mt-1 text-sm text-stone-600">{positioning.desc}</div>
+              </div>
+
               <div className="space-y-2">
                 <Label>Ville de base</Label>
                 <Input
@@ -278,6 +425,7 @@ export default function ChefMobilityPage() {
                   onChange={(e) => setData({ ...data, travelRadiusKm: parseInt(e.target.value || '0', 10) || 0 })}
                   placeholder="50"
                 />
+                <p className="text-xs text-stone-400">Ex : 50 = local • 150 = régional • 300+ = multi-zones</p>
               </div>
 
               <label className="flex items-center gap-4 p-6 bg-stone-50 border border-stone-100 cursor-pointer">
