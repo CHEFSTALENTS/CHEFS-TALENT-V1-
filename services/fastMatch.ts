@@ -47,12 +47,31 @@ type MatchInfo = {
   score: number;
 };
 
+/**
+ * ✅ Determine if a chef is open to international missions
+ * Supports:
+ * - profile.internationalMobility (legacy)
+ * - profile.location.internationalMobility (new)
+ * - coverageZones includes "International"
+ */
+function isChefInternational(profile: any): boolean {
+  const intl =
+    profile?.internationalMobility === true ||
+    profile?.location?.internationalMobility === true;
+
+  const zones = Array.isArray(profile?.coverageZones) ? profile.coverageZones : [];
+  const zoneIntl = zones.some((z: string) => normalize(z) === 'international');
+
+  return intl || zoneIntl;
+}
+
 function scoreChefForRequest(request: RequestEntity, chef: ChefUser): number {
   const profile = chef.profile;
   if (!profile) return -1;
 
   const reqCity = extractCity(request.location);
-  const baseCity = normalize(profile.baseCity || '');
+  const baseCity = normalize(profile.baseCity || profile?.location?.baseCity || '');
+  const chefIsInternational = isChefInternational(profile);
 
   // Base filters (hard)
   if (chef.role !== 'chef') return -1;
@@ -68,26 +87,32 @@ function scoreChefForRequest(request: RequestEntity, chef: ChefUser): number {
   let score = 0;
 
   // Location scoring
-  const zones = (profile.coverageZones || []).map(z => normalize(z));
+  const zones = (profile.coverageZones || []).map((z: string) => normalize(z));
 
   const exactBaseCity = baseCity && reqCity && baseCity === reqCity;
   const zoneExact = reqCity && zones.includes(reqCity);
-  const zoneLoose = reqCity && zones.some(z => includesLoose(z, reqCity));
+  const zoneLoose = reqCity && zones.some((z: string) => includesLoose(z, reqCity));
   const baseLoose = baseCity && reqCity && includesLoose(baseCity, reqCity);
 
   if (exactBaseCity) score += 100;
   else if (zoneExact) score += 70;
   else if (baseLoose) score += 55;
   else if (zoneLoose) score += 45;
-  else return -1; // if no location match at all, discard
+  else {
+    // ✅ fallback international : on ne jette pas le chef, mais il passe après les locaux
+    if (!chefIsInternational) return -1;
+    score += 25; // “match international” (à ajuster si besoin)
+  }
 
   // Optional small bonuses (keep it light)
-  // Seniority could be used if present
   if (profile.seniorityLevel === 'senior') score += 6;
   if (profile.seniorityLevel === 'confirmed') score += 3;
 
   // If chef has more images / portfolio, tiny bonus (proxy for “ready”)
   if ((profile.images || []).length >= 3) score += 2;
+
+  // Tiny bonus if international enabled
+  if (chefIsInternational) score += 2;
 
   return score;
 }
