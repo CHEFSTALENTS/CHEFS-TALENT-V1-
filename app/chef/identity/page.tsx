@@ -30,62 +30,34 @@ useEffect(() => {
 
   (async () => {
     const { data } = await supabase.auth.getSession();
+    if (!alive) return;
+
     const sbUser = data.session?.user ?? null;
+    if (!sbUser) return;
 
-    if (!sbUser) return; // ChefLayout gère déjà la redirection
+    // pré-remplir depuis supabase metadata + profile DB si tu veux
+    setData((d) => ({
+      ...d,
+      firstName: (sbUser.user_metadata as any)?.firstName ?? d.firstName,
+      lastName: (sbUser.user_metadata as any)?.lastName ?? d.lastName,
+      email: sbUser.email ?? d.email,
+    }));
 
-    // 1) Profil DB
-    let profile: any = {};
+    // optionnel : charger profile DB existant
     try {
       const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
       const json = await res.json();
-      profile = json?.profile ?? {};
+      const p = json?.profile ?? {};
+      if (!alive) return;
+
+      setData((d) => ({
+        ...d,
+        phone: p.phone ?? d.phone,
+        photoUrl: p.avatarUrl ?? p.photoUrl ?? d.photoUrl,
+        profileType: p.profileType ?? d.profileType,
+        seniorityLevel: p.seniorityLevel ?? d.seniorityLevel,
+      }));
     } catch {}
-
-    if (!alive) return;
-
-    setData({
-      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
-      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-      email: sbUser.email ?? '',
-      phone: profile.phone || '',
-      photoUrl: profile.avatarUrl || profile.photoUrl || '',
-      profileType: profile.profileType || 'private',
-      seniorityLevel: profile.seniorityLevel || 'confirmed',
-    });
-  })();
-
-  return () => {
-    alive = false;
-  };
-}, []);useEffect(() => {
-  let alive = true;
-
-  (async () => {
-    const { data } = await supabase.auth.getSession();
-    const sbUser = data.session?.user ?? null;
-
-    if (!sbUser) return; // ChefLayout gère déjà la redirection
-
-    // 1) Profil DB
-    let profile: any = {};
-    try {
-      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-      const json = await res.json();
-      profile = json?.profile ?? {};
-    } catch {}
-
-    if (!alive) return;
-
-    setData({
-      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
-      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-      email: sbUser.email ?? '',
-      phone: profile.phone || '',
-      photoUrl: profile.avatarUrl || profile.photoUrl || '',
-      profileType: profile.profileType || 'private',
-      seniorityLevel: profile.seniorityLevel || 'confirmed',
-    });
   })();
 
   return () => {
@@ -181,37 +153,39 @@ const user = { id: sbUser.id, email: sbUser.email ?? '' };
 };
   
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const user = auth.getCurrentUser();
-      if (user) {
-        const fullName = `${data.firstName} ${data.lastName}`.trim();
-
-        await saveChefProfilePatch({
-          name: fullName || undefined,
-          phone: data.phone,
-          // ✅ on persiste les 2 pour compat
-          photoUrl: data.photoUrl || undefined,
-          avatarUrl: data.photoUrl || undefined,
-          profileType: data.profileType,
-          seniorityLevel: data.seniorityLevel,
-        });
-
-        // sync local storage (si ton auth le supporte)
-       
-
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
-      }
-    } catch (err: any) {
-      console.warn('[identity] save failed', err?.message || err);
-      alert(err?.message || 'Erreur lors de l’enregistrement');
-    } finally {
-      setLoading(false);
+  try {
+    const { data: sess } = await supabase.auth.getSession();
+    const sbUser = sess.session?.user ?? null;
+    if (!sbUser?.id) {
+      router.replace('/chef/login');
+      return;
     }
-  };
+
+    const fullName = `${data.firstName} ${data.lastName}`.trim();
+
+    await saveChefProfilePatch({
+      id: sbUser.id,
+      email: sbUser.email,
+      name: fullName || undefined,
+      phone: data.phone,
+      photoUrl: data.photoUrl || undefined,
+      avatarUrl: data.photoUrl || undefined,
+      profileType: data.profileType,
+      seniorityLevel: data.seniorityLevel,
+    });
+
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  } catch (err: any) {
+    console.warn('[identity] save failed', err?.message || err);
+    alert(err?.message || 'Erreur lors de l’enregistrement');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ChefLayout>
