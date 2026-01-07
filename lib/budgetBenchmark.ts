@@ -64,18 +64,24 @@ export function getMarketBudgetRange(ctx: BudgetContext) {
     const minTotal = base.residence.min * m * days;
     const maxTotal = base.residence.max * m * days;
 
-    return {
-      currency: 'EUR' as const,
-      kind: 'residence' as const,
-      tier,
-      multiplier: m,
-      unit: '€/jour',
-      min: roundTo(minTotal, 50),
-      max: roundTo(maxTotal, 50),
-      recommended: roundTo(((minTotal + maxTotal) / 2), 50),
-      meta: { days },
-    };
-  }
+   return {
+  currency: 'EUR' as const,
+  kind: 'event' as const,
+  tier,
+  multiplier: m,
+
+  // totals
+  minTotal: roundTo(minTotal, 50),
+  maxTotal: roundTo(maxTotal, 50),
+  recommendedTotal: roundTo(((minTotal + maxTotal) / 2), 50),
+
+  // unit (per person) — info only
+  unitLabel: '€/pers',
+  minUnit: roundTo(base.event.min * m, 5),
+  maxUnit: roundTo(base.event.max * m, 5),
+
+  meta: { guests },
+};
 
   // event
   const guests = Math.max(2, Number(ctx.guests ?? 10));
