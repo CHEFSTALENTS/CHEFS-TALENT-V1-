@@ -575,7 +575,7 @@ function RequestFormContent() {
                       />
                     </div>
                     <div className="space-y-4">
-                      <Label>Date du dîner</Label>
+                      <Label>Date de la prestation </Label>
                       <Input
                         type="date"
                         value={formData.startDate}
