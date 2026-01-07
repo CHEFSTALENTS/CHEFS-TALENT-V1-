@@ -7,6 +7,7 @@ import { supabase } from '@/services/supabaseClient';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { Label, Button } from '../../../components/ui';
 import { computeChefScore } from '@/lib/chefScore';
+import { Image as ImageIcon } from 'lucide-react';
 import {
   CheckCircle2,
   Clock,
@@ -211,14 +212,23 @@ const portfolioOk = photoCount >= MIN_PORTFOLIO_PHOTOS;
 
     const availabilityOk = true;
 
-    return [
-      { key: 'identity', title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
-      { key: 'experience', title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: experienceOk, icon: ChefHat },
-{key: 'portfolio',label: 'Portfolio', ok: portfolioOk,hint: portfolioOk ? `OK (${photoCount}/${MIN_PORTFOLIO_PHOTOS})` : `Min. ${MIN_PORTFOLIO_PHOTOS} photos (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`,}      { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
-      { key: 'mobility', title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
-      { key: 'availability', title: 'Disponibilités', desc: 'Ouverture des missions bientôt.', path: '/chef/availability', done: availabilityOk, icon: Calendar },
-      { key: 'preferences', title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
-    ];
+   return [
+  { key: 'identity', title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
+  { key: 'experience', title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: experienceOk, icon: ChefHat },
+  {key: 'portfolio',
+    title: 'Portfolio',
+    desc: portfolioOk
+      ? `OK (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`
+      : `Min. ${MIN_PORTFOLIO_PHOTOS} photos (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`,
+    path: '/chef/portfolio',
+    done: portfolioOk,
+    icon: ImageIcon,
+  },
+  { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
+  { key: 'mobility', title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
+  { key: 'availability', title: 'Disponibilités', desc: 'Ouverture des missions bientôt.', path: '/chef/availability', done: availabilityOk, icon: Calendar },
+  { key: 'preferences', title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
+];
   }, [mergedProfile]);
 
   const completedCount = checks.filter((c) => c.done).length;
