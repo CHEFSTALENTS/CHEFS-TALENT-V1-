@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth } from '../../../services/storage';
+import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2, Upload } from 'lucide-react';
 import { ChefProfileType, ChefSeniority } from '../../../types';
@@ -25,25 +25,79 @@ export default function ChefProfilePage() {
     seniorityLevel: 'confirmed' as ChefSeniority,
   });
 
-  useEffect(() => {
-    const user = auth.getCurrentUser();
-    if (user) {
-      const p: any = user.profile ?? {};
-      setData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: p.phone || '',
-        // ✅ supporte avatarUrl ou photoUrl selon historique
-        photoUrl: p.avatarUrl || p.photoUrl || '',
-        profileType: p.profileType || 'private',
-        seniorityLevel: p.seniorityLevel || 'confirmed',
-      });
-    }
-  }, []);
+useEffect(() => {
+  let alive = true;
 
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    const sbUser = data.session?.user ?? null;
+
+    if (!sbUser) return; // ChefLayout gère déjà la redirection
+
+    // 1) Profil DB
+    let profile: any = {};
+    try {
+      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+      const json = await res.json();
+      profile = json?.profile ?? {};
+    } catch {}
+
+    if (!alive) return;
+
+    setData({
+      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+      email: sbUser.email ?? '',
+      phone: profile.phone || '',
+      photoUrl: profile.avatarUrl || profile.photoUrl || '',
+      profileType: profile.profileType || 'private',
+      seniorityLevel: profile.seniorityLevel || 'confirmed',
+    });
+  })();
+
+  return () => {
+    alive = false;
+  };
+}, []);useEffect(() => {
+  let alive = true;
+
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    const sbUser = data.session?.user ?? null;
+
+    if (!sbUser) return; // ChefLayout gère déjà la redirection
+
+    // 1) Profil DB
+    let profile: any = {};
+    try {
+      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+      const json = await res.json();
+      profile = json?.profile ?? {};
+    } catch {}
+
+    if (!alive) return;
+
+    setData({
+      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+      email: sbUser.email ?? '',
+      phone: profile.phone || '',
+      photoUrl: profile.avatarUrl || profile.photoUrl || '',
+      profileType: profile.profileType || 'private',
+      seniorityLevel: profile.seniorityLevel || 'confirmed',
+    });
+  })();
+
+  return () => {
+    alive = false;
+  };
+}, []);
+  
   async function saveChefProfilePatch(patch: any) {
-    const user = auth.getCurrentUser?.();
+const { data } = await supabase.auth.getSession();
+const sbUser = data.session?.user ?? null;
+if (!sbUser?.id) throw new Error('No user');
+const user = { id: sbUser.id, email: sbUser.email ?? '' };
     if (!user?.id) throw new Error('No user');
 
     // 1) GET existing profile from DB
@@ -88,10 +142,10 @@ export default function ChefProfilePage() {
   const pickAvatar = () => avatarRef.current?.click();
 
   const onAvatarFile = async (files: FileList | null) => {
-    const user = auth.getCurrentUser?.();
-    if (!user?.id) return;
-    if (!files || files.length === 0) return;
-
+   const { data } = await supabase.auth.getSession();
+const sbUser = data.session?.user ?? null;
+if (!sbUser?.id) return;
+    
     const file = files[0];
     if (!file.type.startsWith('image/')) {
       alert('Veuillez sélectionner une image.');
@@ -146,13 +200,7 @@ export default function ChefProfilePage() {
         });
 
         // sync local storage (si ton auth le supporte)
-        await auth.updateChefProfile?.(user.id, {
-          phone: data.phone,
-          photoUrl: data.photoUrl || undefined,
-          avatarUrl: data.photoUrl || undefined,
-          profileType: data.profileType,
-          seniorityLevel: data.seniorityLevel,
-        } as any);
+       
 
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
