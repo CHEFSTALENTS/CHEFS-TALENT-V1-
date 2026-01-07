@@ -275,8 +275,10 @@ export default function ChefSettingsPage() {
       (profile as any).portfolioImages ??
       [];
 
-    const hasImages = Array.isArray(imagesRaw) && imagesRaw.filter(Boolean).length > 0;
-
+const MIN_PORTFOLIO = 5;
+const imageCount = Array.isArray(imagesRaw) ? imagesRaw.filter(Boolean).length : 0;
+const hasMinImages = imageCount >= MIN_PORTFOLIO;
+    
     const photoUrl = String((profile as any).photoUrl ?? (profile as any).avatarUrl ?? '').trim();
 
     const instagram = String((profile as any).instagram ?? '').trim();
@@ -313,8 +315,8 @@ export default function ChefSettingsPage() {
       {
         key: 'portfolio',
         label: 'Portfolio',
-        ok: hasImages || !!photoUrl || !!portfolioUrl || !!instagram || !!website,
-        hint: 'Photos / Instagram / site',
+        ok: hasMinImages,
+hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
         href: '/chef/portfolio',
         icon: ImageIcon,
       },
