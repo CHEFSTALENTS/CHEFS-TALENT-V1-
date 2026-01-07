@@ -8,7 +8,31 @@ import { submitRequest } from '../../services/actions';
 import { RequestForm, RequestMode } from '../../types';
 import { Loader2, CheckCircle2, Clock } from 'lucide-react';
 import { getMarketBudgetRange, BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
+import { getMarketBudgetRange } from '@/lib/budgetBenchmark';
 
+function fmtEUR(n: number) {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+}
+
+function getDaysFromDates(start?: string, end?: string) {
+  if (!start) return 1;
+  if (!end) return 1;
+  const a = new Date(start);
+  const b = new Date(end);
+  const diff = Math.ceil((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  return Number.isFinite(diff) ? Math.max(1, diff) : 1;
+}
+
+/**
+ * ✅ Ta règle:
+ * - ponctuel (single) => event (€/pers)
+ * - résidence (multi + >=2 jours) => residence (€/jour)
+ */
+function getBudgetKind(formData: any) {
+  const isMulti = formData?.dateMode === 'multi';
+  const days = getDaysFromDates(formData?.startDate, formData?.endDate);
+  return isMulti && days >= 2 ? 'residence' : 'event';
+}
 /* =========================================================
    Budget helpers (premium + safe)
 ========================================================= */
