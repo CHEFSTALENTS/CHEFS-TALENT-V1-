@@ -7,7 +7,6 @@ import { Button, Input, Textarea, Reveal, Marker, Label } from '../../components
 import { submitRequest } from '../../services/actions';
 import { RequestForm, RequestMode } from '../../types';
 import { Loader2, CheckCircle2, Clock } from 'lucide-react';
-import { getMarketBudgetRange, BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
 import { getMarketBudgetRange } from '@/lib/budgetBenchmark';
 
 function fmtEUR(n: number) {
