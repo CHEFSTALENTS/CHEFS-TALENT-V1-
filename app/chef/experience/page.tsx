@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth } from '../../../services/storage';
+import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Textarea, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
 
@@ -34,8 +35,17 @@ function ensureArray(v: any): string[] {
   return [];
 }
 
+function uniq(arr: string[]) {
+  return Array.from(new Set(arr.map((s) => s.trim()).filter(Boolean)));
+}
+
 export default function ChefExperiencePage() {
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const [booting, setBooting] = useState(true);
+  const [sbUser, setSbUser] = useState<any | null>(null);
+
+  const [loading, setLoading] = useState(false); // saving
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,42 +58,88 @@ export default function ChefExperiencePage() {
     certNotes: '',
   });
 
+  // 1) Session supabase
   useEffect(() => {
-    const user = auth.getCurrentUser?.();
-    if (user && (user as any).profile) {
-      const prof: any = (user as any).profile;
+    let alive = true;
 
-      const existingCert = prof?.certifications ?? {};
-      const certItems = ensureArray(existingCert?.items)
-        .map((x) => x as CertificationKey)
-        .filter((x) => CERTS.some((c) => c.id === x));
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
 
-      setData({
-        yearsExperience: Number(prof.yearsExperience || 0),
-        bio: String(prof.bio || ''),
-        environments: Array.isArray(prof.environments) ? prof.environments : ensureArray(prof.environments),
+      const u = data.session?.user ?? null;
+      setSbUser(u);
 
-        certItems,
-        certNotes: String(existingCert?.notes || ''),
-      });
-    }
-  }, []);
+      if (!u) {
+        router.replace('/chef/login');
+        return;
+      }
+
+      setBooting(false);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const u = session?.user ?? null;
+      setSbUser(u);
+      if (!u) router.replace('/chef/login');
+    });
+
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  // 2) Charger le profil DB (source de vérité)
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!sbUser?.id) return;
+
+      try {
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const json = await res.json();
+        const prof: any = json?.profile ?? {};
+
+        const existingCert = prof?.certifications ?? {};
+        const certItems = ensureArray(existingCert?.items)
+          .map((x) => x as CertificationKey)
+          .filter((x) => CERTS.some((c) => c.id === x));
+
+        if (!cancelled) {
+          setData({
+            yearsExperience: Number(prof.yearsExperience || 0),
+            bio: String(prof.bio || ''),
+            environments: Array.isArray(prof.environments) ? prof.environments : ensureArray(prof.environments),
+
+            certItems,
+            certNotes: String(existingCert?.notes || ''),
+          });
+        }
+      } catch (e) {
+        console.warn('[experience] load profile failed', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sbUser?.id]);
 
   async function saveChefProfilePatch(patch: any) {
-    const user = auth.getCurrentUser?.();
-    if (!user?.id) throw new Error('No user');
+    if (!sbUser?.id) throw new Error('No user');
 
     // 1) GET existing profile from DB
-    const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
+    const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
     const json = await resGet.json();
     const current = json?.profile ?? {};
 
-    // 2) merge
+    // 2) MERGE
     const merged = {
       ...current,
       ...patch,
-      id: user.id,
-      email: user.email,
+      id: sbUser.id,
+      email: sbUser.email ?? '',
       updatedAt: new Date().toISOString(),
     };
 
@@ -91,7 +147,7 @@ export default function ChefExperiencePage() {
     const resPut = await fetch('/api/chef/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: user.id, profile: merged }),
+      body: JSON.stringify({ id: sbUser.id, profile: merged }),
     });
 
     if (!resPut.ok) throw new Error(await resPut.text());
@@ -124,23 +180,20 @@ export default function ChefExperiencePage() {
     setError(null);
 
     try {
-      const user = auth.getCurrentUser?.();
-      if (!user?.id) throw new Error('Utilisateur introuvable (auth.getCurrentUser).');
+      if (!sbUser?.id) throw new Error('Session expirée. Reconnecte-toi.');
 
-      // ✅ Normalize environments safely (array OR comma string)
-      const environments = Array.isArray(data.environments)
-        ? data.environments.map(String).map((s) => s.trim()).filter(Boolean)
-        : String((data as any).environments ?? '')
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean);
+      // ✅ Normalize environments safely
+      const environments = uniq(
+        Array.isArray(data.environments)
+          ? data.environments.map(String)
+          : String((data as any).environments ?? '').split(',')
+      );
 
       const patch = {
         yearsExperience: Number.isFinite(Number(data.yearsExperience)) ? Number(data.yearsExperience) : 0,
         bio: String(data.bio || ''),
         environments,
 
-        // ✅ Certifications stored as object
         certifications: {
           items: (data.certItems || []).map(String),
           notes: String(data.certNotes || '').trim() || undefined,
@@ -148,11 +201,7 @@ export default function ChefExperiencePage() {
         },
       };
 
-      // ✅ 1) DB
       await saveChefProfilePatch(patch);
-
-      // ✅ 2) local storage / UX
-      await auth.updateChefProfile?.(user.id, patch);
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -163,6 +212,9 @@ export default function ChefExperiencePage() {
       setLoading(false);
     }
   };
+
+  if (booting) return <div className="p-10">Chargement…</div>;
+  if (!sbUser) return null;
 
   return (
     <ChefLayout>
@@ -214,9 +266,7 @@ export default function ChefExperiencePage() {
                   />
                   <div
                     className={`w-4 h-4 border flex items-center justify-center ${
-                      data.environments.includes(env.id)
-                        ? 'bg-stone-900 border-stone-900'
-                        : 'border-stone-300'
+                      data.environments.includes(env.id) ? 'bg-stone-900 border-stone-900' : 'border-stone-300'
                     }`}
                   >
                     {data.environments.includes(env.id) && <div className="w-1.5 h-1.5 bg-white" />}
@@ -226,7 +276,6 @@ export default function ChefExperiencePage() {
             </div>
           </div>
 
-          {/* Certifications */}
           <div className="space-y-4 pt-6 border-t border-stone-100">
             <Label>Diplômes & certifications</Label>
 
@@ -246,12 +295,7 @@ export default function ChefExperiencePage() {
                         {c.hint ? <div className="text-xs text-stone-500 mt-1">{c.hint}</div> : null}
                       </div>
 
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={checked}
-                        onChange={() => toggleCert(c.id)}
-                      />
+                      <input type="checkbox" className="hidden" checked={checked} onChange={() => toggleCert(c.id)} />
                       <div
                         className={`w-4 h-4 border flex items-center justify-center ${
                           checked ? 'bg-stone-900 border-stone-900' : 'border-stone-300'
@@ -273,9 +317,7 @@ export default function ChefExperiencePage() {
                 placeholder="Ex: Permis B, Permis bateau, etc."
                 className="h-24"
               />
-              <p className="text-xs text-stone-400">
-                Ces infos nous aident à mieux vous matcher (yacht, sécurité, conformité).
-              </p>
+              <p className="text-xs text-stone-400">Ces infos nous aident à mieux vous matcher (yacht, sécurité, conformité).</p>
             </div>
           </div>
 
