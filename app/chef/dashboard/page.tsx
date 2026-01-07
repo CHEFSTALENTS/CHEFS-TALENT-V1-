@@ -352,13 +352,15 @@ export default function ChefDashboardPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link href="/chef/settings">
-                <Button className="bg-stone-900 hover:bg-stone-800">
-                  Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
+          {completedCount < checks.length ? (
+  <div className="flex items-center gap-3">
+    <Link href="/chef/settings">
+      <Button className="bg-stone-900 hover:bg-stone-800">
+        Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
+      </Button>
+    </Link>
+  </div>
+) : null}
           </div>
         </div>
 
