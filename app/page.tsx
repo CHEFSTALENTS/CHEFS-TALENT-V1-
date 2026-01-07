@@ -107,7 +107,7 @@ export default function Home() {
                 <div>
                   <h4 className="font-serif text-xl mb-6">La discrétion comme principe</h4>
                   <p className="text-stone-600 font-light leading-relaxed">
-                    Nos chefs interviennent dans less villas, chalets, yachts et résidences privées à travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics. Les références sont partagées de manière sélective.
+                    Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics. Les références sont partagées de manière sélective.
                   </p>
                 </div>
               </div>
