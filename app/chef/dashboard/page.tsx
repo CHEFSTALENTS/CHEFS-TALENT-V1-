@@ -98,17 +98,17 @@ export default function ChefDashboardPage() {
     const fullName = `${firstName} ${lastName}`.trim();
 const MIN_PORTFOLIO_PHOTOS = 5;
 
-function getPortfolioPhotosCount(p: any) {
+function getPortfolioPhotosCount(p: any): number {
   const imgs =
     p?.images ??
     p?.photos ??
     p?.gallery ??
     p?.portfolioImages ??
     [];
-
-  return Array.isArray(imgs) ? imgs.filter(Boolean).length : 0;
+  if (!Array.isArray(imgs)) return 0;
+  return imgs.filter(Boolean).length;
 }
-
+    
 function isPortfolioValid(p: any) {
   return getPortfolioPhotosCount(p) >= MIN_PORTFOLIO_PHOTOS;
 }
