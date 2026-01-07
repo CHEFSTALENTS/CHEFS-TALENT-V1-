@@ -25,6 +25,23 @@ import {
 
 type AnyProfile = Record<string, any>;
 
+/* ✅ helpers au scope du module (disponibles partout dans le fichier) */
+const MIN_PORTFOLIO_PHOTOS = 5;
+
+function getPortfolioPhotosCount(p: any): number {
+  const imgs =
+    p?.images ??
+    p?.photos ??
+    p?.gallery ??
+    p?.portfolioImages ??
+    [];
+  return Array.isArray(imgs) ? imgs.filter(Boolean).length : 0;
+}
+
+function isPortfolioValid(p: any): boolean {
+  return getPortfolioPhotosCount(p) >= MIN_PORTFOLIO_PHOTOS;
+}
+
 export default function ChefDashboardPage() {
   const router = useRouter();
   const didRedirect = useRef(false);
@@ -91,27 +108,12 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser?.id]);
 
-  // 3) merged profile (1 seule source : supabase auth + chef_profiles.profile)
+  // 3) merged profile
   const mergedProfile = useMemo<AnyProfile>(() => {
     const firstName = (sbUser?.user_metadata as any)?.firstName ?? '';
     const lastName = (sbUser?.user_metadata as any)?.lastName ?? '';
     const fullName = `${firstName} ${lastName}`.trim();
-const MIN_PORTFOLIO_PHOTOS = 5;
 
-function getPortfolioPhotosCount(p: any): number {
-  const imgs =
-    p?.images ??
-    p?.photos ??
-    p?.gallery ??
-    p?.portfolioImages ??
-    [];
-  if (!Array.isArray(imgs)) return 0;
-  return imgs.filter(Boolean).length;
-}
-    
-function isPortfolioValid(p: any) {
-  return getPortfolioPhotosCount(p) >= MIN_PORTFOLIO_PHOTOS;
-}
     return {
       id: sbUser?.id ?? '',
       email: sbUser?.email ?? '',
@@ -126,10 +128,11 @@ function isPortfolioValid(p: any) {
   // 4) Score
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
-    
-const photoCount = getPortfolioPhotosCount(mergedProfile as any);
-const portfolioOk = photoCount >= MIN_PORTFOLIO_PHOTOS;
-    
+
+    // ✅ dispo si tu veux l’afficher dans le dashboard
+    const photoCount = getPortfolioPhotosCount(p);
+    const portfolioOk = isPortfolioValid(p);
+
     const city = String(
       p.city ??
         p.baseCity ??
@@ -151,16 +154,24 @@ const portfolioOk = photoCount >= MIN_PORTFOLIO_PHOTOS;
       specialties: Array.isArray(p.specialties) ? p.specialties : [],
       languages: Array.isArray(p.languages) ? p.languages : [],
 
+      // ⚠️ ton computeChefScore actuel ne compte pas les photos.
+      // Il compte portfolioUrl/instagram/website.
       instagram: String(p.instagram ?? '').trim(),
       website: String(p.website ?? '').trim(),
       portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
 
       avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? '').trim(),
+
+      // (optionnel) si tu veux l’utiliser ailleurs dans la page
+      photoCount,
+      portfolioOk,
     };
   }, [mergedProfile]);
 
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
+ 
+}
   // 5) checks
   const checks = useMemo(() => {
     const bio = String((mergedProfile as any).bio ?? (mergedProfile as any).about ?? (mergedProfile as any).description ?? '').trim();
