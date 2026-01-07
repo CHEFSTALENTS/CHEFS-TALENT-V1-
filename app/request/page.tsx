@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input, Textarea, Reveal, Marker, Label } from '../../components/ui';
 import { submitRequest } from '../../services/actions';
 import { RequestForm, RequestMode } from '../../types';
 import { Loader2, CheckCircle2, Clock } from 'lucide-react';
+import { getFastMatchBudgetBenchmark } from '@/services/fastMatch';
 
 function RequestFormContent() {
   const searchParams = useSearchParams();
@@ -111,6 +112,144 @@ function RequestFormContent() {
       setIsSubmitting(false);
     }
   };
+
+  /* ==============================
+     Budget benchmark (premium UI)
+  ============================== */
+
+  const canComputeBenchmark = useMemo(() => {
+    const hasLocation = !!String(formData.location || '').trim();
+    const hasDate = !!String(formData.startDate || '').trim();
+    const guestsOk = Number(formData.guestCount || 0) > 0;
+    // On déclenche tôt, avant que le client remplisse le budget
+    return hasLocation && hasDate && guestsOk;
+  }, [formData.location, formData.startDate, formData.guestCount]);
+
+  const budgetBenchmark = useMemo(() => {
+    if (!canComputeBenchmark) return null;
+    try {
+      // On passe le formData complet (la fonction pourra utiliser ce qu’elle veut)
+      return getFastMatchBudgetBenchmark(formData as any) as any;
+    } catch {
+      return null;
+    }
+  }, [canComputeBenchmark, formData]);
+
+  const benchmarkView = useMemo(() => {
+    if (!budgetBenchmark) return null;
+
+    // Supporte plusieurs shapes possibles sans casser
+    const min = Number(budgetBenchmark?.min ?? budgetBenchmark?.low ?? 0) || 0;
+    const avg = Number(budgetBenchmark?.avg ?? budgetBenchmark?.average ?? 0) || 0;
+    const max = Number(budgetBenchmark?.max ?? budgetBenchmark?.high ?? 0) || 0;
+    const recommended = Number(budgetBenchmark?.recommended ?? budgetBenchmark?.suggested ?? avg) || 0;
+    const explanation =
+      String(
+        budgetBenchmark?.explanation ??
+          budgetBenchmark?.note ??
+          "Estimation indicative basée sur la zone, le format et le nombre de convives."
+      ) || '';
+
+    if (!min && !avg && !max) return null;
+
+    const fmt = (n: number) =>
+      n > 0
+        ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
+        : '—';
+
+    return { min, avg, max, recommended, explanation, fmt };
+  }, [budgetBenchmark]);
+
+  function BudgetBenchmarkCard({
+    contextLabel,
+  }: {
+    contextLabel: string;
+  }) {
+    if (!benchmarkView) return null;
+
+    const { min, avg, max, recommended, explanation, fmt } = benchmarkView;
+
+    return (
+      <div className="border border-stone-200 bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-6 py-5 border-b border-stone-100 bg-gradient-to-b from-stone-50 to-white">
+          <div className="flex items-start justify-between gap-6">
+            <div className="space-y-1">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
+                Benchmark • {contextLabel}
+              </div>
+              <div className="text-lg font-serif text-stone-900">
+                Budget moyen constaté (estimation)
+              </div>
+              <p className="text-xs text-stone-500 font-light leading-relaxed max-w-xl">
+                {explanation}
+              </p>
+            </div>
+
+            <div className="shrink-0 text-right">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
+                Recommandé
+              </div>
+              <div className="text-2xl font-serif text-stone-900">
+                {fmt(recommended)}€
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-5">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
+                Bas
+              </div>
+              <div className="text-lg font-serif text-stone-900 mt-1">
+                {fmt(min)}€
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-[0_1px_0_0_rgba(0,0,0,0.02)]">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
+                Moyen
+              </div>
+              <div className="text-lg font-serif text-stone-900 mt-1">
+                {fmt(avg)}€
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
+                Haut
+              </div>
+              <div className="text-lg font-serif text-stone-900 mt-1">
+                {fmt(max)}€
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-5">
+            <div className="text-xs text-stone-500 font-light">
+              Astuce : un budget aligné au marché augmente fortement la vitesse de matching.
+            </div>
+
+            <button
+              type="button"
+              className="inline-flex items-center justify-center px-4 h-11 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 transition-colors text-sm text-stone-900"
+              onClick={() => {
+                // On remplit le champ budgetRange avec un format simple
+                const v =
+                  recommended > 0
+                    ? `${recommended}€`
+                    : '';
+                setFormData((prev) => ({ ...prev, budgetRange: v }));
+              }}
+            >
+              Utiliser le recommandé
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // --- SUCCESS SCREEN ---
   if (result) {
@@ -301,7 +440,11 @@ function RequestFormContent() {
                     </div>
                     <div className="space-y-4">
                       <Label>Date du dîner</Label>
-                      <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
+                      <Input
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      />
                     </div>
                   </div>
 
@@ -310,9 +453,27 @@ function RequestFormContent() {
                     <Input
                       type="number"
                       min={1}
-                      className="max-w-[100px]"
+                      className="max-w-[140px]"
                       value={formData.guestCount}
                       onChange={(e) => setFormData({ ...formData, guestCount: parseInt(e.target.value || '0', 10) })}
+                    />
+                  </div>
+
+                  {/* ✅ BENCHMARK PREMIUM (FAST) */}
+                  <div className="pt-2">
+                    <BudgetBenchmarkCard contextLabel="Fast Match" />
+                  </div>
+
+                  {/* ✅ CHAMP BUDGET (FAST) */}
+                  <div className="space-y-4">
+                    <Label>Budget estimatif</Label>
+                    <p className="text-xs text-stone-400 italic">
+                      Indiquez un ordre de grandeur pour éviter un budget en-dessous du marché.
+                    </p>
+                    <Input
+                      value={formData.budgetRange}
+                      onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
+                      placeholder="Ex: 600€"
                     />
                   </div>
 
@@ -384,7 +545,11 @@ function RequestFormContent() {
                   {formData.clientType === 'concierge' && (
                     <div className="space-y-4">
                       <Label>Nom de la structure</Label>
-                      <Input value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Agence, Family Office..." />
+                      <Input
+                        value={formData.companyName}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        placeholder="Agence, Family Office..."
+                      />
                     </div>
                   )}
 
@@ -579,7 +744,17 @@ function RequestFormContent() {
                   <div className="space-y-4 pt-6 border-t border-stone-100">
                     <Label>Budget estimatif</Label>
                     <p className="text-xs text-stone-400 italic mb-2">Confidentiel. Permet de calibrer le profil du chef.</p>
-                    <Input value={formData.budgetRange} onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })} placeholder="Ex: 500–800€ / jour ou budget global" />
+
+                    {/* ✅ BENCHMARK PREMIUM (CONCIERGE) */}
+                    <BudgetBenchmarkCard contextLabel="Concierge Match" />
+
+                    <div className="pt-4">
+                      <Input
+                        value={formData.budgetRange}
+                        onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
+                        placeholder="Ex: 500–800€ / jour ou budget global"
+                      />
+                    </div>
                   </div>
                 </div>
               </Reveal>
