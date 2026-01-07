@@ -151,13 +151,11 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
 
   if (data.kind === 'event') {
     const guests = Number(data.meta?.guests ?? 0) || 0;
-    if (guests <= 0) return null;
-
     return {
       unitLabel: '€/pers',
-      min: data.min / guests,
-      max: data.max / guests,
-      recommended: data.recommended / guests,
+      min: data.perUnit.min,
+      max: data.perUnit.max,
+      recommended: data.perUnit.recommended,
       totalRecommended: data.recommended,
       totalMin: data.min,
       totalMax: data.max,
@@ -165,15 +163,12 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
     };
   }
 
-  // residence
   const days = Number(data.meta?.days ?? 0) || 0;
-  if (days <= 0) return null;
-
   return {
     unitLabel: '€/jour',
-    min: data.min / days,
-    max: data.max / days,
-    recommended: data.recommended / days,
+    min: data.perUnit.min,
+    max: data.perUnit.max,
+    recommended: data.perUnit.recommended,
     totalRecommended: data.recommended,
     totalMin: data.min,
     totalMax: data.max,
