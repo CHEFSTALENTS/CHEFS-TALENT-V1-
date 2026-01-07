@@ -44,8 +44,7 @@ export default function ChefPortfolioPage() {
   const [instagramUrl, setInstagramUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
 
-  const fileRef = useRef<HTMLInputElement | null>(null);
-
+ 
   // 1) Session Supabase
   useEffect(() => {
     let alive = true;
