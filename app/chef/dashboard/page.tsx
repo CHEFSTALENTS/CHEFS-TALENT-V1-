@@ -90,22 +90,22 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser?.id]);
 
-  // 3) merge profile
-  const mergedProfile = useMemo(() => {
-    const firstName = (sbUser?.user_metadata as any)?.firstName ?? '';
-    const lastName = (sbUser?.user_metadata as any)?.lastName ?? '';
-    const fullName = `${firstName} ${lastName}`.trim();
+ // 3) merge profile
+const mergedProfile = useMemo<AnyProfile>(() => {
+  const firstName = (sbUser?.user_metadata as any)?.firstName ?? '';
+  const lastName = (sbUser?.user_metadata as any)?.lastName ?? '';
+  const fullName = `${firstName} ${lastName}`.trim();
 
-    return {
-      id: sbUser?.id ?? '',
-      email: sbUser?.email ?? '',
-      firstName,
-      lastName,
-      name: settingsProfile?.name ?? fullName,
-      status: settingsProfile?.status ?? 'draft',
-      ...(settingsProfile ?? {}),
-    };
-  }, [sbUser, settingsProfile]);
+  return {
+    id: sbUser?.id ?? '',
+    email: sbUser?.email ?? '',
+    firstName,
+    lastName,
+    name: (settingsProfile as any)?.name ?? fullName,
+    status: (settingsProfile as any)?.status ?? 'draft',
+    ...(settingsProfile ?? {}),
+  };
+}, [sbUser, settingsProfile]);
 
   // 4) score
   const profileForScore = useMemo(() => {
