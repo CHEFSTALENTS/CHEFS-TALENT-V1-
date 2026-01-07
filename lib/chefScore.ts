@@ -1,21 +1,18 @@
 export type ChefProfile = {
   name?: string;
   phone?: string;
-
-  // legacy
   city?: string;
   country?: string;
-
   bio?: string;
   yearsExperience?: number | null;
   cuisines?: string[];
   specialties?: string[];
   languages?: string[];
-
   instagram?: string;
   website?: string;
   portfolioUrl?: string;
   avatarUrl?: string;
+  images?: string[]; 
 
   // ✅ mobilité (nouveau + compat)
   baseCity?: string;
@@ -66,6 +63,7 @@ export function computeChefScore(p: ChefProfile) {
   const baseCity = getBaseCity(p);
   const radius = getRadius(p);
   const international = getInternational(p);
+const imgCount = (p.images ?? []).filter(Boolean).length;
 
   const mobilityOk =
     !!baseCity ||
@@ -84,8 +82,7 @@ export function computeChefScore(p: ChefProfile) {
     { key: 'cuisines', ok: (p.cuisines?.length ?? 0) >= 1, weight: 1 },
     { key: 'specialties', ok: (p.specialties?.length ?? 0) >= 1, weight: 1 },
     { key: 'languages', ok: (p.languages?.length ?? 0) >= 1, weight: 1 },
-    { key: 'portfolio', ok: !!p.portfolioUrl?.trim() || !!p.instagram?.trim() || !!p.website?.trim(), weight: 2 },
-
+{ key: 'portfolio', ok: imgCount >= 5, weight: 2 },
     // ✅ NOUVEAU : mobilité/logistique
     // poids 1 ou 2 selon l’importance que tu veux lui donner
     { key: 'mobility', ok: mobilityOk, weight: 1 },
