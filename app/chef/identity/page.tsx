@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
@@ -8,6 +9,7 @@ import { Loader2, Upload } from 'lucide-react';
 import { ChefProfileType, ChefSeniority } from '../../../types';
 
 export default function ChefProfilePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -65,38 +67,36 @@ useEffect(() => {
   };
 }, []);
   
-  async function saveChefProfilePatch(patch: any) {
-const { data } = await supabase.auth.getSession();
-const sbUser = data.session?.user ?? null;
-if (!sbUser?.id) throw new Error('No user');
-const user = { id: sbUser.id, email: sbUser.email ?? '' };
-    if (!user?.id) throw new Error('No user');
+async function saveChefProfilePatch(patch: any) {
+  const { data } = await supabase.auth.getSession();
+  const sbUser = data.session?.user ?? null;
+  if (!sbUser?.id) throw new Error('No user');
 
-    // 1) GET existing profile from DB
-    const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
-    const json = await resGet.json();
-    const current = json?.profile ?? {};
+  // 1) GET existing profile from DB
+  const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+  const json = await resGet.json();
+  const current = json?.profile ?? {};
 
-    // 2) merge
-    const merged = {
-      ...current,
-      ...patch,
-      id: user.id,
-      email: user.email,
-      updatedAt: new Date().toISOString(),
-    };
+  // 2) merge
+  const merged = {
+    ...current,
+    ...patch,
+    id: sbUser.id,
+    email: sbUser.email ?? '',
+    updatedAt: new Date().toISOString(),
+  };
 
-    // 3) PUT
-    const resPut = await fetch('/api/chef/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: user.id, profile: merged }),
-    });
+  // 3) PUT
+  const resPut = await fetch('/api/chef/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: sbUser.id, profile: merged }),
+  });
 
-    if (!resPut.ok) throw new Error(await resPut.text());
+  if (!resPut.ok) throw new Error(await resPut.text());
 
-    return merged;
-  }
+  return merged;
+}
 
   async function uploadAvatar(file: File, userId: string) {
     const fd = new FormData();
