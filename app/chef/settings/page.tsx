@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth, api } from '../../../services/storage';
 import { Marker, Label, Button, Input } from '../../../components/ui';
 import {
   Sparkles,
@@ -22,10 +22,13 @@ import {
   Calendar,
   SlidersHorizontal,
   DollarSign,
+  Upload,
 } from 'lucide-react';
 import { computeChefScore } from '@/lib/chefScore';
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 import { supabase } from '@/services/supabaseClient';
+
+/* ----------------- Password Section (Supabase) ----------------- */
 
 function PasswordSection() {
   const [pw1, setPw1] = useState('');
@@ -92,6 +95,8 @@ function PasswordSection() {
   );
 }
 
+/* ----------------- Types ----------------- */
+
 type ChefProfile = {
   id?: string;
   name?: string;
@@ -99,32 +104,43 @@ type ChefProfile = {
   phone?: string;
   city?: string;
   country?: string;
+
   bio?: string;
   cuisines?: string[];
   specialties?: string[];
   languages?: string[];
+
   instagram?: string;
   website?: string;
   portfolioUrl?: string;
+
   avatarUrl?: string;
+  photoUrl?: string; // legacy
   yearsExperience?: number | null;
+
+  images?: string[]; // portfolio photos
   founder?: boolean;
+
+  pricing?: any;
+  availability?: any;
+
+  location?: {
+    baseCity?: string;
+    travelRadiusKm?: number;
+    internationalMobility?: boolean;
+    coverageZones?: string[];
+  };
+
   createdAt?: string;
   updatedAt?: string;
-location?: {
-  baseCity?: string;
-  travelRadiusKm?: number;
-  internationalMobility?: boolean;
-  coverageZones?: string[];
-  };
-  
 
-
+  [key: string]: any;
 };
 
 const STORAGE_KEY = 'ct_chef_profile_v1';
-// si tu avais une ancienne clé utilisée ailleurs, tu peux en ajouter ici :
 const FALLBACK_KEYS = ['ct_chef_profile', 'chef_profile', 'ct_chef_v1'];
+
+/* ----------------- Helpers ----------------- */
 
 function isPricingComplete(p: any) {
   const pricing = p?.pricing ?? null;
@@ -136,67 +152,97 @@ function isPricingComplete(p: any) {
 
   return okDaily || okPpp;
 }
+
+function safeReadLS<T>(key: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function safeWriteLS(key: string, value: any) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+/* ----------------- Page ----------------- */
+
 export default function ChefSettingsPage() {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [sbUser, setSbUser] = useState<any | null>(null);
+
   const [profile, setProfile] = useState<ChefProfile>({});
   const [notice, setNotice] = useState<string | null>(null);
-const scoreInput = useMemo(() => {
-  const p: any = profile ?? {};
-  return {
-    ...p,
-    city: p.city ?? p.baseCity ?? p.location?.baseCity ?? '',
-    avatarUrl: p.avatarUrl ?? p.photoUrl ?? '',
-    portfolioUrl: p.portfolioUrl ?? p.portfolio ?? p.driveUrl ?? p.drive ?? '',
-    images: p.images ?? p.photos ?? p.gallery ?? p.portfolioImages ?? [],
-  };
-}, [profile]);
-  
-  
-const validationCompletion = useMemo(() => {
-  const { details, ok } = isProfileCompleteForValidation(profile ?? {});
-  const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
-  const okCount = items.filter(i => i.ok).length;
-  const total = items.length || 1;
-  return { ok, okCount, total, score: Math.round((okCount / total) * 100), details };
-}, [profile]);
-  
-const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput]);
 
- useEffect(() => {
-  let cancelled = false;
+  // ✅ Normalisation pour score / compat legacy
+  const scoreInput = useMemo(() => {
+    const p: any = profile ?? {};
+    return {
+      ...p,
+      city: p.city ?? p.baseCity ?? p.location?.baseCity ?? '',
+      avatarUrl: p.avatarUrl ?? p.photoUrl ?? '',
+      portfolioUrl: p.portfolioUrl ?? p.portfolio ?? p.driveUrl ?? p.drive ?? '',
+      images: p.images ?? p.photos ?? p.gallery ?? p.portfolioImages ?? [],
+    };
+  }, [profile]);
 
-  (async () => {
-    setLoading(true);
+  // (si tu l’utilises ailleurs)
+  const validationCompletion = useMemo(() => {
+    const { details, ok } = isProfileCompleteForValidation(profile ?? {});
+    const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
+    const okCount = items.filter((i) => i.ok).length;
+    const total = items.length || 1;
+    return { ok, okCount, total, score: Math.round((okCount / total) * 100), details };
+  }, [profile]);
 
-    try {
-      const user = auth.getCurrentUser?.();
-      if (!user?.id) {
-        if (!cancelled) setLoading(false);
-        return;
-      }
+  const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput]);
 
-      // 1) on lit en DB
-const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, {
-  cache: 'no-store',
-});
-      const json = await res.json();
-      const fromDb = json?.profile ?? null;
+  // ✅ Source de vérité = DB (Supabase session + /api/chef/profile)
+  useEffect(() => {
+    let cancelled = false;
 
-      if (!cancelled) {
+    (async () => {
+      setLoading(true);
+
+      try {
+        const { data } = await supabase.auth.getSession();
+        const u = data.session?.user ?? null;
+
+        if (!u?.id) {
+          if (!cancelled) setLoading(false);
+          router.replace('/chef/login');
+          return;
+        }
+
+        if (!cancelled) setSbUser(u);
+
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, { cache: 'no-store' });
+        const json = await res.json();
+        const fromDb = json?.profile ?? null;
+
+        if (cancelled) return;
+
         if (fromDb) {
           setProfile(fromDb);
         } else {
-          // 2) fallback localStorage
+          // fallback localStorage (au cas où)
           const fromLs =
             safeReadLS<ChefProfile>(STORAGE_KEY) ??
-            FALLBACK_KEYS.map(k => safeReadLS<ChefProfile>(k)).find(Boolean) ??
+            FALLBACK_KEYS.map((k) => safeReadLS<ChefProfile>(k)).find(Boolean) ??
             null;
 
           const merged: ChefProfile = {
             ...(fromLs ?? {}),
-            id: user.id,
-            email: user.email,
+            id: u.id,
+            email: u.email ?? '',
             updatedAt: new Date().toISOString(),
           };
 
@@ -204,140 +250,119 @@ const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, {
         }
 
         setLoading(false);
+      } catch (e) {
+        console.error('LOAD PROFILE ERROR', e);
+        if (!cancelled) setLoading(false);
       }
-    } catch (e) {
-      console.error("LOAD PROFILE ERROR", e);
-      if (!cancelled) setLoading(false);
-    }
-  })();
+    })();
 
-  return () => {
-    cancelled = true;
-  };
-}, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
+  // ✅ Checklist tolérante (bio / images / avatar / location / pricing etc.)
   const checklist = useMemo(() => {
-  // Helpers “tolérants” (on accepte plusieurs clés / vieux champs)
-  const bio = String(
-    profile.bio ??
-      (profile as any).about ??
-      (profile as any).description ??
-      ''
-  ).trim();
+    const bio = String(profile.bio ?? (profile as any).about ?? (profile as any).description ?? '').trim();
 
-  const years =
-    Number(
-      profile.yearsExperience ??
-        (profile as any).experienceYears ??
-        (profile as any).years ??
-        0
-    ) || 0;
+    const years =
+      Number(profile.yearsExperience ?? (profile as any).experienceYears ?? (profile as any).years ?? 0) || 0;
 
- const imagesRaw =
-  (profile as any).photos ??
-  (profile as any).images ??
-  (profile as any).gallery ??
-  (profile as any).portfolioImages ??
-  [];
+    const imagesRaw =
+      (profile as any).photos ??
+      (profile as any).images ??
+      (profile as any).gallery ??
+      (profile as any).portfolioImages ??
+      [];
 
-const hasImages = Array.isArray(imagesRaw) && imagesRaw.filter(Boolean).length > 0;
+    const hasImages = Array.isArray(imagesRaw) && imagesRaw.filter(Boolean).length > 0;
 
-  const photoUrl =
-    (profile as any).photoUrl ??
-    (profile as any).avatarUrl ??
-    '';
+    const photoUrl = String((profile as any).photoUrl ?? (profile as any).avatarUrl ?? '').trim();
 
-  const instagram = String((profile as any).instagram ?? '').trim();
-  const website = String((profile as any).website ?? '').trim();
-  const portfolioUrl = String((profile as any).portfolioUrl ?? '').trim();
+    const instagram = String((profile as any).instagram ?? '').trim();
+    const website = String((profile as any).website ?? '').trim();
+    const portfolioUrl = String((profile as any).portfolioUrl ?? '').trim();
 
+    const items: Array<{
+      key: string;
+      label: string;
+      ok: boolean;
+      hint?: string;
+      href?: string;
+      icon: React.ElementType;
+    }> = [
+      {
+        key: 'identity',
+        label: 'Identité',
+        ok:
+          !!String((profile as any).name ?? '').trim() &&
+          !!String(profile.phone ?? '').trim() &&
+          (!!String((profile as any).city ?? '').trim() || !!String(profile.location?.baseCity ?? '').trim()),
+        hint: 'Nom, téléphone, ville…',
+        href: '/chef/identity',
+        icon: User,
+      },
+      {
+        key: 'experience',
+        label: 'Expérience',
+        ok: years > 0 || bio.length >= 80 || (profile.specialties?.length ?? 0) >= 1,
+        hint: 'Bio + expérience',
+        href: '/chef/experience',
+        icon: Briefcase,
+      },
+      {
+        key: 'portfolio',
+        label: 'Portfolio',
+        ok: hasImages || !!photoUrl || !!portfolioUrl || !!instagram || !!website,
+        hint: 'Photos / Instagram / site',
+        href: '/chef/portfolio',
+        icon: ImageIcon,
+      },
+      {
+        key: 'mobility',
+        label: 'Zone & mobilité',
+        ok:
+          !!String(profile.location?.baseCity ?? '').trim() ||
+          profile.location?.internationalMobility === true ||
+          (profile.location?.coverageZones?.length ?? 0) > 0,
+        hint: 'Zones, déplacements',
+        href: '/chef/mobility',
+        icon: MapPinned,
+      },
+      {
+        key: 'pricing',
+        label: 'Tarifs',
+        ok: isPricingComplete(profile),
+        hint: 'Prix / jour ou prix / personne',
+        href: '/chef/pricing',
+        icon: DollarSign,
+      },
+      {
+        key: 'availability',
+        label: 'Disponibilités',
+        ok: true, // volontairement non-bloquant
+        hint: 'Calendrier, périodes',
+        href: '/chef/availability',
+        icon: Calendar,
+      },
+      {
+        key: 'preferences',
+        label: 'Préférences',
+        ok: (profile.cuisines?.length ?? 0) >= 1 && (profile.languages?.length ?? 0) >= 1,
+        hint: 'Cuisines, langues…',
+        href: '/chef/preferences',
+        icon: SlidersHorizontal,
+      },
+    ];
 
-  const items: Array<{
-    key: string;
-    label: string;
-    ok: boolean;
-    hint?: string;
-    href?: string;
-    icon: React.ElementType;
-  }> = [
-    {
-      key: 'identity',
-      label: 'Identité',
-      ok:
-        !!(profile as any).name?.trim?.() &&
-        !!profile.phone?.trim?.() &&
-        (!!(profile as any).city?.trim?.() || !!profile.location?.baseCity?.trim?.()),
-      hint: 'Nom, téléphone, ville…',
-      href: '/chef/identity',
-      icon: User,
-    },
-
-    {
-      key: 'experience',
-      label: 'Expérience',
-      ok: years > 0 || bio.length >= 80 || (profile.specialties?.length ?? 0) >= 1,
-      hint: 'Bio + expérience',
-      href: '/chef/experience',
-      icon: Briefcase,
-    },
-
-    {
-      key: 'portfolio',
-      label: 'Portfolio',
-      ok: hasImages || !!photoUrl?.trim?.() || !!portfolioUrl || !!instagram || !!website,
-      hint: 'Photos / Instagram / site',
-      href: '/chef/portfolio',
-      icon: ImageIcon,
-    },
-
-    {
-      key: 'mobility',
-      label: 'Zone & mobilité',
-      ok:
-        !!profile.location?.baseCity?.trim?.() ||
-        profile.location?.internationalMobility === true ||
-        (profile.location?.coverageZones?.length ?? 0) > 0,
-      hint: 'Zones, déplacements',
-      href: '/chef/mobility',
-      icon: MapPinned,
-    },
-    
-    {
-      key: 'pricing',
-      label: 'Tarifs',
-      ok: isPricingComplete(profile),
-      hint: 'Prix / jour ou prix / personne',
-      href: '/chef/pricing',
-      icon: DollarSign, 
-    },
-    
-    {
-      key: 'availability',
-      label: 'Disponibilités',
-      ok: true,
-      hint: 'Calendrier, périodes',
-      href: '/chef/availability',
-      icon: Calendar,
-    },
-
-    {
-      key: 'preferences',
-      label: 'Préférences',
-      ok: (profile.cuisines?.length ?? 0) >= 1 && (profile.languages?.length ?? 0) >= 1,
-      hint: 'Cuisines, langues…',
-      href: '/chef/preferences',
-      icon: SlidersHorizontal,
-    },
-  ];
-
-  return items;
-}, [profile]);
+    return items;
+  }, [profile]);
 
   const completion = useMemo(() => {
     const total = checklist.length;
-    const ok = checklist.filter(i => i.ok).length;
-    const score = total === 0 ? 0 : Math.round((ok / total) * 100);
-    return { total, ok, score };
+    const ok = checklist.filter((i) => i.ok).length;
+    const scorePct = total === 0 ? 0 : Math.round((ok / total) * 100);
+    return { total, ok, score: scorePct };
   }, [checklist]);
 
   const launchTier = useMemo(() => {
@@ -348,45 +373,45 @@ const hasImages = Array.isArray(imagesRaw) && imagesRaw.filter(Boolean).length >
     return { label: 'À compléter', tone: 'stone' as const, icon: Lock };
   }, [completion.score]);
 
-const canBecomeFounder = completion.score >= 70 && isPricingComplete(profile);
-  
-const saveProfile = async (patch: ChefProfile) => {
-  setSaving(true);
-  setNotice(null);
+  const canBecomeFounder = completion.score >= 70 && isPricingComplete(profile);
 
-  try {
-    const user = auth.getCurrentUser?.();
-    if (!user?.id) throw new Error("No user");
+  const saveProfile = async (patch: ChefProfile) => {
+    setSaving(true);
+    setNotice(null);
 
-    const merged: ChefProfile = {
-      ...profile,
-      ...patch,
-      id: user.id,
-      email: user.email,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      if (!sbUser?.id) throw new Error('No user');
 
-    // ✅ localStorage ici (APRES merged)
-    safeWriteLS(STORAGE_KEY, merged);
+      const merged: ChefProfile = {
+        ...profile,
+        ...patch,
+        id: sbUser.id,
+        email: sbUser.email ?? profile.email ?? '',
+        updatedAt: new Date().toISOString(),
+      };
 
-    const res = await fetch("/api/chef/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: user.id, profile: merged }),
-    });
+      // ✅ cache local
+      safeWriteLS(STORAGE_KEY, merged);
 
-    if (!res.ok) throw new Error(await res.text());
+      // ✅ DB
+      const res = await fetch('/api/chef/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sbUser.id, profile: merged }),
+      });
 
-    setProfile(merged);
-    setNotice("Enregistré ✅");
-  } catch (e) {
-    console.error("SAVE ERROR", e);
-    setNotice("Erreur d’enregistrement");
-  } finally {
-    setSaving(false);
-    setTimeout(() => setNotice(null), 2500);
-  }
-};
+      if (!res.ok) throw new Error(await res.text());
+
+      setProfile(merged);
+      setNotice('Enregistré ✅');
+    } catch (e) {
+      console.error('SAVE ERROR', e);
+      setNotice('Erreur d’enregistrement');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setNotice(null), 2500);
+    }
+  };
 
   const activateFounder = async () => {
     const next = { ...profile, founder: true, updatedAt: new Date().toISOString() };
@@ -422,10 +447,7 @@ const saveProfile = async (patch: ChefProfile) => {
               </div>
 
               <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
-                <div
-                  className="h-2 bg-stone-900 rounded-full transition-all"
-                  style={{ width: `${completion.score}%` }}
-                />
+                <div className="h-2 bg-stone-900 rounded-full transition-all" style={{ width: `${completion.score}%` }} />
               </div>
 
               <div className="text-xs text-stone-500">
@@ -434,16 +456,15 @@ const saveProfile = async (patch: ChefProfile) => {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-  type="button"
-  onClick={() => {
-    saveProfile(profile);
-  }}
-  style={{ padding: 12, border: "1px solid #000", cursor: "pointer" }}
-  disabled={saving || loading}
->
-  Enregistrer
-</button>
+              <Button
+                type="button"
+                onClick={() => saveProfile(profile)}
+                disabled={saving || loading}
+                className="bg-stone-900 hover:bg-stone-800"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                Enregistrer
+              </Button>
               {notice ? <div className="text-sm text-stone-600">{notice}</div> : null}
             </div>
           </div>
@@ -497,7 +518,7 @@ const saveProfile = async (patch: ChefProfile) => {
             <p className="text-sm text-stone-500 mt-1">Atteins 70% pour être prioritaire.</p>
 
             <div className="mt-4 space-y-3">
-              {checklist.map(item => (
+              {checklist.map((item) => (
                 <div key={item.key} className="flex items-start gap-3">
                   {item.ok ? (
                     <CheckCircle2 className="w-5 h-5 text-stone-900 mt-0.5" />
@@ -510,10 +531,7 @@ const saveProfile = async (patch: ChefProfile) => {
                   </div>
 
                   {item.href ? (
-                    <Link
-                      href={item.href}
-                      className="text-xs text-stone-700 hover:text-stone-900 transition whitespace-nowrap"
-                    >
+                    <Link href={item.href} className="text-xs text-stone-700 hover:text-stone-900 transition whitespace-nowrap">
                       Ouvrir →
                     </Link>
                   ) : null}
@@ -522,7 +540,7 @@ const saveProfile = async (patch: ChefProfile) => {
             </div>
           </div>
 
-          {/* Premium hub (pas de duplication de champs ici) */}
+          {/* Hub */}
           <div className="lg:col-span-2 border border-stone-200 bg-white rounded-2xl p-6">
             {loading ? (
               <div className="py-16 flex justify-center">
@@ -539,9 +557,7 @@ const saveProfile = async (patch: ChefProfile) => {
                   </div>
                   <div className="text-right">
                     <div className="text-xs uppercase tracking-widest text-stone-400">Profil</div>
-                    <div className="text-sm text-stone-900 font-medium">
-                      {profile.name?.trim() ? profile.name : '—'}
-                    </div>
+                    <div className="text-sm text-stone-900 font-medium">{profile.name?.trim() ? profile.name : '—'}</div>
                     <div className="text-xs text-stone-500">{profile.email ?? '—'}</div>
                   </div>
                 </div>
@@ -552,51 +568,54 @@ const saveProfile = async (patch: ChefProfile) => {
                     desc="Nom, téléphone, ville…"
                     href="/chef/identity"
                     icon={User}
-                    ok={checklist.find(i => i.key === 'identity')?.ok}
+                    ok={checklist.find((i) => i.key === 'identity')?.ok}
                   />
                   <SectionCard
                     title="Expérience"
                     desc="Bio, années, style…"
                     href="/chef/experience"
                     icon={Briefcase}
-                    ok={checklist.find(i => i.key === 'experience')?.ok}
+                    ok={checklist.find((i) => i.key === 'experience')?.ok}
                   />
                   <SectionCard
                     title="Portfolio"
                     desc="Photos, Instagram, site…"
                     href="/chef/portfolio"
                     icon={ImageIcon}
-                    ok={checklist.find(i => i.key === 'portfolio')?.ok}
+                    ok={checklist.find((i) => i.key === 'portfolio')?.ok}
                   />
                   <SectionCard
                     title="Zone & Mobilité"
                     desc="Zones, déplacements…"
                     href="/chef/mobility"
                     icon={MapPinned}
-                    ok={checklist.find(i => i.key === 'mobility')?.ok}
+                    ok={checklist.find((i) => i.key === 'mobility')?.ok}
                   />
                   <SectionCard
                     title="Disponibilités"
                     desc="Périodes, calendrier…"
                     href="/chef/availability"
                     icon={Calendar}
-                    ok={checklist.find(i => i.key === 'availability')?.ok}
+                    ok={checklist.find((i) => i.key === 'availability')?.ok}
                   />
                   <SectionCard
                     title="Préférences"
                     desc="Cuisines, langues…"
                     href="/chef/preferences"
                     icon={SlidersHorizontal}
-                    ok={checklist.find(i => i.key === 'preferences')?.ok}
+                    ok={checklist.find((i) => i.key === 'preferences')?.ok}
+                  />
+                  <SectionCard
+                    title="Tarifs"
+                    desc="Positionnement & prix"
+                    href="/chef/pricing"
+                    icon={DollarSign}
+                    ok={checklist.find((i) => i.key === 'pricing')?.ok}
                   />
                 </div>
 
                 <div className="pt-3 flex items-center gap-2">
-                  <Button
-                    className="bg-stone-900 hover:bg-stone-800"
-                    onClick={() => saveProfile(profile)}
-                    disabled={saving}
-                  >
+                  <Button className="bg-stone-900 hover:bg-stone-800" onClick={() => saveProfile(profile)} disabled={saving}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                     Enregistrer
                   </Button>
@@ -606,6 +625,14 @@ const saveProfile = async (patch: ChefProfile) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* ✅ Password */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1" />
+          <div className="lg:col-span-2">
+            <PasswordSection />
           </div>
         </div>
 
@@ -628,11 +655,7 @@ function Pill({ children, tone = 'stone' }: { children: React.ReactNode; tone?: 
       ? 'bg-violet-500/15 text-violet-700 border-violet-500/20'
       : 'bg-stone-100 text-stone-700 border-stone-200';
 
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
-      {children}
-    </span>
-  );
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{children}</span>;
 }
 
 function SectionCard({
@@ -669,22 +692,4 @@ function SectionCard({
       </div>
     </Link>
   );
-}
-
-/* ----------------- localStorage helpers ----------------- */
-
-function safeReadLS<T>(key: string): T | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function safeWriteLS(key: string, value: any) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
 }
