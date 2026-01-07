@@ -8,32 +8,10 @@ import { submitRequest } from '../../services/actions';
 import { RequestForm, RequestMode } from '../../types';
 import { Loader2, CheckCircle2, Clock } from 'lucide-react';
 import { getMarketBudgetRange } from '@/lib/budgetBenchmark';
+import type { BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
 
-function fmtEUR(n: number) {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
-}
-
-function getDaysFromDates(start?: string, end?: string) {
-  if (!start) return 1;
-  if (!end) return 1;
-  const a = new Date(start);
-  const b = new Date(end);
-  const diff = Math.ceil((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  return Number.isFinite(diff) ? Math.max(1, diff) : 1;
-}
-
-/**
- * ✅ Ta règle:
- * - ponctuel (single) => event (€/pers)
- * - résidence (multi + >=2 jours) => residence (€/jour)
- */
-function getBudgetKind(formData: any) {
-  const isMulti = formData?.dateMode === 'multi';
-  const days = getDaysFromDates(formData?.startDate, formData?.endDate);
-  return isMulti && days >= 2 ? 'residence' : 'event';
-}
 /* =========================================================
-   Budget helpers (premium + safe)
+   Money + dates helpers (safe)
 ========================================================= */
 
 function formatMoney(v?: number, currency: string = 'EUR') {
@@ -61,7 +39,6 @@ function diffDaysInclusive(start?: string, end?: string) {
   const b = parseISODate(end);
   if (!a || !b) return 1;
 
-  // diff days (UTC-ish) + inclusive
   const ms = b.getTime() - a.getTime();
   const days = Math.floor(ms / (1000 * 60 * 60 * 24)) + 1;
   return Math.max(1, days);
@@ -79,41 +56,64 @@ function isInternationalFromLocation(location?: string) {
   const s = String(location || '').toLowerCase();
   if (!s) return false;
 
-  // règle simple: si le champ contient un pays explicitement non-FR
-  // (tu pourras raffiner plus tard)
-  const hintsNonFR = ['ibiza', 'spain', 'espagne', 'italy', 'italie', 'greece', 'grece', 'uk', 'london', 'switzerland', 'suisse', 'marrakech', 'morocco', 'maroc', 'dubai'];
-  const hintsFR = ['france', 'paris', 'lyon', 'marseille', 'nice', 'cannes', 'saint tropez', 'courchevel', 'megeve', 'bordeaux'];
+  // heuristique simple (à raffiner plus tard)
+  const hintsNonFR = [
+    'ibiza',
+    'spain',
+    'espagne',
+    'italy',
+    'italie',
+    'greece',
+    'grece',
+    'uk',
+    'london',
+    'switzerland',
+    'suisse',
+    'marrakech',
+    'morocco',
+    'maroc',
+    'dubai',
+  ];
+  const hintsFR = [
+    'france',
+    'paris',
+    'lyon',
+    'marseille',
+    'nice',
+    'cannes',
+    'saint tropez',
+    'courchevel',
+    'megeve',
+    'bordeaux',
+  ];
 
   const nonfr = hintsNonFR.some((x) => s.includes(x));
   const fr = hintsFR.some((x) => s.includes(x));
 
-  // si on détecte non-FR et pas FR -> international
   return nonfr && !fr;
+}
+
+/**
+ * ✅ Ta règle métier (IMPORTANT) :
+ * - Ponctuel (date unique / single) => EVENT => €/pers (déjeuner/dîner/évènement ponctuel)
+ * - Résidence = uniquement si MULTI + >= 2 jours => RESIDENCE => €/jour (villa / yacht / chalet)
+ *
+ * => Le nombre de personnes n’impacte JAMAIS le prix “résidence / jour”.
+ */
+function getBudgetKindFromForm(formData: RequestForm): RequestKind {
+  const days = diffDaysInclusive(formData.startDate, (formData as any).endDate);
+  const isMulti = formData.dateMode === 'multi';
+  return isMulti && days >= 2 ? 'residence' : 'event';
 }
 
 function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null {
   const assignment = String((formData as any).assignmentType || 'dinner');
 
-  // kind
-  const isResidenceLike =
-    formData.dateMode === 'multi' ||
-    assignment === 'daily' ||
-    assignment === 'residence';
+  const kind = getBudgetKindFromForm(formData);
 
-  const kind: RequestKind = isResidenceLike ? 'residence' : 'event';
+  const days = kind === 'residence' ? diffDaysInclusive(formData.startDate, (formData as any).endDate) : null;
+  const guests = kind === 'event' ? Math.max(2, Number((formData as any).guestCount ?? 2)) : null;
 
-  // days / guests
-  const days =
-    kind === 'residence'
-      ? diffDaysInclusive(formData.startDate, (formData as any).endDate)
-      : null;
-
-  const guests =
-    kind === 'event'
-      ? Math.max(2, Number((formData as any).guestCount ?? 2))
-      : null;
-
-  // flags
   const yacht = assignment === 'yacht';
   const brigade =
     String((formData as any).serviceExpectations || '') === 'full_team' ||
@@ -122,11 +122,8 @@ function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null
   const highSeason = isHighSeasonFromStartDate(formData.startDate);
   const international = isInternationalFromLocation(formData.location);
 
-  // tier par défaut = premium (comme ton lib)
-  // (si plus tard tu ajoutes un champ tier côté formData, tu peux le passer ici)
-  const tier = 'premium';
+  const tier: BudgetContext['tier'] = 'premium';
 
-  // Minimum d'infos pour être utile
   if (kind === 'event' && (!guests || guests <= 0)) return null;
   if (kind === 'residence' && (!days || days <= 0)) return null;
 
@@ -145,6 +142,45 @@ function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null
   };
 }
 
+/* =========================================================
+   Premium benchmark card (shows unit + total)
+========================================================= */
+
+function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
+  if (!data) return null;
+
+  if (data.kind === 'event') {
+    const guests = Number(data.meta?.guests ?? 0) || 0;
+    if (guests <= 0) return null;
+
+    return {
+      unitLabel: '€/pers',
+      min: data.min / guests,
+      max: data.max / guests,
+      recommended: data.recommended / guests,
+      totalRecommended: data.recommended,
+      totalMin: data.min,
+      totalMax: data.max,
+      qtyLabel: `${guests} pers.`,
+    };
+  }
+
+  // residence
+  const days = Number(data.meta?.days ?? 0) || 0;
+  if (days <= 0) return null;
+
+  return {
+    unitLabel: '€/jour',
+    min: data.min / days,
+    max: data.max / days,
+    recommended: data.recommended / days,
+    totalRecommended: data.recommended,
+    totalMin: data.min,
+    totalMax: data.max,
+    qtyLabel: `${days} jour${days > 1 ? 's' : ''}`,
+  };
+}
+
 function BudgetBenchmarkCard({
   loading,
   data,
@@ -156,23 +192,51 @@ function BudgetBenchmarkCard({
   onUseRecommended: () => void;
   onUseRange: () => void;
 }) {
+  const per = useMemo(() => calcPerUnit(data), [data]);
   const currency = data?.currency || 'EUR';
 
-  const title =
+  const headerTitle =
     data?.kind === 'residence'
-      ? `Budget indicatif · Séjour (${data?.meta?.days ?? 1} jour${(data?.meta?.days ?? 1) > 1 ? 's' : ''})`
-      : `Budget indicatif · Événement (${data?.meta?.guests ?? 2} pers.)`;
+      ? `Budget indicatif · Résidence (${per?.qtyLabel ?? '—'})`
+      : `Budget indicatif · Prestation ponctuelle (${per?.qtyLabel ?? '—'})`;
+
+  const chips = useMemo(() => {
+    const flags = data?.multiplier ? [] : [];
+    const f = (data as any)?.flags as BudgetContext['flags'] | undefined;
+
+    // On ne reçoit pas flags du lib — donc on déduit via multiplier + copy.
+    // On garde “premium” et on affiche multiplier.
+    return flags;
+  }, [data]);
 
   return (
-    <div className="border border-stone-200 bg-white shadow-sm">
+    <div className="rounded-xl border border-stone-200 bg-white shadow-[0_10px_30px_-20px_rgba(0,0,0,0.25)] overflow-hidden">
       <div className="p-6 md:p-7">
         <div className="flex items-start justify-between gap-6">
           <div className="space-y-2">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Référence marché</div>
-            <div className="text-xl md:text-2xl font-serif text-stone-900 leading-tight">{title}</div>
+            <div className="flex items-center gap-3">
+              <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400">Référence marché</div>
+              {data?.tier ? (
+                <span className="text-[10px] uppercase tracking-[0.22em] text-stone-500 border border-stone-200 px-2 py-1 rounded-full">
+                  {data.tier}
+                </span>
+              ) : null}
+              {typeof data?.multiplier === 'number' ? (
+                <span className="text-[10px] uppercase tracking-[0.22em] text-stone-500 border border-stone-200 px-2 py-1 rounded-full">
+                  ×{Number(data.multiplier).toFixed(2)}
+                </span>
+              ) : null}
+              {chips.map((c) => (
+                <span key={c} className="text-[10px] uppercase tracking-[0.22em] text-stone-500 border border-stone-200 px-2 py-1 rounded-full">
+                  {c}
+                </span>
+              ))}
+            </div>
+
+            <div className="text-xl md:text-2xl font-serif text-stone-900 leading-tight">{headerTitle}</div>
+
             <p className="text-sm text-stone-500 font-light leading-relaxed max-w-2xl">
-              Estimation basée sur une grille “premium” et des multiplicateurs (saison, international, yacht, brigade).
-              Le budget final dépendra du chef, du menu et de la logistique.
+              Estimation indicative. Le budget final dépend du chef, du menu, des achats et de la logistique.
             </p>
           </div>
 
@@ -185,12 +249,20 @@ function BudgetBenchmarkCard({
             ) : (
               <div className="space-y-1">
                 <div className="text-[10px] uppercase tracking-widest text-stone-400">Recommandé</div>
-                <div className="text-2xl md:text-3xl font-serif text-stone-900">
-                  {typeof data?.recommended === 'number' ? formatMoney(data.recommended, currency) : '—'}
+
+                {/* ✅ On affiche d’abord l’unité (€/pers ou €/jour), puis le total */}
+                <div className="text-2xl md:text-3xl font-serif text-stone-900 leading-none">
+                  {per ? formatMoney(per.recommended, currency) : '—'}
                 </div>
-                <div className="text-[11px] text-stone-400">
-                  {data?.unit ? `(${data.unit})` : ''}
+                <div className="text-[11px] text-stone-500">
+                  {per ? `${per.unitLabel}` : ''}
                 </div>
+
+                {per ? (
+                  <div className="text-[11px] text-stone-400 pt-1">
+                    Total estimé : <span className="text-stone-700">{formatMoney(per.totalRecommended, currency)}</span>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -200,37 +272,38 @@ function BudgetBenchmarkCard({
           <div className="text-sm text-stone-600">
             <span className="text-stone-400">Fourchette :</span>{' '}
             <span className="font-medium text-stone-900">
-              {loading || !data ? '—' : `${formatMoney(data.min, currency)} – ${formatMoney(data.max, currency)}`}
+              {loading || !per ? '—' : `${formatMoney(per.min, currency)} – ${formatMoney(per.max, currency)} ${per.unitLabel}`}
             </span>
+            {!loading && per ? (
+              <span className="block text-xs text-stone-400 mt-1">
+                Total : {formatMoney(per.totalMin, currency)} – {formatMoney(per.totalMax, currency)}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex gap-3 justify-start md:justify-end">
-            <Button type="button" onClick={onUseRecommended} disabled={loading || !data} className="w-auto px-5">
+            <Button type="button" onClick={onUseRecommended} disabled={loading || !per} className="w-auto px-5">
               Utiliser recommandé
             </Button>
             <Button
               type="button"
               variant="link"
               onClick={onUseRange}
-              disabled={loading || !data}
+              disabled={loading || !per}
               className="w-auto px-0 text-stone-500 hover:text-stone-900"
             >
               Utiliser la fourchette
             </Button>
           </div>
         </div>
-
-        {!loading && data?.multiplier ? (
-          <p className="mt-4 text-xs text-stone-400 italic">
-            Multiplicateur appliqué : ×{Number(data.multiplier).toFixed(2)} · Tier : {data.tier}
-          </p>
-        ) : null}
       </div>
     </div>
   );
 }
 
-/* ========================================================= */
+/* =========================================================
+   Page
+========================================================= */
 
 function RequestFormContent() {
   const searchParams = useSearchParams();
@@ -253,7 +326,7 @@ function RequestFormContent() {
     location: '',
     dateMode: 'single',
     startDate: '',
-    // @ts-ignore (si ton type ne l’a pas encore, ça ne cassera pas le build)
+    // @ts-ignore
     endDate: '',
     assignmentType: 'dinner',
     guestCount: 2,
@@ -338,12 +411,14 @@ function RequestFormContent() {
 
   /* =========================================================
      Budget benchmark (local compute)
+     - FAST: step 1
+     - CONCIERGE: step 3
   ========================================================= */
 
   const shouldShowBenchmark = useMemo(() => {
     if (!mode) return false;
-    if (mode === 'fast' && step === 1) return true;      // avant budget fast
-    if (mode === 'concierge' && step === 3) return true;  // avant budget concierge
+    if (mode === 'fast' && step === 1) return true;
+    if (mode === 'concierge' && step === 3) return true;
     return false;
   }, [mode, step]);
 
@@ -354,7 +429,7 @@ function RequestFormContent() {
     if (!shouldShowBenchmark) return;
 
     const ctx = buildBudgetContextFromForm(formData);
-    // on attend au moins une localisation + startDate (sinon ça bouge trop)
+
     const hasLocation = String(formData.location || '').trim().length >= 2;
     const hasStart = String(formData.startDate || '').trim().length >= 8;
 
@@ -395,13 +470,34 @@ function RequestFormContent() {
 
   const applyRecommendedBudget = () => {
     if (!marketBudget) return;
-    const s = `≈ ${formatMoney(marketBudget.recommended, marketBudget.currency)} (${marketBudget.unit})`;
+    const per = calcPerUnit(marketBudget);
+    if (!per) return;
+
+    // ✅ on stocke un texte lisible + premium
+    const s =
+      marketBudget.kind === 'event'
+        ? `≈ ${formatMoney(per.recommended, marketBudget.currency)} / pers (≈ ${formatMoney(per.totalRecommended, marketBudget.currency)} total)`
+        : `≈ ${formatMoney(per.recommended, marketBudget.currency)} / jour (≈ ${formatMoney(per.totalRecommended, marketBudget.currency)} total)`;
+
     setFormData((prev) => ({ ...prev, budgetRange: s }));
   };
 
   const applyRangeBudget = () => {
     if (!marketBudget) return;
-    const s = `${formatMoney(marketBudget.min, marketBudget.currency)} – ${formatMoney(marketBudget.max, marketBudget.currency)} (${marketBudget.unit})`;
+    const per = calcPerUnit(marketBudget);
+    if (!per) return;
+
+    const s =
+      marketBudget.kind === 'event'
+        ? `${formatMoney(per.min, marketBudget.currency)} – ${formatMoney(per.max, marketBudget.currency)} / pers (Total: ${formatMoney(
+            per.totalMin,
+            marketBudget.currency
+          )} – ${formatMoney(per.totalMax, marketBudget.currency)})`
+        : `${formatMoney(per.min, marketBudget.currency)} – ${formatMoney(per.max, marketBudget.currency)} / jour (Total: ${formatMoney(
+            per.totalMin,
+            marketBudget.currency
+          )} – ${formatMoney(per.totalMax, marketBudget.currency)})`;
+
     setFormData((prev) => ({ ...prev, budgetRange: s }));
   };
 
@@ -424,9 +520,7 @@ function RequestFormContent() {
             )}
           </div>
 
-          <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">
-            {isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}
-          </h2>
+          <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">{isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}</h2>
 
           <div className="text-stone-500 mb-12 text-lg font-light space-y-4">
             {isFastMode ? (
@@ -436,8 +530,7 @@ function RequestFormContent() {
               </>
             ) : (
               <p>
-                Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et reviendrons vers
-                vous avec une proposition structurée.
+                Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et reviendrons vers vous avec une proposition structurée.
               </p>
             )}
 
@@ -472,8 +565,7 @@ function RequestFormContent() {
               <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">Date unique</p>
               <h3 className="text-3xl font-serif text-stone-900 mb-4">Fast Match</h3>
               <p className="text-stone-500 font-light leading-relaxed">
-                Pour une demande simple sur une date précise. Nous identifions rapidement un chef disponible correspondant à votre
-                brief.
+                Pour une demande simple sur une date précise. Nous identifions rapidement un chef disponible correspondant à votre brief.
               </p>
             </button>
 
@@ -512,9 +604,7 @@ function RequestFormContent() {
                 ← Changer de mode
               </button>
 
-              <h1 className="text-2xl font-serif text-stone-900 leading-tight">
-                {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
-              </h1>
+              <h1 className="text-2xl font-serif text-stone-900 leading-tight">{mode === 'fast' ? 'Fast Match' : 'Concierge Match'}</h1>
 
               <p className="text-xs text-stone-500 font-light leading-relaxed">
                 {mode === 'fast' ? 'Pour une demande simple, sur une date précise.' : 'Pour les demandes complexes ou sensibles.'}
@@ -536,9 +626,7 @@ function RequestFormContent() {
                       }`}
                     />
                     <span
-                      className={`text-[10px] uppercase tracking-widest transition-colors ${
-                        isActive ? 'text-stone-900' : 'text-stone-300'
-                      }`}
+                      className={`text-[10px] uppercase tracking-widest transition-colors ${isActive ? 'text-stone-900' : 'text-stone-300'}`}
                     >
                       {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
                       {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
@@ -560,9 +648,7 @@ function RequestFormContent() {
               <Reveal>
                 <div className="space-y-12">
                   <h2 className="text-3xl font-serif text-stone-900 mb-2">Votre demande</h2>
-                  <p className="text-sm text-stone-500 font-light">
-                    Quelques informations suffisent pour positionner votre demande sur le marché.
-                  </p>
+                  <p className="text-sm text-stone-500 font-light">Quelques informations suffisent pour positionner votre demande sur le marché.</p>
 
                   <div className="space-y-6 pt-4">
                     <Label>Vous êtes :</Label>
@@ -590,20 +676,11 @@ function RequestFormContent() {
                   <div className="grid md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <Label>Lieu</Label>
-                      <Input
-                        placeholder="Ville"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        autoFocus
-                      />
+                      <Input placeholder="Ville" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} autoFocus />
                     </div>
                     <div className="space-y-4">
-                      <Label>Date de la prestation </Label>
-                      <Input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      />
+                      <Label>Date de la prestation</Label>
+                      <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
                     </div>
                   </div>
 
@@ -618,24 +695,17 @@ function RequestFormContent() {
                     />
                   </div>
 
-                  {/* ✅ Budget benchmark + Budget input (FAST step 1) */}
+                  {/* ✅ Benchmark + budget input */}
                   <div className="space-y-6 pt-2">
-                    <BudgetBenchmarkCard
-                      loading={budgetLoading}
-                      data={marketBudget}
-                      onUseRecommended={applyRecommendedBudget}
-                      onUseRange={applyRangeBudget}
-                    />
+                    <BudgetBenchmarkCard loading={budgetLoading} data={marketBudget} onUseRecommended={applyRecommendedBudget} onUseRange={applyRangeBudget} />
 
                     <div className="space-y-2">
                       <Label>Budget estimatif</Label>
-                      <p className="text-xs text-stone-400 italic">
-                        Confidentiel. Permet de vous proposer des chefs cohérents avec votre niveau d’exigence.
-                      </p>
+                      <p className="text-xs text-stone-400 italic">Confidentiel. Permet de vous proposer des chefs cohérents avec votre niveau d’exigence.</p>
                       <Input
                         value={formData.budgetRange}
                         onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                        placeholder={marketBudget ? `Ex: ${formatMoney(marketBudget.min)} – ${formatMoney(marketBudget.max)} (${marketBudget.unit})` : 'Ex: 800–1200€'}
+                        placeholder="Ex: ≈ 220€ / pers (≈ 1 760€ total)"
                       />
                     </div>
                   </div>
@@ -882,11 +952,7 @@ function RequestFormContent() {
 
                   <div className="space-y-4">
                     <Label>Style culinaire</Label>
-                    <Textarea
-                      placeholder="Méditerranéen, gastronomique, family style..."
-                      value={formData.cuisinePreferences}
-                      onChange={(e) => setFormData({ ...formData, cuisinePreferences: e.target.value })}
-                    />
+                    <Textarea placeholder="Méditerranéen, gastronomique, family style..." value={formData.cuisinePreferences} onChange={(e) => setFormData({ ...formData, cuisinePreferences: e.target.value })} />
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-8">
@@ -900,25 +966,14 @@ function RequestFormContent() {
                     </div>
                   </div>
 
-                  {/* ✅ Budget benchmark + Budget input (CONCIERGE step 3) */}
+                  {/* ✅ Benchmark + budget input */}
                   <div className="space-y-6 pt-6 border-t border-stone-100">
-                    <BudgetBenchmarkCard
-                      loading={budgetLoading}
-                      data={marketBudget}
-                      onUseRecommended={applyRecommendedBudget}
-                      onUseRange={applyRangeBudget}
-                    />
+                    <BudgetBenchmarkCard loading={budgetLoading} data={marketBudget} onUseRecommended={applyRecommendedBudget} onUseRange={applyRangeBudget} />
 
                     <div className="space-y-2">
                       <Label>Budget estimatif</Label>
-                      <p className="text-xs text-stone-400 italic mb-1">
-                        Confidentiel. Permet de calibrer le profil du chef.
-                      </p>
-                      <Input
-                        value={formData.budgetRange}
-                        onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                        placeholder={marketBudget ? `Ex: ${formatMoney(marketBudget.min)} – ${formatMoney(marketBudget.max)} (${marketBudget.unit})` : 'Ex: 500–800€ / jour ou budget global'}
-                      />
+                      <p className="text-xs text-stone-400 italic mb-1">Confidentiel. Permet de calibrer le profil du chef.</p>
+                      <Input value={formData.budgetRange} onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })} placeholder="Ex: ≈ 600€ / jour (≈ 3 000€ total)" />
                     </div>
                   </div>
                 </div>
