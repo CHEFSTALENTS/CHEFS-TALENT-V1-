@@ -26,7 +26,10 @@ function extractCity(location: string): string {
 
   // remove french arrondissement patterns (paris 16, lyon 2, marseille 8, etc.)
   // keeps the city name
-  const cleaned = beforeComma.replace(/\b(\d{1,2})(er|eme|e)?\b/g, '').replace(/\s+/g, ' ').trim();
+  const cleaned = beforeComma
+    .replace(/\b(\d{1,2})(er|eme|e)?\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   return cleaned;
 }
@@ -36,6 +39,166 @@ function includesLoose(haystack: string, needle: string): boolean {
   const n = normalize(needle);
   if (!h || !n) return false;
   return h.includes(n) || n.includes(h);
+}
+
+/* =========================================================
+   Budget benchmark (Fast Match)
+   -> à utiliser côté UI AVANT le champ budget
+========================================================= */
+
+export type BudgetBenchmark = {
+  currency: 'EUR';
+  min: number;
+  avg: number;
+  max: number;
+  recommended: number;
+  breakdown: {
+    base: number;
+    pax: number;
+    days: number;
+    multipliers: Record<string, number>;
+  };
+  explanation: string;
+};
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function safeInt(v: any, fallback = 0) {
+  const n = typeof v === 'number' ? v : parseInt(String(v || ''), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function daysBetweenISO(startISO?: string, endISO?: string): number {
+  if (!startISO || !endISO) return 1;
+  const s = new Date(startISO);
+  const e = new Date(endISO);
+  const ms = e.getTime() - s.getTime();
+  if (!Number.isFinite(ms)) return 1;
+  // +1 car une mission sur 1 jour = start=end (souvent)
+  const days = Math.round(ms / (1000 * 60 * 60 * 24)) + 1;
+  return clamp(days, 1, 30);
+}
+
+function monthFromISO(dateISO?: string): number | null {
+  if (!dateISO) return null;
+  const d = new Date(dateISO);
+  if (!Number.isFinite(d.getTime())) return null;
+  return d.getUTCMonth() + 1; // 1..12
+}
+
+/**
+ * ✅ Budget benchmark simple, robuste, et “orientant”
+ * - basé sur guestCount + durée + quelques flags
+ * - retourne min/avg/max + bouton “utiliser recommandé”
+ *
+ * NOTE: ceci ne remplace pas un pricing engine complet, mais
+ * c’est parfait pour empêcher les budgets absurdes.
+ */
+export function getFastMatchBudgetBenchmark(request: RequestEntity): BudgetBenchmark {
+  const guestCount = clamp(safeInt((request as any).guestCount, 1), 1, 200);
+
+  const start = (request as any)?.dates?.start ?? (request as any)?.dateStart ?? null;
+  const end = (request as any)?.dates?.end ?? (request as any)?.dateEnd ?? null;
+  const days = daysBetweenISO(start || undefined, end || undefined);
+
+  const locationRaw = String((request as any)?.location ?? '');
+  const loc = normalize(locationRaw);
+
+  // Flags “souples” (pas besoin que ton RequestEntity soit parfaitement normalisé)
+  const isInternational =
+    (request as any)?.international === true ||
+    (request as any)?.internationalMobility === true ||
+    loc.includes('switzerland') ||
+    loc.includes('suisse') ||
+    loc.includes('london') ||
+    loc.includes('dubai') ||
+    loc.includes('marrakech') ||
+    loc.includes('ibiza') ||
+    loc.includes('mykonos');
+
+  const isYacht =
+    (request as any)?.context === 'yacht' ||
+    (request as any)?.service === 'yacht' ||
+    loc.includes('yacht') ||
+    loc.includes('boat');
+
+  const isResidence =
+    (request as any)?.type === 'residence' ||
+    (request as any)?.kind === 'residence' ||
+    (request as any)?.service === 'residence';
+
+  const month = monthFromISO(start || undefined);
+  const isHighSeason =
+    month != null && ([12, 1, 2, 6, 7, 8] as number[]).includes(month); // hiver stations + été
+
+  // Base (plancher) : forfait “mise en place / logistique”
+  let base = 450;
+
+  // Prix/pax moyen “marché” (Fast Match event)
+  let pax = 95; // € / personne / jour
+
+  // Ajustements selon type
+  if (isResidence) {
+    base = 650;
+    pax = 75;
+  }
+
+  // Multipliers
+  const multipliers: Record<string, number> = {};
+
+  if (isInternational) multipliers.international = 1.25;
+  if (isHighSeason) multipliers.highSeason = 1.15;
+  if (isYacht) multipliers.yacht = 1.35;
+
+  // Petites corrections “taille”
+  // - petit comité = ticket moyen plus élevé/pax
+  // - grand volume = légèrement moins/pax
+  const sizeFactor =
+    guestCount <= 6 ? 1.25 :
+    guestCount <= 12 ? 1.10 :
+    guestCount <= 25 ? 1.00 :
+    guestCount <= 50 ? 0.95 : 0.90;
+  multipliers.size = sizeFactor;
+
+  // Calcul
+  const mult = Object.values(multipliers).reduce((acc, m) => acc * m, 1);
+
+  const avgRaw = (base + guestCount * pax) * days * mult;
+
+  // Arrondis “propres” (et éviter les budgets à 12 347€)
+  const roundTo = (n: number, step: number) => Math.round(n / step) * step;
+
+  const avg = roundTo(avgRaw, 50);
+  const min = roundTo(avg * 0.85, 50);
+  const max = roundTo(avg * 1.25, 50);
+  const recommended = avg;
+
+  const explanationParts: string[] = [];
+  explanationParts.push(`Base ${base}€`);
+  explanationParts.push(`${guestCount} pers`);
+  explanationParts.push(`${days} jour(s)`);
+
+  if (isResidence) explanationParts.push('résidence');
+  if (isInternational) explanationParts.push('international');
+  if (isHighSeason) explanationParts.push('haute saison');
+  if (isYacht) explanationParts.push('yacht');
+
+  return {
+    currency: 'EUR',
+    min,
+    avg,
+    max,
+    recommended,
+    breakdown: {
+      base,
+      pax,
+      days,
+      multipliers,
+    },
+    explanation: `Estimation basée sur: ${explanationParts.join(' • ')}`,
+  };
 }
 
 /* =========================================================
@@ -101,7 +264,7 @@ function scoreChefForRequest(request: RequestEntity, chef: ChefUser): number {
   else {
     // ✅ fallback international : on ne jette pas le chef, mais il passe après les locaux
     if (!chefIsInternational) return -1;
-    score += 25; // “match international” (à ajuster si besoin)
+    score += 25; // “match international”
   }
 
   // Optional small bonuses (keep it light)
