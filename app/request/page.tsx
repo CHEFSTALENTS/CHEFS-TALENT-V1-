@@ -7,7 +7,207 @@ import { Button, Input, Textarea, Reveal, Marker, Label } from '../../components
 import { submitRequest } from '../../services/actions';
 import { RequestForm, RequestMode } from '../../types';
 import { Loader2, CheckCircle2, Clock } from 'lucide-react';
-import { getFastMatchBudgetBenchmark } from '@/services/fastMatch';
+import { getMarketBudgetRange, BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
+
+/* =========================================================
+   Budget helpers (premium + safe)
+========================================================= */
+
+function formatMoney(v?: number, currency: string = 'EUR') {
+  if (typeof v !== 'number' || Number.isNaN(v)) return '—';
+  try {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(v);
+  } catch {
+    return `${Math.round(v)}€`;
+  }
+}
+
+function parseISODate(s?: string) {
+  if (!s) return null;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+function diffDaysInclusive(start?: string, end?: string) {
+  const a = parseISODate(start);
+  const b = parseISODate(end);
+  if (!a || !b) return 1;
+
+  // diff days (UTC-ish) + inclusive
+  const ms = b.getTime() - a.getTime();
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(1, days);
+}
+
+function isHighSeasonFromStartDate(startDate?: string) {
+  const d = parseISODate(startDate);
+  if (!d) return false;
+  const m = d.getMonth() + 1; // 1..12
+  // summer + christmas/new year
+  return (m >= 6 && m <= 9) || m === 12;
+}
+
+function isInternationalFromLocation(location?: string) {
+  const s = String(location || '').toLowerCase();
+  if (!s) return false;
+
+  // règle simple: si le champ contient un pays explicitement non-FR
+  // (tu pourras raffiner plus tard)
+  const hintsNonFR = ['ibiza', 'spain', 'espagne', 'italy', 'italie', 'greece', 'grece', 'uk', 'london', 'switzerland', 'suisse', 'marrakech', 'morocco', 'maroc', 'dubai'];
+  const hintsFR = ['france', 'paris', 'lyon', 'marseille', 'nice', 'cannes', 'saint tropez', 'courchevel', 'megeve', 'bordeaux'];
+
+  const nonfr = hintsNonFR.some((x) => s.includes(x));
+  const fr = hintsFR.some((x) => s.includes(x));
+
+  // si on détecte non-FR et pas FR -> international
+  return nonfr && !fr;
+}
+
+function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null {
+  const assignment = String((formData as any).assignmentType || 'dinner');
+
+  // kind
+  const isResidenceLike =
+    formData.dateMode === 'multi' ||
+    assignment === 'daily' ||
+    assignment === 'residence';
+
+  const kind: RequestKind = isResidenceLike ? 'residence' : 'event';
+
+  // days / guests
+  const days =
+    kind === 'residence'
+      ? diffDaysInclusive(formData.startDate, (formData as any).endDate)
+      : null;
+
+  const guests =
+    kind === 'event'
+      ? Math.max(2, Number((formData as any).guestCount ?? 2))
+      : null;
+
+  // flags
+  const yacht = assignment === 'yacht';
+  const brigade =
+    String((formData as any).serviceExpectations || '') === 'full_team' ||
+    String((formData as any).serviceExpectations || '') === 'brigade';
+
+  const highSeason = isHighSeasonFromStartDate(formData.startDate);
+  const international = isInternationalFromLocation(formData.location);
+
+  // tier par défaut = premium (comme ton lib)
+  // (si plus tard tu ajoutes un champ tier côté formData, tu peux le passer ici)
+  const tier = 'premium';
+
+  // Minimum d'infos pour être utile
+  if (kind === 'event' && (!guests || guests <= 0)) return null;
+  if (kind === 'residence' && (!days || days <= 0)) return null;
+
+  return {
+    kind,
+    days,
+    guests,
+    locationCountry: null,
+    tier,
+    flags: {
+      highSeason,
+      international,
+      yacht,
+      brigade,
+    },
+  };
+}
+
+function BudgetBenchmarkCard({
+  loading,
+  data,
+  onUseRecommended,
+  onUseRange,
+}: {
+  loading: boolean;
+  data: ReturnType<typeof getMarketBudgetRange> | null;
+  onUseRecommended: () => void;
+  onUseRange: () => void;
+}) {
+  const currency = data?.currency || 'EUR';
+
+  const title =
+    data?.kind === 'residence'
+      ? `Budget indicatif · Séjour (${data?.meta?.days ?? 1} jour${(data?.meta?.days ?? 1) > 1 ? 's' : ''})`
+      : `Budget indicatif · Événement (${data?.meta?.guests ?? 2} pers.)`;
+
+  return (
+    <div className="border border-stone-200 bg-white shadow-sm">
+      <div className="p-6 md:p-7">
+        <div className="flex items-start justify-between gap-6">
+          <div className="space-y-2">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Référence marché</div>
+            <div className="text-xl md:text-2xl font-serif text-stone-900 leading-tight">{title}</div>
+            <p className="text-sm text-stone-500 font-light leading-relaxed max-w-2xl">
+              Estimation basée sur une grille “premium” et des multiplicateurs (saison, international, yacht, brigade).
+              Le budget final dépendra du chef, du menu et de la logistique.
+            </p>
+          </div>
+
+          <div className="shrink-0 text-right">
+            {loading ? (
+              <div className="inline-flex items-center gap-2 text-stone-400">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-xs uppercase tracking-widest">Calcul…</span>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="text-[10px] uppercase tracking-widest text-stone-400">Recommandé</div>
+                <div className="text-2xl md:text-3xl font-serif text-stone-900">
+                  {typeof data?.recommended === 'number' ? formatMoney(data.recommended, currency) : '—'}
+                </div>
+                <div className="text-[11px] text-stone-400">
+                  {data?.unit ? `(${data.unit})` : ''}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-stone-100 pt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="text-sm text-stone-600">
+            <span className="text-stone-400">Fourchette :</span>{' '}
+            <span className="font-medium text-stone-900">
+              {loading || !data ? '—' : `${formatMoney(data.min, currency)} – ${formatMoney(data.max, currency)}`}
+            </span>
+          </div>
+
+          <div className="flex gap-3 justify-start md:justify-end">
+            <Button type="button" onClick={onUseRecommended} disabled={loading || !data} className="w-auto px-5">
+              Utiliser recommandé
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              onClick={onUseRange}
+              disabled={loading || !data}
+              className="w-auto px-0 text-stone-500 hover:text-stone-900"
+            >
+              Utiliser la fourchette
+            </Button>
+          </div>
+        </div>
+
+        {!loading && data?.multiplier ? (
+          <p className="mt-4 text-xs text-stone-400 italic">
+            Multiplicateur appliqué : ×{Number(data.multiplier).toFixed(2)} · Tier : {data.tier}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* ========================================================= */
 
 function RequestFormContent() {
   const searchParams = useSearchParams();
@@ -113,143 +313,76 @@ function RequestFormContent() {
     }
   };
 
-  /* ==============================
-     Budget benchmark (premium UI)
-  ============================== */
+  /* =========================================================
+     Budget benchmark (local compute)
+  ========================================================= */
 
-  const canComputeBenchmark = useMemo(() => {
-    const hasLocation = !!String(formData.location || '').trim();
-    const hasDate = !!String(formData.startDate || '').trim();
-    const guestsOk = Number(formData.guestCount || 0) > 0;
-    // On déclenche tôt, avant que le client remplisse le budget
-    return hasLocation && hasDate && guestsOk;
-  }, [formData.location, formData.startDate, formData.guestCount]);
+  const shouldShowBenchmark = useMemo(() => {
+    if (!mode) return false;
+    if (mode === 'fast' && step === 1) return true;      // avant budget fast
+    if (mode === 'concierge' && step === 3) return true;  // avant budget concierge
+    return false;
+  }, [mode, step]);
 
-  const budgetBenchmark = useMemo(() => {
-    if (!canComputeBenchmark) return null;
-    try {
-      // On passe le formData complet (la fonction pourra utiliser ce qu’elle veut)
-      return getFastMatchBudgetBenchmark(formData as any) as any;
-    } catch {
-      return null;
+  const [budgetLoading, setBudgetLoading] = useState(false);
+  const [marketBudget, setMarketBudget] = useState<ReturnType<typeof getMarketBudgetRange> | null>(null);
+
+  useEffect(() => {
+    if (!shouldShowBenchmark) return;
+
+    const ctx = buildBudgetContextFromForm(formData);
+    // on attend au moins une localisation + startDate (sinon ça bouge trop)
+    const hasLocation = String(formData.location || '').trim().length >= 2;
+    const hasStart = String(formData.startDate || '').trim().length >= 8;
+
+    if (!ctx || !hasLocation || !hasStart) {
+      setMarketBudget(null);
+      return;
     }
-  }, [canComputeBenchmark, formData]);
 
-  const benchmarkView = useMemo(() => {
-    if (!budgetBenchmark) return null;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      setBudgetLoading(true);
+      try {
+        const res = getMarketBudgetRange(ctx);
+        if (!cancelled) setMarketBudget(res);
+      } catch (e) {
+        console.error('BUDGET BENCHMARK ERROR', e);
+        if (!cancelled) setMarketBudget(null);
+      } finally {
+        if (!cancelled) setBudgetLoading(false);
+      }
+    }, 250);
 
-    // Supporte plusieurs shapes possibles sans casser
-    const min = Number(budgetBenchmark?.min ?? budgetBenchmark?.low ?? 0) || 0;
-    const avg = Number(budgetBenchmark?.avg ?? budgetBenchmark?.average ?? 0) || 0;
-    const max = Number(budgetBenchmark?.max ?? budgetBenchmark?.high ?? 0) || 0;
-    const recommended = Number(budgetBenchmark?.recommended ?? budgetBenchmark?.suggested ?? avg) || 0;
-    const explanation =
-      String(
-        budgetBenchmark?.explanation ??
-          budgetBenchmark?.note ??
-          "Estimation indicative basée sur la zone, le format et le nombre de convives."
-      ) || '';
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [
+    shouldShowBenchmark,
+    formData.location,
+    formData.startDate,
+    // @ts-ignore
+    (formData as any).endDate,
+    (formData as any).guestCount,
+    (formData as any).assignmentType,
+    (formData as any).serviceExpectations,
+    formData.dateMode,
+  ]);
 
-    if (!min && !avg && !max) return null;
+  const applyRecommendedBudget = () => {
+    if (!marketBudget) return;
+    const s = `≈ ${formatMoney(marketBudget.recommended, marketBudget.currency)} (${marketBudget.unit})`;
+    setFormData((prev) => ({ ...prev, budgetRange: s }));
+  };
 
-    const fmt = (n: number) =>
-      n > 0
-        ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
-        : '—';
+  const applyRangeBudget = () => {
+    if (!marketBudget) return;
+    const s = `${formatMoney(marketBudget.min, marketBudget.currency)} – ${formatMoney(marketBudget.max, marketBudget.currency)} (${marketBudget.unit})`;
+    setFormData((prev) => ({ ...prev, budgetRange: s }));
+  };
 
-    return { min, avg, max, recommended, explanation, fmt };
-  }, [budgetBenchmark]);
-
-  function BudgetBenchmarkCard({
-    contextLabel,
-  }: {
-    contextLabel: string;
-  }) {
-    if (!benchmarkView) return null;
-
-    const { min, avg, max, recommended, explanation, fmt } = benchmarkView;
-
-    return (
-      <div className="border border-stone-200 bg-white rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-6 py-5 border-b border-stone-100 bg-gradient-to-b from-stone-50 to-white">
-          <div className="flex items-start justify-between gap-6">
-            <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
-                Benchmark • {contextLabel}
-              </div>
-              <div className="text-lg font-serif text-stone-900">
-                Budget moyen constaté (estimation)
-              </div>
-              <p className="text-xs text-stone-500 font-light leading-relaxed max-w-xl">
-                {explanation}
-              </p>
-            </div>
-
-            <div className="shrink-0 text-right">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
-                Recommandé
-              </div>
-              <div className="text-2xl font-serif text-stone-900">
-                {fmt(recommended)}€
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-6 py-5">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
-                Bas
-              </div>
-              <div className="text-lg font-serif text-stone-900 mt-1">
-                {fmt(min)}€
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-[0_1px_0_0_rgba(0,0,0,0.02)]">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
-                Moyen
-              </div>
-              <div className="text-lg font-serif text-stone-900 mt-1">
-                {fmt(avg)}€
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-stone-400">
-                Haut
-              </div>
-              <div className="text-lg font-serif text-stone-900 mt-1">
-                {fmt(max)}€
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-5">
-            <div className="text-xs text-stone-500 font-light">
-              Astuce : un budget aligné au marché augmente fortement la vitesse de matching.
-            </div>
-
-            <button
-              type="button"
-              className="inline-flex items-center justify-center px-4 h-11 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 transition-colors text-sm text-stone-900"
-              onClick={() => {
-                // On remplit le champ budgetRange avec un format simple
-                const v =
-                  recommended > 0
-                    ? `${recommended}€`
-                    : '';
-                setFormData((prev) => ({ ...prev, budgetRange: v }));
-              }}
-            >
-              Utiliser le recommandé
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /* ========================================================= */
 
   // --- SUCCESS SCREEN ---
   if (result) {
@@ -311,7 +444,7 @@ function RequestFormContent() {
             <button
               type="button"
               onClick={() => selectMode('fast')}
-              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900"
+              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900 bg-white"
             >
               <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">Date unique</p>
               <h3 className="text-3xl font-serif text-stone-900 mb-4">Fast Match</h3>
@@ -324,7 +457,7 @@ function RequestFormContent() {
             <button
               type="button"
               onClick={() => selectMode('concierge')}
-              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900"
+              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900 bg-white"
             >
               <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">Demande complexe</p>
               <h3 className="text-3xl font-serif text-stone-900 mb-4">Concierge Match</h3>
@@ -403,11 +536,14 @@ function RequestFormContent() {
             {mode === 'fast' && step === 1 && (
               <Reveal>
                 <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">Votre demande</h2>
+                  <h2 className="text-3xl font-serif text-stone-900 mb-2">Votre demande</h2>
+                  <p className="text-sm text-stone-500 font-light">
+                    Quelques informations suffisent pour positionner votre demande sur le marché.
+                  </p>
 
-                  <div className="space-y-6">
+                  <div className="space-y-6 pt-4">
                     <Label>Vous êtes :</Label>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 flex-wrap">
                       {[
                         { val: 'private', label: 'Client Privé' },
                         { val: 'concierge', label: 'Conciergerie / Agence' },
@@ -416,7 +552,7 @@ function RequestFormContent() {
                           key={opt.val}
                           type="button"
                           onClick={() => setFormData({ ...formData, clientType: opt.val as any })}
-                          className={`px-6 py-3 text-sm border transition-colors ${
+                          className={`px-6 py-3 text-sm border transition-colors bg-white ${
                             formData.clientType === opt.val
                               ? 'border-stone-900 bg-stone-900 text-white'
                               : 'border-stone-200 text-stone-600 hover:border-stone-900'
@@ -459,22 +595,26 @@ function RequestFormContent() {
                     />
                   </div>
 
-                  {/* ✅ BENCHMARK PREMIUM (FAST) */}
-                  <div className="pt-2">
-                    <BudgetBenchmarkCard contextLabel="Fast Match" />
-                  </div>
-
-                  {/* ✅ CHAMP BUDGET (FAST) */}
-                  <div className="space-y-4">
-                    <Label>Budget estimatif</Label>
-                    <p className="text-xs text-stone-400 italic">
-                      Indiquez un ordre de grandeur pour éviter un budget en-dessous du marché.
-                    </p>
-                    <Input
-                      value={formData.budgetRange}
-                      onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                      placeholder="Ex: 600€"
+                  {/* ✅ Budget benchmark + Budget input (FAST step 1) */}
+                  <div className="space-y-6 pt-2">
+                    <BudgetBenchmarkCard
+                      loading={budgetLoading}
+                      data={marketBudget}
+                      onUseRecommended={applyRecommendedBudget}
+                      onUseRange={applyRangeBudget}
                     />
+
+                    <div className="space-y-2">
+                      <Label>Budget estimatif</Label>
+                      <p className="text-xs text-stone-400 italic">
+                        Confidentiel. Permet de vous proposer des chefs cohérents avec votre niveau d’exigence.
+                      </p>
+                      <Input
+                        value={formData.budgetRange}
+                        onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
+                        placeholder={marketBudget ? `Ex: ${formatMoney(marketBudget.min)} – ${formatMoney(marketBudget.max)} (${marketBudget.unit})` : 'Ex: 800–1200€'}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -545,11 +685,7 @@ function RequestFormContent() {
                   {formData.clientType === 'concierge' && (
                     <div className="space-y-4">
                       <Label>Nom de la structure</Label>
-                      <Input
-                        value={formData.companyName}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        placeholder="Agence, Family Office..."
-                      />
+                      <Input value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Agence, Family Office..." />
                     </div>
                   )}
 
@@ -651,7 +787,7 @@ function RequestFormContent() {
                           <label
                             key={l.id}
                             className={[
-                              'flex justify-between items-center p-4 border transition-colors',
+                              'flex justify-between items-center p-4 border transition-colors bg-white',
                               l.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-stone-900',
                               selected ? 'border-stone-900' : 'border-stone-200',
                             ].join(' ')}
@@ -741,18 +877,24 @@ function RequestFormContent() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 pt-6 border-t border-stone-100">
-                    <Label>Budget estimatif</Label>
-                    <p className="text-xs text-stone-400 italic mb-2">Confidentiel. Permet de calibrer le profil du chef.</p>
+                  {/* ✅ Budget benchmark + Budget input (CONCIERGE step 3) */}
+                  <div className="space-y-6 pt-6 border-t border-stone-100">
+                    <BudgetBenchmarkCard
+                      loading={budgetLoading}
+                      data={marketBudget}
+                      onUseRecommended={applyRecommendedBudget}
+                      onUseRange={applyRangeBudget}
+                    />
 
-                    {/* ✅ BENCHMARK PREMIUM (CONCIERGE) */}
-                    <BudgetBenchmarkCard contextLabel="Concierge Match" />
-
-                    <div className="pt-4">
+                    <div className="space-y-2">
+                      <Label>Budget estimatif</Label>
+                      <p className="text-xs text-stone-400 italic mb-1">
+                        Confidentiel. Permet de calibrer le profil du chef.
+                      </p>
                       <Input
                         value={formData.budgetRange}
                         onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                        placeholder="Ex: 500–800€ / jour ou budget global"
+                        placeholder={marketBudget ? `Ex: ${formatMoney(marketBudget.min)} – ${formatMoney(marketBudget.max)} (${marketBudget.unit})` : 'Ex: 500–800€ / jour ou budget global'}
                       />
                     </div>
                   </div>
