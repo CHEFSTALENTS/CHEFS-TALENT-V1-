@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth } from '../../../services/storage';
+import { supabase } from '@/services/supabaseClient';
 import { Label, Marker, Button, Input } from '../../../components/ui';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
@@ -36,14 +37,10 @@ function toISODate(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 function monthLabel(d: Date) {
-  // ex: "janvier 2026"
   return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
 
-/**
- * Retourne une grille de 6 semaines (42 cases) pour un mois donné,
- * en démarrant la semaine le lundi.
- */
+/** grille 6 semaines (42 cases), semaine commence lundi */
 function buildMonthGrid(monthDate: Date) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -51,34 +48,39 @@ function buildMonthGrid(monthDate: Date) {
   const firstOfMonth = new Date(year, month, 1);
   const lastOfMonth = new Date(year, month + 1, 0);
 
-  // JS: 0=dim ... 6=sam. On veut lundi=0 ... dimanche=6
-  const jsDay = firstOfMonth.getDay(); // 0..6
-  const mondayIndex = (jsDay + 6) % 7; // lundi=0
+  const jsDay = firstOfMonth.getDay(); // 0=dim..6=sam
+  const mondayIndex = (jsDay + 6) % 7; // lundi=0..dim=6
 
   const gridStart = new Date(firstOfMonth);
   gridStart.setDate(firstOfMonth.getDate() - mondayIndex);
 
-  const days: Array<{
-    date: Date;
-    inMonth: boolean;
-    iso: string;
-  }> = [];
-
+  const days: Array<{ date: Date; inMonth: boolean; iso: string }> = [];
   for (let i = 0; i < 42; i++) {
     const d = new Date(gridStart);
     d.setDate(gridStart.getDate() + i);
-
     days.push({
       date: d,
       inMonth: d >= firstOfMonth && d <= lastOfMonth,
       iso: toISODate(d),
     });
   }
-
   return days;
 }
 
+function uniq(arr: string[]) {
+  return Array.from(new Set((arr || []).map(String).map(s => s.trim()).filter(Boolean)));
+}
+
 export default function ChefAvailabilityPage() {
+  const router = useRouter();
+  const didRedirect = useRef(false);
+
+  // ✅ si tu veux auto-save à chaque clic (date/période/toggle), passe à true
+  const AUTO_SAVE = false;
+
+  const [booting, setBooting] = useState(true);
+  const [sbUser, setSbUser] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -90,46 +92,92 @@ export default function ChefAvailabilityPage() {
   const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
 
   const today = useMemo(() => new Date(), []);
-  const [month, setMonth] = useState<Date>(() => new Date()); // ✅ mois courant par défaut
-
+  const [month, setMonth] = useState<Date>(() => new Date());
   const monthGrid = useMemo(() => buildMonthGrid(month), [month]);
 
+  // 1) session supabase = vérité
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
+
+      const u = data.session?.user ?? null;
+      setSbUser(u);
+
+      if (!u && !didRedirect.current) {
+        didRedirect.current = true;
+        router.replace('/chef/login');
+        return;
+      }
+
+      setBooting(false);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const u = session?.user ?? null;
+      setSbUser(u);
+      if (!u && !didRedirect.current) {
+        didRedirect.current = true;
+        router.replace('/chef/login');
+      }
+    });
+
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  // 2) load DB profile (source de vérité)
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
+      if (!sbUser?.id) return;
+
       setLoading(true);
       try {
-        const user = auth.getCurrentUser?.();
-        if (!user?.id) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-
-        // ✅ no-store bien placé
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const fromDb: ChefProfile | null = json?.profile ?? null;
 
-        const base = fromDb ?? { id: user.id, email: user.email ?? null };
+        const base: ChefProfile = fromDb ?? { id: sbUser.id, email: sbUser.email ?? '' };
 
-        const a = base.availability ?? {};
+        // compat : certains historiques peuvent stocker à plat
+        const a = (base.availability ?? {}) as any;
+
+        const available =
+          a.availableNow ?? (base as any).availableNow ?? false;
+
+        const nextFrom =
+          a.nextAvailableFrom ?? (base as any).nextAvailableFrom ?? '';
+
+        const periods =
+          a.preferredPeriods ?? (base as any).preferredPeriods ?? [];
+
+        const unav =
+          a.unavailableDates ??
+          (base as any).unavailableDates ??
+          (base as any).unavailable_dates ??
+          [];
+
         if (!cancelled) {
           setProfile(base);
-          setAvailableNow(!!a.availableNow);
-          setNextAvailableFrom(a.nextAvailableFrom ?? '');
-          setPreferredPeriods(a.preferredPeriods ?? []);
-          setUnavailableDates(a.unavailableDates ?? []);
+          setAvailableNow(!!available);
+          setNextAvailableFrom(nextFrom ? String(nextFrom) : '');
+          setPreferredPeriods(uniq(periods));
+          setUnavailableDates(uniq(unav));
           setLoading(false);
 
-          // ✅ optionnel : se caler sur le mois de "nextAvailableFrom" si rempli
-          if (a.nextAvailableFrom) {
-            const d = new Date(String(a.nextAvailableFrom));
+          if (nextFrom) {
+            const d = new Date(String(nextFrom));
             if (!Number.isNaN(d.getTime())) setMonth(new Date(d.getFullYear(), d.getMonth(), 1));
           }
         }
       } catch (e) {
-        console.error('LOAD AVAILABILITY ERROR', e);
+        console.error('[availability] load error', e);
         if (!cancelled) setLoading(false);
       }
     })();
@@ -137,68 +185,100 @@ export default function ChefAvailabilityPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sbUser?.id]);
 
-  const togglePeriod = (k: string) => {
-    setPreferredPeriods(prev => (prev.includes(k) ? prev.filter(x => x !== k) : [...prev, k]));
-  };
+  async function saveAvailability(next: {
+    availableNow: boolean;
+    nextAvailableFrom: string;
+    preferredPeriods: string[];
+    unavailableDates: string[];
+  }) {
+    if (!sbUser?.id) throw new Error('No user');
 
-  const toggleDate = (dateStr: string) => {
-    setUnavailableDates(prev => (prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr]));
-  };
-
-  const save = async (patch?: Partial<ChefProfile['availability']>) => {
     setSaving(true);
     setSuccess(false);
 
     try {
-      const user = auth.getCurrentUser?.();
-      if (!user?.id) throw new Error('No user');
+      // 1) GET current (merge safe)
+      const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+      const jsonGet = await resGet.json();
+      const current = jsonGet?.profile ?? {};
 
       const nextAvailability = {
-        availableNow,
-        nextAvailableFrom: nextAvailableFrom || null,
-        preferredPeriods,
-        unavailableDates,
-        ...(patch ?? {}),
+        availableNow: !!next.availableNow,
+        nextAvailableFrom: next.nextAvailableFrom ? String(next.nextAvailableFrom) : null,
+        preferredPeriods: uniq(next.preferredPeriods),
+        unavailableDates: uniq(next.unavailableDates),
       };
 
       const merged: ChefProfile = {
-        ...profile,
-        id: user.id,
-        email: user.email ?? profile.email ?? null,
+        ...current,
+        id: sbUser.id,
+        email: sbUser.email ?? current.email ?? '',
         availability: nextAvailability,
+
+        // ✅ compat legacy (si d'autres pages lisent à plat)
+        availableNow: nextAvailability.availableNow,
+        nextAvailableFrom: nextAvailability.nextAvailableFrom,
+        preferredPeriods: nextAvailability.preferredPeriods,
+        unavailableDates: nextAvailability.unavailableDates,
+
         updatedAt: new Date().toISOString(),
       };
 
-      const res = await fetch('/api/chef/profile', {
+      // 2) PUT
+      const resPut = await fetch('/api/chef/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: user.id, profile: merged }),
+        body: JSON.stringify({ id: sbUser.id, profile: merged }),
       });
-
-      if (!res.ok) throw new Error(await res.text());
+      if (!resPut.ok) throw new Error(await resPut.text());
 
       setProfile(merged);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
-    } catch (e) {
-      console.error('AVAILABILITY SAVE ERROR', e);
     } finally {
       setSaving(false);
+    }
+  }
+
+  const togglePeriod = async (k: string) => {
+    const next = preferredPeriods.includes(k)
+      ? preferredPeriods.filter(x => x !== k)
+      : [...preferredPeriods, k];
+
+    setPreferredPeriods(next);
+    if (AUTO_SAVE) {
+      await saveAvailability({ availableNow, nextAvailableFrom, preferredPeriods: next, unavailableDates });
+    }
+  };
+
+  const toggleDate = async (dateStr: string) => {
+    const next = unavailableDates.includes(dateStr)
+      ? unavailableDates.filter(d => d !== dateStr)
+      : [...unavailableDates, dateStr];
+
+    setUnavailableDates(next);
+    if (AUTO_SAVE) {
+      await saveAvailability({ availableNow, nextAvailableFrom, preferredPeriods, unavailableDates: next });
     }
   };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await save();
+    try {
+      await saveAvailability({ availableNow, nextAvailableFrom, preferredPeriods, unavailableDates });
+    } catch (e) {
+      console.error('AVAILABILITY SAVE ERROR', e);
+      alert((e as any)?.message || 'Erreur lors de la sauvegarde');
+    }
   };
 
   const goPrevMonth = () => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
   const goNextMonth = () => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
   const goToday = () => setMonth(new Date(today.getFullYear(), today.getMonth(), 1));
 
-  if (loading) {
+  if (booting || loading) {
     return (
       <ChefLayout>
         <div className="py-16 flex justify-center">
@@ -207,6 +287,8 @@ export default function ChefAvailabilityPage() {
       </ChefLayout>
     );
   }
+
+  if (!sbUser) return null;
 
   return (
     <ChefLayout>
@@ -220,7 +302,17 @@ export default function ChefAvailabilityPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="p-4 border border-stone-200 bg-stone-50 cursor-pointer">
               <div className="flex items-center gap-3">
-                <input type="checkbox" checked={availableNow} onChange={() => setAvailableNow(v => !v)} />
+                <input
+                  type="checkbox"
+                  checked={availableNow}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setAvailableNow(v);
+                    if (AUTO_SAVE) {
+                      saveAvailability({ availableNow: v, nextAvailableFrom, preferredPeriods, unavailableDates }).catch(() => {});
+                    }
+                  }}
+                />
                 <div>
                   <div className="text-sm font-medium text-stone-900">Disponible immédiatement</div>
                   <div className="text-xs text-stone-500">Active si tu peux accepter une mission maintenant.</div>
@@ -230,7 +322,17 @@ export default function ChefAvailabilityPage() {
 
             <div className="p-4 border border-stone-200">
               <Label>Prochaine disponibilité</Label>
-              <Input type="date" value={nextAvailableFrom} onChange={e => setNextAvailableFrom(e.target.value)} />
+              <Input
+                type="date"
+                value={nextAvailableFrom}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setNextAvailableFrom(v);
+                  if (AUTO_SAVE) {
+                    saveAvailability({ availableNow, nextAvailableFrom: v, preferredPeriods, unavailableDates }).catch(() => {});
+                  }
+                }}
+              />
               <div className="text-xs text-stone-500 mt-1">Laisse vide si tu es flexible.</div>
             </div>
 
@@ -277,9 +379,7 @@ export default function ChefAvailabilityPage() {
               </button>
 
               <div className="flex-1 text-center">
-                <div className="text-sm font-medium text-stone-900 capitalize">
-                  {monthLabel(month)}
-                </div>
+                <div className="text-sm font-medium text-stone-900 capitalize">{monthLabel(month)}</div>
                 <button
                   type="button"
                   onClick={goToday}
@@ -354,9 +454,7 @@ export default function ChefAvailabilityPage() {
                       </div>
                     ) : (
                       <div className="absolute inset-x-3 bottom-3">
-                        <span className="text-[10px] uppercase tracking-widest text-stone-400">
-                          Disponible
-                        </span>
+                        <span className="text-[10px] uppercase tracking-widest text-stone-400">Disponible</span>
                       </div>
                     )}
                   </button>
@@ -373,7 +471,7 @@ export default function ChefAvailabilityPage() {
           </div>
         </form>
 
-        <div className="text-xs text-stone-400 mt-4">{/* note / placeholder */}</div>
+        <div className="text-xs text-stone-400 mt-4" />
       </div>
     </ChefLayout>
   );
