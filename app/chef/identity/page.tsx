@@ -141,45 +141,45 @@ const user = { id: sbUser.id, email: sbUser.email ?? '' };
 
   const pickAvatar = () => avatarRef.current?.click();
 
-  const onAvatarFile = async (files: FileList | null) => {
-   const { data } = await supabase.auth.getSession();
-const sbUser = data.session?.user ?? null;
-if (!sbUser?.id) return;
-    
-    const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image.');
-      return;
-    }
+ const onAvatarFile = async (files: FileList | null) => {
+  const { data } = await supabase.auth.getSession();
+  const sbUser = data.session?.user ?? null;
+  if (!sbUser?.id) return;
 
-    const maxMb = 6;
-    if (file.size > maxMb * 1024 * 1024) {
-      alert(`Image trop lourde (max ${maxMb}MB).`);
-      return;
-    }
+  if (!files || files.length === 0) return;
 
-    setUploadingAvatar(true);
-    try {
-      const url = await uploadAvatar(file, user.id);
+  const file = files[0];
+  if (!file.type.startsWith('image/')) {
+    alert('Veuillez sélectionner une image.');
+    return;
+  }
 
-      // ✅ on set local state (preview)
-      setData((d) => ({ ...d, photoUrl: url }));
+  const maxMb = 6;
+  if (file.size > maxMb * 1024 * 1024) {
+    alert(`Image trop lourde (max ${maxMb}MB).`);
+    return;
+  }
 
-      // ✅ DB + local storage
-      await saveChefProfilePatch({ avatarUrl: url, photoUrl: url });
-      await auth.updateChefProfile?.(user.id, { avatarUrl: url, photoUrl: url } as any);
+  setUploadingAvatar(true);
+  try {
+    const url = await uploadAvatar(file, sbUser.id); // ✅ ICI
 
-      if (avatarRef.current) avatarRef.current.value = '';
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (e: any) {
-      console.warn('[identity] avatar upload failed', e?.message || e);
-      alert(e?.message || "Erreur lors de l'upload");
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
+    setData((d) => ({ ...d, photoUrl: url }));
 
+    // ✅ DB
+    await saveChefProfilePatch({ avatarUrl: url, photoUrl: url });
+
+    if (avatarRef.current) avatarRef.current.value = '';
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  } catch (e: any) {
+    console.warn('[identity] avatar upload failed', e?.message || e);
+    alert(e?.message || "Erreur lors de l'upload");
+  } finally {
+    setUploadingAvatar(false);
+  }
+};
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
