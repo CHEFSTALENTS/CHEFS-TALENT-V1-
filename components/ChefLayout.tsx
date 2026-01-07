@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/services/supabaseClient';
-import { ChefUser } from '../types';
 import {
   LogOut,
   LayoutDashboard,
@@ -21,8 +20,13 @@ import {
   X,
 } from 'lucide-react';
 
-// (OPTIONNEL) si tu as encore ce service et qu'il marche sans auth localStorage
-import { api } from '../services/storage';
+type UiChefUser = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  status?: string | null;
+};
 
 interface ChefLayoutProps {
   children?: React.ReactNode;
@@ -32,21 +36,20 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [user, setUser] = useState<ChefUser | null>(null);
-  const [offeredCount, setOfferedCount] = useState(0);
+  const [user, setUser] = useState<UiChefUser | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [offeredCount] = useState(0); // ✅ on réactivera plus tard (quand missions seront Supabase)
 
-  // ✅ Auth + user bootstrap (SUPABASE source de vérité)
+  // 1) Guard session + hydrate user
   useEffect(() => {
     let alive = true;
 
-    // noindex
     const meta = document.createElement('meta');
     meta.name = 'robots';
     meta.content = 'noindex, nofollow';
     document.head.appendChild(meta);
 
-    const boot = async () => {
+    (async () => {
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
 
@@ -57,39 +60,23 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         return;
       }
 
-      const pseudoUser: any = {
+      const pseudoUser: UiChefUser = {
         id: sbUser.id,
         email: sbUser.email ?? '',
         firstName: (sbUser.user_metadata as any)?.firstName ?? '',
         lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-        status: 'draft',
+        status: null,
       };
 
-      setUser(pseudoUser);
-
-      // ✅ Resync status depuis DB (chef_profiles.profile.status)
+      // Optionnel : resync status depuis DB (si ton endpoint est ok)
       try {
-        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, {
-          cache: 'no-store',
-        });
+        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
-        if (alive && json?.status) {
-          setUser((prev: any) => (prev ? { ...prev, status: json.status } : prev));
-        }
+        if (alive && json?.status) pseudoUser.status = json.status;
       } catch {}
 
-      // ✅ (OPTIONNEL) Compteur d’offres
-      try {
-        // Si api.getChefMissions dépend de l'ancien auth localStorage, commente ce bloc.
-        const missions = await api.getChefMissions(sbUser.id);
-        const offers = Array.isArray(missions) ? missions.filter((m: any) => m?.status === 'offered') : [];
-        if (alive) setOfferedCount(offers.length);
-      } catch {
-        // pas bloquant
-      }
-    };
-
-    boot();
+      if (alive) setUser(pseudoUser);
+    })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
       const sbUser = session?.user ?? null;
@@ -123,84 +110,91 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     router.replace('/chef/login');
   };
 
-  if (!user) return null;
+  const navItems = useMemo(
+    () => [
+      { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
+      { icon: Briefcase, label: 'Missions', path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
+      { icon: Euro, label: 'Revenus', path: '/chef/earnings' },
+      { icon: Euro, label: 'Tarifs', path: '/chef/pricing' },
+      { icon: User, label: 'Identité', path: '/chef/identity' },
+      { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
+      { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
+      { icon: Map, label: 'Zone & Mobilité', path: '/chef/mobility' },
+      { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
+      { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
+      { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
+    ],
+    [offeredCount]
+  );
 
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
-    { icon: Briefcase, label: 'Missions', path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
-    { icon: Euro, label: 'Revenus', path: '/chef/earnings' },
-    { icon: Euro, label: 'Tarifs', path: '/chef/pricing' },
-    { icon: User, label: 'Identité', path: '/chef/identity' },
-    { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
-    { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
-    { icon: Map, label: 'Zone & Mobilité', path: '/chef/mobility' },
-    { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
-    { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
-    { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
-  ];
+  const SidebarContent = ({ compact = false }: { compact?: boolean }) => {
+    if (!user) return null;
 
-  const SidebarContent = ({ compact = false }: { compact?: boolean }) => (
-    <div className="h-full flex flex-col">
-      <div className={`border-b border-stone-800 ${compact ? 'p-5' : 'p-8'}`}>
-        <Link href="/" className="font-serif text-xl text-stone-50 tracking-tight">
-          CHEF TALENTS
-        </Link>
-        <span className="text-[10px] uppercase tracking-widest text-stone-500 block mt-1">Portal</span>
-      </div>
-
-      <nav className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} space-y-1`}>
-        {navItems.map((item) => {
-          const isActive = pathname === item.path;
-          const Icon = item.icon;
-          const isProfileStart = item.path === '/chef/identity';
-
-          return (
-            <React.Fragment key={item.path}>
-              {isProfileStart && <div className="h-px bg-stone-800 my-4 mx-2" />}
-              <Link
-                href={item.path}
-                className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white text-stone-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 opacity-70" />
-                  {item.label}
-                </div>
-                {item.badge ? (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
-                    {item.badge}
-                  </span>
-                ) : null}
-              </Link>
-            </React.Fragment>
-          );
-        })}
-      </nav>
-
-      <div className={`border-t border-stone-800 ${compact ? 'p-4' : 'p-6'}`}>
-        <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-xs font-bold text-stone-400">
-            {user.firstName?.[0]}
-            {user.lastName?.[0]}
-          </div>
-          <div className="overflow-hidden">
-            <p className="text-sm font-medium text-white truncate">
-              {user.firstName} {user.lastName}
-            </p>
-            <p className="text-xs text-stone-500 truncate">{user.email}</p>
-          </div>
+    return (
+      <div className="h-full flex flex-col">
+        <div className={`border-b border-stone-800 ${compact ? 'p-5' : 'p-8'}`}>
+          <Link href="/" className="font-serif text-xl text-stone-50 tracking-tight">
+            CHEF TALENTS
+          </Link>
+          <span className="text-[10px] uppercase tracking-widest text-stone-500 block mt-1">Portal</span>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2"
-        >
-          <LogOut className="w-3 h-3" /> Déconnexion
-        </button>
+        <nav className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} space-y-1`}>
+          {navItems.map((item) => {
+            const isActive = pathname === item.path;
+            const Icon = item.icon;
+            const isProfileStart = item.path === '/chef/identity';
+
+            return (
+              <React.Fragment key={item.path}>
+                {isProfileStart && <div className="h-px bg-stone-800 my-4 mx-2" />}
+                <Link
+                  href={item.path}
+                  className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+                    isActive ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white text-stone-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 opacity-70" />
+                    {item.label}
+                  </div>
+                  {item.badge ? (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </Link>
+              </React.Fragment>
+            );
+          })}
+        </nav>
+
+        <div className={`border-t border-stone-800 ${compact ? 'p-4' : 'p-6'}`}>
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-xs font-bold text-stone-400">
+              {(user.firstName?.[0] || '').toUpperCase()}
+              {(user.lastName?.[0] || '').toUpperCase()}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium text-white truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-xs text-stone-500 truncate">{user.email}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2"
+          >
+            <LogOut className="w-3 h-3" /> Déconnexion
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
