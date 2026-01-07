@@ -34,6 +34,13 @@ export default function ChefPortfolioPage() {
   const [success, setSuccess] = useState(false);
 
   const [images, setImages] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+    const MIN_PORTFOLIO = 5;
+  const photoCount = images.filter(Boolean).length;
+  const isPortfolioValid = photoCount >= MIN_PORTFOLIO;
+
+  
   const [instagramUrl, setInstagramUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
 
@@ -81,10 +88,7 @@ export default function ChefPortfolioPage() {
         const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const p: any = json?.profile ?? {};
-        
-const MIN_PORTFOLIO = 5;
-const photoCount = images.filter(Boolean).length;
-const isPortfolioValid = photoCount >= MIN_PORTFOLIO;
+  
         
         const imgs = Array.isArray(p.images) ? p.images.map(String).filter(Boolean) : [];
         const ig = String(p.instagramUrl ?? p.instagram ?? p.socialInstagram ?? '').trim();
