@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChefLayout } from '../../../components/ChefLayout';
-import { auth } from '../../../services/storage';
+import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
 
@@ -12,7 +13,7 @@ type ChefProfile = {
   cuisines?: string[];
   languages?: string[];
   specialties?: string[];
-  missionTypes?: string[]; // ✅ NEW
+  missionTypes?: string[];
   updatedAt?: string;
   [key: string]: any;
 };
@@ -48,7 +49,6 @@ const MISSION_TYPES_PRESET = [
   { key: 'event_catering', label: 'Event / catering' },
 ];
 
-
 function normalizeList(v: any): string[] {
   if (!v) return [];
   if (Array.isArray(v)) return v.map(String).map((s) => s.trim()).filter(Boolean);
@@ -65,51 +65,85 @@ function toggle(list: string[], value: string) {
 }
 
 export default function ChefPreferencesPage() {
+  const router = useRouter();
+
+  // session
+  const [booting, setBooting] = useState(true);
+  const [sbUserId, setSbUserId] = useState<string | null>(null);
+  const [sbEmail, setSbEmail] = useState<string>('');
+
+  // data
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const [baseProfile, setBaseProfile] = useState<ChefProfile>({});
-
   const [cuisines, setCuisines] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
-const [missionTypes, setMissionTypes] = useState<string[]>([]);
-  
+  const [missionTypes, setMissionTypes] = useState<string[]>([]);
+
   const [customCuisine, setCustomCuisine] = useState('');
   const [customLanguage, setCustomLanguage] = useState('');
   const [customSpecialty, setCustomSpecialty] = useState('');
 
+  // 0) Boot session (source de vérité)
   useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
+
+      const user = data.session?.user ?? null;
+      if (!user) {
+        router.replace('/chef/login');
+        return;
+      }
+
+      setSbUserId(user.id);
+      setSbEmail(user.email ?? '');
+      setBooting(false);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const user = session?.user ?? null;
+      if (!user) router.replace('/chef/login');
+    });
+
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  // 1) Load profile DB
+  useEffect(() => {
+    if (!sbUserId) return;
     let cancelled = false;
 
     (async () => {
       setLoading(true);
       try {
-        const user = auth.getCurrentUser?.();
-        if (!user?.id) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-
-        // ✅ Lire le profil depuis la DB (no-store)
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
+        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUserId)}`, { cache: 'no-store' });
         const json = await res.json();
         const fromDb: ChefProfile | null = json?.profile ?? null;
 
-        const p: ChefProfile = fromDb ?? { id: user.id, email: user.email };
+        const p: ChefProfile = fromDb ?? { id: sbUserId, email: sbEmail };
 
         const initialCuisines = uniq(normalizeList(p.cuisines ?? (p as any)?.cuisineTypes ?? (p as any)?.styles));
         const initialLanguages = uniq(normalizeList(p.languages ?? (p as any)?.langues));
         const initialSpecialties = uniq(normalizeList(p.specialties ?? (p as any)?.speciality));
-        const initialMissionTypes = uniq(normalizeList((p as any)?.missionTypes ?? (p as any)?.missions ?? (p as any)?.mission_types));
+        const initialMissionTypes = uniq(
+          normalizeList((p as any)?.missionTypes ?? (p as any)?.missions ?? (p as any)?.mission_types)
+        );
 
         if (!cancelled) {
           setBaseProfile(p);
           setCuisines(initialCuisines);
           setLanguages(initialLanguages);
           setSpecialties(initialSpecialties);
-setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission_types ?? (p as any).missions)));
+          setMissionTypes(initialMissionTypes);
           setLoading(false);
         }
       } catch (e) {
@@ -121,9 +155,8 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sbUserId, sbEmail]);
 
-  // ✅ On rend le choix des missions obligatoire pour le matching
   const canSave = useMemo(() => {
     return cuisines.length >= 1 && languages.length >= 1 && missionTypes.length >= 1;
   }, [cuisines, languages, missionTypes]);
@@ -146,43 +179,53 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
   };
 
   const handleSave = async () => {
-  setSaving(true);
-  setSuccess(false);
+    setSaving(true);
+    setSuccess(false);
 
-  try {
-    const user = auth.getCurrentUser?.();
-    if (!user?.id) throw new Error('No user');
+    try {
+      if (!sbUserId) throw new Error('No user');
 
-    // IMPORTANT : on MERGE avec le profil DB pour ne rien écraser
-    const merged: ChefProfile = {
-      ...baseProfile,
-      id: user.id,
-      email: user.email,
-      cuisines: uniq(cuisines),
-      languages: uniq(languages),
-      specialties: uniq(specialties),
-      missionTypes: uniq(missionTypes), // ✅ NEW
-      updatedAt: new Date().toISOString(),
-    };
+      // 🔒 merge pour ne rien écraser
+      const merged: ChefProfile = {
+        ...baseProfile,
+        id: sbUserId,
+        email: sbEmail,
+        cuisines: uniq(cuisines),
+        languages: uniq(languages),
+        specialties: uniq(specialties),
+        missionTypes: uniq(missionTypes),
+        updatedAt: new Date().toISOString(),
+      };
 
-    const res = await fetch('/api/chef/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: user.id, profile: merged }),
-    });
+      const res = await fetch('/api/chef/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sbUserId, profile: merged }),
+      });
 
-    if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error(await res.text());
 
-    setBaseProfile(merged);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 2500);
-  } catch (e) {
-    console.error('PREFERENCES SAVE ERROR', e);
-    alert("Erreur d’enregistrement (check console)");
-  } finally {
-    setSaving(false);
+      setBaseProfile(merged);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2500);
+    } catch (e) {
+      console.error('PREFERENCES SAVE ERROR', e);
+      alert("Erreur d’enregistrement (check console)");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (booting) {
+    return (
+      <ChefLayout>
+        <div className="py-16 flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
+        </div>
+      </ChefLayout>
+    );
   }
-};
+
   return (
     <ChefLayout>
       <div className="max-w-3xl">
@@ -198,48 +241,47 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
           ) : (
             <>
               {/* Types de missions souhaitées */}
-<div className="space-y-3 pt-6 border-t border-stone-100">
-  <Label>Types de missions souhaitées</Label>
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    {MISSION_TYPES_PRESET.map(x => {
-      const on = missionTypes.includes(x.key);
-      return (
-        <button
-          key={x.key}
-          type="button"
-          onClick={() => setMissionTypes(prev => toggle(prev, x.key))}
-          className={`p-3 border text-left transition ${
-            on ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
-          }`}
-        >
-          <div className="text-sm font-medium text-stone-900">{x.label}</div>
-          <div className="text-xs text-stone-500">{on ? 'Sélectionné' : 'Cliquer'}</div>
-        </button>
-      );
-    })}
-  </div>
+              <div className="space-y-3 pt-6 border-t border-stone-100">
+                <Label>Types de missions souhaitées</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {MISSION_TYPES_PRESET.map((x) => {
+                    const on = missionTypes.includes(x.key);
+                    return (
+                      <button
+                        key={x.key}
+                        type="button"
+                        onClick={() => setMissionTypes((prev) => toggle(prev, x.key))}
+                        className={`p-3 border text-left transition ${
+                          on ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-stone-900">{x.label}</div>
+                        <div className="text-xs text-stone-500">{on ? 'Sélectionné' : 'Cliquer'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-  {missionTypes.length > 0 ? (
-    <div className="flex flex-wrap gap-2">
-      {missionTypes.map(k => {
-        const label = MISSION_TYPES_PRESET.find(x => x.key === k)?.label ?? k;
-        return (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setMissionTypes(prev => prev.filter(v => v !== k))}
-            className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
-          >
-            {label} ✕
-          </button>
-        );
-      })}
-    </div>
-  ) : (
-    <p className="text-xs text-stone-500">Choisis ce que tu veux recevoir (utilisé pour le matching).</p>
-  )}
-</div>
-
+                {missionTypes.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {missionTypes.map((k) => {
+                      const label = MISSION_TYPES_PRESET.find((x) => x.key === k)?.label ?? k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setMissionTypes((prev) => prev.filter((v) => v !== k))}
+                          className="text-xs px-2 py-1 border border-stone-200 rounded-full hover:border-stone-400"
+                        >
+                          {label} ✕
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-stone-500">Choisis ce que tu veux recevoir (utilisé pour le matching).</p>
+                )}
+              </div>
 
               {/* Cuisines */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
@@ -335,9 +377,7 @@ setMissionTypes(uniq(normalizeList((p as any).missionTypes ?? (p as any).mission
                       type="button"
                       onClick={() => setSpecialties((prev) => toggle(prev, x))}
                       className={`p-3 border text-left transition ${
-                        specialties.includes(x)
-                          ? 'border-stone-900 bg-stone-50'
-                          : 'border-stone-200 hover:border-stone-300'
+                        specialties.includes(x) ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300'
                       }`}
                     >
                       <div className="text-sm font-medium text-stone-900">{x}</div>
