@@ -7,7 +7,6 @@ import { supabase } from '@/services/supabaseClient';
 import { ChefLayout } from '../../../components/ChefLayout';
 import { Label, Button } from '../../../components/ui';
 import { computeChefScore } from '@/lib/chefScore';
-import { Image as ImageIcon } from 'lucide-react';
 import {
   CheckCircle2,
   Clock,
