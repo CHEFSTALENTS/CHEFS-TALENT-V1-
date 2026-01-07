@@ -96,7 +96,22 @@ export default function ChefDashboardPage() {
     const firstName = (sbUser?.user_metadata as any)?.firstName ?? '';
     const lastName = (sbUser?.user_metadata as any)?.lastName ?? '';
     const fullName = `${firstName} ${lastName}`.trim();
+const MIN_PORTFOLIO_PHOTOS = 5;
 
+function getPortfolioPhotosCount(p: any) {
+  const imgs =
+    p?.images ??
+    p?.photos ??
+    p?.gallery ??
+    p?.portfolioImages ??
+    [];
+
+  return Array.isArray(imgs) ? imgs.filter(Boolean).length : 0;
+}
+
+function isPortfolioValid(p: any) {
+  return getPortfolioPhotosCount(p) >= MIN_PORTFOLIO_PHOTOS;
+}
     return {
       id: sbUser?.id ?? '',
       email: sbUser?.email ?? '',
@@ -111,7 +126,10 @@ export default function ChefDashboardPage() {
   // 4) Score
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
-
+    
+const photoCount = getPortfolioPhotosCount(mergedProfile as any);
+const portfolioOk = photoCount >= MIN_PORTFOLIO_PHOTOS;
+    
     const city = String(
       p.city ??
         p.baseCity ??
@@ -196,8 +214,7 @@ export default function ChefDashboardPage() {
     return [
       { key: 'identity', title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…', path: '/chef/identity', done: identityOk, icon: User },
       { key: 'experience', title: 'Expérience', desc: 'Bio + expérience', path: '/chef/experience', done: experienceOk, icon: ChefHat },
-      { key: 'portfolio', title: 'Portfolio / Photos', desc: 'Lien Drive / site / Notion.', path: '/chef/portfolio', done: portfolioOk, icon: ImageIcon },
-      { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
+{key: 'portfolio',label: 'Portfolio', ok: portfolioOk,hint: portfolioOk ? `OK (${photoCount}/${MIN_PORTFOLIO_PHOTOS})` : `Min. ${MIN_PORTFOLIO_PHOTOS} photos (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`,}      { key: 'pricing', title: 'Tarifs', desc: 'Prix / jour ou prix / personne', path: '/chef/pricing', done: hasPricing, icon: DollarSign },
       { key: 'mobility', title: 'Zone & Mobilité', desc: 'Zones, déplacements', path: '/chef/mobility', done: mobilityOk, icon: Map },
       { key: 'availability', title: 'Disponibilités', desc: 'Ouverture des missions bientôt.', path: '/chef/availability', done: availabilityOk, icon: Calendar },
       { key: 'preferences', title: 'Préférences', desc: 'Cuisines + langues', path: '/chef/preferences', done: preferencesOk, icon: Sparkles },
