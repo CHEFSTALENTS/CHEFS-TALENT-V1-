@@ -1,9 +1,6 @@
-// middleware.ts (à la racine du projet, pas dans /app)
 import { NextRequest, NextResponse } from 'next/server';
 
-type Area = 'admin' | 'public';
-
-function redirectToAccess(req: NextRequest, area: Area) {
+function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
   const url = req.nextUrl.clone();
   const next = req.nextUrl.pathname + req.nextUrl.search;
 
@@ -28,11 +25,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Autoriser l’API access
+  // ✅ Autoriser les APIs gate / waitlist (sinon le fetch est redirigé)
   if (pathname.startsWith('/api/access')) return NextResponse.next();
+  if (pathname.startsWith('/api/waitlist')) return NextResponse.next();
 
   const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
-  const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
 
   // ✅ Admin protégé
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
@@ -40,15 +37,15 @@ export function middleware(req: NextRequest) {
     return redirectToAccess(req, 'admin');
   }
 
-  // ✅ (Option) Chefs : laisse passer
+  // ✅ Chefs : ON LAISSE PASSER
   if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
     return NextResponse.next();
   }
 
-  // ✅ PUBLIC GATE : bloque TOUT le reste (dont "/")
-  if (!hasPublic) {
-    return redirectToAccess(req, 'public');
-  }
+  // ✅ PUBLIC GATE (si tu l’as déjà ajouté ailleurs, laisse tel quel)
+  // Si tu veux bloquer tout le public hors /access, c’est ici que ça doit être fait
+  const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
+  if (!hasPublic) return redirectToAccess(req, 'public');
 
   return NextResponse.next();
 }
