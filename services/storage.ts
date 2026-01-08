@@ -264,14 +264,11 @@ export const api = {
     await delay(120);
     return getDb();
   },
-getProposals: async () => {
-  try {
-    const raw = localStorage.getItem('proposals');
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+async getProposals(): Promise<ChefProposalEntity[]> {
+  await delay(80);
+  return getProposalsDb();
 },
+  
   async getRequest(id: string): Promise<RequestEntity | undefined> {
     await delay(120);
     return getDb().find(r => r.id === id);
