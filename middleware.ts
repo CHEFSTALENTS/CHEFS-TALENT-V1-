@@ -1,6 +1,9 @@
+// middleware.ts (à la racine du projet, pas dans /app)
 import { NextRequest, NextResponse } from 'next/server';
 
-function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
+type Area = 'admin' | 'public';
+
+function redirectToAccess(req: NextRequest, area: Area) {
   const url = req.nextUrl.clone();
   const next = req.nextUrl.pathname + req.nextUrl.search;
 
@@ -29,6 +32,7 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith('/api/access')) return NextResponse.next();
 
   const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
+  const hasPublic = req.cookies.get('ct_gate_public')?.value === '1';
 
   // ✅ Admin protégé
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
@@ -36,9 +40,14 @@ export function middleware(req: NextRequest) {
     return redirectToAccess(req, 'admin');
   }
 
-  // ✅ Chefs : ON LAISSE PASSER (sinon loops)
+  // ✅ (Option) Chefs : laisse passer
   if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
     return NextResponse.next();
+  }
+
+  // ✅ PUBLIC GATE : bloque TOUT le reste (dont "/")
+  if (!hasPublic) {
+    return redirectToAccess(req, 'public');
   }
 
   return NextResponse.next();
