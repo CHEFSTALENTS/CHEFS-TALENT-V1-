@@ -1,62 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-type Area = 'admin' | 'public' | 'chef';
+function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
+  const url = req.nextUrl.clone();
+  const next = req.nextUrl.pathname + req.nextUrl.search;
 
-export async function POST(req: NextRequest) {
-  let body: any = {};
-  try {
-    body = await req.json();
-  } catch {}
+  url.pathname = '/access';
+  url.searchParams.set('area', area);
+  url.searchParams.set('next', next);
 
-  const areaRaw = String(body?.area || 'public').toLowerCase();
-  const area: Area =
-    areaRaw === 'admin' || areaRaw === 'chef' || areaRaw === 'public'
-      ? (areaRaw as Area)
-      : 'public';
-
-  const code = String(body?.code || '').trim();
-
-  const ADMIN_CODE = process.env.CT_ADMIN_CODE || '';
-  const PUBLIC_CODE = process.env.CT_PUBLIC_CODE || '';
-  const CHEF_CODE = process.env.CT_CHEF_CODE || PUBLIC_CODE;
-
-  const expected =
-    area === 'admin' ? ADMIN_CODE :
-    area === 'chef' ? CHEF_CODE :
-    PUBLIC_CODE;
-
-  if (!expected) {
-    return NextResponse.json(
-      { success: false, error: `Code ${area} non configuré (env manquante).` },
-      { status: 500 }
-    );
-  }
-
-  if (!code || code !== expected) {
-    return NextResponse.json(
-      { success: false, error: 'Code invalide.' },
-      { status: 401 }
-    );
-  }
-
-  const res = NextResponse.json({ success: true });
-
-  const cookie = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: 60 * 60 * 24 * 14,
-  };
-
-  if (area === 'admin') {
-    res.cookies.set('ct_gate_admin', '1', cookie);
-  } else if (area === 'chef') {
-    res.cookies.set('ct_gate_chef', '1', cookie);
-    res.cookies.set('ct_gate_public', '1', cookie);
-  } else {
-    res.cookies.set('ct_gate_public', '1', cookie);
-  }
-
-  return res;
+  return NextResponse.redirect(url);
 }
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Laisser passer la page d'accès + assets + next internals
+  if (
+    pathname.startsWith('/access') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/robots.txt') ||
+    pathname.startsWith('/sitemap')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Autoriser l’API access
+  if (pathname.startsWith('/api/access')) return NextResponse.next();
+
+  const hasAdmin = req.cookies.get('ct_gate_admin')?.value === '1';
+
+  // ✅ Admin protégé
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (hasAdmin) return NextResponse.next();
+    return redirectToAccess(req, 'admin');
+  }
+
+  // ✅ Chefs : ON LAISSE PASSER (sinon loops)
+  if (pathname.startsWith('/chef') || pathname.startsWith('/api/chef')) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image).*)'],
+};
