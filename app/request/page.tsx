@@ -335,7 +335,50 @@ function RequestFormContent() {
 
     router.push('/request');
   };
+const emptyForm = (mode: RequestMode): RequestForm => ({
+  mode,
+  clientType: 'private',
+  location: '',
+  dateMode: mode === 'fast' ? 'single' : 'single',
+  startDate: '',
+  // @ts-ignore
+  endDate: '',
+  assignmentType: mode === 'fast' ? 'dinner' : 'dinner',
+  guestCount: 2,
+  serviceExpectations: 'chef_only',
+  cuisinePreferences: '',
+  dietaryRestrictions: '',
+  preferredLanguage: '',
+  budgetRange: '',
+  notes: '',
+  fullName: '',
+  email: '',
+  phone: '',
+  companyName: '',
+  serviceRhythm: 'daily',
+  accommodationProvided: 'yes',
+  sailingArea: '',
+  crewSize: 0,
+});
 
+const selectMode = (selected: RequestMode) => {
+  setMode(selected);
+  setStep(1);
+  setFormData(emptyForm(selected));
+  setMarketBudget(null);
+  setBudgetLoading(false);
+  router.push(`?mode=${selected}`);
+};
+
+const resetMode = () => {
+  setMode(null);
+  setStep(1);
+  setFormData(emptyForm('fast')); // ou garde un default
+  setMarketBudget(null);
+  setBudgetLoading(false);
+  router.push('/request');
+};
+   
   // Init from URL (mode/type/step) — but WITHOUT leaking previous state
   useEffect(() => {
     const modeParam = searchParams?.get('mode');
@@ -417,7 +460,13 @@ function RequestFormContent() {
       setMarketBudget(null);
       return;
     }
+const wantsResidence = formData.dateMode === 'multi';
+const hasEnd = String((formData as any).endDate || '').trim().length >= 8;
 
+if (wantsResidence && !hasEnd) {
+  setMarketBudget(null);
+  return;
+}
     let cancelled = false;
     const t = setTimeout(() => {
       setBudgetLoading(true);
