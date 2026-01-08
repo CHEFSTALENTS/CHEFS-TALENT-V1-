@@ -1,46 +1,62 @@
-'use client';
+import { NextRequest, NextResponse } from 'next/server';
 
-import React, { Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+type Area = 'admin' | 'public' | 'chef';
 
-function AccessInner() {
-  const router = useRouter();
-  const sp = useSearchParams();
+export async function POST(req: NextRequest) {
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {}
 
-  useEffect(() => {
-    const area = (sp.get('area') || 'public') as 'admin' | 'chef' | 'public';
-    const next = sp.get('next') || '/';
+  const areaRaw = String(body?.area || 'public').toLowerCase();
+  const area: Area =
+    areaRaw === 'admin' || areaRaw === 'chef' || areaRaw === 'public'
+      ? (areaRaw as Area)
+      : 'public';
 
-    (async () => {
-      try {
-        // On appelle l'API qui pose le cookie gate
-        await fetch('/api/access', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ area, code: '', next }), // code vide => si PUBLIC_CODE requis, voir note plus bas
-          cache: 'no-store',
-        });
-      } catch (e) {
-        // silencieux
-      }
+  const code = String(body?.code || '').trim();
 
-      // Puis on redirige
-      router.replace(next);
-    })();
-  }, [router, sp]);
+  const ADMIN_CODE = process.env.CT_ADMIN_CODE || '';
+  const PUBLIC_CODE = process.env.CT_PUBLIC_CODE || '';
+  const CHEF_CODE = process.env.CT_CHEF_CODE || PUBLIC_CODE;
 
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="text-sm text-stone-600">Accès…</div>
-    </div>
-  );
-}
+  const expected =
+    area === 'admin' ? ADMIN_CODE :
+    area === 'chef' ? CHEF_CODE :
+    PUBLIC_CODE;
 
-export default function AccessPage() {
-  // ✅ nécessaire pour éviter l'erreur Next 14 useSearchParams() sans Suspense
-  return (
-    <Suspense fallback={<div className="p-8">Accès…</div>}>
-      <AccessInner />
-    </Suspense>
-  );
+  if (!expected) {
+    return NextResponse.json(
+      { success: false, error: `Code ${area} non configuré (env manquante).` },
+      { status: 500 }
+    );
+  }
+
+  if (!code || code !== expected) {
+    return NextResponse.json(
+      { success: false, error: 'Code invalide.' },
+      { status: 401 }
+    );
+  }
+
+  const res = NextResponse.json({ success: true });
+
+  const cookie = {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 14,
+  };
+
+  if (area === 'admin') {
+    res.cookies.set('ct_gate_admin', '1', cookie);
+  } else if (area === 'chef') {
+    res.cookies.set('ct_gate_chef', '1', cookie);
+    res.cookies.set('ct_gate_public', '1', cookie);
+  } else {
+    res.cookies.set('ct_gate_public', '1', cookie);
+  }
+
+  return res;
 }
