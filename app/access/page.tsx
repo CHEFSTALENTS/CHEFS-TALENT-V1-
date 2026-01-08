@@ -26,7 +26,7 @@ function AccessInner() {
   const subtitle = useMemo(() => {
     return area === 'admin'
       ? 'Zone réservée à l’équipe.'
-      : 'Chef Talents est en lancement privé. Accès sur code uniquement.';
+      : 'Chef Talents est en cours de lancement. Accès sur code uniquement.';
   }, [area]);
 
   const handleAccess = async () => {
