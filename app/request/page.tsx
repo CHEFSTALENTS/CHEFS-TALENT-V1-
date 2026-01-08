@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input, Textarea, Reveal, Marker, Label } from '../../components/ui';
@@ -17,7 +17,11 @@ import type { BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
 function formatMoney(v?: number, currency: string = 'EUR') {
   if (typeof v !== 'number' || Number.isNaN(v)) return '—';
   try {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(v);
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(v);
   } catch {
     return `${Math.round(v)}€`;
   }
@@ -51,18 +55,43 @@ function isInternationalFromLocation(location?: string) {
   if (!s) return false;
 
   const hintsNonFR = [
-    'ibiza','spain','espagne','italy','italie','greece','grece','uk','london',
-    'switzerland','suisse','marrakech','morocco','maroc','dubai',
+    'ibiza',
+    'spain',
+    'espagne',
+    'italy',
+    'italie',
+    'greece',
+    'grece',
+    'uk',
+    'london',
+    'switzerland',
+    'suisse',
+    'marrakech',
+    'morocco',
+    'maroc',
+    'dubai',
   ];
-  const hintsFR = ['france','paris','lyon','marseille','nice','cannes','saint tropez','courchevel','megeve','bordeaux'];
+  const hintsFR = [
+    'france',
+    'paris',
+    'lyon',
+    'marseille',
+    'nice',
+    'cannes',
+    'saint tropez',
+    'courchevel',
+    'megeve',
+    'bordeaux',
+  ];
 
   const nonfr = hintsNonFR.some((x) => s.includes(x));
   const fr = hintsFR.some((x) => s.includes(x));
+
   return nonfr && !fr;
 }
 
 /**
- * ✅ Règle métier (IMPORTANT)
+ * ✅ Règle métier
  * - Ponctuel (single) => EVENT => €/pers
  * - Résidence (multi + >=2 jours) => RESIDENCE => €/jour
  */
@@ -73,7 +102,7 @@ function getBudgetKindFromForm(formData: RequestForm): RequestKind {
 }
 
 function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null {
-  // Bloquer benchmark résidence tant qu'on n'a pas endDate (sinon "ponctuel" parasite)
+  // Bloquer benchmark résidence tant qu'on n'a pas endDate (évite le "ponctuel" parasite)
   if (formData.dateMode === 'multi') {
     const end = String((formData as any).endDate || '').trim();
     if (end.length < 8) return null;
@@ -93,7 +122,6 @@ function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null
   const highSeason = isHighSeasonFromStartDate(formData.startDate);
   const international = isInternationalFromLocation(formData.location);
 
-  // On garde premium par défaut, MAIS on ne montre pas la carte tant que l'user n'a pas donné son budget/pers en FAST.
   const tier: BudgetContext['tier'] = 'premium';
 
   if (kind === 'event' && (!guests || guests <= 0)) return null;
@@ -138,6 +166,10 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
     qtyLabel: `${days} jour${days > 1 ? 's' : ''}`,
   };
 }
+
+/* =========================================================
+   Benchmark Card
+========================================================= */
 
 function BudgetBenchmarkCard({
   loading,
@@ -255,6 +287,8 @@ function BudgetBenchmarkCard({
    Form factory (KEY FIX: no state leak between modes)
 ========================================================= */
 
+type FastMealMoment = 'lunch' | 'dinner';
+
 const makeEmptyForm = (m: RequestMode): RequestForm => ({
   mode: m,
   clientType: 'private',
@@ -279,14 +313,16 @@ const makeEmptyForm = (m: RequestMode): RequestForm => ({
   accommodationProvided: 'yes',
   sailingArea: '',
   crewSize: 0,
-  // FAST additions (soft typed)
+  // additions (soft typed)
   // @ts-ignore
-  mealMoment: 'dinner', // 'lunch' | 'dinner'
+  mealMoment: 'dinner' as FastMealMoment,
   // @ts-ignore
   budgetPerPerson: '',
 });
 
-/* ========================================================= */
+/* =========================================================
+   Page
+========================================================= */
 
 function RequestFormContent() {
   const searchParams = useSearchParams();
@@ -316,7 +352,7 @@ function RequestFormContent() {
     setMode(selected);
     setStep(1);
 
-    // ✅ HARD RESET (fixes your "cache")
+    // ✅ HARD RESET (fixes "cache"/leaks between modes)
     setFormData(makeEmptyForm(selected));
     setMarketBudget(null);
     setBudgetLoading(false);
@@ -328,58 +364,14 @@ function RequestFormContent() {
     setMode(null);
     setStep(1);
 
-    // optional: reset everything when going back to mode selection
     setFormData(makeEmptyForm('fast'));
     setMarketBudget(null);
     setBudgetLoading(false);
 
     router.push('/request');
   };
-const emptyForm = (mode: RequestMode): RequestForm => ({
-  mode,
-  clientType: 'private',
-  location: '',
-  dateMode: mode === 'fast' ? 'single' : 'single',
-  startDate: '',
-  // @ts-ignore
-  endDate: '',
-  assignmentType: mode === 'fast' ? 'dinner' : 'dinner',
-  guestCount: 2,
-  serviceExpectations: 'chef_only',
-  cuisinePreferences: '',
-  dietaryRestrictions: '',
-  preferredLanguage: '',
-  budgetRange: '',
-  notes: '',
-  fullName: '',
-  email: '',
-  phone: '',
-  companyName: '',
-  serviceRhythm: 'daily',
-  accommodationProvided: 'yes',
-  sailingArea: '',
-  crewSize: 0,
-});
 
-const selectMode = (selected: RequestMode) => {
-  setMode(selected);
-  setStep(1);
-  setFormData(emptyForm(selected));
-  setMarketBudget(null);
-  setBudgetLoading(false);
-  router.push(`?mode=${selected}`);
-};
-
-const resetMode = () => {
-  setMode(null);
-  setStep(1);
-  setFormData(emptyForm('fast')); // ou garde un default
-  setMarketBudget(null);
-  setBudgetLoading(false);
-  router.push('/request');
-};
-   
-  // Init from URL (mode/type/step) — but WITHOUT leaking previous state
+  // Init from URL (mode/type/step) — without leaking previous state
   useEffect(() => {
     const modeParam = searchParams?.get('mode');
     const typeParam = searchParams?.get('type');
@@ -396,11 +388,12 @@ const resetMode = () => {
       setStep(desiredStep);
 
       setFormData((prev) => {
-        // If mode changes via URL, do a reset
         const next = makeEmptyForm(m);
-        // keep clientType from URL if provided
         if (typeParam === 'concierge' || typeParam === 'private') {
           (next as any).clientType = typeParam;
+        } else if (m === 'fast') {
+          // conserve le clientType si l’URL ne le force pas
+          (next as any).clientType = (prev as any).clientType ?? 'private';
         }
         return next;
       });
@@ -408,7 +401,6 @@ const resetMode = () => {
       setMarketBudget(null);
       setBudgetLoading(false);
     } else {
-      // if no mode in URL, keep mode selection screen
       setMode(null);
       setStep(1);
       setMarketBudget(null);
@@ -417,7 +409,10 @@ const resetMode = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // When benchmark section is not displayed, hard reset its state (prevents old card from lingering)
+  /* =========================================================
+     Benchmark logic
+  ========================================================= */
+
   const shouldShowBenchmark = useMemo(() => {
     if (!mode) return false;
 
@@ -425,13 +420,9 @@ const resetMode = () => {
     const hasStart = String(formData.startDate || '').trim().length >= 8;
 
     if (mode === 'fast' && step === 1) {
-      // FAST: show only if user entered budget per person + base info
       const guestsOk = Number((formData as any).guestCount || 0) > 0;
-
-      // @ts-ignore
       const bppRaw = (formData as any).budgetPerPerson;
       const bpp = typeof bppRaw === 'string' ? Number(bppRaw.replace(',', '.')) : Number(bppRaw || 0);
-
       return hasLocation && hasStart && guestsOk && Number.isFinite(bpp) && bpp > 0;
     }
 
@@ -442,8 +433,18 @@ const resetMode = () => {
     }
 
     return false;
-  }, [mode, step, formData.location, formData.startDate, formData.dateMode, (formData as any).endDate, (formData as any).guestCount, (formData as any).budgetPerPerson]);
+  }, [
+    mode,
+    step,
+    formData.location,
+    formData.startDate,
+    formData.dateMode,
+    (formData as any).endDate,
+    (formData as any).guestCount,
+    (formData as any).budgetPerPerson,
+  ]);
 
+  // When benchmark should not show, clear its state (prevents lingering card)
   useEffect(() => {
     if (!shouldShowBenchmark) {
       setMarketBudget(null);
@@ -460,13 +461,7 @@ const resetMode = () => {
       setMarketBudget(null);
       return;
     }
-const wantsResidence = formData.dateMode === 'multi';
-const hasEnd = String((formData as any).endDate || '').trim().length >= 8;
 
-if (wantsResidence && !hasEnd) {
-  setMarketBudget(null);
-  return;
-}
     let cancelled = false;
     const t = setTimeout(() => {
       setBudgetLoading(true);
@@ -522,32 +517,28 @@ if (wantsResidence && !hasEnd) {
     setFormData((prev) => ({ ...prev, budgetRange: s }));
   };
 
+  /* =========================================================
+     Submit
+  ========================================================= */
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // ✅ Normalize payload for your rules:
-      // FAST: budget per person only (no total), store in budgetRange as €/pers label
       if (mode === 'fast') {
-        // @ts-ignore
         const bppRaw = (formData as any).budgetPerPerson;
         const bpp = typeof bppRaw === 'string' ? Number(bppRaw.replace(',', '.')) : Number(bppRaw || 0);
-        const guests = Number((formData as any).guestCount || 0);
 
-        const budgetLabel =
-          Number.isFinite(bpp) && bpp > 0 ? `${formatMoney(bpp)} / pers (hors frais de service)` : '';
-
-        const patch: any = {
+        const payload: any = {
           ...formData,
-          budgetRange: budgetLabel,
-          // helpful for backend/admin
-          budgetPerPerson: bpp,
-          guestCount: guests,
+          budgetRange: Number.isFinite(bpp) && bpp > 0 ? `${formatMoney(bpp)} / pers (hors frais de service)` : '',
+          budgetPerPerson: Number.isFinite(bpp) ? bpp : undefined,
+          // safety: fast is always ponctuel
+          dateMode: 'single',
         };
 
-        const response = await submitRequest(patch);
+        const response = await submitRequest(payload);
         if (response?.success) setResult(response);
       } else {
-        // CONCIERGE: keep budgetRange as €/jour label (and disclaimer is in UI)
         const response = await submitRequest(formData);
         if (response?.success) setResult(response);
       }
@@ -578,25 +569,18 @@ if (wantsResidence && !hasEnd) {
             )}
           </div>
 
-          <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">
-            {isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}
-          </h2>
+          <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">{isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}</h2>
 
           <div className="text-stone-500 mb-12 text-lg font-light space-y-4">
             {isFastMode ? (
               <>
                 <p>Votre demande Fast Match a bien été reçue.</p>
                 <p>Nous vérifions la disponibilité immédiate de nos chefs et vous confirmerons l’attribution sous 2h.</p>
-                <p className="text-xs text-stone-400">
-                  Tarifs hors frais de service.
-                </p>
+                <p className="text-xs text-stone-400">Tarifs hors frais de service.</p>
               </>
             ) : (
               <>
-                <p>
-                  Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et reviendrons vers
-                  vous avec une proposition structurée.
-                </p>
+                <p>Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et reviendrons vers vous avec une proposition structurée.</p>
                 <p className="text-xs text-stone-400">
                   Prix / jour = prestation du chef uniquement (approvisionnements non inclus). Tarifs hors frais de service.
                 </p>
@@ -679,9 +663,7 @@ if (wantsResidence && !hasEnd) {
                 ← Changer de mode
               </button>
 
-              <h1 className="text-2xl font-serif text-stone-900 leading-tight">
-                {mode === 'fast' ? 'Fast Match' : 'Concierge Match'}
-              </h1>
+              <h1 className="text-2xl font-serif text-stone-900 leading-tight">{mode === 'fast' ? 'Fast Match' : 'Concierge Match'}</h1>
 
               <p className="text-xs text-stone-500 font-light leading-relaxed">
                 {mode === 'fast'
@@ -690,6 +672,7 @@ if (wantsResidence && !hasEnd) {
               </p>
             </div>
 
+            {/* STEPS */}
             <div className="flex flex-col gap-3 pt-4">
               {Array.from({ length: getTotalSteps() }).map((_, i) => {
                 const s = i + 1;
@@ -751,7 +734,7 @@ if (wantsResidence && !hasEnd) {
                     </div>
                   </div>
 
-                  {/* NEW: Lunch/Dinner */}
+                  {/* Lunch / Dinner */}
                   <div className="space-y-4">
                     <Label>Prestation</Label>
                     <div className="flex gap-4 flex-wrap">
@@ -759,13 +742,19 @@ if (wantsResidence && !hasEnd) {
                         { val: 'lunch', label: 'Déjeuner' },
                         { val: 'dinner', label: 'Dîner' },
                       ].map((opt) => {
-                        // @ts-ignore
                         const selected = (formData as any).mealMoment === opt.val;
                         return (
                           <button
                             key={opt.val}
                             type="button"
-                            onClick={() => setFormData({ ...formData, assignmentType: 'dinner', /* @ts-ignore */ mealMoment: opt.val })}
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                assignmentType: 'dinner',
+                                // @ts-ignore
+                                mealMoment: opt.val,
+                              })
+                            }
                             className={`px-6 py-3 text-sm border transition-colors bg-white ${
                               selected ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 text-stone-600 hover:border-stone-900'
                             }`}
@@ -805,7 +794,6 @@ if (wantsResidence && !hasEnd) {
                       />
                     </div>
 
-                    {/* NEW: budget per person */}
                     <div className="space-y-4">
                       <Label>Budget par personne</Label>
                       <Input
@@ -922,13 +910,21 @@ if (wantsResidence && !hasEnd) {
                   {formData.clientType === 'concierge' && (
                     <div className="space-y-4">
                       <Label>Nom de la structure</Label>
-                      <Input value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Agence, Family Office..." />
+                      <Input
+                        value={formData.companyName}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        placeholder="Agence, Family Office..."
+                      />
                     </div>
                   )}
 
                   <div className="space-y-4">
                     <Label>Lieu de la mission</Label>
-                    <Input placeholder="Ville, Pays, Station..." value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
+                    <Input
+                      placeholder="Ville, Pays, Station..."
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    />
                   </div>
 
                   <div className="space-y-4">
@@ -944,7 +940,13 @@ if (wantsResidence && !hasEnd) {
                             {formData.dateMode === m.val && <div className="w-2 h-2 bg-stone-900" />}
                           </div>
                           <span className="text-stone-600">{m.label}</span>
-                          <input type="radio" className="hidden" name="dateMode" checked={formData.dateMode === m.val} onChange={() => setFormData({ ...formData, dateMode: m.val as any })} />
+                          <input
+                            type="radio"
+                            className="hidden"
+                            name="dateMode"
+                            checked={formData.dateMode === m.val}
+                            onChange={() => setFormData({ ...formData, dateMode: m.val as any })}
+                          />
                         </label>
                       ))}
                     </div>
@@ -996,7 +998,11 @@ if (wantsResidence && !hasEnd) {
                     <div className="grid grid-cols-2 gap-8 p-6 bg-stone-50 border border-stone-100">
                       <div className="space-y-2">
                         <Label>Zone de navigation</Label>
-                        <Input value={formData.sailingArea} onChange={(e) => setFormData({ ...formData, sailingArea: e.target.value })} placeholder="Ex: Méditerranée" />
+                        <Input
+                          value={formData.sailingArea}
+                          onChange={(e) => setFormData({ ...formData, sailingArea: e.target.value })}
+                          placeholder="Ex: Méditerranée"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Équipage total</Label>
@@ -1101,7 +1107,11 @@ if (wantsResidence && !hasEnd) {
 
                   <div className="space-y-4">
                     <Label>Style culinaire</Label>
-                    <Textarea placeholder="Méditerranéen, gastronomique, family style..." value={formData.cuisinePreferences} onChange={(e) => setFormData({ ...formData, cuisinePreferences: e.target.value })} />
+                    <Textarea
+                      placeholder="Méditerranéen, gastronomique, family style..."
+                      value={formData.cuisinePreferences}
+                      onChange={(e) => setFormData({ ...formData, cuisinePreferences: e.target.value })}
+                    />
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-8">
