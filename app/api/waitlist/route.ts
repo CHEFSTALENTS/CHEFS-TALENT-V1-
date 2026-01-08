@@ -1,85 +1,74 @@
-
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+function json(status: number, data: any) {
+  return NextResponse.json(data, { status });
+}
+
+function normalizeEmail(email: string) {
+  return String(email || '').trim().toLowerCase();
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null);
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return json(500, {
+        success: false,
+        error: 'SUPABASE_ENV_MISSING',
+        message:
+          'Missing SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in env vars.',
+      });
+    }
 
-    const email = String(body?.email || '').trim().toLowerCase();
-    const company = String(body?.company || '').trim();
-    const role = String(body?.role || '').trim();
+    const body = await req.json().catch(() => ({}));
+    const email = normalizeEmail(body?.email);
+    const company = String(body?.company || '').trim() || null;
+    const role = String(body?.role || 'concierge').trim();
     const source = String(body?.source || 'access_gate').trim();
 
     if (!email || !email.includes('@')) {
-      return NextResponse.json({ success: false, error: 'INVALID_EMAIL' }, { status: 400 });
+      return json(400, { success: false, error: 'INVALID_EMAIL' });
     }
 
-    const payload = {
-      email,
-      company: company || null,
-      role: role || null,
-      source,
-      createdAt: new Date().toISOString(),
-    };
+    // Supabase server client (service role => bypass RLS)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
 
-    // 1) WEBHOOK (Make/Zapier)
-    const webhookUrl = process.env.WAITLIST_WEBHOOK_URL;
-    if (webhookUrl) {
-      const r = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        cache: 'no-store',
-      });
-
-      if (!r.ok) {
-        return NextResponse.json({ success: false, error: 'WEBHOOK_FAILED' }, { status: 502 });
-      }
-
-      return NextResponse.json({ success: true, mode: 'webhook' });
-    }
-
-    // 2) SUPABASE (service role)
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (supabaseUrl && serviceKey) {
-      const insert = await fetch(`${supabaseUrl}/rest/v1/waitlist`, {
-        method: 'POST',
-        headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation',
-        },
-        body: JSON.stringify([
+    // Upsert by email (requires unique constraint on email in DB)
+    const { data, error } = await supabase
+      .from('waitlist')
+      .upsert(
+        [
           {
-            email: payload.email,
-            company: payload.company,
-            role: payload.role,
-            source: payload.source,
+            email,
+            company,
+            role,
+            source,
+            created_at: new Date().toISOString(),
           },
-        ]),
-        cache: 'no-store',
+        ],
+        { onConflict: 'email' }
+      )
+      .select('email')
+      .single();
+
+    if (error) {
+      return json(500, {
+        success: false,
+        error: 'SUPABASE_INSERT_FAILED',
+        message: error.message,
       });
-
-      if (!insert.ok) {
-        const txt = await insert.text().catch(() => '');
-        return NextResponse.json(
-          { success: false, error: 'SUPABASE_INSERT_FAILED', detail: txt.slice(0, 400) },
-          { status: 502 }
-        );
-      }
-
-      return NextResponse.json({ success: true, mode: 'supabase' });
     }
 
-    // 3) Rien configuré
-    return NextResponse.json(
-      { success: false, error: 'NO_STORAGE_CONFIGURED' },
-      { status: 500 }
-    );
-  } catch (e) {
-    return NextResponse.json({ success: false, error: 'SERVER_ERROR' }, { status: 500 });
+    return json(200, { success: true, email: data?.email || email });
+  } catch (e: any) {
+    return json(500, { success: false, error: 'SERVER_ERROR', message: e?.message || String(e) });
   }
 }
