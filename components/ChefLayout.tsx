@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/services/supabaseClient';
 
@@ -34,6 +34,10 @@ interface ChefLayoutProps {
   children?: React.ReactNode;
 }
 
+/**
+ * ⚠️ Incrémente cette version à chaque fois que tu modifies les conditions.
+ * Le popup se réaffichera automatiquement si la version stockée != cette version.
+ */
 const CURRENT_TERMS_VERSION = '09/01/2026';
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
@@ -46,20 +50,22 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Terms gate (source of truth = Supabase via /api/chef/me)
-  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  // Terms state (chargé depuis /api/chef/me)
+  const [termsLoaded, setTermsLoaded] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const [termsAcceptedVersion, setTermsAcceptedVersion] = useState<string | null>(null);
   const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
 
-  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  // Modal
+  const [termsOpen, setTermsOpen] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
 
-  // Fetch session + user + status + terms ONCE
+  // ---- AUTH + LOAD PROFILE (status + terms) ----
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    const run = async () => {
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
 
@@ -76,13 +82,13 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         lastName: (sbUser.user_metadata as any)?.lastName ?? '',
         status: 'draft',
       };
-
       setUser(pseudo);
 
-      // ✅ resync depuis DB
+      // Charge status + terms depuis DB
       try {
         const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-        const json = await res.json().catch(() => null);
+        const json = await res.json();
+
         if (!alive) return;
 
         // status
@@ -91,24 +97,24 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         }
 
         // terms
-        const accepted = Boolean(json?.termsAccepted);
-        const version = (json?.termsAcceptedVersion ?? null) as string | null;
-        const acceptedAt = (json?.termsAcceptedAt ?? null) as string | null;
+        const dbAccepted = Boolean(json?.termsAccepted);
+        const dbVersion = (json?.termsAcceptedVersion ?? null) as string | null;
+        const dbAt = (json?.termsAcceptedAt ?? null) as string | null;
 
-        setTermsAccepted(accepted);
-        setTermsAcceptedVersion(version);
-        setTermsAcceptedAt(acceptedAt);
-
-        const mustAccept = !accepted || version !== CURRENT_TERMS_VERSION;
-        setTermsModalOpen(mustAccept);
+        setTermsAccepted(dbAccepted);
+        setTermsAcceptedVersion(dbVersion);
+        setTermsAcceptedAt(dbAt);
       } catch {
-        // si la requête échoue, on force le gate (sécurité)
+        // si /api/chef/me plante, on évite de bloquer sans info -> on considère non accepté
         setTermsAccepted(false);
         setTermsAcceptedVersion(null);
         setTermsAcceptedAt(null);
-        setTermsModalOpen(true);
+      } finally {
+        if (alive) setTermsLoaded(true);
       }
-    })();
+    };
+
+    run();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
       const sbUser = session?.user ?? null;
@@ -143,6 +149,32 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [mobileOpen]);
 
+  // ---- TERMS LOGIC ----
+  const mustAcceptTerms = useMemo(() => {
+    if (!termsLoaded) return false; // ⚠️ tant qu’on n’a pas chargé, on n’affiche rien
+    if (!termsAccepted) return true;
+    if ((termsAcceptedVersion ?? null) !== CURRENT_TERMS_VERSION) return true;
+    return false;
+  }, [termsLoaded, termsAccepted, termsAcceptedVersion]);
+
+  useEffect(() => {
+    // ouvre le popup uniquement quand on sait qu'il faut accepter
+    // et pas sur /chef/terms ou /chef/login
+    if (!termsLoaded) return;
+    if (!user) return;
+
+    const isExcluded =
+      pathname?.startsWith('/chef/terms') ||
+      pathname?.startsWith('/chef/login') ||
+      pathname?.startsWith('/chef/signup');
+
+    if (!isExcluded && mustAcceptTerms) {
+      setTermsOpen(true);
+    } else {
+      setTermsOpen(false);
+    }
+  }, [termsLoaded, mustAcceptTerms, pathname, user]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace('/chef/login');
@@ -150,6 +182,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   const acceptTerms = async () => {
     if (!user?.id) return;
+
     setTermsLoading(true);
     setTermsError(null);
 
@@ -162,18 +195,19 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       });
 
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
+      if (!res.ok || !json?.success) throw new Error(json?.error || 'ACCEPT_FAIL');
 
-      // ✅ update local state (no re-popup on navigation)
+      // refresh local state
       setTermsAccepted(true);
       setTermsAcceptedVersion(CURRENT_TERMS_VERSION);
       setTermsAcceptedAt(new Date().toISOString());
-      setTermsModalOpen(false);
+      setTermsOpen(false);
 
+      // (optionnel) cache local
       try {
-        localStorage.setItem('ct_chef_terms_accepted_version', CURRENT_TERMS_VERSION);
+        localStorage.setItem('ct_chef_terms_version', CURRENT_TERMS_VERSION);
       } catch {}
-    } catch {
+    } catch (e: any) {
       setTermsError("Impossible d’enregistrer l’acceptation. Réessaie.");
     } finally {
       setTermsLoading(false);
@@ -181,14 +215,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   };
 
   if (!user) return null;
-
-  const showTermsModal = useMemo(() => {
-    // évite boucle sur la page terms/login
-    if (!termsModalOpen) return false;
-    if (pathname?.startsWith('/chef/login')) return false;
-    if (pathname?.startsWith('/chef/terms')) return false;
-    return true;
-  }, [termsModalOpen, pathname]);
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
@@ -204,7 +230,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
     { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
 
-    // ✅ lien permanent vers les conditions
+    // ✅ lien utile vers les terms
     { icon: FileText, label: 'Conditions', path: '/chef/terms' },
   ];
 
@@ -215,17 +241,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           CHEF TALENTS
         </Link>
         <span className="text-[10px] uppercase tracking-widest text-stone-500 block mt-1">Portal</span>
-
-        {/* petit statut discret */}
-        <div className="mt-4 text-[11px] text-stone-400">
-          {termsAccepted && termsAcceptedVersion === CURRENT_TERMS_VERSION ? (
-            <span>
-              Conditions acceptées {termsAcceptedAt ? `· ${new Date(termsAcceptedAt).toLocaleDateString('fr-FR')}` : ''}
-            </span>
-          ) : (
-            <span>Conditions à valider</span>
-          )}
-        </div>
       </div>
 
       <nav className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} space-y-1`}>
@@ -259,10 +274,32 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       </nav>
 
       <div className={`border-t border-stone-800 ${compact ? 'p-4' : 'p-6'}`}>
+        {/* ✅ petit statut terms dans la sidebar */}
+        <div className="mb-4 px-2 text-xs text-stone-500">
+          {termsLoaded ? (
+            termsAccepted && termsAcceptedVersion === CURRENT_TERMS_VERSION ? (
+              <span>
+                Conditions : <span className="text-stone-200">acceptées</span>
+                {termsAcceptedAt ? (
+                  <span className="block text-[11px] text-stone-600 mt-1">
+                    {new Date(termsAcceptedAt).toLocaleString('fr-FR')}
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              <span>
+                Conditions : <span className="text-red-400">à valider</span>
+              </span>
+            )
+          ) : (
+            <span>Chargement…</span>
+          )}
+        </div>
+
         <div className="flex items-center gap-3 mb-4 px-2">
           <div className="w-8 h-8 rounded-full bg-stone-800 flex items-center justify-center text-xs font-bold text-stone-400">
-            {user.firstName?.[0]}
-            {user.lastName?.[0]}
+            {(user.firstName?.[0] ?? '')}
+            {(user.lastName?.[0] ?? '')}
           </div>
           <div className="overflow-hidden">
             <p className="text-sm font-medium text-white truncate">
@@ -272,7 +309,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           </div>
         </div>
 
-        <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2"
+        >
           <LogOut className="w-3 h-3" /> Déconnexion
         </button>
       </div>
@@ -320,7 +360,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
         {mobileOpen ? (
           <div className="md:hidden fixed inset-0 z-30">
-            <button type="button" className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} aria-label="Fermer le menu" />
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fermer le menu"
+            />
             <div className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-stone-900 text-stone-300 shadow-2xl">
               <div className="flex items-center justify-between p-4 border-b border-stone-800">
                 <div className="text-stone-50 font-serif text-lg">CHEF TALENTS</div>
@@ -344,7 +389,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       </div>
 
       {/* ✅ TERMS MODAL (bloquante) */}
-      {showTermsModal ? (
+      {termsOpen ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="absolute inset-0 flex items-center justify-center px-4">
@@ -354,13 +399,17 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                   Chef Talents · Portail Chef
                 </div>
 
-                <h2 className="text-2xl md:text-3xl font-serif text-stone-900">Conditions de collaboration</h2>
+                <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
+                  Conditions de collaboration
+                </h2>
 
                 <p className="mt-3 text-sm text-stone-600 leading-relaxed">
-                  Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
+                  Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration.
                 </p>
 
-                {termsError ? <div className="mt-4 text-sm text-red-600">{termsError}</div> : null}
+                {termsError ? (
+                  <div className="mt-4 text-sm text-red-600">{termsError}</div>
+                ) : null}
 
                 <div className="mt-7 grid gap-3">
                   <Link
@@ -388,7 +437,9 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                   </button>
                 </div>
 
-                <div className="mt-6 text-xs text-stone-400">Version en vigueur : {CURRENT_TERMS_VERSION}</div>
+                <div className="mt-6 text-xs text-stone-400">
+                  Version en vigueur : {CURRENT_TERMS_VERSION}
+                </div>
               </div>
             </div>
           </div>
