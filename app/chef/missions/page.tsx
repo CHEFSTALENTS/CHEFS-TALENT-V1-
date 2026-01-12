@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { auth, api } from '../../../services/storage';
 import { Mission } from '../../../types';
 import { Marker, Label, Button } from '../../../components/ui';
@@ -66,7 +65,6 @@ export default function ChefMissionsPage() {
   const activeCount = missions.filter(m => ['accepted', 'confirmed'].includes(m.status)).length;
 
   return (
-    <ChefLayout>
       <div className="space-y-8 animate-in fade-in duration-500">
         <div>
           <Marker />
@@ -164,7 +162,7 @@ onClick={() => window.location.assign('/chef/identity')}              >
           </div>
         )}
       </div>
-    </ChefLayout>
+  
   );
 }
 
