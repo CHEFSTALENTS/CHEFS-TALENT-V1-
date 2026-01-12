@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { Label, Button } from '../../../components/ui';
 import { computeChefScore } from '@/lib/chefScore';
 import {
@@ -275,7 +274,7 @@ export default function ChefDashboardPage() {
   };
 
   return (
-    <ChefLayout>
+
       <div className="space-y-12 animate-in fade-in duration-700">
         {/* Header */}
         <div className="flex items-end justify-between border-b border-stone-200 pb-8">
@@ -402,7 +401,7 @@ export default function ChefDashboardPage() {
           ))}
         </div>
       </div>
-    </ChefLayout>
+
   );
 }
 
