@@ -217,7 +217,7 @@ export default function ChefExperiencePage() {
   if (!sbUser) return null;
 
   return (
-    <ChefLayout>
+
       <div className="max-w-2xl">
         <Marker />
         <Label>Profil</Label>
@@ -344,6 +344,6 @@ export default function ChefExperiencePage() {
           </div>
         </form>
       </div>
-    </ChefLayout>
+
   );
 }
