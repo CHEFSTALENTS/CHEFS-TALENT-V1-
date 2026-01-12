@@ -60,7 +60,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     if (!user) return false;
     if (pathname.startsWith('/chef/terms')) return false;
     if (pathname.startsWith('/chef/login')) return false;
-
+const showTermsModal =
+  !!user &&
+  termsAccepted === false &&
+  !pathname.startsWith('/chef/terms') &&
+  !pathname.startsWith('/chef/login');
+    
     // null = en cours de check
     if (termsAccepted === null) return false;
 
@@ -106,35 +111,42 @@ setTermsAccepted(!mustAcceptTerms);
       setTermsOpen(false);
 
       // ✅ resync status + termsAccepted depuis DB
-      try {
-        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-        const json = await res.json().catch(() => null);
-        if (!alive) return;
+      // ✅ Version unique (source of truth)
+const CURRENT_TERMS_VERSION = '2026-01-09';
 
-        // status
-        if (json?.status) {
-          setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
-        }
+// reset terms while loading (optionnel)
+setTermsAccepted(null);
 
-        const accepted = Boolean(json?.termsAccepted);
-        const acceptedAt = (json?.termsAcceptedAt as string) || null;
-        const acceptedVersion = (json?.termsAcceptedVersion as string) || null;
+try {
+  const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, {
+    cache: 'no-store',
+  });
 
-        setTermsAccepted(accepted);
-        setTermsAcceptedAt(acceptedAt);
-        setTermsAcceptedVersion(acceptedVersion);
+  const json: {
+    status?: string | null;
+    termsAccepted?: boolean;
+    termsAcceptedVersion?: string | null;
+    termsAcceptedAt?: string | null;
+  } = await res.json().catch(() => ({} as any));
 
-        const mustAccept =
-          !accepted || (acceptedVersion ?? '') !== CHEF_TERMS_VERSION;
+  if (!alive) return;
 
-        // ✅ ouvre le popup uniquement si nécessaire
-        if (mustAccept) setTermsOpen(true);
-      } catch {
-        // si l’API échoue, on ne bloque pas hard.
-        // (tu peux mettre setTermsOpen(true) si tu veux bloquer absolument)
-        setTermsAccepted(true);
-        setTermsOpen(false);
-      }
+  // status (optionnel)
+  if (json?.status) {
+    setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+  }
+
+  // ✅ Gate logique : on redemande UNIQUEMENT si pas accepté OU version différente
+  const mustAcceptTerms =
+    !Boolean(json?.termsAccepted) ||
+    String(json?.termsAcceptedVersion || '') !== CURRENT_TERMS_VERSION;
+
+  setTermsAccepted(!mustAcceptTerms);
+} catch {
+  // En cas d'erreur réseau, on évite de bloquer injustement :
+  // soit on laisse l’accès (true), soit tu préfères bloquer (false)
+  setTermsAccepted(true);
+}
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
