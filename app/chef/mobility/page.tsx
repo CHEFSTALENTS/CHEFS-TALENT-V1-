@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2, Info, X } from 'lucide-react';
@@ -327,16 +326,13 @@ export default function ChefMobilityPage() {
 
   if (booting) {
     return (
-      <ChefLayout>
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
-      </ChefLayout>
     );
   }
 
   return (
-    <ChefLayout>
       <div className="max-w-2xl">
         <Marker />
         <Label>Logistique</Label>
@@ -485,6 +481,5 @@ export default function ChefMobilityPage() {
           )}
         </form>
       </div>
-    </ChefLayout>
   );
 }
