@@ -275,7 +275,7 @@ export default function ChefDashboardPage() {
   };
 
   return (
-    
+    <ChefLayout>
       <div className="space-y-12 animate-in fade-in duration-700">
         {/* Header */}
         <div className="flex items-end justify-between border-b border-stone-200 pb-8">
@@ -402,6 +402,7 @@ export default function ChefDashboardPage() {
           ))}
         </div>
       </div>
+    </ChefLayout>
   );
 }
 
