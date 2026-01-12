@@ -64,9 +64,14 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     // null = en cours de check
     if (termsAccepted === null) return false;
 
-    const mustAccept =
-      termsAccepted !== true || (termsAcceptedVersion ?? '') !== CHEF_TERMS_VERSION;
+   const CURRENT_TERMS_VERSION = '2026-01-09';
 
+const mustAcceptTerms =
+  !json.termsAccepted ||
+  json.termsAcceptedVersion !== CURRENT_TERMS_VERSION;
+
+setTermsAccepted(!mustAcceptTerms);
+    
     return mustAccept && termsOpen;
   }, [user, pathname, termsAccepted, termsAcceptedVersion, termsOpen]);
 
