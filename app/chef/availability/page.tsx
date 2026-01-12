@@ -473,6 +473,6 @@ export default function ChefAvailabilityPage() {
 
         <div className="text-xs text-stone-400 mt-4" />
       </div>
-    </ChefLayout>
+    </>
   );
 }
