@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/services/supabaseClient';
 
 export default function TermsClient() {
   const router = useRouter();
@@ -19,35 +20,54 @@ export default function TermsClient() {
   );
 
   const accept = async () => {
-    setErr(null);
-    if (!checked) {
-      setErr("Merci de cocher la case d’acceptation.");
-      return;
+  setErr(null);
+
+  if (!checked) {
+    setErr("Merci de cocher la case d’acceptation.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // 🔐 récupérer le user connecté
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      throw new Error('NOT_AUTHENTICATED');
     }
 
-    setLoading(true);
+    // ✅ appel API avec userId + version
+    const res = await fetch('/api/chef/terms/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        userId: user.id,
+        version: '09/01/2026',
+      }),
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      throw new Error(json?.error || 'ACCEPT_FAIL');
+    }
+
+    // fallback local (sécurité UX)
     try {
-      const res = await fetch('/api/chef/terms/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({
-          version: '09/01/2026',
-        }),
-      });
+      localStorage.setItem('ct_chef_terms_accepted', '1');
+    } catch {}
 
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) {
-        throw new Error('ACCEPT_FAIL');
-      }
-
-      router.replace(next);
-    } catch {
-      setErr("Impossible d’enregistrer l’acceptation. Réessaie.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    router.replace(next);
+  } catch (e) {
+    console.error(e);
+    setErr("Impossible d’enregistrer l’acceptation. Réessaie.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] text-stone-900">
