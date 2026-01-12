@@ -21,7 +21,9 @@ export default function TermsClient() {
     () => 'Conditions de collaboration – Chefs',
     []
   );
-
+  
+body: JSON.stringify({ userId, version: '09/01/2026', accepted: true })
+  
   const accept = async () => {
   setErr(null);
 
