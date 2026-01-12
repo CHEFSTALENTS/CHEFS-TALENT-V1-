@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/services/supabaseClient';
-import { FileText } from 'lucide-react';
 
 import {
   LogOut,
@@ -20,6 +19,7 @@ import {
   Euro,
   Menu,
   X,
+  FileText,
 } from 'lucide-react';
 
 type PseudoChefUser = {
@@ -34,6 +34,9 @@ interface ChefLayoutProps {
   children?: React.ReactNode;
 }
 
+// ✅ Version courante (modifie ici le jour où tu updates les conditions)
+const CHEF_TERMS_VERSION = '09/01/2026';
+
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -44,12 +47,28 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // ✅ Terms gate
-  const TERMS_VERSION = '09/01/2026';
-  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null); // null = loading
-  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  // Terms gate
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
+  const [termsAcceptedVersion, setTermsAcceptedVersion] = useState<string | null>(null);
+
+  const [termsOpen, setTermsOpen] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+
+  const shouldBlockWithTermsModal = useMemo(() => {
+    if (!user) return false;
+    if (pathname.startsWith('/chef/terms')) return false;
+    if (pathname.startsWith('/chef/login')) return false;
+
+    // null = en cours de check
+    if (termsAccepted === null) return false;
+
+    const mustAccept =
+      termsAccepted !== true || (termsAcceptedVersion ?? '') !== CHEF_TERMS_VERSION;
+
+    return mustAccept && termsOpen;
+  }, [user, pathname, termsAccepted, termsAcceptedVersion, termsOpen]);
 
   useEffect(() => {
     let alive = true;
@@ -77,12 +96,14 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
       // reset terms while loading
       setTermsAccepted(null);
-      setTermsModalOpen(false);
-      setTermsError(null);
+      setTermsAcceptedAt(null);
+      setTermsAcceptedVersion(null);
+      setTermsOpen(false);
 
+      // ✅ resync status + termsAccepted depuis DB
       try {
         const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-        const json = await res.json().catch(() => ({} as any));
+        const json = await res.json().catch(() => null);
         if (!alive) return;
 
         // status
@@ -90,17 +111,24 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
         }
 
-        // terms accepted
         const accepted = Boolean(json?.termsAccepted);
-        setTermsAccepted(accepted);
+        const acceptedAt = (json?.termsAcceptedAt as string) || null;
+        const acceptedVersion = (json?.termsAcceptedVersion as string) || null;
 
-        // 🔒 open modal ONLY if not accepted
-        if (!accepted) setTermsModalOpen(true);
+        setTermsAccepted(accepted);
+        setTermsAcceptedAt(acceptedAt);
+        setTermsAcceptedVersion(acceptedVersion);
+
+        const mustAccept =
+          !accepted || (acceptedVersion ?? '') !== CHEF_TERMS_VERSION;
+
+        // ✅ ouvre le popup uniquement si nécessaire
+        if (mustAccept) setTermsOpen(true);
       } catch {
-        // si l’API plante, on ouvre le modal par sécurité (empêche l'accès si tu veux être strict)
-        if (!alive) return;
-        setTermsAccepted(false);
-        setTermsModalOpen(true);
+        // si l’API échoue, on ne bloque pas hard.
+        // (tu peux mettre setTermsOpen(true) si tu veux bloquer absolument)
+        setTermsAccepted(true);
+        setTermsOpen(false);
       }
     })();
 
@@ -129,13 +157,13 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   // Prevent body scroll when drawer is open (mobile)
   useEffect(() => {
-    if (!mobileOpen && !termsModalOpen) return;
+    if (!mobileOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [mobileOpen, termsModalOpen]);
+  }, [mobileOpen]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -143,7 +171,8 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   };
 
   const acceptTerms = async () => {
-    if (!user?.id) return;
+    if (!user) return;
+
     setTermsLoading(true);
     setTermsError(null);
 
@@ -152,14 +181,25 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
-        body: JSON.stringify({ userId: user.id, version: TERMS_VERSION }),
+        body: JSON.stringify({
+          userId: user.id,
+          version: CHEF_TERMS_VERSION,
+        }),
       });
 
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
 
       setTermsAccepted(true);
-      setTermsModalOpen(false);
+      setTermsAcceptedAt(new Date().toISOString());
+      setTermsAcceptedVersion(CHEF_TERMS_VERSION);
+      setTermsOpen(false);
+
+      // petit fallback local (optionnel)
+      try {
+        localStorage.setItem('ct_chef_terms_accepted', '1');
+        localStorage.setItem('ct_chef_terms_version', CHEF_TERMS_VERSION);
+      } catch {}
     } catch {
       setTermsError("Impossible d'enregistrer l'acceptation. Réessaie.");
     } finally {
@@ -181,8 +221,11 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: Map, label: 'Zone & Mobilité', path: '/chef/mobility' },
     { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
-    { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
+
+    // ✅ accès permanent aux conditions
     { icon: FileText, label: 'Conditions', path: '/chef/terms' },
+
+    { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
   ];
 
   const SidebarContent = ({ compact = false }: { compact?: boolean }) => (
@@ -244,14 +287,25 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         >
           <LogOut className="w-3 h-3" /> Déconnexion
         </button>
+
+        {/* ✅ petit rappel status terms (optionnel) */}
+        <div className="mt-4 px-2">
+          <div className="text-[10px] uppercase tracking-widest text-stone-500">Conditions</div>
+          <div className="text-xs text-stone-400 mt-1">
+            {termsAccepted === null ? (
+              <span>Vérification…</span>
+            ) : termsAccepted && (termsAcceptedVersion ?? '') === CHEF_TERMS_VERSION ? (
+              <span>
+                Acceptées · {termsAcceptedAt ? new Date(termsAcceptedAt).toLocaleDateString('fr-FR') : '—'}
+              </span>
+            ) : (
+              <span className="text-amber-300">À accepter</span>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
-
-  const showTermsModal =
-    termsAccepted === false &&
-    termsModalOpen &&
-    !pathname.startsWith('/chef/login'); // on ne l'affiche pas sur login
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
@@ -322,37 +376,33 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         </main>
       </div>
 
-      {/* ✅ TERMS MODAL (bloquante, 1 fois jusqu'à acceptation en DB) */}
-      {showTermsModal ? (
+      {/* ✅ TERMS MODAL (bloquante, seulement si nouvelle version ou non accepté) */}
+      {shouldBlockWithTermsModal ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
           <div className="absolute inset-0 flex items-center justify-center px-4">
             <div className="w-full max-w-lg rounded-3xl border border-stone-200 bg-white shadow-2xl overflow-hidden">
               <div className="p-8">
-                <div className="flex items-start justify-between gap-6">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400 mb-3">
-                      Chef Talents · Portail Chef
-                    </div>
+                <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400 mb-3">
+                  Chef Talents · Portail Chef
+                </div>
 
-                    <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
-                      Conditions de collaboration
-                    </h2>
+                <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
+                  Conditions de collaboration
+                </h2>
 
-                    <p className="mt-3 text-sm text-stone-600 leading-relaxed">
-                      Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
-                    </p>
-                  </div>
+                <p className="mt-3 text-sm text-stone-600 leading-relaxed">
+                  Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
+                </p>
 
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-10 h-10 border border-stone-200 rounded-xl inline-flex items-center justify-center hover:bg-stone-50"
-                    aria-label="Se déconnecter"
-                    title="Se déconnecter"
-                  >
-                    <LogOut className="w-5 h-5 text-stone-700" />
-                  </button>
+                <div className="mt-4 text-xs text-stone-400">
+                  Version requise : <span className="text-stone-700 font-medium">{CHEF_TERMS_VERSION}</span>
+                  {termsAcceptedVersion ? (
+                    <>
+                      {' · '}Votre version : <span className="text-stone-700 font-medium">{termsAcceptedVersion}</span>
+                    </>
+                  ) : null}
                 </div>
 
                 {termsError ? (
@@ -375,10 +425,18 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                   >
                     {termsLoading ? 'Enregistrement…' : 'J’ai lu et j’accepte'}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full rounded-2xl py-3 text-sm font-medium text-stone-500 hover:text-stone-900"
+                  >
+                    Se déconnecter
+                  </button>
                 </div>
 
                 <div className="mt-6 text-xs text-stone-400">
-                  Version en vigueur : {TERMS_VERSION}
+                  En acceptant, vous confirmez avoir lu et compris les conditions de collaboration Chef Talents.
                 </div>
               </div>
             </div>
