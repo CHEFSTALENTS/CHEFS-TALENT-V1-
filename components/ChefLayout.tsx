@@ -181,6 +181,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
     { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
+    { icon: FileText, label: 'Conditions', path: '/chef/terms' },
   ];
 
   const SidebarContent = ({ compact = false }: { compact?: boolean }) => (
