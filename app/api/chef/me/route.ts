@@ -18,15 +18,10 @@ export async function GET(req: Request) {
 
   const profile = (data?.profile ?? {}) as any;
 
-  const status = profile?.status ?? null;
-  const termsAccepted = Boolean(profile?.termsAccepted);
-  const termsAcceptedAt = profile?.termsAcceptedAt ?? null;
-  const termsAcceptedVersion = profile?.termsAcceptedVersion ?? null;
-
   return NextResponse.json({
-    status,
-    termsAccepted,
-    termsAcceptedAt,
-    termsAcceptedVersion,
+    status: profile?.status ?? null,
+    termsAccepted: Boolean(profile?.termsAccepted),
+    termsAcceptedAt: profile?.termsAcceptedAt ?? null,
+    termsAcceptedVersion: profile?.termsAcceptedVersion ?? null,
   });
 }
