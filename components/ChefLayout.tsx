@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -43,8 +43,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Terms gate
-  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  // ✅ Terms gate
+  const TERMS_VERSION = '09/01/2026';
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null); // null = loading
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
 
@@ -74,28 +76,33 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
       // reset terms while loading
       setTermsAccepted(null);
+      setTermsModalOpen(false);
+      setTermsError(null);
 
-      // ✅ resync status + termsAccepted depuis DB
-   // juste après setUser(pseudo);
-const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
-const [termsOpen, setTermsOpen] = useState<boolean>(false);
-      
-try {
-  const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-  const json = await res.json();
-  if (!alive) return;
+      try {
+        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const json = await res.json().catch(() => ({} as any));
+        if (!alive) return;
 
-  setUser((prev) => (prev ? { ...prev, status: String(json?.status || prev.status) } : prev));
+        // status
+        if (json?.status) {
+          setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+        }
 
-  // ✅ on récupère l’acceptation
-  setTermsAccepted(Boolean(json?.termsAccepted));
-} catch {}
-      
+        // terms accepted
+        const accepted = Boolean(json?.termsAccepted);
+        setTermsAccepted(accepted);
+
+        // 🔒 open modal ONLY if not accepted
+        if (!accepted) setTermsModalOpen(true);
+      } catch {
+        // si l’API plante, on ouvre le modal par sécurité (empêche l'accès si tu veux être strict)
+        if (!alive) return;
+        setTermsAccepted(false);
+        setTermsModalOpen(true);
+      }
     })();
-if (Boolean(json?.termsAccepted) === false) {
-  setTermsOpen(true);
-}
-    
+
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
       const sbUser = session?.user ?? null;
       if (!sbUser) router.replace('/chef/login');
@@ -121,13 +128,13 @@ if (Boolean(json?.termsAccepted) === false) {
 
   // Prevent body scroll when drawer is open (mobile)
   useEffect(() => {
-    if (!mobileOpen) return;
+    if (!mobileOpen && !termsModalOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [mobileOpen]);
+  }, [mobileOpen, termsModalOpen]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -135,19 +142,23 @@ if (Boolean(json?.termsAccepted) === false) {
   };
 
   const acceptTerms = async () => {
+    if (!user?.id) return;
     setTermsLoading(true);
     setTermsError(null);
+
     try {
       const res = await fetch('/api/chef/terms/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
-        body: JSON.stringify({ accepted: true }),
+        body: JSON.stringify({ userId: user.id, version: TERMS_VERSION }),
       });
+
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
 
       setTermsAccepted(true);
+      setTermsModalOpen(false);
     } catch {
       setTermsError("Impossible d'enregistrer l'acceptation. Réessaie.");
     } finally {
@@ -236,10 +247,9 @@ if (Boolean(json?.termsAccepted) === false) {
   );
 
   const showTermsModal =
-    !!user &&
     termsAccepted === false &&
-    !pathname.startsWith('/chef/terms') &&
-    !pathname.startsWith('/chef/login');
+    termsModalOpen &&
+    !pathname.startsWith('/chef/login'); // on ne l'affiche pas sur login
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
@@ -310,24 +320,38 @@ if (Boolean(json?.termsAccepted) === false) {
         </main>
       </div>
 
-      {/* ✅ TERMS MODAL (bloquante) */}
+      {/* ✅ TERMS MODAL (bloquante, 1 fois jusqu'à acceptation en DB) */}
       {showTermsModal ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="absolute inset-0 flex items-center justify-center px-4">
             <div className="w-full max-w-lg rounded-3xl border border-stone-200 bg-white shadow-2xl overflow-hidden">
               <div className="p-8">
-                <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400 mb-3">
-                  Chef Talents · Portail Chef
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400 mb-3">
+                      Chef Talents · Portail Chef
+                    </div>
+
+                    <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
+                      Conditions de collaboration
+                    </h2>
+
+                    <p className="mt-3 text-sm text-stone-600 leading-relaxed">
+                      Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-10 h-10 border border-stone-200 rounded-xl inline-flex items-center justify-center hover:bg-stone-50"
+                    aria-label="Se déconnecter"
+                    title="Se déconnecter"
+                  >
+                    <LogOut className="w-5 h-5 text-stone-700" />
+                  </button>
                 </div>
-
-                <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
-                  Conditions de collaboration
-                </h2>
-
-                <p className="mt-3 text-sm text-stone-600 leading-relaxed">
-                  Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
-                </p>
 
                 {termsError ? (
                   <div className="mt-4 text-sm text-red-600">{termsError}</div>
@@ -347,99 +371,15 @@ if (Boolean(json?.termsAccepted) === false) {
                     onClick={acceptTerms}
                     className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
                   >
-                    {termsLoading ? 'Enregistrement…' : 'Accepter et continuer'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full rounded-2xl py-3 text-sm font-medium text-stone-500 hover:text-stone-900"
-                  >
-                    Se déconnecter
+                    {termsLoading ? 'Enregistrement…' : 'J’ai lu et j’accepte'}
                   </button>
                 </div>
-                {termsOpen && (
-  <div className="fixed inset-0 z-[60]">
-    <div className="absolute inset-0 bg-black/50" />
-    <div className="absolute inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center p-4">
-      <div className="w-full md:max-w-2xl rounded-2xl bg-white shadow-2xl border border-stone-200 overflow-hidden">
-        <div className="p-6 md:p-8">
-          <div className="flex items-start justify-between gap-6">
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-stone-400 mb-2">
-                Obligatoire avant accès complet
-              </div>
-              <h3 className="text-2xl font-serif text-stone-900">
-                Conditions de collaboration — Chefs
-              </h3>
-              <p className="text-stone-500 mt-2">
-                Merci de lire et d’accepter les conditions pour activer votre accès aux missions.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setTermsOpen(false)}
-              className="w-10 h-10 border border-stone-200 rounded-xl inline-flex items-center justify-center hover:bg-stone-50"
-              aria-label="Fermer"
-            >
-              <X className="w-5 h-5 text-stone-700" />
-            </button>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-stone-200 bg-stone-50 p-4">
-            <p className="text-sm text-stone-600">
-              Ouvrir le document complet :
-              <Link href="/chef/terms" className="ml-2 underline text-stone-900">
-                lire les conditions
-              </Link>
-            </p>
-          </div>
-
-          <div className="mt-6 flex flex-col md:flex-row gap-3 md:justify-end">
-            <button
-              onClick={() => setTermsOpen(false)}
-              className="px-4 py-3 rounded-xl border border-stone-200 text-stone-700 hover:bg-stone-50"
-            >
-              Plus tard
-            </button>
-
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/chef/terms/accept', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    cache: 'no-store',
-                    body: JSON.stringify({ userId: user.id, version: '09/01/2026' }),
-                  });
-                  const json = await res.json().catch(() => null);
-                  if (json?.success) {
-                    setTermsAccepted(true);
-                    setTermsOpen(false);
-                  }
-                } catch {}
-              }}
-              className="px-4 py-3 rounded-xl bg-stone-900 text-white hover:bg-stone-800"
-            >
-              J’ai lu et j’accepte
-            </button>
-          </div>
-
-          <p className="text-xs text-stone-400 mt-4">
-            En acceptant, vous confirmez avoir lu et compris les conditions de collaboration Chef Talents.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
 
                 <div className="mt-6 text-xs text-stone-400">
-                  Version en vigueur : 09/01/2026
+                  Version en vigueur : {TERMS_VERSION}
                 </div>
               </div>
             </div>
-            
           </div>
         </div>
       ) : null}
