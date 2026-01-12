@@ -33,20 +33,20 @@ interface ChefLayoutProps {
   children?: React.ReactNode;
 }
 
-
-  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
-  const [termsLoading, setTermsLoading] = useState(false);
-  const [termsError, setTermsError] = useState<string | null>(null);
-
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
 
   const [user, setUser] = useState<PseudoChefUser | null>(null);
-  const [offeredCount] = useState(0); // ✅ on reconnectera plus tard (missions supabase)
+  const [offeredCount] = useState(0);
 
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Terms gate
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -71,11 +71,11 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       };
 
       setUser(pseudo);
-      setTermsAccepted(null); // reset pendant le resync
 
-      
-      // ✅ resync status depuis DB (optionnel)
-           // ✅ resync status + termsAccepted depuis DB
+      // reset terms while loading
+      setTermsAccepted(null);
+
+      // ✅ resync status + termsAccepted depuis DB
       try {
         const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
@@ -86,19 +86,23 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
         }
 
-        // IMPORTANT : json.termsAccepted doit venir de Supabase
         if (typeof json?.termsAccepted === 'boolean') {
           setTermsAccepted(json.termsAccepted);
         } else {
-          // si pas fourni, on considère non accepté
           setTermsAccepted(false);
         }
       } catch {
-        // si erreur API, on ne bloque pas hard : tu peux mettre false si tu veux stricter
+        // si tu veux être strict : false
         setTermsAccepted(false);
       }
+    })();
 
-    // robots noindex (OK)
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const sbUser = session?.user ?? null;
+      if (!sbUser) router.replace('/chef/login');
+    });
+
+    // robots noindex
     const meta = document.createElement('meta');
     meta.name = 'robots';
     meta.content = 'noindex, nofollow';
@@ -111,24 +115,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [router]);
 
-      useEffect(() => {
-    if (!user) return;
-
-    // on ne popup pas sur login / terms
-    const excluded =
-      pathname.startsWith('/chef/login') ||
-      pathname.startsWith('/chef/terms');
-
-    if (excluded) return;
-
-    // si on n’a pas encore l’info, on ne fait rien
-    if (termsAccepted === null) return;
-
-    // si pas accepté → on affiche la modal (ou redirect si tu préfères)
-    // ici: modal, donc rien à faire
-  }, [pathname, user, termsAccepted]);
-
-    
   // Close drawer when route changes
   useEffect(() => {
     setMobileOpen(false);
@@ -147,6 +133,27 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace('/chef/login');
+  };
+
+  const acceptTerms = async () => {
+    setTermsLoading(true);
+    setTermsError(null);
+    try {
+      const res = await fetch('/api/chef/terms/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ accepted: true }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
+
+      setTermsAccepted(true);
+    } catch {
+      setTermsError("Impossible d'enregistrer l'acceptation. Réessaie.");
+    } finally {
+      setTermsLoading(false);
+    }
   };
 
   if (!user) return null;
@@ -219,12 +226,21 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           </div>
         </div>
 
-        <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2"
+        >
           <LogOut className="w-3 h-3" /> Déconnexion
         </button>
       </div>
     </div>
   );
+
+  const showTermsModal =
+    !!user &&
+    termsAccepted === false &&
+    !pathname.startsWith('/chef/terms') &&
+    !pathname.startsWith('/chef/login');
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
@@ -267,7 +283,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
         {mobileOpen ? (
           <div className="md:hidden fixed inset-0 z-30">
-            <button type="button" className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} aria-label="Fermer le menu" />
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fermer le menu"
+            />
             <div className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-stone-900 text-stone-300 shadow-2xl">
               <div className="flex items-center justify-between p-4 border-b border-stone-800">
                 <div className="text-stone-50 font-serif text-lg">CHEF TALENTS</div>
@@ -284,8 +305,14 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
             </div>
           </div>
         ) : null}
-              {/* ✅ TERMS POPUP (bloquant) */}
-      {user && termsAccepted === false && !pathname.startsWith('/chef/terms') ? (
+
+        <main className="flex-1 md:ml-64 px-4 py-6 md:p-12">
+          <div className="max-w-4xl mx-auto">{children}</div>
+        </main>
+      </div>
+
+      {/* ✅ TERMS MODAL (bloquante) */}
+      {showTermsModal ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="absolute inset-0 flex items-center justify-center px-4">
@@ -318,26 +345,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                   <button
                     type="button"
                     disabled={termsLoading}
-                    onClick={async () => {
-                      setTermsLoading(true);
-                      setTermsError(null);
-                      try {
-                        const res = await fetch('/api/chef/terms/accept', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          cache: 'no-store',
-                          body: JSON.stringify({ accepted: true }),
-                        });
-                        const json = await res.json().catch(() => null);
-                        if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
-
-                        setTermsAccepted(true);
-                      } catch {
-                        setTermsError("Impossible d'enregistrer l'acceptation. Réessaie.");
-                      } finally {
-                        setTermsLoading(false);
-                      }
-                    }}
+                    onClick={acceptTerms}
                     className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
                   >
                     {termsLoading ? 'Enregistrement…' : 'Accepter et continuer'}
@@ -360,12 +368,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           </div>
         </div>
       ) : null}
-        
-
-        <main className="flex-1 md:ml-64 px-4 py-6 md:p-12">
-          <div className="max-w-4xl mx-auto">{children}</div>
-        </main>
-      </div>
     </div>
   );
 };
