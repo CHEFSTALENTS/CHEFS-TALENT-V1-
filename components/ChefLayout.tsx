@@ -69,8 +69,6 @@ const showTermsModal =
     // null = en cours de check
     if (termsAccepted === null) return false;
     
-    return mustAccept && termsOpen;
-  }, [user, pathname, termsAccepted, termsAcceptedVersion, termsOpen]);
   
 const showTermsModal = useMemo(() => {
   if (!user) return false;
