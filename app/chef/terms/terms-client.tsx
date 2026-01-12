@@ -4,6 +4,9 @@ import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
+const CURRENT_TERMS_VERSION = '09/01/2026';
+const LS_TERMS_KEY = `ct_chef_terms_v_${CURRENT_TERMS_VERSION}`;
+
 export default function TermsClient() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -29,26 +32,28 @@ export default function TermsClient() {
 
   setLoading(true);
 
-  try {
-    // 🔐 récupérer le user connecté
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      // 1) Lire session Supabase pour récupérer userId
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
 
-    if (!user?.id) {
-      throw new Error('NOT_AUTHENTICATED');
-    }
+      const userId = data.session?.user?.id;
+      if (!userId) {
+        // pas connecté -> retour login
+        router.replace('/chef/login');
+        return;
+      }
 
-    // ✅ appel API avec userId + version
-    const res = await fetch('/api/chef/terms/accept', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-      body: JSON.stringify({
-        userId: user.id,
-        version: '09/01/2026',
-      }),
-    });
+      // 2) Flag DB (Supabase) — endpoint attend userId + version
+      const res = await fetch('/api/chef/terms/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          userId,
+          version: CURRENT_TERMS_VERSION,
+        }),
+      });
 
     const json = await res.json().catch(() => null);
     if (!res.ok || !json?.success) {
@@ -56,18 +61,17 @@ export default function TermsClient() {
     }
 
     // fallback local (sécurité UX)
-    try {
-      localStorage.setItem('ct_chef_terms_accepted', '1');
-    } catch {}
+   try {
+        localStorage.setItem(LS_TERMS_KEY, '1');
+      } catch {}
 
-    router.replace(next);
-  } catch (e) {
-    console.error(e);
-    setErr("Impossible d’enregistrer l’acceptation. Réessaie.");
-  } finally {
-    setLoading(false);
-  }
-};
+      router.replace(next);
+    } catch (e: any) {
+      setErr("Impossible d’enregistrer l’acceptation. Réessaie.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] text-stone-900">
