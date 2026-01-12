@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
@@ -320,18 +319,18 @@ export default function ChefPricingPage() {
 
   if (booting || loadingPage) {
     return (
-      <ChefLayout>
+
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
-      </ChefLayout>
+
     );
   }
 
   if (!sbUser) return null;
 
   return (
-    <ChefLayout>
+   
       <div className="max-w-2xl">
         <Marker />
         <Label>Tarifs</Label>
@@ -660,6 +659,6 @@ export default function ChefPricingPage() {
           </div>
         </form>
       </div>
-    </ChefLayout>
+
   );
 }
