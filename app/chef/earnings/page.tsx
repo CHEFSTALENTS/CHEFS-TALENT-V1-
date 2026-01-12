@@ -39,6 +39,7 @@ export default function ChefEarningsPage() {
     : 0;
 
   return (
+    <ChefLayout>
       <div className="space-y-8 animate-in fade-in duration-500">
         <div>
           <Marker />
@@ -126,7 +127,7 @@ export default function ChefEarningsPage() {
           </>
         )}
       </div>
-  
+    </ChefLayout>
   );
 }
 
