@@ -33,6 +33,11 @@ interface ChefLayoutProps {
   children?: React.ReactNode;
 }
 
+
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const [termsLoading, setTermsLoading] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -66,19 +71,32 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       };
 
       setUser(pseudo);
+      setTermsAccepted(null); // reset pendant le resync
 
+      
       // ✅ resync status depuis DB (optionnel)
+           // ✅ resync status + termsAccepted depuis DB
       try {
         const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
-        if (alive && json?.status) setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
-      } catch {}
-    })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      const sbUser = session?.user ?? null;
-      if (!sbUser) router.replace('/chef/login');
-    });
+        if (!alive) return;
+
+        if (json?.status) {
+          setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+        }
+
+        // IMPORTANT : json.termsAccepted doit venir de Supabase
+        if (typeof json?.termsAccepted === 'boolean') {
+          setTermsAccepted(json.termsAccepted);
+        } else {
+          // si pas fourni, on considère non accepté
+          setTermsAccepted(false);
+        }
+      } catch {
+        // si erreur API, on ne bloque pas hard : tu peux mettre false si tu veux stricter
+        setTermsAccepted(false);
+      }
 
     // robots noindex (OK)
     const meta = document.createElement('meta');
@@ -93,6 +111,24 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [router]);
 
+      useEffect(() => {
+    if (!user) return;
+
+    // on ne popup pas sur login / terms
+    const excluded =
+      pathname.startsWith('/chef/login') ||
+      pathname.startsWith('/chef/terms');
+
+    if (excluded) return;
+
+    // si on n’a pas encore l’info, on ne fait rien
+    if (termsAccepted === null) return;
+
+    // si pas accepté → on affiche la modal (ou redirect si tu préfères)
+    // ici: modal, donc rien à faire
+  }, [pathname, user, termsAccepted]);
+
+    
   // Close drawer when route changes
   useEffect(() => {
     setMobileOpen(false);
@@ -248,6 +284,83 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
             </div>
           </div>
         ) : null}
+              {/* ✅ TERMS POPUP (bloquant) */}
+      {user && termsAccepted === false && !pathname.startsWith('/chef/terms') ? (
+        <div className="fixed inset-0 z-[80]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <div className="w-full max-w-lg rounded-3xl border border-stone-200 bg-white shadow-2xl overflow-hidden">
+              <div className="p-8">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400 mb-3">
+                  Chef Talents · Portail Chef
+                </div>
+
+                <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
+                  Conditions de collaboration
+                </h2>
+
+                <p className="mt-3 text-sm text-stone-600 leading-relaxed">
+                  Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
+                </p>
+
+                {termsError ? (
+                  <div className="mt-4 text-sm text-red-600">{termsError}</div>
+                ) : null}
+
+                <div className="mt-7 grid gap-3">
+                  <Link
+                    href={`/chef/terms?next=${encodeURIComponent(pathname || '/chef/dashboard')}`}
+                    className="w-full text-center rounded-2xl border border-stone-200 bg-stone-50 py-3 text-sm font-medium text-stone-900 hover:bg-stone-100"
+                  >
+                    Lire les conditions
+                  </Link>
+
+                  <button
+                    type="button"
+                    disabled={termsLoading}
+                    onClick={async () => {
+                      setTermsLoading(true);
+                      setTermsError(null);
+                      try {
+                        const res = await fetch('/api/chef/terms/accept', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          cache: 'no-store',
+                          body: JSON.stringify({ accepted: true }),
+                        });
+                        const json = await res.json().catch(() => null);
+                        if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
+
+                        setTermsAccepted(true);
+                      } catch {
+                        setTermsError("Impossible d'enregistrer l'acceptation. Réessaie.");
+                      } finally {
+                        setTermsLoading(false);
+                      }
+                    }}
+                    className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
+                  >
+                    {termsLoading ? 'Enregistrement…' : 'Accepter et continuer'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full rounded-2xl py-3 text-sm font-medium text-stone-500 hover:text-stone-900"
+                  >
+                    Se déconnecter
+                  </button>
+                </div>
+
+                <div className="mt-6 text-xs text-stone-400">
+                  Version en vigueur : 09/01/2026
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+        
 
         <main className="flex-1 md:ml-64 px-4 py-6 md:p-12">
           <div className="max-w-4xl mx-auto">{children}</div>
