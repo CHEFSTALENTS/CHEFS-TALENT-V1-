@@ -402,7 +402,6 @@ export default function ChefDashboardPage() {
           ))}
         </div>
       </div>
-    </ChefLayout>
   );
 }
 
