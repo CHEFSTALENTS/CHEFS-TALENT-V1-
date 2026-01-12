@@ -12,7 +12,7 @@ import {
   Settings,
   Calendar,
   ChefHat,
-  Image,
+  Image as ImageIcon,
   Map,
   SlidersHorizontal,
   Briefcase,
@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   FileText,
+  CheckCircle2,
 } from 'lucide-react';
 
 type PseudoChefUser = {
@@ -34,8 +35,7 @@ interface ChefLayoutProps {
   children?: React.ReactNode;
 }
 
-// ✅ Version courante (modifie ici le jour où tu updates les conditions)
-const CHEF_TERMS_VERSION = '09/01/2026';
+const CURRENT_TERMS_VERSION = '09/01/2026';
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
@@ -47,107 +47,108 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Terms gate
+  // Terms state (from Supabase via /api/chef/me)
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
   const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null);
   const [termsAcceptedVersion, setTermsAcceptedVersion] = useState<string | null>(null);
 
+  // Modal state
   const [termsOpen, setTermsOpen] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
 
-  const shouldBlockWithTermsModal = useMemo(() => {
-    if (!user) return false;
-    if (pathname.startsWith('/chef/terms')) return false;
-    if (pathname.startsWith('/chef/login')) return false;
-  
-    // null = en cours de check
-    if (termsAccepted === null) return false;
-    
-const showTermsModal = useMemo(() => {
-  if (!user) return false;
-  if (pathname.startsWith('/chef/terms')) return false;
-  if (pathname.startsWith('/chef/login')) return false;
-  if (termsAccepted === null) return false; // on attend Supabase
-  return termsAccepted === false;
-}, [user, pathname, termsAccepted]);
-  
- const CURRENT_TERMS_VERSION = '2026-01-09';
+  // ---------- Session init ----------
+  useEffect(() => {
+    let alive = true;
 
-useEffect(() => {
-  let alive = true;
-
-  (async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!alive) return;
-
-    const sbUser = data.session?.user ?? null;
-
-    if (!sbUser) {
-      router.replace('/chef/login');
-      return;
-    }
-
-    const pseudo: PseudoChefUser = {
-      id: sbUser.id,
-      email: sbUser.email ?? '',
-      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
-      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-      status: 'draft',
-    };
-
-    setUser(pseudo);
-
-    // reset terms while loading
-    setTermsAccepted(null);
-
-    try {
-      const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, {
-        cache: 'no-store',
-      });
-
-      const json: {
-        status?: string | null;
-        termsAccepted?: boolean;
-        termsAcceptedVersion?: string | null;
-        termsAcceptedAt?: string | null;
-      } = await res.json().catch(() => ({} as any));
-
+    (async () => {
+      const { data } = await supabase.auth.getSession();
       if (!alive) return;
 
-      if (json?.status) {
-        setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+      const sbUser = data.session?.user ?? null;
+      if (!sbUser) {
+        router.replace('/chef/login');
+        return;
       }
 
-      // ✅ ICI seulement (json existe ici)
-      const mustAcceptTerms =
-        !Boolean(json?.termsAccepted) ||
-        String(json?.termsAcceptedVersion || '') !== CURRENT_TERMS_VERSION;
+      const pseudo: PseudoChefUser = {
+        id: sbUser.id,
+        email: sbUser.email ?? '',
+        firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+        lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+        status: 'draft',
+      };
 
-      setTermsAccepted(!mustAcceptTerms);
-    } catch {
-      // en cas de fail réseau, on ne rebloque pas tout
-      setTermsAccepted(true);
-    }
-  })();
+      setUser(pseudo);
 
-  const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-    const sbUser = session?.user ?? null;
-    if (!sbUser) router.replace('/chef/login');
-  });
+      // Reset terms while loading
+      setTermsAccepted(null);
+      setTermsAcceptedAt(null);
+      setTermsAcceptedVersion(null);
 
-  return () => {
-    alive = false;
-    sub.subscription.unsubscribe();
-  };
-}, [router]);
+      // Sync status + terms from DB
+      try {
+        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const json = await res.json().catch(() => null);
+        if (!alive) return;
 
-  // Close drawer when route changes
+        if (json?.status) {
+          setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+        }
+
+        const accepted = Boolean(json?.termsAccepted);
+        const v = (json?.termsAcceptedVersion ? String(json.termsAcceptedVersion) : null) as string | null;
+        const at = (json?.termsAcceptedAt ? String(json.termsAcceptedAt) : null) as string | null;
+
+        setTermsAccepted(accepted);
+        setTermsAcceptedVersion(v);
+        setTermsAcceptedAt(at);
+
+        const mustAccept = !accepted || v !== CURRENT_TERMS_VERSION;
+
+        // Ouvre le popup uniquement si nécessaire (et pas sur /chef/terms ou /chef/login)
+        if (
+          mustAccept &&
+          !pathname.startsWith('/chef/terms') &&
+          !pathname.startsWith('/chef/login')
+        ) {
+          setTermsOpen(true);
+        } else {
+          setTermsOpen(false);
+        }
+      } catch {
+        // Si on ne peut pas lire, on n'ouvre pas en boucle.
+        setTermsAccepted(true);
+        setTermsOpen(false);
+      }
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const sbUser = session?.user ?? null;
+      if (!sbUser) router.replace('/chef/login');
+    });
+
+    // robots noindex
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+      if (document.head.contains(meta)) document.head.removeChild(meta);
+    };
+    // ⚠️ pathname volontairement non ajouté ici pour éviter re-run agressif
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  // Close drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Prevent body scroll when drawer is open (mobile)
+  // Prevent body scroll when drawer open
   useEffect(() => {
     if (!mobileOpen) return;
     const prev = document.body.style.overflow;
@@ -157,13 +158,18 @@ useEffect(() => {
     };
   }, [mobileOpen]);
 
+  // If user navigates to /chef/terms, close modal
+  useEffect(() => {
+    if (pathname.startsWith('/chef/terms')) setTermsOpen(false);
+  }, [pathname]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace('/chef/login');
   };
 
   const acceptTerms = async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     setTermsLoading(true);
     setTermsError(null);
@@ -173,31 +179,42 @@ useEffect(() => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
-        body: JSON.stringify({
-          userId: user.id,
-          version: CHEF_TERMS_VERSION,
-        }),
+        body: JSON.stringify({ userId: user.id, version: CURRENT_TERMS_VERSION }),
       });
 
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) throw new Error('ACCEPT_FAIL');
 
+      // Update local state (évite de ré-ouvrir à la prochaine nav)
       setTermsAccepted(true);
+      setTermsAcceptedVersion(CURRENT_TERMS_VERSION);
       setTermsAcceptedAt(new Date().toISOString());
-      setTermsAcceptedVersion(CHEF_TERMS_VERSION);
       setTermsOpen(false);
 
-      // petit fallback local (optionnel)
       try {
         localStorage.setItem('ct_chef_terms_accepted', '1');
-        localStorage.setItem('ct_chef_terms_version', CHEF_TERMS_VERSION);
       } catch {}
     } catch {
-      setTermsError("Impossible d'enregistrer l'acceptation. Réessaie.");
+      setTermsError("Impossible d’enregistrer l’acceptation. Réessaie.");
     } finally {
       setTermsLoading(false);
     }
   };
+
+  const mustAcceptTerms = useMemo(() => {
+    if (termsAccepted === null) return false; // on attend la DB
+    if (termsAccepted === false) return true;
+    if (!termsAcceptedVersion) return true;
+    return termsAcceptedVersion !== CURRENT_TERMS_VERSION;
+  }, [termsAccepted, termsAcceptedVersion]);
+
+  const showTermsModal = useMemo(() => {
+    if (!user) return false;
+    if (!mustAcceptTerms) return false;
+    if (pathname.startsWith('/chef/terms')) return false;
+    if (pathname.startsWith('/chef/login')) return false;
+    return termsOpen;
+  }, [user, mustAcceptTerms, pathname, termsOpen]);
 
   if (!user) return null;
 
@@ -209,14 +226,10 @@ useEffect(() => {
 
     { icon: User, label: 'Identité', path: '/chef/identity' },
     { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
-    { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
+    { icon: ImageIcon, label: 'Portfolio', path: '/chef/portfolio' },
     { icon: Map, label: 'Zone & Mobilité', path: '/chef/mobility' },
     { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
-
-    // ✅ accès permanent aux conditions
-    { icon: FileText, label: 'Conditions', path: '/chef/terms' },
-
     { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
   ];
 
@@ -257,6 +270,31 @@ useEffect(() => {
             </React.Fragment>
           );
         })}
+
+        <div className="h-px bg-stone-800 my-4 mx-2" />
+
+        {/* ✅ lien permanent vers les conditions */}
+        <Link
+          href="/chef/terms"
+          className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+            pathname === '/chef/terms' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white text-stone-300'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <FileText className="w-4 h-4 opacity-70" />
+            Conditions
+          </div>
+
+          {termsAccepted && termsAcceptedVersion === CURRENT_TERMS_VERSION ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          ) : null}
+        </Link>
+
+        {termsAccepted && termsAcceptedAt ? (
+          <div className="px-4 pt-2 text-[11px] text-stone-500">
+            Acceptées le {new Date(termsAcceptedAt).toLocaleDateString('fr-FR')}
+          </div>
+        ) : null}
       </nav>
 
       <div className={`border-t border-stone-800 ${compact ? 'p-4' : 'p-6'}`}>
@@ -279,22 +317,6 @@ useEffect(() => {
         >
           <LogOut className="w-3 h-3" /> Déconnexion
         </button>
-
-        {/* ✅ petit rappel status terms (optionnel) */}
-        <div className="mt-4 px-2">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500">Conditions</div>
-          <div className="text-xs text-stone-400 mt-1">
-            {termsAccepted === null ? (
-              <span>Vérification…</span>
-            ) : termsAccepted && (termsAcceptedVersion ?? '') === CHEF_TERMS_VERSION ? (
-              <span>
-                Acceptées · {termsAcceptedAt ? new Date(termsAcceptedAt).toLocaleDateString('fr-FR') : '—'}
-              </span>
-            ) : (
-              <span className="text-amber-300">À accepter</span>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -368,11 +390,10 @@ useEffect(() => {
         </main>
       </div>
 
-      {/* ✅ TERMS MODAL (bloquante, seulement si nouvelle version ou non accepté) */}
-      {shouldBlockWithTermsModal ? (
+      {/* ✅ TERMS MODAL (bloquant) */}
+      {showTermsModal ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
           <div className="absolute inset-0 flex items-center justify-center px-4">
             <div className="w-full max-w-lg rounded-3xl border border-stone-200 bg-white shadow-2xl overflow-hidden">
               <div className="p-8">
@@ -387,15 +408,6 @@ useEffect(() => {
                 <p className="mt-3 text-sm text-stone-600 leading-relaxed">
                   Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration Chef Talents.
                 </p>
-
-                <div className="mt-4 text-xs text-stone-400">
-                  Version requise : <span className="text-stone-700 font-medium">{CHEF_TERMS_VERSION}</span>
-                  {termsAcceptedVersion ? (
-                    <>
-                      {' · '}Votre version : <span className="text-stone-700 font-medium">{termsAcceptedVersion}</span>
-                    </>
-                  ) : null}
-                </div>
 
                 {termsError ? (
                   <div className="mt-4 text-sm text-red-600">{termsError}</div>
@@ -415,7 +427,7 @@ useEffect(() => {
                     onClick={acceptTerms}
                     className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
                   >
-                    {termsLoading ? 'Enregistrement…' : 'J’ai lu et j’accepte'}
+                    {termsLoading ? 'Enregistrement…' : 'Accepter et continuer'}
                   </button>
 
                   <button
@@ -428,7 +440,7 @@ useEffect(() => {
                 </div>
 
                 <div className="mt-6 text-xs text-stone-400">
-                  En acceptant, vous confirmez avoir lu et compris les conditions de collaboration Chef Talents.
+                  Version en vigueur : {CURRENT_TERMS_VERSION}
                 </div>
               </div>
             </div>
