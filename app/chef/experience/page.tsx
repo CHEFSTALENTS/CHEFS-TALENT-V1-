@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Textarea, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
@@ -217,7 +216,7 @@ export default function ChefExperiencePage() {
   if (!sbUser) return null;
 
   return (
-    <ChefLayout>
+
       <div className="max-w-2xl">
         <Marker />
         <Label>Profil</Label>
@@ -344,6 +343,6 @@ export default function ChefExperiencePage() {
           </div>
         </form>
       </div>
-    </ChefLayout>
+
   );
 }
