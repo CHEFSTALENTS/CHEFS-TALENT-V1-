@@ -188,6 +188,7 @@ async function saveChefProfilePatch(patch: any) {
 };
 
   return (
+    <ChefLayout>
       <div className="max-w-2xl">
         <Marker />
         <Label>Profil</Label>
@@ -334,5 +335,6 @@ async function saveChefProfilePatch(patch: any) {
           </div>
         </form>
       </div>
+    </ChefLayout>
   );
 }
