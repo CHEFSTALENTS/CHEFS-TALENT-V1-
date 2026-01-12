@@ -68,12 +68,17 @@ const showTermsModal =
     
     // null = en cours de check
     if (termsAccepted === null) return false;
-
-setTermsAccepted(!mustAcceptTerms);
     
     return mustAccept && termsOpen;
   }, [user, pathname, termsAccepted, termsAcceptedVersion, termsOpen]);
-
+  
+const showTermsModal = useMemo(() => {
+  if (!user) return false;
+  if (pathname.startsWith('/chef/terms') || pathname.startsWith('/chef/login')) return false;
+  if (termsAccepted === null) return false; // on attend la sync supabase
+  return termsAccepted === false;
+}, [user, pathname, termsAccepted]);
+  
  const CURRENT_TERMS_VERSION = '2026-01-09';
 
 useEffect(() => {
