@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Marker, Input } from '../../../components/ui';
 import { Loader2, X, Image as ImageIcon, Upload, Link as LinkIcon } from 'lucide-react';
@@ -256,7 +255,6 @@ export default function ChefPortfolioPage() {
   if (!sbUser) return null;
 
   return (
-    <ChefLayout>
       <div className="max-w-4xl">
         <Marker />
         <Label>Visuel</Label>
@@ -373,6 +371,5 @@ export default function ChefPortfolioPage() {
           </div>
         </div>
       </div>
-    </ChefLayout>
   );
 }
