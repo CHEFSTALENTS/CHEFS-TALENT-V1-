@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { Marker, Label, Button, Input } from '../../../components/ui';
 import {
   Sparkles,
@@ -421,7 +420,7 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
   };
 
   return (
-    <ChefLayout>
+  
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Header */}
         <div>
@@ -643,7 +642,7 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
           Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).
         </div>
       </div>
-    </ChefLayout>
+   
   );
 }
 
