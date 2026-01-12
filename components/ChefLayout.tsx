@@ -60,20 +60,15 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     if (!user) return false;
     if (pathname.startsWith('/chef/terms')) return false;
     if (pathname.startsWith('/chef/login')) return false;
-const showTermsModal =
-  !!user &&
-  termsAccepted === false &&
-  !pathname.startsWith('/chef/terms') &&
-  !pathname.startsWith('/chef/login');
-    
+  
     // null = en cours de check
     if (termsAccepted === null) return false;
     
-  
 const showTermsModal = useMemo(() => {
   if (!user) return false;
-  if (pathname.startsWith('/chef/terms') || pathname.startsWith('/chef/login')) return false;
-  if (termsAccepted === null) return false; // on attend la sync supabase
+  if (pathname.startsWith('/chef/terms')) return false;
+  if (pathname.startsWith('/chef/login')) return false;
+  if (termsAccepted === null) return false; // on attend Supabase
   return termsAccepted === false;
 }, [user, pathname, termsAccepted]);
   
