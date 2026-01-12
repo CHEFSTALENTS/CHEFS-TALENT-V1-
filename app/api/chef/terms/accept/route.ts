@@ -1,26 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
+
+    const userId = String(body?.userId || '').trim();
+    const accepted = body?.accepted === undefined ? true : Boolean(body?.accepted);
     const version = String(body?.version || '09/01/2026').trim();
 
-    // ✅ session supabase (anti spoof)
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const { data: authData, error: authErr } = await supabaseAuth.auth.getUser();
-
-    if (authErr || !authData?.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Missing userId' }, { status: 400 });
     }
 
-    const userId = authData.user.id;
+    if (!accepted) {
+      return NextResponse.json({ success: false, error: 'accepted=false not supported' }, { status: 400 });
+    }
 
     const supabase = getSupabaseAdmin();
 
-    // 1) Lire le profile actuel (optionnel)
+    // 1) Lire le profile actuel
     const { data, error } = await supabase
       .from('chef_profiles')
       .select('profile')
@@ -41,19 +40,22 @@ export async function POST(req: Request) {
       termsAcceptedVersion: version,
     };
 
-    // 3) Upsert (crée la ligne si absente)
+    // 3) Update en DB
     const { error: upErr } = await supabase
       .from('chef_profiles')
-      .upsert(
-        { user_id: userId, profile: patchedProfile },
-        { onConflict: 'user_id' }
-      );
+      .update({ profile: patchedProfile })
+      .eq('user_id', userId);
 
     if (upErr) {
       return NextResponse.json({ success: false, error: upErr.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      termsAccepted: true,
+      termsAcceptedAt: patchedProfile.termsAcceptedAt,
+      termsAcceptedVersion: version,
+    });
   } catch (e: any) {
     return NextResponse.json(
       { success: false, error: e?.message || 'Unknown error' },
