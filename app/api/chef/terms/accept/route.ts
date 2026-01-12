@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const userId = String(body?.userId || '').trim();
     const version = String(body?.version || '09/01/2026').trim();
 
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'Missing userId' }, { status: 400 });
+    // ✅ session supabase (anti spoof)
+    const supabaseAuth = createRouteHandlerClient({ cookies });
+    const { data: authData, error: authErr } = await supabaseAuth.auth.getUser();
+
+    if (authErr || !authData?.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = authData.user.id;
 
     const supabase = getSupabaseAdmin();
 
-    // 1) Lire le profile actuel
+    // 1) Lire le profile actuel (optionnel)
     const { data, error } = await supabase
       .from('chef_profiles')
       .select('profile')
@@ -34,11 +41,13 @@ export async function POST(req: Request) {
       termsAcceptedVersion: version,
     };
 
-    // 3) Update en DB
+    // 3) Upsert (crée la ligne si absente)
     const { error: upErr } = await supabase
       .from('chef_profiles')
-      .update({ profile: patchedProfile })
-      .eq('user_id', userId);
+      .upsert(
+        { user_id: userId, profile: patchedProfile },
+        { onConflict: 'user_id' }
+      );
 
     if (upErr) {
       return NextResponse.json({ success: false, error: upErr.message }, { status: 500 });
