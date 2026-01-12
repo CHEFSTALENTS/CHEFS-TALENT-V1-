@@ -41,14 +41,12 @@ export async function POST(req: Request) {
     };
 
     // 3) Update en DB
-    const { error: upErr } = await supabase
-      .from('chef_profiles')
-      .update({ profile: patchedProfile })
-      .eq('user_id', userId);
-
-    if (upErr) {
-      return NextResponse.json({ success: false, error: upErr.message }, { status: 500 });
-    }
+   const { error: upErr } = await supabase
+  .from('chef_profiles')
+  .upsert(
+    { user_id: userId, profile: patchedProfile },
+    { onConflict: 'user_id' }
+  );
 
     return NextResponse.json({
       success: true,
