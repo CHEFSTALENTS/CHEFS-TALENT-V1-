@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
@@ -218,16 +217,16 @@ export default function ChefPreferencesPage() {
 
   if (booting) {
     return (
-      <ChefLayout>
+
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
-      </ChefLayout>
+
     );
   }
 
   return (
-    <ChefLayout>
+
       <div className="max-w-3xl">
         <Marker />
         <Label>Préférences</Label>
@@ -431,6 +430,6 @@ export default function ChefPreferencesPage() {
           )}
         </div>
       </div>
-    </ChefLayout>
+  
   );
 }
