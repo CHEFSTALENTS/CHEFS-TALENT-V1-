@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefLayout } from '../../../components/ChefLayout';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Marker, Button, Input } from '../../../components/ui';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -280,18 +279,17 @@ export default function ChefAvailabilityPage() {
 
   if (booting || loading) {
     return (
-      <ChefLayout>
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
-      </ChefLayout>
+
     );
   }
 
   if (!sbUser) return null;
 
   return (
-    <ChefLayout>
+
       <div className="max-w-4xl">
         <Marker />
         <Label>Planning</Label>
@@ -473,6 +471,6 @@ export default function ChefAvailabilityPage() {
 
         <div className="text-xs text-stone-400 mt-4" />
       </div>
-    </ChefLayout>
+   
   );
 }
