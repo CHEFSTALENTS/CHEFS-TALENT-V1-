@@ -69,103 +69,80 @@ const showTermsModal =
     // null = en cours de check
     if (termsAccepted === null) return false;
 
-   const CURRENT_TERMS_VERSION = '2026-01-09';
-
-const mustAcceptTerms =
-  !json.termsAccepted ||
-  json.termsAcceptedVersion !== CURRENT_TERMS_VERSION;
-
 setTermsAccepted(!mustAcceptTerms);
     
     return mustAccept && termsOpen;
   }, [user, pathname, termsAccepted, termsAcceptedVersion, termsOpen]);
 
-  useEffect(() => {
-    let alive = true;
+ const CURRENT_TERMS_VERSION = '2026-01-09';
 
-    (async () => {
-      const { data } = await supabase.auth.getSession();
+useEffect(() => {
+  let alive = true;
+
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!alive) return;
+
+    const sbUser = data.session?.user ?? null;
+
+    if (!sbUser) {
+      router.replace('/chef/login');
+      return;
+    }
+
+    const pseudo: PseudoChefUser = {
+      id: sbUser.id,
+      email: sbUser.email ?? '',
+      firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+      lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+      status: 'draft',
+    };
+
+    setUser(pseudo);
+
+    // reset terms while loading
+    setTermsAccepted(null);
+
+    try {
+      const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, {
+        cache: 'no-store',
+      });
+
+      const json: {
+        status?: string | null;
+        termsAccepted?: boolean;
+        termsAcceptedVersion?: string | null;
+        termsAcceptedAt?: string | null;
+      } = await res.json().catch(() => ({} as any));
+
       if (!alive) return;
 
-      const sbUser = data.session?.user ?? null;
-
-      if (!sbUser) {
-        router.replace('/chef/login');
-        return;
+      if (json?.status) {
+        setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
       }
 
-      const pseudo: PseudoChefUser = {
-        id: sbUser.id,
-        email: sbUser.email ?? '',
-        firstName: (sbUser.user_metadata as any)?.firstName ?? '',
-        lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-        status: 'draft',
-      };
+      // ✅ ICI seulement (json existe ici)
+      const mustAcceptTerms =
+        !Boolean(json?.termsAccepted) ||
+        String(json?.termsAcceptedVersion || '') !== CURRENT_TERMS_VERSION;
 
-      setUser(pseudo);
+      setTermsAccepted(!mustAcceptTerms);
+    } catch {
+      // en cas de fail réseau, on ne rebloque pas tout
+      setTermsAccepted(true);
+    }
+  })();
 
-      // reset terms while loading
-      setTermsAccepted(null);
-      setTermsAcceptedAt(null);
-      setTermsAcceptedVersion(null);
-      setTermsOpen(false);
-
-      // ✅ resync status + termsAccepted depuis DB
-      // ✅ Version unique (source of truth)
-const CURRENT_TERMS_VERSION = '2026-01-09';
-
-// reset terms while loading (optionnel)
-setTermsAccepted(null);
-
-try {
-  const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, {
-    cache: 'no-store',
+  const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+    const sbUser = session?.user ?? null;
+    if (!sbUser) router.replace('/chef/login');
   });
 
-  const json: {
-    status?: string | null;
-    termsAccepted?: boolean;
-    termsAcceptedVersion?: string | null;
-    termsAcceptedAt?: string | null;
-  } = await res.json().catch(() => ({} as any));
-
-  if (!alive) return;
-
-  // status (optionnel)
-  if (json?.status) {
-    setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
-  }
-
-  // ✅ Gate logique : on redemande UNIQUEMENT si pas accepté OU version différente
-  const mustAcceptTerms =
-    !Boolean(json?.termsAccepted) ||
-    String(json?.termsAcceptedVersion || '') !== CURRENT_TERMS_VERSION;
-
-  setTermsAccepted(!mustAcceptTerms);
-} catch {
-  // En cas d'erreur réseau, on évite de bloquer injustement :
-  // soit on laisse l’accès (true), soit tu préfères bloquer (false)
-  setTermsAccepted(true);
-}
-    })();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      const sbUser = session?.user ?? null;
-      if (!sbUser) router.replace('/chef/login');
-    });
-
-    // robots noindex
-    const meta = document.createElement('meta');
-    meta.name = 'robots';
-    meta.content = 'noindex, nofollow';
-    document.head.appendChild(meta);
-
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-      if (document.head.contains(meta)) document.head.removeChild(meta);
-    };
-  }, [router]);
+  return () => {
+    alive = false;
+    sub.subscription.unsubscribe();
+  };
+}, [router]);
 
   // Close drawer when route changes
   useEffect(() => {
