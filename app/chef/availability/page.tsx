@@ -280,194 +280,199 @@ export default function ChefAvailabilityPage() {
 
   if (booting || loading) {
     return (
+      <ChefLayout>
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
+      </ChefLayout>
     );
   }
 
   if (!sbUser) return null;
-return (
-  <div className="max-w-4xl">
-    <Marker />
-    <Label>Planning</Label>
-    <h1 className="text-3xl font-serif text-stone-900 mb-8">Disponibilités</h1>
 
-    <form onSubmit={onSubmit} className="bg-white p-8 border border-stone-200 space-y-8">
-      {/* Quick status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <label className="p-4 border border-stone-200 bg-stone-50 cursor-pointer">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={availableNow}
-              onChange={(e) => {
-                const v = e.target.checked;
-                setAvailableNow(v);
-                if (AUTO_SAVE) {
-                  saveAvailability({ availableNow: v, nextAvailableFrom, preferredPeriods, unavailableDates }).catch(() => {});
-                }
-              }}
-            />
-            <div>
-              <div className="text-sm font-medium text-stone-900">Disponible immédiatement</div>
-              <div className="text-xs text-stone-500">Active si tu peux accepter une mission maintenant.</div>
+  return (
+    <ChefLayout>
+      <div className="max-w-4xl">
+        <Marker />
+        <Label>Planning</Label>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">Disponibilités</h1>
+
+        <form onSubmit={onSubmit} className="bg-white p-8 border border-stone-200 space-y-8">
+          {/* Quick status */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="p-4 border border-stone-200 bg-stone-50 cursor-pointer">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={availableNow}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setAvailableNow(v);
+                    if (AUTO_SAVE) {
+                      saveAvailability({ availableNow: v, nextAvailableFrom, preferredPeriods, unavailableDates }).catch(() => {});
+                    }
+                  }}
+                />
+                <div>
+                  <div className="text-sm font-medium text-stone-900">Disponible immédiatement</div>
+                  <div className="text-xs text-stone-500">Active si tu peux accepter une mission maintenant.</div>
+                </div>
+              </div>
+            </label>
+
+            <div className="p-4 border border-stone-200">
+              <Label>Prochaine disponibilité</Label>
+              <Input
+                type="date"
+                value={nextAvailableFrom}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setNextAvailableFrom(v);
+                  if (AUTO_SAVE) {
+                    saveAvailability({ availableNow, nextAvailableFrom: v, preferredPeriods, unavailableDates }).catch(() => {});
+                  }
+                }}
+              />
+              <div className="text-xs text-stone-500 mt-1">Laisse vide si tu es flexible.</div>
+            </div>
+
+            <div className="p-4 border border-stone-200">
+              <Label>Périodes préférées</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {PERIODS.map(p => {
+                  const on = preferredPeriods.includes(p.key);
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => togglePeriod(p.key)}
+                      className={`px-3 py-1 text-xs border transition ${
+                        on ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-700'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </label>
 
-        <div className="p-4 border border-stone-200">
-          <Label>Prochaine disponibilité</Label>
-          <Input
-            type="date"
-            value={nextAvailableFrom}
-            onChange={(e) => {
-              const v = e.target.value;
-              setNextAvailableFrom(v);
-              if (AUTO_SAVE) {
-                saveAvailability({ availableNow, nextAvailableFrom: v, preferredPeriods, unavailableDates }).catch(() => {});
-              }
-            }}
-          />
-          <div className="text-xs text-stone-500 mt-1">Laisse vide si tu es flexible.</div>
-        </div>
-
-        <div className="p-4 border border-stone-200">
-          <Label>Périodes préférées</Label>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {PERIODS.map((p) => {
-              const on = preferredPeriods.includes(p.key);
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => togglePeriod(p.key)}
-                  className={`px-3 py-1 text-xs border transition ${
-                    on ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-700'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Calendar */}
-      <div>
-        <div className="text-center md:text-left">
-          <p className="text-stone-600 font-light mb-3">
-            Par défaut, vous êtes considéré comme <strong>disponible</strong>. Cliquez sur une date pour la marquer comme{' '}
-            <span className="text-red-500 font-medium">indisponible</span>.
-          </p>
-        </div>
-
-        {/* Header mois */}
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <button
-            type="button"
-            onClick={goPrevMonth}
-            className="p-2 rounded-md border border-stone-200 hover:bg-stone-50 transition"
-            aria-label="Mois précédent"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          <div className="flex-1 text-center">
-            <div className="text-sm font-medium text-stone-900 capitalize">{monthLabel(month)}</div>
-            <button
-              type="button"
-              onClick={goToday}
-              className="mt-1 text-xs text-stone-500 hover:text-stone-900 underline underline-offset-2"
-            >
-              Revenir à aujourd’hui
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={goNextMonth}
-            className="p-2 rounded-md border border-stone-200 hover:bg-stone-50 transition"
-            aria-label="Mois suivant"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-px bg-stone-200 border border-stone-200">
-          {WEEKDAYS.map((day) => (
-            <div
-              key={day}
-              className="bg-stone-50 px-2 py-3 text-center text-xs font-medium uppercase tracking-widest text-stone-500"
-            >
-              {day}
+          {/* Calendar */}
+          <div>
+            <div className="text-center md:text-left">
+              <p className="text-stone-600 font-light mb-3">
+                Par défaut, vous êtes considéré comme <strong>disponible</strong>. Cliquez sur une date pour la marquer comme{' '}
+                <span className="text-red-500 font-medium">indisponible</span>.
+              </p>
             </div>
-          ))}
 
-          {monthGrid.map(({ date, inMonth, iso }) => {
-            const isUnavailable = unavailableDates.includes(iso);
-            const isToday =
-              date.getFullYear() === today.getFullYear() &&
-              date.getMonth() === today.getMonth() &&
-              date.getDate() === today.getDate();
-
-            return (
+            {/* Header mois */}
+            <div className="flex items-center justify-between gap-3 mb-3">
               <button
-                key={iso}
                 type="button"
-                onClick={() => toggleDate(iso)}
-                className={[
-                  'h-20 md:h-24 p-3 text-left relative transition-colors',
-                  'hover:bg-stone-50',
-                  inMonth ? 'bg-white' : 'bg-stone-50/60',
-                  isUnavailable ? 'bg-stone-100' : '',
-                ].join(' ')}
+                onClick={goPrevMonth}
+                className="p-2 rounded-md border border-stone-200 hover:bg-stone-50 transition"
+                aria-label="Mois précédent"
               >
-                <div className="flex items-center justify-between">
-                  <span
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex-1 text-center">
+                <div className="text-sm font-medium text-stone-900 capitalize">{monthLabel(month)}</div>
+                <button
+                  type="button"
+                  onClick={goToday}
+                  className="mt-1 text-xs text-stone-500 hover:text-stone-900 underline underline-offset-2"
+                >
+                  Revenir à aujourd’hui
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={goNextMonth}
+                className="p-2 rounded-md border border-stone-200 hover:bg-stone-50 transition"
+                aria-label="Mois suivant"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-px bg-stone-200 border border-stone-200">
+              {WEEKDAYS.map(day => (
+                <div
+                  key={day}
+                  className="bg-stone-50 px-2 py-3 text-center text-xs font-medium uppercase tracking-widest text-stone-500"
+                >
+                  {day}
+                </div>
+              ))}
+
+              {monthGrid.map(({ date, inMonth, iso }) => {
+                const isUnavailable = unavailableDates.includes(iso);
+                const isToday =
+                  date.getFullYear() === today.getFullYear() &&
+                  date.getMonth() === today.getMonth() &&
+                  date.getDate() === today.getDate();
+
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    onClick={() => toggleDate(iso)}
                     className={[
-                      'text-sm font-medium',
-                      inMonth ? 'text-stone-900' : 'text-stone-400',
-                      isUnavailable ? 'text-stone-400' : '',
+                      'h-20 md:h-24 p-3 text-left relative transition-colors',
+                      'hover:bg-stone-50',
+                      inMonth ? 'bg-white' : 'bg-stone-50/60',
+                      isUnavailable ? 'bg-stone-100' : '',
                     ].join(' ')}
                   >
-                    {date.getDate()}
-                  </span>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={[
+                          'text-sm font-medium',
+                          inMonth ? 'text-stone-900' : 'text-stone-400',
+                          isUnavailable ? 'text-stone-400' : '',
+                        ].join(' ')}
+                      >
+                        {date.getDate()}
+                      </span>
 
-                  {isToday ? (
-                    <span className="text-[10px] uppercase tracking-widest text-stone-700 border border-stone-300 px-2 py-0.5">
-                      Aujourd’hui
-                    </span>
-                  ) : null}
-                </div>
+                      {isToday ? (
+                        <span className="text-[10px] uppercase tracking-widest text-stone-700 border border-stone-300 px-2 py-0.5">
+                          Aujourd’hui
+                        </span>
+                      ) : null}
+                    </div>
 
-                {isUnavailable ? (
-                  <div className="absolute inset-x-3 bottom-3">
-                    <span className="text-[10px] uppercase tracking-widest text-red-500 bg-red-50 px-2 py-1 inline-block">
-                      Indisponible
-                    </span>
-                  </div>
-                ) : (
-                  <div className="absolute inset-x-3 bottom-3">
-                    <span className="text-[10px] uppercase tracking-widest text-stone-400">Disponible</span>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    {isUnavailable ? (
+                      <div className="absolute inset-x-3 bottom-3">
+                        <span className="text-[10px] uppercase tracking-widest text-red-500 bg-red-50 px-2 py-1 inline-block">
+                          Indisponible
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-x-3 bottom-3">
+                        <span className="text-[10px] uppercase tracking-widest text-stone-400">Disponible</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-        <div className="mt-4 flex items-center justify-between">
-          {success ? <span className="text-sm text-green-600">Enregistré ✅</span> : <span />}
-          <Button type="submit" disabled={saving} className="w-32">
-            {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
-          </Button>
-        </div>
+            <div className="mt-4 flex items-center justify-between">
+              {success ? <span className="text-sm text-green-600">Enregistré ✅</span> : <span />}
+              <Button type="submit" disabled={saving} className="w-32">
+                {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
+              </Button>
+            </div>
+          </div>
+        </form>
+
+        <div className="text-xs text-stone-400 mt-4" />
       </div>
-    </form>
-
-    <div className="text-xs text-stone-400 mt-4" />
-  </div>
-);
+    </ChefLayout>
+  );
 }
