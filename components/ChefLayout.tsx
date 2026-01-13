@@ -35,14 +35,21 @@ interface ChefLayoutProps {
 }
 
 /**
- * ⚠️ Incrémente cette version à chaque fois que tu modifies les conditions.
- * Le popup se réaffichera automatiquement si la version stockée != cette version.
+ * ⚠️ Incrémente cette version à chaque modif des conditions.
  */
 const CURRENT_TERMS_VERSION = '09/01/2026';
+
+// ✅ routes accessibles sans session
+const PUBLIC_CHEF_ROUTES = ['/chef/login', '/chef/signup', '/chef/terms'];
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
+
+  const isPublicRoute = useMemo(() => {
+    const p = pathname || '';
+    return PUBLIC_CHEF_ROUTES.some((r) => p.startsWith(r));
+  }, [pathname]);
 
   const [user, setUser] = useState<PseudoChefUser | null>(null);
   const [offeredCount] = useState(0);
@@ -66,6 +73,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     let alive = true;
 
     const run = async () => {
+      // ✅ Sur routes publiques: ne pas forcer login, ne pas charger profil
+      if (isPublicRoute) {
+        if (alive) setTermsLoaded(true);
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
 
@@ -91,12 +104,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
         if (!alive) return;
 
-        // status
         if (json?.status) {
           setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
         }
 
-        // terms
         const dbAccepted = Boolean(json?.termsAccepted);
         const dbVersion = (json?.termsAcceptedVersion ?? null) as string | null;
         const dbAt = (json?.termsAcceptedAt ?? null) as string | null;
@@ -105,7 +116,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         setTermsAcceptedVersion(dbVersion);
         setTermsAcceptedAt(dbAt);
       } catch {
-        // si /api/chef/me plante, on évite de bloquer sans info -> on considère non accepté
         setTermsAccepted(false);
         setTermsAcceptedVersion(null);
         setTermsAcceptedAt(null);
@@ -117,6 +127,9 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     run();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      // ✅ Sur routes publiques: pas de redirect auto
+      if (isPublicRoute) return;
+
       const sbUser = session?.user ?? null;
       if (!sbUser) router.replace('/chef/login');
     });
@@ -132,7 +145,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       sub.subscription.unsubscribe();
       if (document.head.contains(meta)) document.head.removeChild(meta);
     };
-  }, [router]);
+  }, [router, isPublicRoute]);
+
+  // ✅ Sur routes publiques, on affiche juste la page (login/signup/terms) sans layout portail
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
 
   // Close drawer when route changes
   useEffect(() => {
@@ -151,28 +169,23 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   // ---- TERMS LOGIC ----
   const mustAcceptTerms = useMemo(() => {
-    if (!termsLoaded) return false; // ⚠️ tant qu’on n’a pas chargé, on n’affiche rien
+    if (!termsLoaded) return false;
     if (!termsAccepted) return true;
     if ((termsAcceptedVersion ?? null) !== CURRENT_TERMS_VERSION) return true;
     return false;
   }, [termsLoaded, termsAccepted, termsAcceptedVersion]);
 
   useEffect(() => {
-    // ouvre le popup uniquement quand on sait qu'il faut accepter
-    // et pas sur /chef/terms ou /chef/login
     if (!termsLoaded) return;
     if (!user) return;
 
-    const isExcluded =
+    const excluded =
       pathname?.startsWith('/chef/terms') ||
       pathname?.startsWith('/chef/login') ||
       pathname?.startsWith('/chef/signup');
 
-    if (!isExcluded && mustAcceptTerms) {
-      setTermsOpen(true);
-    } else {
-      setTermsOpen(false);
-    }
+    if (!excluded && mustAcceptTerms) setTermsOpen(true);
+    else setTermsOpen(false);
   }, [termsLoaded, mustAcceptTerms, pathname, user]);
 
   const handleLogout = async () => {
@@ -197,17 +210,15 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) throw new Error(json?.error || 'ACCEPT_FAIL');
 
-      // refresh local state
       setTermsAccepted(true);
       setTermsAcceptedVersion(CURRENT_TERMS_VERSION);
       setTermsAcceptedAt(new Date().toISOString());
       setTermsOpen(false);
 
-      // (optionnel) cache local
       try {
         localStorage.setItem('ct_chef_terms_version', CURRENT_TERMS_VERSION);
       } catch {}
-    } catch (e: any) {
+    } catch {
       setTermsError("Impossible d’enregistrer l’acceptation. Réessaie.");
     } finally {
       setTermsLoading(false);
@@ -230,7 +241,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
     { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
 
-    // ✅ lien utile vers les terms
     { icon: FileText, label: 'Conditions', path: '/chef/terms' },
   ];
 
@@ -274,7 +284,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       </nav>
 
       <div className={`border-t border-stone-800 ${compact ? 'p-4' : 'p-6'}`}>
-        {/* ✅ petit statut terms dans la sidebar */}
         <div className="mb-4 px-2 text-xs text-stone-500">
           {termsLoaded ? (
             termsAccepted && termsAcceptedVersion === CURRENT_TERMS_VERSION ? (
@@ -407,9 +416,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                   Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration.
                 </p>
 
-                {termsError ? (
-                  <div className="mt-4 text-sm text-red-600">{termsError}</div>
-                ) : null}
+                {termsError ? <div className="mt-4 text-sm text-red-600">{termsError}</div> : null}
 
                 <div className="mt-7 grid gap-3">
                   <Link
