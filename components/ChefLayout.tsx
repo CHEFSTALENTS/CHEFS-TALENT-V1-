@@ -34,12 +34,7 @@ interface ChefLayoutProps {
   children?: React.ReactNode;
 }
 
-/**
- * ⚠️ Incrémente cette version à chaque modif des conditions.
- */
 const CURRENT_TERMS_VERSION = '09/01/2026';
-
-// ✅ pages accessibles sans session + sans sidebar
 const PUBLIC_CHEF_ROUTES = ['/chef/login', '/chef/signup', '/chef/terms'];
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
@@ -53,13 +48,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   const [user, setUser] = useState<PseudoChefUser | null>(null);
   const [booting, setBooting] = useState(true);
-
   const [offeredCount] = useState(0);
 
   // Mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Terms state (chargé depuis /api/chef/me)
+  // Terms state
   const [termsLoaded, setTermsLoaded] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(false);
   const [termsAcceptedVersion, setTermsAcceptedVersion] = useState<string | null>(null);
@@ -75,7 +69,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     let alive = true;
 
     const run = async () => {
-      // ✅ Sur routes publiques : on ne fait rien (pas de redirect, pas de sidebar)
+      // ✅ Routes publiques: pas de session obligatoire, pas de load profil
       if (isPublicRoute) {
         if (!alive) return;
         setBooting(false);
@@ -103,7 +97,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         };
         setUser(pseudo);
 
-        // Charge status + terms depuis DB
         try {
           const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
           const json = await res.json();
@@ -125,8 +118,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           if (alive) setTermsLoaded(true);
         }
       } catch {
-        // en cas de souci session : on renvoie login (sauf public)
-        if (!isPublicRoute) router.replace('/chef/login');
+        router.replace('/chef/login');
       } finally {
         if (alive) setBooting(false);
       }
@@ -135,9 +127,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     run();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      // ✅ Sur routes publiques: pas de redirect auto
       if (isPublicRoute) return;
-
       const sbUser = session?.user ?? null;
       if (!sbUser) router.replace('/chef/login');
     });
@@ -155,29 +145,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [router, isPublicRoute]);
 
-  // ✅ Sur routes publiques: pas de layout portail du tout
-  if (isPublicRoute) {
-    return <>{children}</>;
-  }
-
-  // ✅ Evite "page blanche" pendant le boot
-  if (booting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <div className="text-sm text-stone-500">Chargement…</div>
-      </div>
-    );
-  }
-
-  // Si pas d'user (et pas public), on laisse le redirect faire son job
-  if (!user) return null;
-
-  // Close drawer when route changes
+  // ✅ Close drawer on route change (même si public, harmless)
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Prevent body scroll when drawer is open (mobile)
+  // ✅ Prevent body scroll when drawer open
   useEffect(() => {
     if (!mobileOpen) return;
     const prev = document.body.style.overflow;
@@ -187,7 +160,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     };
   }, [mobileOpen]);
 
-  // ---- TERMS LOGIC ----
   const mustAcceptTerms = useMemo(() => {
     if (!termsLoaded) return false;
     if (!termsAccepted) return true;
@@ -195,7 +167,9 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     return false;
   }, [termsLoaded, termsAccepted, termsAcceptedVersion]);
 
+  // ✅ Open terms modal only on private routes
   useEffect(() => {
+    if (isPublicRoute) return;
     if (!termsLoaded) return;
     if (!user) return;
 
@@ -206,7 +180,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
     if (!excluded && mustAcceptTerms) setTermsOpen(true);
     else setTermsOpen(false);
-  }, [termsLoaded, mustAcceptTerms, pathname, user]);
+  }, [isPublicRoute, termsLoaded, mustAcceptTerms, pathname, user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -245,6 +219,22 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     }
   };
 
+  // ---------------- RENDER (aucun hook après ceci) ----------------
+
+  // ✅ Routes publiques: no sidebar
+  if (isPublicRoute) return <>{children}</>;
+
+  // ✅ Evite page blanche
+  if (booting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <div className="text-sm text-stone-500">Chargement…</div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   const navItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
     { icon: Briefcase, label: 'Missions', path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
@@ -258,7 +248,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
     { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
     { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
-
     { icon: FileText, label: 'Conditions', path: '/chef/terms' },
   ];
 
@@ -415,7 +404,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         </main>
       </div>
 
-      {/* ✅ TERMS MODAL (bloquante) */}
       {termsOpen ? (
         <div className="fixed inset-0 z-[80]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
