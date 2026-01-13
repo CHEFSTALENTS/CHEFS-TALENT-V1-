@@ -40,15 +40,15 @@ export default function TermsClient() {
         return;
       }
 
-      // 2) Flag DB (Supabase)
+      // 2) Enregistrer en DB
       const res = await fetch('/api/chef/terms/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
           userId,
-          version: CURRENT_TERMS_VERSION,
           accepted: true,
+          version: CURRENT_TERMS_VERSION,
         }),
       });
 
@@ -74,15 +74,11 @@ export default function TermsClient() {
     <div className="min-h-screen bg-[#F7F5F2] text-stone-900">
       <div className="mx-auto max-w-3xl px-6 py-16">
         <div className="rounded-3xl border border-stone-200 bg-white shadow-sm p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-stone-400">
-            Chef Talents
-          </div>
+          <div className="text-xs uppercase tracking-[0.25em] text-stone-400">Chef Talents</div>
 
           <h1 className="mt-2 text-3xl md:text-4xl font-serif">{title}</h1>
 
-          <p className="mt-2 text-sm text-stone-500">
-            Dernière mise à jour : {CURRENT_TERMS_VERSION}
-          </p>
+          <p className="mt-2 text-sm text-stone-500">Dernière mise à jour : {CURRENT_TERMS_VERSION}</p>
 
           {/* ===================== CONDITIONS ===================== */}
           <div className="mt-8 prose prose-stone max-w-none">
@@ -351,9 +347,7 @@ export default function TermsClient() {
                 onChange={(e) => setChecked(e.target.checked)}
                 className="mt-1"
               />
-              <span>
-                J’ai lu et j’accepte les Conditions de Collaboration Chef Talents.
-              </span>
+              <span>J’ai lu et j’accepte les Conditions de Collaboration Chef Talents.</span>
             </label>
 
             {err ? <div className="text-sm text-red-600">{err}</div> : null}
@@ -366,9 +360,7 @@ export default function TermsClient() {
               {loading ? 'Enregistrement…' : 'Accepter et continuer'}
             </button>
 
-            <div className="text-xs text-stone-400">
-              Version en vigueur : {CURRENT_TERMS_VERSION}
-            </div>
+            <div className="text-xs text-stone-400">Version en vigueur : {CURRENT_TERMS_VERSION}</div>
           </div>
         </div>
       </div>
