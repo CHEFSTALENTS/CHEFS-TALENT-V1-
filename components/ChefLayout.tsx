@@ -46,6 +46,14 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
 
+  const isAuthRoute = useMemo(() => {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith('/chef/login') ||
+    pathname.startsWith('/chef/signup')
+  );
+}, [pathname]);
+
   const isPublicRoute = useMemo(() => {
     const p = pathname || '';
     return PUBLIC_CHEF_ROUTES.some((r) => p.startsWith(r));
@@ -70,6 +78,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   // ---- AUTH + LOAD PROFILE (status + terms) ----
   useEffect(() => {
+    if (isAuthRoute) return;
     let alive = true;
 
     const run = async () => {
@@ -145,6 +154,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       sub.subscription.unsubscribe();
       if (document.head.contains(meta)) document.head.removeChild(meta);
     };
+    }, [router, isAuthRoute]);
   }, [router, isPublicRoute]);
 
   // ✅ Sur routes publiques, on affiche juste la page (login/signup/terms) sans layout portail
@@ -176,6 +186,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   }, [termsLoaded, termsAccepted, termsAcceptedVersion]);
 
   useEffect(() => {
+    if (isAuthroute) return;
     if (!termsLoaded) return;
     if (!user) return;
 
@@ -186,7 +197,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
     if (!excluded && mustAcceptTerms) setTermsOpen(true);
     else setTermsOpen(false);
-  }, [termsLoaded, mustAcceptTerms, pathname, user]);
+  }, [isAuthRoute, termsLoaded, mustAcceptTerms, pathname, user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -225,7 +236,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     }
   };
 
-  if (!user) return null;
+if (isAuthRoute) {
+  // ✅ Sur login/signup: PAS de sidebar, PAS de modal, PAS besoin d'user
+  return <>{children}</>;
+}
+
+if (!user) return null;
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
