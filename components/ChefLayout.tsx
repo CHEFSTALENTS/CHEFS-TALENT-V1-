@@ -39,20 +39,12 @@ interface ChefLayoutProps {
  */
 const CURRENT_TERMS_VERSION = '09/01/2026';
 
-// ✅ routes accessibles sans session
+// ✅ pages accessibles sans session + sans sidebar
 const PUBLIC_CHEF_ROUTES = ['/chef/login', '/chef/signup', '/chef/terms'];
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
-
-  const isAuthRoute = useMemo(() => {
-  if (!pathname) return false;
-  return (
-    pathname.startsWith('/chef/login') ||
-    pathname.startsWith('/chef/signup')
-  );
-}, [pathname]);
 
   const isPublicRoute = useMemo(() => {
     const p = pathname || '';
@@ -60,6 +52,8 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   }, [pathname]);
 
   const [user, setUser] = useState<PseudoChefUser | null>(null);
+  const [booting, setBooting] = useState(true);
+
   const [offeredCount] = useState(0);
 
   // Mobile drawer
@@ -78,58 +72,63 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
   // ---- AUTH + LOAD PROFILE (status + terms) ----
   useEffect(() => {
-    if (isAuthRoute) return;
     let alive = true;
 
     const run = async () => {
-      // ✅ Sur routes publiques: ne pas forcer login, ne pas charger profil
+      // ✅ Sur routes publiques : on ne fait rien (pas de redirect, pas de sidebar)
       if (isPublicRoute) {
-        if (alive) setTermsLoaded(true);
+        if (!alive) return;
+        setBooting(false);
+        setTermsLoaded(true);
         return;
       }
 
-      const { data } = await supabase.auth.getSession();
-      if (!alive) return;
-
-      const sbUser = data.session?.user ?? null;
-      if (!sbUser) {
-        router.replace('/chef/login');
-        return;
-      }
-
-      const pseudo: PseudoChefUser = {
-        id: sbUser.id,
-        email: sbUser.email ?? '',
-        firstName: (sbUser.user_metadata as any)?.firstName ?? '',
-        lastName: (sbUser.user_metadata as any)?.lastName ?? '',
-        status: 'draft',
-      };
-      setUser(pseudo);
-
-      // Charge status + terms depuis DB
       try {
-        const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
-        const json = await res.json();
-
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
         if (!alive) return;
 
-        if (json?.status) {
-          setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+        const sbUser = data.session?.user ?? null;
+        if (!sbUser) {
+          router.replace('/chef/login');
+          return;
         }
 
-        const dbAccepted = Boolean(json?.termsAccepted);
-        const dbVersion = (json?.termsAcceptedVersion ?? null) as string | null;
-        const dbAt = (json?.termsAcceptedAt ?? null) as string | null;
+        const pseudo: PseudoChefUser = {
+          id: sbUser.id,
+          email: sbUser.email ?? '',
+          firstName: (sbUser.user_metadata as any)?.firstName ?? '',
+          lastName: (sbUser.user_metadata as any)?.lastName ?? '',
+          status: 'draft',
+        };
+        setUser(pseudo);
 
-        setTermsAccepted(dbAccepted);
-        setTermsAcceptedVersion(dbVersion);
-        setTermsAcceptedAt(dbAt);
+        // Charge status + terms depuis DB
+        try {
+          const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+          const json = await res.json();
+
+          if (!alive) return;
+
+          if (json?.status) {
+            setUser((prev) => (prev ? { ...prev, status: String(json.status) } : prev));
+          }
+
+          setTermsAccepted(Boolean(json?.termsAccepted));
+          setTermsAcceptedVersion((json?.termsAcceptedVersion ?? null) as string | null);
+          setTermsAcceptedAt((json?.termsAcceptedAt ?? null) as string | null);
+        } catch {
+          setTermsAccepted(false);
+          setTermsAcceptedVersion(null);
+          setTermsAcceptedAt(null);
+        } finally {
+          if (alive) setTermsLoaded(true);
+        }
       } catch {
-        setTermsAccepted(false);
-        setTermsAcceptedVersion(null);
-        setTermsAcceptedAt(null);
+        // en cas de souci session : on renvoie login (sauf public)
+        if (!isPublicRoute) router.replace('/chef/login');
       } finally {
-        if (alive) setTermsLoaded(true);
+        if (alive) setBooting(false);
       }
     };
 
@@ -154,13 +153,24 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       sub.subscription.unsubscribe();
       if (document.head.contains(meta)) document.head.removeChild(meta);
     };
-    }, [router, isAuthRoute]);
   }, [router, isPublicRoute]);
 
-  // ✅ Sur routes publiques, on affiche juste la page (login/signup/terms) sans layout portail
+  // ✅ Sur routes publiques: pas de layout portail du tout
   if (isPublicRoute) {
     return <>{children}</>;
   }
+
+  // ✅ Evite "page blanche" pendant le boot
+  if (booting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <div className="text-sm text-stone-500">Chargement…</div>
+      </div>
+    );
+  }
+
+  // Si pas d'user (et pas public), on laisse le redirect faire son job
+  if (!user) return null;
 
   // Close drawer when route changes
   useEffect(() => {
@@ -186,7 +196,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   }, [termsLoaded, termsAccepted, termsAcceptedVersion]);
 
   useEffect(() => {
-    if (isAuthroute) return;
     if (!termsLoaded) return;
     if (!user) return;
 
@@ -197,7 +206,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
 
     if (!excluded && mustAcceptTerms) setTermsOpen(true);
     else setTermsOpen(false);
-  }, [isAuthRoute, termsLoaded, mustAcceptTerms, pathname, user]);
+  }, [termsLoaded, mustAcceptTerms, pathname, user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -235,13 +244,6 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       setTermsLoading(false);
     }
   };
-
-if (isAuthRoute) {
-  // ✅ Sur login/signup: PAS de sidebar, PAS de modal, PAS besoin d'user
-  return <>{children}</>;
-}
-
-if (!user) return null;
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
