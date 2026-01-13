@@ -83,137 +83,290 @@ export default function TermsClient() {
             Dernière mise à jour : {CURRENT_TERMS_VERSION}
           </p>
 
-          {/* ===================== CONDITIONS ===================== */}
-          <div className="mt-8 prose prose-stone max-w-none">
+{/* ===================== CONDITIONS ===================== */}
+<div className="mt-8 prose prose-stone max-w-none">
 
-            <h2>1. Objet</h2>
-            <p>
-              Les présentes Conditions de Collaboration ont pour objet de définir
-              les modalités selon lesquelles les chefs indépendants (ci-après le
-              « Chef ») collaborent avec Chef Talents, plateforme de mise en
-              relation entre chefs privés et clients (particuliers,
-              conciergeries, agences, entreprises).
-            </p>
-            <p>
-              Chef Talents agit exclusivement en qualité d’intermédiaire
-              commercial et de gestion, sans lien de subordination avec le Chef.
-            </p>
+  <h2>1. Objet</h2>
+  <p>
+    Les présentes Conditions de Collaboration ont pour objet de définir les modalités selon lesquelles les chefs indépendants
+    (ci-après le « Chef ») collaborent avec Chef Talents, plateforme de mise en relation entre chefs privés et clients
+    (particuliers, conciergeries, agences, entreprises).
+  </p>
+  <p>
+    Chef Talents agit en qualité d’intermédiaire commercial et de gestion, sans lien de subordination avec le Chef.
+  </p>
 
-            <h2>2. Statut du Chef</h2>
-            <p>
-              Le Chef déclare exercer son activité en tant qu’indépendant
-              (auto-entrepreneur, société, ou équivalent étranger).
-            </p>
-            <ul>
-              <li>Il est seul responsable de ses obligations fiscales, sociales et assurantielles.</li>
-              <li>Il garantit disposer des autorisations légales, assurances professionnelles et compétences nécessaires.</li>
-            </ul>
-            <p>
-              L’inscription sur la plateforme est sans engagement d’exclusivité
-              et sans garantie de missions.
-            </p>
+  <hr />
 
-            <h3>2.1 Absence de lien de subordination</h3>
-            <p>
-              Le Chef intervient en tant que prestataire indépendant. Il est
-              expressément convenu qu’aucune relation de subordination,
-              d’exclusivité ou de dépendance juridique ne peut être caractérisée
-              entre le Chef, Chef Talents et le client final.
-            </p>
-            <p>
-              Le Chef demeure libre d’accepter ou de refuser toute mission, de
-              fixer ses tarifs et d’organiser son travail dans le respect du
-              cahier des charges validé.
-            </p>
+  <h2>2. Statut du Chef</h2>
+  <p>
+    Le Chef déclare exercer son activité en tant qu’indépendant (auto-entrepreneur, société, équivalent étranger).
+  </p>
+  <p>À ce titre :</p>
+  <ul>
+    <li>il est seul responsable de ses obligations fiscales, sociales et assurantielles,</li>
+    <li>il garantit disposer de toutes les autorisations légales, assurances RC Pro et compétences nécessaires à l’exercice de son activité.</li>
+  </ul>
+  <p>
+    Chef Talents n’est ni employeur, ni donneur d’ordre exclusif.
+  </p>
+  <p>
+    L’inscription du Chef sur la plateforme est sans engagement exclusif.
+  </p>
+  <p>
+    Le Chef demeure libre d’exercer son activité en dehors de Chef Talents, sous réserve du respect des obligations de confidentialité
+    et de non-contournement prévues aux présentes.
+  </p>
 
-            <h4>Cas particulier des missions yachting</h4>
-            <p>
-              Dans certaines missions spécifiques (yachts, navires), le Chef
-              peut intervenir en qualité de salarié du yacht, de l’armateur ou
-              de la société d’exploitation.
-            </p>
-            <p>
-              Dans ce cas, le contrat est conclu directement entre le Chef et
-              l’entité exploitante. Chef Talents n’est ni employeur, ni
-              co-employeur et n’assume aucune obligation liée à ce contrat.
-            </p>
+  <h3>2.1 Absence de lien de subordination</h3>
+  <p>
+    Le Chef intervient en tant que prestataire indépendant, dans le cadre d’une relation commerciale librement consentie.
+  </p>
+  <p>Il est expressément convenu que :</p>
+  <ul>
+    <li>le Chef n’est pas salarié de Chef Talents ;</li>
+    <li>le Chef n’est pas salarié du client final ;</li>
+    <li>aucune relation de subordination, d’exclusivité ou de dépendance juridique ne peut être caractérisée entre le Chef, Chef Talents et le client ;</li>
+    <li>le Chef demeure libre d’accepter ou de refuser toute mission proposée via la plateforme.</li>
+  </ul>
 
-            <h2>3. Processus de sélection</h2>
-            <p>
-              L’accès à la plateforme est soumis à validation. L’inscription ne
-              constitue en aucun cas une garantie d’attribution de missions.
-            </p>
+  <h4>Cas particulier des missions yachting</h4>
+  <p>
+    Dans le cadre de certaines missions spécifiques, notamment à bord de yachts ou navires, le Chef peut être amené à intervenir
+    en qualité de salarié du yacht, de l’armateur ou de la société d’exploitation du navire.
+  </p>
+  <p>Dans ce cas :</p>
+  <ul>
+    <li>le contrat de travail est établi directement entre le Chef et l’entité exploitante du yacht ;</li>
+    <li>Chef Talents n’est ni employeur, ni co-employeur, ni responsable des obligations sociales, fiscales ou contractuelles liées à ce contrat.</li>
+  </ul>
 
-            <h2>4. Fixation des tarifs</h2>
-            <p>Le Chef fixe librement ses tarifs (prix/pax, prix/jour, etc.).</p>
-            <p>
-              Chef Talents applique des frais de service facturés au client, en
-              supplément du tarif du Chef.
-            </p>
+  <p>Le Chef conserve l’entière liberté :</p>
+  <ul>
+    <li>d’accepter ou refuser une mission,</li>
+    <li>de fixer ses tarifs,</li>
+    <li>d’organiser son travail dans le respect du cahier des charges validé.</li>
+  </ul>
 
-            <h2>5. Facturation et encaissement</h2>
-            <p>
-              Le client règle la prestation à l’avance via Chef Talents (tiers
-              de confiance). Le paiement du Chef intervient après réalisation de
-              la prestation (ou conditions spécifiques validées).
-            </p>
+  <p>
+    Chef Talents intervient exclusivement en qualité d’intermédiaire de mise en relation et de gestion administrative et financière,
+    sans direction ni contrôle hiérarchique sur l’exécution de la prestation.
+  </p>
+  <p>
+    En toute hypothèse, le recours aux services de Chef Talents, y compris pour la gestion des paiements, ne saurait être interprété
+    comme la création d’un lien de subordination ou d’un contrat de travail entre le Chef et Chef Talents.
+  </p>
 
-            <h2>6. Déroulé d’une mission</h2>
-            <ol>
-              <li>Réception de la demande</li>
-              <li>Validation du périmètre</li>
-              <li>Validation du devis</li>
-              <li>Encaissement client</li>
-              <li>Réalisation de la prestation</li>
-              <li>Facturation du Chef</li>
-              <li>Paiement du Chef</li>
-            </ol>
+  <hr />
 
-            <h2>7. Annulations et manquements</h2>
-            <p>
-              Toute annulation doit être immédiatement signalée. Une annulation
-              à moins de 48h peut entraîner suspension ou limitation d’accès.
-            </p>
-            <p>
-              Toute annulation à moins de 24h sans justification ou sans
-              communication entraîne l’exclusion immédiate.
-            </p>
+  <h2>3. Processus de sélection des Chefs</h2>
+  <p>
+    L’accès à la plateforme Chef Talents est soumis à validation.
+  </p>
+  <p>Deux niveaux de sélection peuvent s’appliquer :</p>
+  <ol>
+    <li>
+      <strong>Validation standard</strong> : étude du dossier, parcours professionnel, références, positionnement.
+    </li>
+    <li>
+      <strong>Validation premium (prestations haut de gamme / résidences)</strong> : validation renforcée incluant, le cas échéant,
+      un entretien visio et une analyse approfondie du niveau de service.
+    </li>
+  </ol>
 
-            <h2>8. Qualité, image et comportement</h2>
-            <p>
-              Le Chef s’engage à adopter une tenue et une attitude
-              professionnelles, à respecter les règles d’hygiène, de sécurité
-              alimentaire et de discrétion.
-            </p>
+  <p>Chef Talents se réserve le droit :</p>
+  <ul>
+    <li>de refuser une candidature sans justification,</li>
+    <li>de limiter certains types de missions à des profils validés premium.</li>
+  </ul>
 
-            <h2>9. Confidentialité et non-contournement</h2>
-            <p>
-              L’ensemble des informations obtenues via Chef Talents est
-              strictement confidentiel. Toute tentative de contournement est
-              interdite pendant la collaboration et pendant 12 mois après la
-              dernière mission.
-            </p>
+  <p>
+    L’inscription du Chef sur la plateforme Chef Talents ne constitue en aucun cas une garantie d’attribution de missions.
+  </p>
 
-            <h2>10. Données et communication</h2>
-            <p>
-              Chef Talents est autorisé à utiliser le profil du Chef (photos,
-              bio) à des fins de promotion, sauf opposition écrite.
-            </p>
+  <p>Les missions sont proposées en fonction :</p>
+  <ul>
+    <li>des besoins spécifiques des clients,</li>
+    <li>du profil, de l’expérience, des disponibilités et de la validation du Chef,</li>
+    <li>des critères propres à chaque mission.</li>
+  </ul>
 
-            <h2>11. Suspension et résiliation</h2>
-            <p>
-              Chef Talents peut suspendre ou résilier l’accès en cas de
-              manquement ou pour préserver la qualité du réseau.
-            </p>
+  <p>
+    Chef Talents n’a aucune obligation de volume, de fréquence ou de récurrence de missions.
+  </p>
 
-            <h2>12. Droit applicable</h2>
-            <p>
-              Les présentes Conditions sont régies par le droit français. Tout
-              litige relève des tribunaux compétents.
-            </p>
+  <h2>4. Fixation des tarifs</h2>
+  <p>Le Chef fixe librement ses tarifs, notamment :</p>
+  <ul>
+    <li>prix par personne pour les prestations ponctuelles (déjeuner, dîner, événement),</li>
+    <li>prix par jour pour les missions de résidence (villa, yacht, chalet, long séjour).</li>
+  </ul>
+  <p>Ces tarifs constituent la rémunération nette du Chef.</p>
+  <p><strong>Aucune commission n’est prélevée sur les honoraires du Chef.</strong></p>
+  <p>
+    Chef Talents applique des frais de service facturés au client, en supplément du tarif du Chef.
+    Le Chef est informé et valide chaque mission avant confirmation.
+  </p>
 
-          </div>
-          {/* ===================== FIN CONDITIONS ===================== */}
+  <p>
+    Chef Talents se réserve le droit de proposer, à l’avenir, des offres d’abonnement ou de services premium, destinées à améliorer la visibilité,
+    la formation, l’accompagnement, l’accès à certaines missions ou à des fonctionnalités avancées.
+  </p>
+  <p>
+    Ces offres feront l’objet de conditions distinctes et ne seront en aucun cas obligatoires pour rester inscrit sur la plateforme.
+  </p>
+
+  <hr />
+
+  <h2>5. Facturation et encaissement</h2>
+
+  <h3>5.1 Encaissement client</h3>
+  <ul>
+    <li>Le client règle 100 % de la prestation à l’avance via Chef Talents.</li>
+    <li>Pour les prestations supérieures à 10 000 €, un acompte de 50 % minimum est exigé à la commande pour activer le chef.</li>
+  </ul>
+  <p>
+    Chef Talents facture au client la prestation globale (honoraires Chef + frais de service).
+  </p>
+
+  <h3>5.2 Paiement du Chef</h3>
+  <ul>
+    <li>La part du Chef est reversée via Stripe ou virement, selon les modalités définies.</li>
+    <li>Le Chef facture Chef Talents, et non le client final.</li>
+    <li>Le paiement intervient après réalisation de la prestation (ou selon les conditions spécifiques prévues).</li>
+  </ul>
+  <p>
+    Chef Talents agit comme tiers de confiance dans la répartition des flux financiers.
+  </p>
+
+  <hr />
+
+  <h2>6. Déroulé d’une mission</h2>
+  <ol>
+    <li>Réception de la demande</li>
+    <li>Échange et validation du périmètre (menu, rythme, contraintes)</li>
+    <li>Validation du devis par les parties</li>
+    <li>Encaissement client</li>
+    <li>Réalisation de la prestation</li>
+    <li>Facturation du Chef à Chef Talents</li>
+    <li>Paiement du Chef</li>
+  </ol>
+
+  <p>Le Chef s’engage à :</p>
+  <ul>
+    <li>respecter le cahier des charges validé,</li>
+    <li>maintenir un niveau de service conforme à son positionnement.</li>
+  </ul>
+
+  <hr />
+
+  <h2>7. Annulations et manquements</h2>
+
+  <h3>7.1 Annulation par le Chef</h3>
+  <ul>
+    <li>Toute annulation doit être immédiatement signalée à Chef Talents.</li>
+    <li>En cas d’annulation moins de 48h avant la prestation, Chef Talents se réserve le droit de suspendre temporairement le compte ou de limiter l’accès aux futures missions.</li>
+  </ul>
+
+  <h3>7.2 Annulation grave (no-show / &lt; 24h sans justification)</h3>
+  <p>Toute annulation :</p>
+  <ul>
+    <li>à moins de 24 heures,</li>
+    <li>ou sans justification valable,</li>
+    <li>ou sans communication,</li>
+  </ul>
+  <p>
+    entraîne l’exclusion immédiate et définitive de la plateforme, dès la première occurrence.
+  </p>
+  <p>
+    Chef Talents se réserve également le droit de réclamer réparation en cas de préjudice client.
+  </p>
+
+  <hr />
+
+  <h2>8. Qualité, image et comportement</h2>
+  <p>Le Chef s’engage à :</p>
+  <ul>
+    <li>adopter une tenue et une attitude professionnelles,</li>
+    <li>respecter les règles d’hygiène, de sécurité alimentaire et de discrétion,</li>
+    <li>ne pas nuire à l’image de Chef Talents.</li>
+  </ul>
+  <p>Tout comportement inapproprié pourra entraîner suspension ou exclusion.</p>
+
+  <hr />
+
+  <h2>9. Confidentialité &amp; non-contournement</h2>
+
+  <h3>Confidentialité</h3>
+  <p>
+    Le Chef reconnaît que l’ensemble des informations auxquelles il a accès dans le cadre de son inscription et de ses missions via Chef Talents
+    (incluant notamment : identité des clients, conciergeries, lieux, budgets, habitudes, contraintes logistiques, échanges, documents, menus, coordonnées)
+    revêt un caractère strictement confidentiel.
+  </p>
+  <p>
+    Le Chef s’engage à ne divulguer aucune de ces informations à des tiers, sauf accord écrit préalable de Chef Talents ou obligation légale.
+  </p>
+
+  <h3>Non-contournement</h3>
+  <p>
+    Le Chef s’interdit formellement, pendant toute la durée de sa collaboration avec Chef Talents et pendant une période de 12 mois après la dernière mission, de :
+  </p>
+  <ul>
+    <li>contracter directement avec un client, une conciergerie, un armateur ou toute entité présentée par Chef Talents ;</li>
+    <li>accepter une mission similaire ou équivalente avec ces mêmes parties, en dehors du cadre de Chef Talents ;</li>
+    <li>utiliser les informations obtenues via Chef Talents à des fins personnelles ou concurrentes.</li>
+  </ul>
+  <p>
+    Toute tentative de contournement, directe ou indirecte, sera considérée comme un manquement grave.
+  </p>
+
+  <h3>Sanctions</h3>
+  <p>
+    En cas de violation avérée des obligations de confidentialité ou de non-contournement :
+  </p>
+  <ul>
+    <li>Chef Talents se réserve le droit de suspendre ou résilier immédiatement l’accès du Chef à la plateforme ;</li>
+    <li>toute mission en cours pourra être annulée ;</li>
+    <li>Chef Talents pourra réclamer une indemnité forfaitaire minimale équivalente aux frais de service non perçus, sans préjudice de dommages et intérêts complémentaires.</li>
+  </ul>
+
+  <hr />
+
+  <h2>10. Données &amp; communication</h2>
+  <p>Chef Talents est autorisé à :</p>
+  <ul>
+    <li>utiliser le profil du Chef (photos, bio) à des fins de promotion,</li>
+    <li>mentionner certaines prestations à titre de référence (sauf opposition écrite).</li>
+  </ul>
+
+  <hr />
+
+  <h2>11. Suspension / Résiliation</h2>
+  <p>Chef Talents peut suspendre ou résilier l’accès d’un Chef :</p>
+  <ul>
+    <li>en cas de manquement aux présentes conditions,</li>
+    <li>en cas de retours clients négatifs répétés,</li>
+    <li>pour préserver la qualité du réseau.</li>
+  </ul>
+  <p>Le Chef peut demander la suppression de son compte à tout moment.</p>
+
+  <hr />
+
+  <h2>12. Droit applicable</h2>
+  <p>
+    Les présentes Conditions sont régies par le droit français.
+    Tout litige relève des tribunaux compétents.
+  </p>
+
+  <hr />
+
+  <h2>13. Acceptation</h2>
+  <p>
+    Le Chef reconnaît avoir lu, compris et accepté sans réserve les présentes Conditions de Collaboration.
+  </p>
+
+</div>
+{/* ===================== FIN CONDITIONS ===================== */}
 
           <div className="mt-10 border-t border-stone-200 pt-6 space-y-4">
             <label className="flex items-start gap-3 text-sm text-stone-700">
