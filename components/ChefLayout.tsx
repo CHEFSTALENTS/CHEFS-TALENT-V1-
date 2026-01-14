@@ -35,7 +35,13 @@ interface ChefLayoutProps {
 }
 
 const CURRENT_TERMS_VERSION = '09/01/2026';
-const PUBLIC_CHEF_ROUTES = ['/chef/login', '/chef/signup', '/chef/terms'];
+const PUBLIC_CHEF_ROUTES = [
+  '/chef/login',
+  '/chef/signup',
+  '/chef/forgot-password',
+  '/chef/reset-password',
+  '/chef/terms',
+];
 
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
