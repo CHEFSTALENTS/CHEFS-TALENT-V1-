@@ -1,6 +1,6 @@
 // app/api/chef/onboarding/evaluate/route.ts
 import { NextResponse } from "next/server";
-import { computeChefScore, type ChefProfile } from "@/lib/chefScoring";
+import { computeChefScore, type ChefProfile } from "@/lib/chefScore";
 
 type Action = { title: string; route: string; priority: "high" | "medium" | "low" };
 
@@ -19,7 +19,6 @@ function actionsFromMissingKeys(keys: string[]): Action[] {
 
   const out = keys.map((k) => map[k]).filter(Boolean);
 
-  // dédoublonnage route+title
   const seen = new Set<string>();
   return out.filter((a) => {
     const id = `${a.route}|${a.title}`;
@@ -71,21 +70,15 @@ function buildPitches(chef: any) {
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
 
-  // ✅ On accepte soit chef payload direct, soit chefId (pour plus tard)
   const chef = (body?.chef ?? null) as ChefProfile | null;
-
   if (!chef) {
     return NextResponse.json({ error: "Missing chef payload" }, { status: 400 });
   }
 
-  // ✅ TON score (source of truth)
   const result = computeChefScore(chef);
 
   const missingKeys = result.rules.filter((r) => !r.ok).map((r) => r.key);
   const nextActions = actionsFromMissingKeys(missingKeys);
-
-  // (optionnel) pitches
-  const pitches = buildPitches(chef);
 
   return NextResponse.json({
     chefId: (chef as any).id ?? null,
@@ -97,6 +90,6 @@ export async function POST(req: Request) {
       missingKeys,
       nextActions,
     },
-    pitches,
+    pitches: buildPitches(chef),
   });
 }
