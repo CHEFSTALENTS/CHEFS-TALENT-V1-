@@ -13,6 +13,17 @@ export default function ResetPasswordClient() {
   const [ready, setReady] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+// ✅ Si Supabase a renvoyé les tokens dans le hash, on les applique
+const hash = window.location.hash;
+if (hash && hash.includes("access_token=")) {
+  const params = new URLSearchParams(hash.replace("#", ""));
+  const access_token = params.get("access_token");
+  const refresh_token = params.get("refresh_token");
+
+  if (access_token && refresh_token) {
+    await supabase.auth.setSession({ access_token, refresh_token });
+  }
+}
 
   useEffect(() => {
     let alive = true;
