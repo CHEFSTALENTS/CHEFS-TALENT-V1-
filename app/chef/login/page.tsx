@@ -75,6 +75,10 @@ export default function ChefLoginPage() {
       </div>
     );
   }
+  
+<Link href="/forgot-password" className="text-sm underline opacity-80 hover:opacity-100">
+  Mot de passe oublié ?
+</Link>
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
