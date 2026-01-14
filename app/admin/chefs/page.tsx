@@ -287,10 +287,30 @@ function ensureArray(v: any): string[] {
 /**
  * Convertit n'importe quel "raw chef/profile" vers le format EXACT attendu par lib/chefScore.ts (ChefProfile)
  */
+/**
+ * Convertit n'importe quel "raw chef/profile" vers le format EXACT attendu par lib/chefScore.ts (ChefProfile)
+ * ✅ Inclut images + mobilité pour que le score admin == score portail chef
+ */
 function toChefProfileForScore(raw: any): ChefProfile {
   const p: any = normalizeProfile(raw);
 
-  // City: peut être string, ou {baseCity:"Paris, Londres, ..."}, ou p.baseCity/p.city, etc.
+  // --- helpers safe ---
+  const firstStr = (...vals: any[]) => {
+    for (const v of vals) {
+      if (typeof v === 'string' && v.trim()) return v.trim();
+    }
+    return '';
+  };
+
+  const firstNum = (...vals: any[]) => {
+    for (const v of vals) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return null;
+  };
+
+  // --- City / baseCity ---
   const cityFromLocationObject =
     typeof p.location === 'object' && p.location
       ? (p.location.city ?? p.location.baseCity ?? p.location.ville ?? '')
@@ -302,30 +322,96 @@ function toChefProfileForScore(raw: any): ChefProfile {
     cityFromLocationObject ??
     (typeof p.location === 'string' ? p.location : '');
 
-  // si "Paris, Londres, " -> garder la première ville (cohérent avec ton portail)
   const city = String(cityCandidate ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)[0] ?? '';
 
+  const baseCity = firstStr(
+    p.location?.baseCity,
+    p.baseCity,
+    p.city,
+    city
+  );
+
+  // --- Mobility ---
+  const travelRadiusKm =
+    firstNum(
+      p.location?.travelRadiusKm,
+      p.travelRadiusKm,
+      p.mobility // parfois string "150"
+    ) ?? null;
+
+  const internationalMobility = Boolean(
+    p.location?.internationalMobility ??
+    p.internationalMobility ??
+    p.pricing?.flags?.international ??
+    false
+  );
+
+  const coverageZones =
+    Array.isArray(p.location?.coverageZones) ? p.location.coverageZones :
+    Array.isArray(p.coverageZones) ? p.coverageZones :
+    [];
+
+  // --- Images (portfolio) ---
+  const images =
+    Array.isArray(p.images) ? p.images :
+    Array.isArray(p.photos) ? p.photos :
+    Array.isArray(p.gallery) ? p.gallery :
+    Array.isArray(p.portfolioImages) ? p.portfolioImages :
+    [];
+
+  const imagesClean = images.map((x: any) => String(x ?? '').trim()).filter(Boolean);
+
+  // --- Name ---
   const name =
-    String(p.name ?? `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() ?? '')
-      .trim();
+    firstStr(
+      p.name,
+      `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim()
+    );
 
   return {
+    // ✅ compat nom (ancien + nouveau)
     name,
-    phone: String(p.phone ?? '').trim(),
+    firstName: firstStr(p.firstName),
+    lastName: firstStr(p.lastName),
+
+    // ✅ contacts
+    phone: firstStr(p.phone),
+    email: firstStr(p.email),
+
+    // ✅ localisation
     city: city.trim(),
-    country: String(p.country ?? (typeof p.location === 'object' ? p.location?.country : '') ?? '').trim(),
-    bio: String(p.bio ?? '').trim(),
-    yearsExperience: (typeof p.yearsExperience === 'number' ? p.yearsExperience : null) as any,
+    baseCity,
+    country: firstStr(p.country, (typeof p.location === 'object' ? p.location?.country : '')),
+
+    // contenu
+    bio: firstStr(p.bio),
+    yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
+
     cuisines: ensureArray(p.cuisines),
     specialties: ensureArray(p.specialties),
     languages: ensureArray(p.languages),
-    instagram: String(p.instagram ?? '').trim(),
-    website: String(p.website ?? '').trim(),
-    portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
-    avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? p.avatar ?? '').trim(),
+
+    instagram: firstStr(p.instagram, p.instagramUrl),
+    website: firstStr(p.website, p.websiteUrl),
+
+    portfolioUrl: firstStr(p.portfolioUrl, p.portfolio),
+    avatarUrl: firstStr(p.avatarUrl, p.photoUrl, p.avatar),
+
+    // ✅ IMPORTANT : portfolio photos
+    images: imagesClean,
+
+    // ✅ IMPORTANT : mobilité (score mobility)
+    travelRadiusKm,
+    internationalMobility,
+    location: {
+      baseCity,
+      travelRadiusKm,
+      internationalMobility,
+      coverageZones,
+    },
   };
 }
 
