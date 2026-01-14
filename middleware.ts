@@ -24,15 +24,17 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Laisser passer la page d'accès + assets + next internals
-  if (
-    pathname.startsWith("/access") ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.startsWith("/robots.txt") ||
-    pathname.startsWith("/sitemap")
-  ) {
-    return NextResponse.next();
-  }
+ if (
+  pathname.startsWith('/access') ||
+  pathname.startsWith('/auth/callback') || // ✅ important
+  pathname.startsWith('/_next') ||
+  pathname.startsWith('/favicon') ||
+  pathname.startsWith('/robots.txt') ||
+  pathname.startsWith('/sitemap')
+) {
+  return NextResponse.next();
+}
+
 
   // ✅ Autoriser les APIs gate / waitlist (sinon le fetch est redirigé)
   if (pathname.startsWith("/api/access")) return NextResponse.next();
