@@ -13,26 +13,27 @@ export default function ResetPasswordClient() {
   const [ready, setReady] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-// ✅ Si Supabase a renvoyé les tokens dans le hash, on les applique
-const hash = window.location.hash;
-if (hash && hash.includes("access_token=")) {
-  const params = new URLSearchParams(hash.replace("#", ""));
-  const access_token = params.get("access_token");
-  const refresh_token = params.get("refresh_token");
-
-  if (access_token && refresh_token) {
-    await supabase.auth.setSession({ access_token, refresh_token });
-  }
-}
 
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    const run = async () => {
       try {
-        const code = searchParams.get("code");
+        // 1) Cas où Supabase renvoie des tokens dans le hash (#access_token=...)
+        const hash = window.location.hash;
+        if (hash && hash.includes("access_token=")) {
+          const params = new URLSearchParams(hash.replace("#", ""));
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
 
-        // ✅ Si on arrive via email (PKCE), on échange le code contre une session
+          if (access_token && refresh_token) {
+            const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+            if (error) throw error;
+          }
+        }
+
+        // 2) Cas PKCE: ?code=...
+        const code = searchParams.get("code");
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
@@ -42,7 +43,9 @@ if (hash && hash.includes("access_token=")) {
       } finally {
         if (alive) setReady(true);
       }
-    })();
+    };
+
+    run();
 
     return () => {
       alive = false;
