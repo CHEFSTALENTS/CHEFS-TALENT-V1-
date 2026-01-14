@@ -75,10 +75,6 @@ export default function ChefLoginPage() {
       </div>
     );
   }
-  
-<Link href="/forgot-password" className="text-sm underline opacity-80 hover:opacity-100">
-  Mot de passe oublié ?
-</Link>
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-6">
@@ -102,7 +98,20 @@ export default function ChefLoginPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs uppercase tracking-widest text-stone-400">Mot de passe</label>
+            <div className="flex items-end justify-between gap-3">
+              <label className="text-xs uppercase tracking-widest text-stone-400">
+                Mot de passe
+              </label>
+
+              {/* ✅ Lien mot de passe oublié (dans le JSX, donc visible) */}
+              <Link
+                href="/chef/forgot-password"
+                className="text-xs underline text-stone-500 hover:text-stone-900"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
             <input
               className="w-full border-b border-stone-300 bg-transparent py-3 outline-none"
               type="password"
