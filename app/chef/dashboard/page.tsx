@@ -32,6 +32,11 @@ function getPortfolioPhotosCount(p: any): number {
   return Array.isArray(imgs) ? imgs.filter(Boolean).length : 0;
 }
 
+function getMergedImages(p: any): string[] {
+  const imgs = p?.images ?? p?.photos ?? p?.gallery ?? p?.portfolioImages ?? [];
+  return Array.isArray(imgs) ? imgs.filter(Boolean) : [];
+}
+
 export default function ChefDashboardPage() {
   const router = useRouter();
   const didRedirect = useRef(false);
@@ -115,7 +120,11 @@ export default function ChefDashboardPage() {
     };
   }, [sbUser, settingsProfile]);
 
-  // 4) Score (⚠️ ton computeChefScore ne compte pas les photos)
+  /**
+   * 4) Profil envoyé au scoring (✅ cohérent avec lib/chefScore.ts)
+   * - Avant: pas d'images, pas de mobilité => scores incohérents
+   * - Maintenant: images + baseCity + travelRadius + international + location + coverageZones
+   */
   const profileForScore = useMemo(() => {
     const p: any = mergedProfile ?? {};
 
@@ -128,11 +137,35 @@ export default function ChefDashboardPage() {
       .split(',')[0]
       .trim();
 
+    const images = getMergedImages(p);
+
+    const location =
+      typeof p.location === 'object' && p.location
+        ? {
+            baseCity: String(p.location.baseCity ?? '').trim(),
+            travelRadiusKm:
+              typeof p.location.travelRadiusKm === 'number'
+                ? p.location.travelRadiusKm
+                : p.location.travelRadiusKm != null
+                ? Number(p.location.travelRadiusKm)
+                : null,
+            internationalMobility: Boolean(p.location.internationalMobility ?? false),
+            coverageZones: Array.isArray(p.location.coverageZones) ? p.location.coverageZones : [],
+          }
+        : undefined;
+
     return {
       name: String(p.name ?? '').trim(),
+      firstName: String(p.firstName ?? '').trim(),
+      lastName: String(p.lastName ?? '').trim(),
+
       phone: String(p.phone ?? '').trim(),
+      email: String(p.email ?? '').trim(),
+
       city,
+      baseCity: String(p.baseCity ?? '').trim(),
       country: String(p.country ?? p.location?.country ?? '').trim(),
+
       bio: String(p.bio ?? '').trim(),
       yearsExperience: typeof p.yearsExperience === 'number' ? p.yearsExperience : null,
 
@@ -140,17 +173,27 @@ export default function ChefDashboardPage() {
       specialties: Array.isArray(p.specialties) ? p.specialties : [],
       languages: Array.isArray(p.languages) ? p.languages : [],
 
-      instagram: String(p.instagram ?? '').trim(),
-      website: String(p.website ?? '').trim(),
-      portfolioUrl: String(p.portfolioUrl ?? p.portfolio ?? '').trim(),
+      instagram: String(p.instagramUrl ?? p.instagram ?? '').trim(),
+      website: String(p.websiteUrl ?? p.website ?? '').trim(),
 
       avatarUrl: String(p.avatarUrl ?? p.photoUrl ?? '').trim(),
+
+      // ✅ clés manquantes qui faisaient baisser le score
+      images,
+      travelRadiusKm:
+        typeof p.travelRadiusKm === 'number'
+          ? p.travelRadiusKm
+          : p.travelRadiusKm != null
+          ? Number(p.travelRadiusKm)
+          : null,
+      internationalMobility: Boolean(p.internationalMobility ?? false),
+      location,
     };
   }, [mergedProfile]);
 
   const { score } = useMemo(() => computeChefScore(profileForScore), [profileForScore]);
 
-  // 5) Checks (dashboard)
+  // 5) Checks (dashboard) — on garde ta checklist telle quelle (safe)
   const checks = useMemo(() => {
     const p: any = mergedProfile ?? {};
 
@@ -166,7 +209,6 @@ export default function ChefDashboardPage() {
 
     const experienceOk = Number(years ?? 0) > 0 || bio.length >= 80;
 
-    // ✅ Portfolio = min 5 photos (nouvelle règle)
     const photoCount = getPortfolioPhotosCount(p);
     const portfolioOk = photoCount >= MIN_PORTFOLIO_PHOTOS;
 
@@ -254,14 +296,19 @@ export default function ChefDashboardPage() {
   const completedCount = checks.filter((c) => c.done).length;
   const progress = Math.round((completedCount / checks.length) * 100);
 
-  const tier = useMemo(() => {
-    if (score >= 90) return { label: 'Priorité MAX', icon: Crown };
-    if (score >= 70) return { label: 'Prioritaire', icon: Sparkles };
-    if (score >= 40) return { label: 'En progression', icon: Clock };
+  /**
+   * ✅ Nouveau badge "état d’onboarding" (et non “qualité”)
+   * - On n’utilise plus le score pour dire “prioritaire”
+   * - On s’appuie sur la checklist (plus honnête)
+   */
+  const onboardingTier = useMemo(() => {
+    if (progress === 100) return { label: 'Profil prêt', icon: CheckCircle2 };
+    if (progress >= 70) return { label: 'Presque prêt', icon: Sparkles };
+    if (progress >= 40) return { label: 'En progression', icon: Clock };
     return { label: 'À compléter', icon: Lock };
-  }, [score]);
+  }, [progress]);
 
-  const TierIcon = tier.icon;
+  const TierIcon = onboardingTier.icon;
 
   if (booting) return <div className="p-10">Chargement…</div>;
   if (!sbUser) return null;
@@ -274,134 +321,130 @@ export default function ChefDashboardPage() {
   };
 
   return (
+    <div className="space-y-12 animate-in fade-in duration-700">
+      {/* Header */}
+      <div className="flex items-end justify-between border-b border-stone-200 pb-8">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Label className="mb-0">Tableau de bord</Label>
 
-      <div className="space-y-12 animate-in fade-in duration-700">
-        {/* Header */}
-        <div className="flex items-end justify-between border-b border-stone-200 pb-8">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Label className="mb-0">Tableau de bord</Label>
-
-              {(mergedProfile as any).plan === 'pro' && (mergedProfile as any).planStatus === 'active' && (
-                <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-bronze border border-bronze px-2 py-0.5 rounded-full">
-                  <Crown className="w-3 h-3" /> Pro
-                </span>
-              )}
-
-              <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">
-                <TierIcon className="w-3 h-3" />
-                {tier.label}
+            {(mergedProfile as any).plan === 'pro' && (mergedProfile as any).planStatus === 'active' && (
+              <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-bronze border border-bronze px-2 py-0.5 rounded-full">
+                <Crown className="w-3 h-3" /> Pro
               </span>
-            </div>
-
-            <h1 className="text-4xl font-serif text-stone-900 mt-2">
-              Bonjour, Chef{' '}
-              {(mergedProfile as any).lastName ||
-                String((mergedProfile as any).name ?? '').split(' ').slice(-1)[0] ||
-                ''}
-              .
-            </h1>
-
-            {(mergedProfile as any)?.profileType && (
-              <p className="text-stone-500 mt-2 font-light">
-                Profil :{' '}
-                {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
-                <span className="mx-2">•</span>
-                {(mergedProfile as any)?.seniorityLevel
-                  ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
-                    String((mergedProfile as any).seniorityLevel).slice(1)
-                  : ''}
-              </p>
             )}
-          </div>
 
-          <div className="text-right">
-            <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">
-              Statut du compte
+            {/* ✅ badge clarifié : onboarding */}
+            <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">
+              <TierIcon className="w-3 h-3" />
+              {onboardingTier.label}
             </span>
-            <StatusBadge status={String((mergedProfile as any).status || '')} />
           </div>
+
+          <h1 className="text-4xl font-serif text-stone-900 mt-2">
+            Bonjour, Chef{' '}
+            {(mergedProfile as any).lastName ||
+              String((mergedProfile as any).name ?? '').split(' ').slice(-1)[0] ||
+              ''}
+            .
+          </h1>
+
+          {(mergedProfile as any)?.profileType && (
+            <p className="text-stone-500 mt-2 font-light">
+              Profil :{' '}
+              {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
+              <span className="mx-2">•</span>
+              {(mergedProfile as any)?.seniorityLevel
+                ? String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() +
+                  String((mergedProfile as any).seniorityLevel).slice(1)
+                : ''}
+            </p>
+          )}
         </div>
 
-        {/* Score */}
-        <div className="bg-white border border-stone-200 p-8 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-3 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-stone-600" />
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-widest text-stone-400">Score profil</div>
-                  <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}/100</div>
-                </div>
-
-                <span className="ml-auto text-xs text-stone-500">
-                  Checklist : <span className="font-medium text-stone-900">{progress}%</span>
-                </span>
-              </div>
-
-              <div className="w-full bg-stone-100 h-1">
-                <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
-              </div>
-
-              <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-                Objectif : <span className="text-stone-900 font-medium">70%+</span> pour remonter dans les
-                premiers matchs lors du lancement.
-              </p>
-            </div>
-
-          {completedCount < checks.length ? (
-  <div className="flex items-center gap-3">
-    <Link href="/chef/settings">
-      <Button className="bg-stone-900 hover:bg-stone-800">
-        Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
-      </Button>
-    </Link>
-  </div>
-) : null}
-          </div>
-        </div>
-
-        {/* Alerts */}
-        {String((mergedProfile as any).status) === 'pending_validation' && (
-          <div className="bg-white border border-stone-200 p-8 shadow-sm">
-            <div className="flex items-start gap-6">
-              <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
-                {score >= 70 ? (
-                  <Clock className="w-6 h-6 text-stone-600" />
-                ) : (
-                  <AlertTriangle className="w-6 h-6 text-bronze" />
-                )}
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-xl font-serif text-stone-900">
-                  {score >= 70 ? "Dossier en cours d'examen" : 'Complétez votre profil pour activation'}
-                </h3>
-                <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
-                  {score >= 70
-                    ? "Votre profil est prêt. Notre équipe examine votre dossier. Vous recevrez une notification sous 48h."
-                    : 'Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.'}
-                </p>
-
-                {score < 70 && (
-                  <div className="w-full bg-stone-100 h-1 mt-4">
-                    <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {checks.map((c) => (
-            <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
-          ))}
+        <div className="text-right">
+          <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
+          <StatusBadge status={String((mergedProfile as any).status || '')} />
         </div>
       </div>
 
+      {/* Profil complété (score) */}
+      <div className="bg-white border border-stone-200 p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="space-y-3 flex-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-stone-100 rounded-full flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-stone-600" />
+              </div>
+
+              <div>
+                {/* ✅ wording cohérent : complétude */}
+                <div className="text-xs uppercase tracking-widest text-stone-400">Profil complété</div>
+                <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}%</div>
+              </div>
+
+              <span className="ml-auto text-xs text-stone-500">
+                Checklist : <span className="font-medium text-stone-900">{progress}%</span>
+              </span>
+            </div>
+
+            <div className="w-full bg-stone-100 h-1">
+              <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
+            </div>
+
+            {/* ✅ message vrai */}
+            <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
+              Complétez votre dossier pour être facilement proposé aux conciergeries.{' '}
+              <span className="text-stone-900 font-medium">Objectif : 70%+</span>.
+            </p>
+          </div>
+
+          {completedCount < checks.length ? (
+            <div className="flex items-center gap-3">
+              <Link href="/chef/settings">
+                <Button className="bg-stone-900 hover:bg-stone-800">
+                  Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Alerts (on garde ton comportement) */}
+      {String((mergedProfile as any).status) === 'pending_validation' && (
+        <div className="bg-white border border-stone-200 p-8 shadow-sm">
+          <div className="flex items-start gap-6">
+            <div className="w-12 h-12 bg-stone-100 flex items-center justify-center rounded-full shrink-0">
+              {score >= 70 ? <Clock className="w-6 h-6 text-stone-600" /> : <AlertTriangle className="w-6 h-6 text-bronze" />}
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-xl font-serif text-stone-900">
+                {score >= 70 ? "Dossier en cours d'examen" : 'Complétez votre profil pour activation'}
+              </h3>
+              <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
+                {score >= 70
+                  ? "Votre dossier est suffisamment complet. Notre équipe examine votre profil."
+                  : 'Pour garantir la qualité du réseau, nous demandons un profil suffisamment complet avant validation.'}
+              </p>
+
+              {score < 70 && (
+                <div className="w-full bg-stone-100 h-1 mt-4">
+                  <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {checks.map((c) => (
+          <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -459,7 +502,11 @@ function StatusBadge({ status }: { status: string }) {
 
   const s = (status || '').toLowerCase();
   return (
-    <span className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${styles[s] || styles.draft}`}>
+    <span
+      className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
+        styles[s] || styles.draft
+      }`}
+    >
       {labels[s] || s || '—'}
     </span>
   );
