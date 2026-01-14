@@ -13,8 +13,9 @@ const supabase = createClientSupabase();
     setError(null);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${window.location.origin}/chef/reset-password`,
+  redirectTo: `${window.location.origin}/auth/callback`,
 });
+
 
 
     if (error) return setError(error.message);
