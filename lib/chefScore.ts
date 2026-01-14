@@ -1,21 +1,40 @@
 export type ChefProfile = {
+  // ✅ compat nom (ancien + nouveau)
   name?: string;
+  firstName?: string;
+  lastName?: string;
+
+  // ✅ compat contacts
   phone?: string;
+  email?: string;
+
+  // ✅ compat localisation
   city?: string;
+  baseCity?: string;
   country?: string;
+
   bio?: string;
   yearsExperience?: number | null;
+
   cuisines?: string[];
   specialties?: string[];
   languages?: string[];
+
+  // ✅ compat liens
   instagram?: string;
+  instagramUrl?: string;
   website?: string;
+  websiteUrl?: string;
+
   portfolioUrl?: string;
+
+  // ✅ compat avatar
   avatarUrl?: string;
-  images?: string[]; 
+  photoUrl?: string;
+
+  images?: string[];
 
   // ✅ mobilité (nouveau + compat)
-  baseCity?: string;
   travelRadiusKm?: number | null;
   internationalMobility?: boolean;
 
@@ -26,6 +45,15 @@ export type ChefProfile = {
     coverageZones?: string[];
   };
 };
+
+function getName(p: ChefProfile) {
+  const n = (p.name ?? '').trim();
+  if (n) return n;
+
+  const fn = (p.firstName ?? '').trim();
+  const ln = (p.lastName ?? '').trim();
+  return `${fn} ${ln}`.trim();
+}
 
 function getBaseCity(p: ChefProfile) {
   return (
@@ -59,11 +87,22 @@ function hasCoverageZones(p: ChefProfile) {
   return Array.isArray(z) && z.filter(Boolean).length > 0;
 }
 
+function hasAvatar(p: ChefProfile) {
+  return !!(p.avatarUrl || p.photoUrl)?.trim();
+}
+
+function hasSocialOrWebsite(p: ChefProfile) {
+  const insta = (p.instagramUrl ?? p.instagram ?? '').trim();
+  const web = (p.websiteUrl ?? p.website ?? '').trim();
+  return !!insta || !!web;
+}
+
 export function computeChefScore(p: ChefProfile) {
   const baseCity = getBaseCity(p);
   const radius = getRadius(p);
   const international = getInternational(p);
-const imgCount = (p.images ?? []).filter(Boolean).length;
+
+  const imgCount = (p.images ?? []).filter(Boolean).length;
 
   const mobilityOk =
     !!baseCity ||
@@ -72,20 +111,28 @@ const imgCount = (p.images ?? []).filter(Boolean).length;
     hasCoverageZones(p);
 
   const rules = [
-    { key: 'name', ok: !!p.name?.trim(), weight: 1 },
+    // ✅ name tolérant (name OU first+last)
+    { key: 'name', ok: !!getName(p), weight: 1 },
+
     { key: 'phone', ok: !!p.phone?.trim(), weight: 1 },
 
-    // 🔁 city reste mais on le rend tolérant (baseCity/location)
+    // 🔁 city reste mais tolérant (baseCity/location)
     { key: 'city', ok: !!baseCity, weight: 1 },
 
     { key: 'bio', ok: (p.bio?.trim()?.length ?? 0) >= 30, weight: 2 },
     { key: 'cuisines', ok: (p.cuisines?.length ?? 0) >= 1, weight: 1 },
     { key: 'specialties', ok: (p.specialties?.length ?? 0) >= 1, weight: 1 },
     { key: 'languages', ok: (p.languages?.length ?? 0) >= 1, weight: 1 },
-{ key: 'portfolio', ok: imgCount >= 5, weight: 2 },
-    // ✅ NOUVEAU : mobilité/logistique
-    // poids 1 ou 2 selon l’importance que tu veux lui donner
+
+    // ✅ portfolio = images (>=5)
+    { key: 'portfolio', ok: imgCount >= 5, weight: 2 },
+
+    // ✅ mobilité/logistique
     { key: 'mobility', ok: mobilityOk, weight: 1 },
+
+    // (optionnel) tu peux l’activer plus tard si tu veux pousser le premium
+    // { key: 'avatar', ok: hasAvatar(p), weight: 1 },
+    // { key: 'links', ok: hasSocialOrWebsite(p), weight: 1 },
   ];
 
   const total = rules.reduce((s, r) => s + r.weight, 0);
