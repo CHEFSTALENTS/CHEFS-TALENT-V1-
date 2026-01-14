@@ -1,4 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from "next/server";
+
+const PUBLIC_PATHS = [
+  "/chef/login",
+  "/chef/signup",
+  "/chef/forgot-password",
+  "/chef/reset-password",
+  "/auth/callback",
+];
 
 function redirectToAccess(req: NextRequest, area: 'admin' | 'public') {
   const url = req.nextUrl.clone();
