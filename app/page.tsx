@@ -29,6 +29,10 @@ export default function Home() {
                 sélectionnés pour des <br />
                 <span className="italic text-stone-500">lieux d’exception.</span>
               </h1>
+              
+<p className="text-sm text-stone-500 mt-6">
+  Repas privés, séjours en résidence, yachts, remplacements longue durée.
+</p>
 
               <p className="text-lg md:text-xl text-stone-600 font-light max-w-lg leading-relaxed mb-12">
                 Chef Talents met en relation des chefs privés soigneusement sélectionnés avec des conciergeries, des résidences et des clients particuliers exigeant constance, discrétion et excellence opérationnelle, partout en Europe.
@@ -107,7 +111,7 @@ export default function Home() {
                 <div>
                   <h4 className="font-serif text-xl mb-6">La discrétion comme principe</h4>
                   <p className="text-stone-600 font-light leading-relaxed">
-                    Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics. Les références sont partagées de manière sélective.
+                    Nos chefs interviennent dans les villas, chalets, yachts à travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics. Les références sont partagées de manière sélective.
                   </p>
                 </div>
               </div>
@@ -132,44 +136,6 @@ export default function Home() {
   </Reveal>
 </div>
 
-          <div className="md:col-span-6 space-y-16">
-            <Reveal>
-              <Marker />
-              <h2 className="text-4xl md:text-5xl font-serif mb-8 text-stone-900 font-normal leading-tight">
-                Deux niveaux de sélection, selon vos exigences.
-              </h2>
-              <p className="text-lg text-stone-500 font-light leading-relaxed max-w-md">
-                Tous les chefs de Chef Talents ne sont pas éligibles à la Sélection Select.
-              </p>
-            </Reveal>
-
-            <div className="space-y-0 border-t border-stone-200">
-              <ExpandableItem
-                title="Sélection publique"
-                content="Une sélection de chefs privés validés, accessible aux clients particuliers pour des prestations ponctuelles ou récurrentes."
-              />
-              <ExpandableItem
-                title="Sélection "
-                subtitle="Réservée aux conciergeries"
-                isDefaultOpen
-                content="Une sélection avancée, destinée aux conciergeries et propriétés, regroupant des chefs approuvés pour des missions à forts enjeux, de longue durée ou récurrentes."
-              />
-            </div>
-          </div>
-        </div>
-      </Section>
-    {/* Visual Break – Chalet with CTA */}
-<section className="relative bg-paper">
-  <Reveal>
-    <div className="relative h-[70vh] md:h-[85vh] overflow-hidden flex items-center justify-center">
-      
-      <Image
-        src="/images/editorial/chalet-cuisine.png"
-        alt="Cuisine ouverte dans un chalet avec vue montagne"
-        fill
-        className="object-cover"
-        priority
-      />
 
       {/* Overlay léger */}
       <div className="absolute inset-0 bg-stone-900/35" />
@@ -232,6 +198,46 @@ export default function Home() {
   );
 }
 
+          <div className="md:col-span-6 space-y-16">
+            <Reveal>
+              <Marker />
+              <h2 className="text-4xl md:text-5xl font-serif mb-8 text-stone-900 font-normal leading-tight">
+                Deux niveaux de sélection, selon vos exigences.
+              </h2>
+              <p className="text-lg text-stone-500 font-light leading-relaxed max-w-md">
+                Tous les chefs de Chef Talents ne sont pas éligibles à la Sélection Select.
+              </p>
+            </Reveal>
+
+            <div className="space-y-0 border-t border-stone-200">
+              <ExpandableItem
+                title="Sélection publique"
+                content="Une sélection de chefs privés validés, accessible aux clients particuliers pour des prestations ponctuelles ou récurrentes."
+              />
+              <ExpandableItem
+                title="Sélection "
+                subtitle="Réservée aux conciergeries"
+                isDefaultOpen
+                content="Une sélection avancée, destinée aux conciergeries et propriétés, regroupant des chefs approuvés pour des missions à forts enjeux, de longue durée ou récurrentes."
+              />
+            </div>
+          </div>
+        </div>
+      </Section>
+
+    {/* Visual Break – Chalet with CTA */}
+<section className="relative bg-paper">
+  <Reveal>
+    <div className="relative h-[70vh] md:h-[85vh] overflow-hidden flex items-center justify-center">
+      
+      <Image
+        src="/images/editorial/chalet-cuisine.png"
+        alt="Cuisine ouverte dans un chalet avec vue montagne"
+        fill
+        className="object-cover"
+        priority
+      />
+      
 // --- Sub-components for Home Page ---
 
 const InteractiveCard = ({ theme, icon: Icon, title, subtitle, description, link, cta }: any) => {
