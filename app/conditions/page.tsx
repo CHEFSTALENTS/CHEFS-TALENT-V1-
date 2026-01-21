@@ -82,171 +82,169 @@ export default function ConditionsPage() {
 
           {/* CGU */}
           <div id="cgu" className="space-y-12 mb-32 scroll-mt-32">
-            <h2 className="text-3xl font-serif text-stone-900">
-              {isFR ? 'Conditions Générales d’Utilisation' : 'Terms of Use'}
-            </h2>
+  <h2 className="text-3xl font-serif text-stone-900">
+    Conditions Générales d’Utilisation
+  </h2>
 
-            <div className="space-y-6 text-stone-600 font-light leading-relaxed">
-              {isFR ? (
-                <>
-                  <p>
-                    Chef Talents est une plateforme de mise en relation entre des chefs
-                    indépendants et des clients privés ou professionnels.
-                  </p>
+  <div className="space-y-8 text-stone-600 font-light leading-relaxed">
 
-                  <p>
-                    L’utilisation du site implique l’acceptation pleine et entière des présentes
-                    Conditions Générales d’Utilisation.
-                  </p>
+    <p><strong>1. Objet</strong></p>
+    <p>
+      Les présentes Conditions Générales d’Utilisation (ci-après les « CGU ») ont pour objet
+      de définir les modalités d’accès et d’utilisation du site Chef Talents (ci-après la « Plateforme »).
+    </p>
+    <p>
+      La Plateforme a pour vocation de mettre en relation des chefs indépendants,
+      des clients privés, des conciergeries, sociétés ou gestionnaires de biens,
+      dans le cadre de prestations culinaires privées, ponctuelles ou de longue durée.
+    </p>
 
-                  <p>
-                    Chef Talents agit exclusivement en tant qu’intermédiaire et tiers de confiance.
-                    La plateforme n’emploie pas les chefs et ne fournit aucune prestation culinaire
-                    directe.
-                  </p>
+    <p><strong>2. Accès à la Plateforme</strong></p>
+    <p>
+      L’accès à la Plateforme est libre pour les visiteurs. Certaines fonctionnalités nécessitent
+      la création d’un compte et la fourniture d’informations exactes et à jour.
+    </p>
+    <p>
+      Chef Talents se réserve le droit de refuser, suspendre ou supprimer l’accès
+      à tout utilisateur ne respectant pas les présentes CGU.
+    </p>
 
-                  <p>
-                    Les chefs référencés sont des professionnels indépendants, seuls responsables
-                    de leurs obligations légales, sociales, fiscales et assurantielles.
-                  </p>
+    <p><strong>3. Rôle de Chef Talents</strong></p>
+    <p>
+      Chef Talents agit exclusivement en tant qu’intermédiaire et tiers de confiance.
+      La société ne fournit aucune prestation culinaire directe, n’emploie pas les chefs
+      et n’intervient pas dans l’exécution matérielle des prestations.
+    </p>
+    <p>
+      Les chefs sont des professionnels indépendants, responsables de leurs obligations
+      légales, sociales, fiscales et assurantielles.
+    </p>
 
-                  <p>
-                    L’ensemble des contenus du site (textes, images, marques, logos) est protégé
-                    par le droit de la propriété intellectuelle.
-                  </p>
+    <p><strong>4. Comptes chefs</strong></p>
+    <p>
+      L’inscription sur la Plateforme ne vaut ni validation automatique, ni garantie de mission.
+      Chef Talents se réserve le droit de sélectionner, refuser ou suspendre un compte chef.
+    </p>
 
-                  <p>
-                    Les données personnelles sont traitées conformément à la réglementation en vigueur.
-                  </p>
+    <p><strong>5. Exactitude des informations</strong></p>
+    <p>
+      Chaque utilisateur s’engage à fournir des informations exactes, sincères et à jour.
+      Chef Talents ne saurait être tenu responsable des conséquences liées à des informations erronées.
+    </p>
 
-                  <p>
-                    Les présentes CGU sont soumises au droit français.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>
-                    Chef Talents is a matchmaking platform connecting independent private chefs
-                    with private and professional clients.
-                  </p>
+    <p><strong>6. Propriété intellectuelle</strong></p>
+    <p>
+      L’ensemble des contenus présents sur la Plateforme est protégé par le droit
+      de la propriété intellectuelle. Toute reproduction non autorisée est interdite.
+    </p>
 
-                  <p>
-                    Access to and use of the website implies full acceptance of these Terms of Use.
-                  </p>
+    <p><strong>7. Données personnelles</strong></p>
+    <p>
+      Les données personnelles sont traitées conformément au RGPD.
+      Les utilisateurs peuvent exercer leurs droits en écrivant à :
+      <a href="mailto:contact@chefstalents.com" className="underline ml-1">
+        contact@chefstalents.com
+      </a>
+    </p>
 
-                  <p>
-                    Chef Talents acts solely as an intermediary and trusted third party.
-                    It does not employ chefs and does not provide culinary services directly.
-                  </p>
+    <p><strong>8. Responsabilité</strong></p>
+    <p>
+      Chef Talents ne saurait être tenu responsable des prestations réalisées par les chefs,
+      ni des litiges pouvant survenir entre chefs et clients.
+    </p>
 
-                  <p>
-                    Listed chefs operate as independent professionals and are solely responsible
-                    for their legal, tax, social, and insurance obligations.
-                  </p>
+    <p><strong>9. Droit applicable</strong></p>
+    <p>
+      Les présentes CGU sont soumises au droit français.
+      Tout litige relève de la compétence des tribunaux français.
+    </p>
 
-                  <p>
-                    All content on the website (texts, images, brands, logos) is protected by
-                    intellectual property law.
-                  </p>
-
-                  <p>
-                    Personal data is processed in accordance with applicable regulations.
-                  </p>
-
-                  <p>
-                    These Terms of Use are governed by French law.
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
+  </div>
+</div>
           {/* CGV */}
           <div id="cgv" className="space-y-12 mb-32 scroll-mt-32">
-            <h2 className="text-3xl font-serif text-stone-900">
-              {isFR ? 'Conditions Générales de Vente' : 'Terms of Sale'}
-            </h2>
+  <h2 className="text-3xl font-serif text-stone-900">
+    Conditions Générales de Vente
+  </h2>
 
-            <div className="space-y-6 text-stone-600 font-light leading-relaxed">
-              {isFR ? (
-                <>
-                  <p>
-                    Chef Talents intervient en tant que tiers de confiance dans la mise en relation,
-                    la coordination et le cadre contractuel des prestations réalisées par des chefs
-                    indépendants.
-                  </p>
+  <div className="space-y-8 text-stone-600 font-light leading-relaxed">
 
-                  <p>
-                    Pour les prestations ponctuelles (One Shot ou missions de 1 à 3 jours),
-                    le règlement de 100 % de la prestation est exigé après sélection du chef.
-                    Sans règlement, la prestation n’est pas confirmée.
-                  </p>
+    <p><strong>1. Champ d’application</strong></p>
+    <p>
+      Les présentes Conditions Générales de Vente s’appliquent à toute commande passée
+      via la Plateforme Chef Talents par un client privé ou professionnel.
+    </p>
 
-                  <p>
-                    Pour les missions de longue durée (supérieures à une semaine),
-                    seuls les frais de service Chef Talents sont facturés à la réservation.
-                    Ces frais valident le démarrage de la mission et le cadre contractuel.
-                  </p>
+    <p><strong>2. Nature de la prestation</strong></p>
+    <p>
+      Chef Talents intervient en qualité de tiers de confiance, assurant la mise en relation,
+      la coordination et la sécurisation du cadre contractuel et financier.
+    </p>
+    <p>
+      Chef Talents n’est pas partie au contrat de prestation culinaire,
+      lequel est conclu directement entre le client et le chef.
+    </p>
 
-                  <p>
-                    La rémunération du chef pour les missions longues est définie séparément
-                    selon un calendrier convenu entre les parties.
-                  </p>
+    <p><strong>3. Processus de réservation</strong></p>
+    <p>
+      Le processus comprend la demande client, l’analyse du besoin,
+      la proposition de chefs, le choix du chef, la validation des conditions
+      et le paiement déclenchant la confirmation de la mission.
+    </p>
 
-                  <p>
-                    En cas d’annulation par le client, les frais de service ne sont pas remboursables.
-                    Des frais supplémentaires peuvent s’appliquer selon le délai d’annulation.
-                  </p>
+    <p><strong>4. Modalités de paiement</strong></p>
 
-                  <p>
-                    En cas d’indisponibilité du chef, Chef Talents s’efforce de proposer une
-                    solution alternative équivalente, sans obligation de résultat.
-                  </p>
+    <p><strong>4.1 Prestations ponctuelles (One Shot – 1 à 3 jours)</strong></p>
+    <p>
+      Le règlement de 100 % du montant est exigé après sélection du chef.
+      Sans paiement, la prestation n’est pas confirmée et le chef n’est pas réservé.
+    </p>
 
-                  <p>
-                    Les présentes CGV sont soumises au droit français.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>
-                    Chef Talents acts as a trusted third party for the coordination and contractual
-                    framework of services provided by independent chefs.
-                  </p>
+    <p><strong>4.2 Missions de longue durée</strong></p>
+    <p>
+      Pour les missions supérieures à une semaine, seuls les frais de service
+      Chef Talents sont facturés à la réservation.
+    </p>
+    <p>
+      Ces frais valident le démarrage de la mission, le cadre contractuel
+      et les conditions générales de collaboration.
+    </p>
+    <p>
+      La rémunération du chef fait l’objet d’un accord distinct.
+    </p>
 
-                  <p>
-                    For short-term services (One Shot or 1–3 day missions),
-                    full payment is required after chef selection to confirm the booking.
-                  </p>
+    <p><strong>5. Annulation – Client</strong></p>
+    <p>
+      Les frais de service Chef Talents ne sont pas remboursables.
+      Toute annulation tardive peut entraîner la facturation partielle
+      ou totale de la prestation selon les engagements pris.
+    </p>
 
-                  <p>
-                    For long-term missions (over one week),
-                    only Chef Talents service fees are invoiced at booking.
-                    These fees validate the mission start and contractual framework.
-                  </p>
+    <p><strong>6. Annulation – Chef / indisponibilité</strong></p>
+    <p>
+      En cas d’indisponibilité du chef, Chef Talents s’efforce de proposer
+      un remplacement équivalent. L’obligation est une obligation de moyens.
+    </p>
 
-                  <p>
-                    Chef remuneration for long-term missions is defined separately
-                    according to an agreed schedule.
-                  </p>
+    <p><strong>7. Responsabilité financière</strong></p>
+    <p>
+      Chef Talents agit comme intermédiaire de paiement et tiers de confiance.
+      Toute contestation doit être signalée dans un délai raisonnable après la mission.
+    </p>
 
-                  <p>
-                    In case of client cancellation, service fees are non-refundable.
-                    Additional charges may apply depending on notice period.
-                  </p>
+    <p><strong>8. Force majeure</strong></p>
+    <p>
+      Chef Talents ne saurait être tenu responsable en cas de force majeure.
+    </p>
 
-                  <p>
-                    If a chef becomes unavailable, Chef Talents will attempt to provide
-                    an equivalent replacement, without obligation of result.
-                  </p>
+    <p><strong>9. Droit applicable</strong></p>
+    <p>
+      Les présentes CGV sont soumises au droit français.
+      Tout litige relève de la compétence exclusive des tribunaux français.
+    </p>
 
-                  <p>
-                    These Terms of Sale are governed by French law.
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
+  </div>
+</div>
 
           {/* Contact */}
           <div id="contact" className="border-t border-stone-200 pt-16 scroll-mt-32">
