@@ -25,7 +25,7 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
       <header className="fixed top-0 z-50 w-full border-b border-stone-200/50 bg-paper/80 backdrop-blur-md transition-all duration-300">
         <div className="max-w-[100rem] mx-auto flex h-24 items-center justify-between px-6 md:px-12">
           <Link href="/" className="flex items-center gap-3 group">
-            <span className="font-serif text-lg tracking-tight font-medium text-stone-900">CHEF TALENTS</span>
+            <span className="font-serif text-lg tracking-tight font-medium text-stone-900">CHEFS TALENTS</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -108,7 +108,7 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div>
             <h4 className="text-stone-300 font-medium mb-8 uppercase text-[10px] tracking-[0.2em]">Légal</h4>
             <ul className="space-y-4 text-sm font-light">
-              <li><Link href="/terms" className="hover:text-paper transition-colors">CGU & CGV</conditions></li>
+              <li><Link href="/conditions" className="hover:text-paper transition-colors">CGU & CGV</Link></li>
               <li><Link href="/privacy" className="hover:text-paper transition-colors">Confidentialité</Link></li>
               <li><Link href="/legal" className="hover:text-paper transition-colors">Mentions Légales</Link></li>
             </ul>
