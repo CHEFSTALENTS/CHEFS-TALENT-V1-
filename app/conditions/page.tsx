@@ -171,76 +171,112 @@ export default function ConditionsPage() {
 
     <p><strong>1. Champ d’application</strong></p>
     <p>
-      Les présentes Conditions Générales de Vente s’appliquent à toute commande passée
-      via la Plateforme Chef Talents par un client privé ou professionnel.
+      Les présentes Conditions Générales de Vente (ci-après les « CGV ») régissent toute commande passée via la plateforme Chefs Talents par un client particulier ou professionnel (ci-après le « Client »).
+Toute validation de commande implique l’acceptation pleine et entière des présentes CGV, sans réserve.
     </p>
 
-    <p><strong>2. Nature de la prestation</strong></p>
+    <p><strong>2. Nature et rôle de Chefs Talents </strong></p>
     <p>
-      Chef Talents intervient en qualité de tiers de confiance, assurant la mise en relation,
-      la coordination et la sécurisation du cadre contractuel et financier.
-    </p>
+      Chef Talents intervient exclusivement en tant que tiers de confiance et intermédiaire dans la mise en relation entre le Client et un chef indépendant.
+ </p>
     <p>
-      Chef Talents n’est pas partie au contrat de prestation culinaire,
-      lequel est conclu directement entre le client et le chef.
+      
+À ce titre, Chef Talents assure notamment :
+          <p>
+	•	l’analyse du besoin exprimé par le Client,
+	•	la sélection et la présentation de profils adaptés,
+	•	la coordination du processus de réservation,
+	•	la sécurisation du cadre contractuel et financier.
+    <p>
+Chef Talents n’est pas partie au contrat de prestation culinaire, lequel est conclu directement entre le Client et le chef sélectionné.
+    <p>
+Les chefs référencés sont des professionnels indépendants, seuls responsables de l’exécution de leurs prestations.
+  
     </p>
 
     <p><strong>3. Processus de réservation</strong></p>
     <p>
-      Le processus comprend la demande client, l’analyse du besoin,
-      la proposition de chefs, le choix du chef, la validation des conditions
-      et le paiement déclenchant la confirmation de la mission.
+      Le processus de réservation s’effectue selon les étapes suivantes :
+       <p>
+	1.	Le Client soumet une demande détaillée via la Plateforme.
+	2.	Chef Talents analyse le besoin et les contraintes.
+	3.	Une sélection de chefs disponibles est proposée.
+	4.	Le Client choisit le chef.
+	5.	Les conditions opérationnelles et financières sont validées.
+	6.	Le paiement requis déclenche la confirmation de la mission.
+ <p>
+Aucune mission n’est considérée comme confirmée tant que le paiement applicable n’a pas été effectué.
     </p>
 
     <p><strong>4. Modalités de paiement</strong></p>
 
-    <p><strong>4.1 Prestations ponctuelles (One Shot – 1 à 3 jours)</strong></p>
+    <p><strong>4.1 Prestations ponctuelles ( 1 à 3 jours)</strong></p>
     <p>
-      Le règlement de 100 % du montant est exigé après sélection du chef.
-      Sans paiement, la prestation n’est pas confirmée et le chef n’est pas réservé.
+    Pour toute prestation courte ou événementielle :
+          <p>
+
+	•	le règlement de 100 % du montant total de la prestation est exigé,
+	•	le paiement intervient après sélection du chef,
+	•	en l’absence de paiement, le chef n’est pas réservé et la mission n’est pas confirmée.
+    <p>
+Ce règlement permet de sécuriser l’engagement du chef et le cadre de la prestation.
     </p>
 
     <p><strong>4.2 Missions de longue durée</strong></p>
     <p>
-      Pour les missions supérieures à une semaine, seuls les frais de service
-      Chef Talents sont facturés à la réservation.
-    </p>
+      Pour les missions supérieures à une semaine : 
+     <p>
+  •	seuls les frais de service Chef Talents sont facturés à la réservation,
+	•	ces frais permettent de valider :
+	     •	le démarrage de la mission,
+	     •	le cadre contractuel,
+    	•	les conditions générales de collaboration.
+ <p>
+La rémunération du chef fait l’objet d’un accord distinct, selon un calendrier défini directement entre le Client et le chef, éventuellement facilité par Chefs Talents
+
     <p>
-      Ces frais valident le démarrage de la mission, le cadre contractuel
-      et les conditions générales de collaboration.
-    </p>
-    <p>
-      La rémunération du chef fait l’objet d’un accord distinct.
     </p>
 
     <p><strong>5. Annulation – Client</strong></p>
     <p>
-      Les frais de service Chef Talents ne sont pas remboursables.
-      Toute annulation tardive peut entraîner la facturation partielle
-      ou totale de la prestation selon les engagements pris.
+     Les conditions d’annulation dépendent de la nature de la mission, de sa durée et du délai d’annulation.
+
+Sauf stipulation contraire communiquée avant validation :
+         <p>
+	•	les frais de service Chefs Talents ne sont pas remboursables,
+	•	toute annulation tardive peut entraîner la facturation partielle ou totale de la prestation, conformément aux engagements pris avec le chef.
+  <p>
+Les conditions précises sont toujours communiquées au Client avant confirmation.
     </p>
 
     <p><strong>6. Annulation – Chef / indisponibilité</strong></p>
     <p>
-      En cas d’indisponibilité du chef, Chef Talents s’efforce de proposer
-      un remplacement équivalent. L’obligation est une obligation de moyens.
+     En cas d’indisponibilité du chef (désistement, empêchement, force majeure) :
+        <p>
+	•	Chef Talents s’efforce de proposer un chef de remplacement équivalent,
+	•	à défaut, les modalités de remboursement ou d’ajustement sont étudiées au cas par cas.
+  <p>
+Chef Talents est tenu à une obligation de moyens, et non de résultat.
     </p>
 
-    <p><strong>7. Responsabilité financière</strong></p>
+    <p><strong>7. Rôle de tiers de confiance et responsabilité financière</strong></p>
     <p>
-      Chef Talents agit comme intermédiaire de paiement et tiers de confiance.
-      Toute contestation doit être signalée dans un délai raisonnable après la mission.
+      Chefs Talents peut intervenir comme intermédiaire de paiement afin de sécuriser les flux financiers liés à la mission.
+
+Toute contestation relative à l’exécution de la prestation devra être signalée par le Client dans un délai raisonnable après la mission, afin de permettre une analyse appropriée.
+
+Chefs Talents ne saurait être tenu responsable des litiges liés à l’exécution matérielle de la prestation.
     </p>
 
     <p><strong>8. Force majeure</strong></p>
     <p>
-      Chef Talents ne saurait être tenu responsable en cas de force majeure.
+Chef Talents ne pourra être tenu responsable en cas de non-exécution ou de retard résultant d’un événement de force majeure, tel que défini par la jurisprudence française (catastrophe naturelle, restrictions administratives, événements sanitaires, etc.).
     </p>
 
-    <p><strong>9. Droit applicable</strong></p>
+    <p><strong>9. Droit applicable et juridiction compétente</strong></p>
     <p>
-      Les présentes CGV sont soumises au droit français.
-      Tout litige relève de la compétence exclusive des tribunaux français.
+     Tout litige relatif à leur interprétation ou à leur exécution relève de la compétence exclusive des tribunaux français.
+
     </p>
 
   </div>
