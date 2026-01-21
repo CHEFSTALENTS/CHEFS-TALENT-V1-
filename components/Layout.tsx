@@ -108,7 +108,7 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div>
             <h4 className="text-stone-300 font-medium mb-8 uppercase text-[10px] tracking-[0.2em]">Légal</h4>
             <ul className="space-y-4 text-sm font-light">
-              <li><Link href="/terms" className="hover:text-paper transition-colors">CGU & CGV</Link></li>
+              <li><Link href="/terms" className="hover:text-paper transition-colors">CGU & CGV</conditions></li>
               <li><Link href="/privacy" className="hover:text-paper transition-colors">Confidentialité</Link></li>
               <li><Link href="/legal" className="hover:text-paper transition-colors">Mentions Légales</Link></li>
             </ul>
