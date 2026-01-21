@@ -8,10 +8,12 @@ import { Button, Section, Reveal, Marker, Label } from '../components/ui';
 import { Layout } from '../components/Layout';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/** ✅ CONFIG CONTACT */
+/** CONFIG CONTACT */
 const SUPPORT_EMAIL = 'contact@chefstalents.com';
-const WHATSAPP_NUMBER_E164 = '33756827612'; // ex: 33623846170 (sans +)
-const WHATSAPP_PREFILL = encodeURIComponent("Bonjour, j'ai une demande Chef Talents. Pouvez-vous m’aider ?");
+const WHATSAPP_NUMBER_E164 = '33756827612'; // ⚠️ string, sans +
+const WHATSAPP_PREFILL = encodeURIComponent(
+  "Bonjour,\n\nJ’ai une demande Chef Talents.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci."
+);
 
 export default function Home() {
   const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
@@ -23,9 +25,7 @@ export default function Home() {
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${WHATSAPP_PREFILL}`;
 
   return (
-    // ... le reste inchangé
-  );
-}
+    <Layout>
   const whatsappHref = `https://wa.me/${+33756827612}?text=${WHATSAPP_PREFILL}`;
 
   return (
