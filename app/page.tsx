@@ -52,11 +52,6 @@ export default function Home() {
                 partout en Europe.
               </p>
 
-              {/* ✅ phrase concrète */}
-              <p className="text-sm text-stone-500 font-light mb-12">
-                Dîners privés • séjours en résidence • yachts • événements • remplacements longue durée
-              </p>
-
               {/* ✅ CTA simplifiés : 1 principal + 1 secondaire */}
               <div className="flex flex-col sm:flex-row gap-6">
                 <Link href="/request">
@@ -140,13 +135,6 @@ export default function Home() {
                   accompagnons chaque mission avec rigueur.
                 </p>
               </div>
-
-              {/* ✅ mini how it works */}
-              <ul className="text-stone-600 font-light space-y-2 mb-16">
-                <li>• Vous décrivez votre besoin (lieu, dates, style, budget)</li>
-                <li>• Nous sélectionnons les chefs disponibles et pertinents</li>
-                <li>• Vous choisissez, nous coordonnons (service, logistique, continuité)</li>
-              </ul>
 
               <div className="grid md:grid-cols-2 gap-12 border-t border-stone-200 pt-12">
                 <div>
@@ -263,7 +251,7 @@ export default function Home() {
                 title="Sélection"
                 subtitle="Réservée aux conciergeries"
                 isDefaultOpen
-                content="Une sélection avancée, destinée aux conciergeries et propriétés, regroupant des chefs approuvés pour des missions à forts enjeux, de longue durée ou récurrentes."
+                content="Une sélection avancée,  regroupant des chefs approuvés pour des missions à forts enjeux, de longue durée ou récurrentes."
               />
             </div>
           </div>
@@ -336,29 +324,58 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-12 border-t border-stone-200">
-              <ExpandableItem
-                title="Que se passe-t-il après l’envoi de ma demande ?"
-                isDefaultOpen
-                content="Nous analysons votre brief, puis nous revenons vers vous avec une sélection de chefs disponibles et pertinents. Vous choisissez, et nous coordonnons ensuite la mission."
-              />
-              <ExpandableItem
-                title="Est-ce que je choisis le chef ?"
-                content="Oui. Nous proposons une sélection curatée et vous choisissez le profil qui correspond le mieux à votre style, vos contraintes et vos attentes."
-              />
-              <ExpandableItem
-                title="Quand paye-t-on ?"
-                content="Le paiement dépend du type de mission. Pour les dates uniques, le règlement se fait une fois le chef sélectionné. Pour les missions longues, nous facturons les frais de service à la réservation puis le reste selon le planning convenu."
-              />
-              <ExpandableItem
-                title="Et si le chef ne convient pas / se désiste ?"
-                content="Notre rôle est d’assurer la continuité. Si un remplacement est nécessaire, nous relançons la recherche et proposons une alternative adaptée, sans vous laisser seul dans l’urgence."
-              />
-              <ExpandableItem
-                title="Intervenez-vous hors de France ?"
-                content="Oui, selon les profils et les disponibilités. Certains chefs sont mobiles à l’international et habitués aux standards UHNW."
-              />
-            </div>
+           <div className="mt-12 border-t border-stone-200">
+  <ExpandableItem
+    title="Que se passe-t-il après l’envoi de ma demande ?"
+    isDefaultOpen
+    content="Nous analysons votre brief (lieu, dates, attentes, budget), puis nous revenons vers vous avec une sélection de chefs disponibles et pertinents. Vous validez un profil, et nous coordonnons ensuite l’ensemble de la mission."
+  />
+
+  <ExpandableItem
+    title="Est-ce que je choisis le chef ?"
+    content="Oui. Chefs Talents fonctionne comme un intermédiaire curateur : nous présélectionnons des profils adaptés, et vous choisissez celui qui correspond le mieux à votre style, vos contraintes et votre niveau d’exigence."
+  />
+
+  <ExpandableItem
+    title="Quand le paiement est-il effectué ?"
+    content="Le paiement dépend du type de mission. Pour une prestation ponctuelle (date unique), le règlement intervient une fois le chef sélectionné pour confirmer la mission. Pour les missions longues (résidence, yacht, séjour), seuls les frais de service sont dus à la réservation."
+  />
+
+  <ExpandableItem
+    title="Pourquoi des frais de service sont-ils demandés ?"
+    content="Les frais de service couvrent la sélection des chefs, la coordination, la sécurisation de la mission et le suivi opérationnel. Ils permettent de garantir fiabilité, continuité et réactivité, notamment sur des missions à forts enjeux."
+  />
+
+  <ExpandableItem
+    title="Que se passe-t-il en cas d’annulation par le client ?"
+    content="Les conditions d’annulation dépendent du délai et de l’état d’avancement de la mission. En cas d’annulation anticipée, un remboursement partiel peut être envisagé. Les frais de service, correspondant au travail engagé, sont généralement non remboursables."
+  />
+
+  <ExpandableItem
+    title="Que se passe-t-il si le chef annule ou ne peut pas assurer la mission ?"
+    content="Notre rôle est précisément d’éviter toute rupture. En cas d’indisponibilité du chef, nous activons immédiatement une solution de remplacement avec un profil équivalent. Si aucun remplacement n’est possible, les conditions de remboursement prévues s’appliquent."
+  />
+
+  <ExpandableItem
+    title="Les chefs sont-ils vérifiés et assurés ?"
+    content="Oui. Les chefs référencés sont sélectionnés pour leur expérience, leurs références et leurs certifications. Les éléments nécessaires (hygiène, assurances, statut professionnel) sont vérifiés lors de leur intégration."
+  />
+
+  <ExpandableItem
+    title="Intervenez-vous hors de France ?"
+    content="Oui. Certains chefs sont mobiles à l’international et habitués aux standards UHNW. Les missions à l’étranger sont étudiées au cas par cas selon la destination et les contraintes logistiques."
+  />
+
+  <ExpandableItem
+    title="Que se passe-t-il si la prestation ne correspond pas aux attentes ?"
+    content="Chaque mission est préparée en amont pour éviter toute mauvaise surprise. Si un ajustement est nécessaire pendant la prestation, nous restons disponibles afin d’intervenir rapidement et trouver une solution adaptée."
+  />
+
+  <ExpandableItem
+    title="La prestation est-elle confidentielle ?"
+    content="Absolument. La discrétion est un principe fondamental de Chefs Talents. Les lieux, les clients, les chefs et les missions ne sont jamais exposés publiquement."
+  />
+</div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link href="/request">
