@@ -86,7 +86,7 @@ export default function ConditionsPage() {
         <p className="text-stone-900 font-medium">1. Objet</p>
         <p>
           Les présentes Conditions Générales d’Utilisation (ci-après les « CGU ») ont pour objet de définir les modalités
-          d’accès et d’utilisation du site Chef Talents (ci-après la « Plateforme »).
+          d’accès et d’utilisation du site Chefs Talents (ci-après la « Plateforme »).
         </p>
         <p>
           La Plateforme met en relation : (i) des chefs indépendants, (ii) des clients privés, (iii) des conciergeries,
@@ -97,12 +97,12 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">2. Définitions</p>
         <ul className="list-disc pl-6 space-y-2">
-          <li><strong>Plateforme</strong> : le site Chef Talents et ses fonctionnalités.</li>
+          <li><strong>Plateforme</strong> : le site Chefs Talents et ses fonctionnalités.</li>
           <li><strong>Utilisateur</strong> : toute personne naviguant ou utilisant la Plateforme.</li>
           <li><strong>Client</strong> : utilisateur déposant une demande de prestation (particulier ou professionnel).</li>
           <li><strong>Chef</strong> : professionnel indépendant référencé ou candidat au référencement.</li>
           <li><strong>Demande</strong> : brief soumis par un Client (lieu, dates, format, budget, contraintes).</li>
-          <li><strong>Mise en relation</strong> : présentation, introduction, transmission d’un profil ou de coordonnées, ou tout échange initié via Chef Talents.</li>
+          <li><strong>Mise en relation</strong> : présentation, introduction, transmission d’un profil ou de coordonnées, ou tout échange initié via Chefs Talents.</li>
         </ul>
       </section>
 
@@ -114,7 +114,7 @@ export default function ConditionsPage() {
           d’informations exactes, complètes et à jour.
         </p>
         <p>
-          Chef Talents se réserve le droit de refuser, suspendre ou supprimer l’accès à tout Utilisateur ne respectant pas les
+          Chefs Talents se réserve le droit de refuser, suspendre ou supprimer l’accès à tout Utilisateur ne respectant pas les
           présentes CGU ou portant atteinte au bon fonctionnement de la Plateforme.
         </p>
       </section>
@@ -123,19 +123,19 @@ export default function ConditionsPage() {
         <p className="text-stone-900 font-medium">4. Création de compte & sécurité</p>
         <p>
           L’Utilisateur est responsable de la confidentialité de ses identifiants et de toute activité effectuée depuis son
-          compte. En cas de suspicion d’accès non autorisé, l’Utilisateur doit en informer Chef Talents dans les meilleurs
+          compte. En cas de suspicion d’accès non autorisé, l’Utilisateur doit en informer Chefs Talents dans les meilleurs
           délais.
         </p>
         <p>
-          Chef Talents peut mettre en œuvre des mesures de sécurité (vérification d’email, double validation, limitation des accès,
+          Chefs Talents peut mettre en œuvre des mesures de sécurité (vérification d’email, double validation, limitation des accès,
           dispositifs anti-abus) afin de protéger les Utilisateurs et l’intégrité de la Plateforme.
         </p>
       </section>
 
       <section className="space-y-3">
-        <p className="text-stone-900 font-medium">5. Rôle de Chef Talents</p>
+        <p className="text-stone-900 font-medium">5. Rôle de Chefs Talents</p>
         <p>
-          Chef Talents agit exclusivement en tant qu’intermédiaire et tiers de confiance. Chef Talents :
+          Chefs Talents agit exclusivement en tant qu’intermédiaire et tiers de confiance. Chefs Talents :
         </p>
         <ul className="list-disc pl-6 space-y-2">
           <li>ne fournit aucune prestation culinaire directe ;</li>
@@ -152,7 +152,7 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">6. Comptes chefs, sélection & validation</p>
         <p>
-          L’inscription d’un Chef sur la Plateforme ne vaut ni validation automatique, ni garantie de mission. Chef Talents se
+          L’inscription d’un Chef sur la Plateforme ne vaut ni validation automatique, ni garantie de mission. Chefs Talents se
           réserve le droit de :
         </p>
         <ul className="list-disc pl-6 space-y-2">
@@ -170,7 +170,7 @@ export default function ConditionsPage() {
           <li>ne pas usurper l’identité d’un tiers ;</li>
           <li>ne pas détourner la Plateforme (scraping, extraction massive, contournement de process, etc.) ;</li>
           <li>respecter la confidentialité des informations reçues (profils, coordonnées, conditions, etc.) ;</li>
-          <li>ne pas porter atteinte à l’image, aux droits ou à la sécurité de Chef Talents, des Clients ou des Chefs ;</li>
+          <li>ne pas porter atteinte à l’image, aux droits ou à la sécurité de Chefs Talents, des Clients ou des Chefs ;</li>
           <li>se comporter de manière loyale et professionnelle dans les échanges.</li>
         </ul>
       </section>
@@ -183,12 +183,12 @@ export default function ConditionsPage() {
           Plateforme. Constitue un contournement, notamment (sans que cette liste soit limitative) :
         </p>
         <ul className="list-disc pl-6 space-y-2">
-          <li>le fait de contractualiser directement avec un Chef ou un Client présenté via Chef Talents en dehors du process prévu ;</li>
-          <li>le fait d’utiliser une mise en relation, un profil, des informations ou un brief obtenus via Chef Talents pour organiser une mission sans Chef Talents ;</li>
+          <li>le fait de contractualiser directement avec un Chef ou un Client présenté via Chefs Talents en dehors du process prévu ;</li>
+          <li>le fait d’utiliser une mise en relation, un profil, des informations ou un brief obtenus via Chefs Talents pour organiser une mission sans Chefs Talents ;</li>
           <li>le fait de solliciter ou partager des coordonnées afin d’éviter la coordination, la sécurisation du cadre ou les frais de service.</li>
         </ul>
         <p>
-          Chef Talents peut, en cas de contournement suspecté ou avéré, limiter l’accès, suspendre un compte, refuser de futures
+          Chefs Talents peut, en cas de contournement suspecté ou avéré, limiter l’accès, suspendre un compte, refuser de futures
           mises en relation et/ou engager toute action utile pour faire cesser les manquements.
         </p>
       </section>
@@ -197,13 +197,13 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">9. Confidentialité & standards UHNW</p>
         <p>
-          Les missions gérées via Chef Talents impliquent souvent des lieux, calendriers et clients sensibles (villas, chalets,
+          Les missions gérées via Chefs Talents impliquent souvent des lieux, calendriers et clients sensibles (villas, chalets,
           yachts, séjours privés). Par conséquent, les Utilisateurs s’engagent à une confidentialité stricte, notamment à :
         </p>
         <ul className="list-disc pl-6 space-y-2">
           <li>ne pas divulguer l’identité des Clients, adresses, localisations précises, dates, habitudes ou informations de sécurité ;</li>
           <li>ne pas publier de contenus (photos/vidéos) liés à une mission sans autorisation préalable expresse du Client ;</li>
-          <li>ne pas partager les profils, conditions et documents reçus via Chef Talents à des tiers non autorisés.</li>
+          <li>ne pas partager les profils, conditions et documents reçus via Chefs Talents à des tiers non autorisés.</li>
         </ul>
         <p>
           Toute violation de confidentialité pourra entraîner une suspension immédiate du compte et l’exclusion du réseau,
@@ -214,8 +214,8 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">10. Exactitude des informations</p>
         <p>
-          Chef Talents ne saurait être tenu responsable des conséquences liées à des informations erronées, incomplètes ou
-          trompeuses fournies par un Utilisateur (Chef ou Client). Chef Talents peut effectuer des vérifications, sans que cela
+          Chefs Talents ne saurait être tenu responsable des conséquences liées à des informations erronées, incomplètes ou
+          trompeuses fournies par un Utilisateur (Chef ou Client). Chefs Talents peut effectuer des vérifications, sans que cela
           ne constitue une obligation générale de contrôle.
         </p>
       </section>
@@ -244,8 +244,8 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">13. Disponibilité de la Plateforme</p>
         <p>
-          Chef Talents s’efforce d’assurer l’accès à la Plateforme, sans garantie d’absence d’interruptions (maintenance,
-          mise à jour, incidents techniques). Chef Talents pourra suspendre l’accès pour des raisons de sécurité ou
+          Chefs Talents s’efforce d’assurer l’accès à la Plateforme, sans garantie d’absence d’interruptions (maintenance,
+          mise à jour, incidents techniques). Chefs Talents pourra suspendre l’accès pour des raisons de sécurité ou
           d’amélioration, dans la mesure du possible.
         </p>
       </section>
@@ -253,7 +253,7 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">14. Liens, contenus externes</p>
         <p>
-          La Plateforme peut contenir des liens vers des sites ou services tiers. Chef Talents n’exerce aucun contrôle sur ces
+          La Plateforme peut contenir des liens vers des sites ou services tiers. Chefs Talents n’exerce aucun contrôle sur ces
           contenus et décline toute responsabilité quant à leur disponibilité ou leurs pratiques.
         </p>
       </section>
@@ -261,8 +261,8 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">15. Responsabilité</p>
         <p>
-          Chef Talents ne saurait être tenu responsable : (i) des prestations réalisées par les Chefs, (ii) des dommages liés
-          à l’exécution des missions, (iii) des litiges entre Chefs et Clients. Chef Talents est soumis à une obligation de
+          Chefs Talents ne saurait être tenu responsable : (i) des prestations réalisées par les Chefs, (ii) des dommages liés
+          à l’exécution des missions, (iii) des litiges entre Chefs et Clients. Chefs Talents est soumis à une obligation de
           moyens dans la mise en relation et la coordination, et non de résultat.
         </p>
       </section>
@@ -272,7 +272,7 @@ export default function ConditionsPage() {
         <p className="text-stone-900 font-medium">16. Suspension, sanctions, suppression</p>
         <p>
           En cas de manquement aux présentes CGU (notamment contournement, fraude, abus, atteinte à la confidentialité,
-          comportements inappropriés), Chef Talents pourra, sans préavis si nécessaire :
+          comportements inappropriés), Chefs Talents pourra, sans préavis si nécessaire :
         </p>
         <ul className="list-disc pl-6 space-y-2">
           <li>suspendre ou limiter l’accès à la Plateforme ;</li>
@@ -285,7 +285,7 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">17. Preuve & communications</p>
         <p>
-          Les enregistrements informatiques (emails, logs, horodatages, confirmations) conservés par Chef Talents pourront
+          Les enregistrements informatiques (emails, logs, horodatages, confirmations) conservés par Chefs Talents pourront
           constituer des éléments de preuve, sauf preuve contraire. L’Utilisateur accepte de recevoir des communications liées
           au service (emails transactionnels, notifications) nécessaires au fonctionnement de la Plateforme.
         </p>
@@ -294,7 +294,7 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">18. Modification des CGU</p>
         <p>
-          Chef Talents peut modifier les présentes CGU afin de les adapter à l’évolution de la Plateforme, de la loi ou des
+          Chefs Talents peut modifier les présentes CGU afin de les adapter à l’évolution de la Plateforme, de la loi ou des
           pratiques. La date de « dernière mise à jour » fait foi. En cas de désaccord, l’Utilisateur doit cesser d’utiliser
           la Plateforme.
         </p>
