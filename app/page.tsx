@@ -25,10 +25,7 @@ export default function Home() {
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${WHATSAPP_PREFILL}`;
 
   return (
-    <Layout>
-  const whatsappHref = `https://wa.me/${+33756827612}?text=${WHATSAPP_PREFILL}`;
-
-  return (
+    
     <Layout>
       {/* Hero Section - Split Layout */}
       <section className="relative min-h-screen grid md:grid-cols-12 pt-24 md:pt-0 bg-paper">
