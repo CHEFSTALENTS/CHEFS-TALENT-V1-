@@ -89,10 +89,10 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
       <footer className="bg-stone-900 text-stone-400 py-32 border-t border-stone-800">
         <div className="max-w-[100rem] mx-auto px-6 md:px-12 grid grid-cols-1 md:grid-cols-4 gap-16">
           <div className="space-y-8">
-            <span className="font-serif text-2xl text-paper">CHEF TALENTS</span>
+            <span className="font-serif text-2xl text-paper">CHEFS TALENTS</span>
             <p className="text-sm leading-relaxed max-w-xs font-light text-stone-500">
               La référence pour l'expérience culinaire privée en Europe. <br/>
-              Service sur-mesure pour villas, yachts et résidences.
+              Service sur-mesure pour villas, yachts et résidences privées.
             </p>
           </div>
 
@@ -117,8 +117,8 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div>
             <h4 className="text-stone-300 font-medium mb-8 uppercase text-[10px] tracking-[0.2em]">Contact</h4>
             <ul className="space-y-4 text-sm font-light">
-              <li>Paris, France</li>
-              <li>concierge@cheftalents.com</li>
+              <li>Bordeaux, France</li>
+              <li>contact@chefstalents.com</li>
               <li className="pt-12 text-xs text-stone-600">
                 © {new Date().getFullYear()} Chef Talents. Tous droits réservés.
               </li>
