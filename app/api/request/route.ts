@@ -8,47 +8,90 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    // ✅ Tolérance aux différents payloads front
+    const email = body.email;
+    const firstName =
+      body.firstName ||
+      (typeof body.fullName === 'string' ? body.fullName.split(' ')[0] : null) ||
+      null;
+
+    // matchType attendu: 'fast' | 'concierge'
+    const matchType =
+      body.matchType ||
+      body.mode || // si tu envoies mode=fast/concierge
+      (body?.type === 'instant_match' ? 'fast' : body?.type) ||
+      'fast';
+
+    const message =
+      body.message ||
+      body.notes ||
+      body.cuisinePreferences ||
+      '';
+
+    if (!email) {
+      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+    }
+
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+
+    if (!supabaseUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing Supabase env vars');
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+    }
+
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      supabaseUrl,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 1. Enregistrement de la demande + récupération de l’ID
+    // 1) Insert + get ID
     const { data, error } = await supabase
       .from('client_requests')
       .insert({
-        email: body.email,
-        first_name: body.firstName,
-        match_type: body.matchType, // 'fast' | 'concierge'
-        message: body.message,
+        email,
+        first_name: firstName,
+        match_type: matchType,
+        message,
       })
       .select('id')
       .single();
 
     if (error || !data) {
-      console.error(error);
+      console.error('DB error:', error);
       return NextResponse.json({ error: 'DB error' }, { status: 500 });
     }
 
     const requestId = data.id;
 
-    // 2. Email de confirmation client
-    await sendClientConfirmation({
-      email: body.email,
-      firstName: body.firstName,
-      type: body.matchType,
-    });
+    // 2) Email client (avec logs)
+    try {
+      console.log('📧 Sending confirmation to:', email, 'type:', matchType);
 
-    // 3. Marquer l’email comme envoyé
-    await supabase
-      .from('client_requests')
-      .update({ email_sent_at: new Date().toISOString() })
-      .eq('id', requestId);
+      await sendClientConfirmation({
+        email,
+        firstName: firstName || '',
+        type: matchType,
+      });
 
-    return NextResponse.json({ ok: true });
+      // 3) Mark sent
+      await supabase
+        .from('client_requests')
+        .update({ email_sent_at: new Date().toISOString() })
+        .eq('id', requestId);
 
+      return NextResponse.json({ ok: true, requestId, emailSent: true });
+    } catch (e) {
+      console.error('EMAIL ERROR:', e);
+
+      // On garde la demande créée, mais on remonte clairement l’erreur
+      return NextResponse.json(
+        { ok: true, requestId, emailSent: false, emailError: String(e) },
+        { status: 200 }
+      );
+    }
   } catch (err) {
-    console.error(err);
+    console.error('Server error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
