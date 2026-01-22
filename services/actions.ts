@@ -131,10 +131,31 @@ export const submitChefApplication = async (data: ChefApplicationForm) => {
 // BACKOFFICE: REQUESTS
 // --------------------
 
-export const boListRequests = async (): Promise<ReturnType<typeof api.getRequests>> => {
-  return api.getRequests();
-};
+export const boListRequests = async () => {
+  const r = await fetch('/api/admin/requests', { cache: 'no-store' });
 
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    console.error('GET /api/admin/requests failed', r.status, txt);
+    throw new Error(`Failed to fetch requests: ${r.status}`);
+  }
+
+  const json = await r.json();
+  return json.items ?? [];
+};
+export const boListRequests = async () => {
+  const r = await fetch('/api/admin/requests', { cache: 'no-store' });
+  if (!r.ok) throw new Error(`Failed to fetch requests: ${r.status}`);
+
+  const { items } = await r.json();
+
+  return (items ?? []).map((x: any) => ({
+    ...x,
+    firstName: x.first_name ?? x.firstName,
+    matchType: x.match_type ?? x.matchType,
+    createdAt: x.created_at ?? x.createdAt,
+  }));
+};
 export const boGetRequest = async (id: string) => {
   return api.getRequest(id);
 };
