@@ -2,12 +2,84 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { api } from '@/services/storage';
 import type { RequestEntity } from '@/types';
-
 
 type TypeFilter = 'all' | 'b2b' | 'b2c';
 type StatusGroup = 'todo' | 'active' | 'closed';
+
+/** Données brutes venant de Supabase (table client_requests) */
+type ClientRequestRow = {
+  id: string;
+  email: string;
+  first_name?: string | null;
+  match_type?: 'fast' | 'concierge' | string | null;
+  message?: string | null;
+  created_at?: string | null;
+  email_sent_at?: string | null;
+};
+
+function parseBrief(message?: string | null) {
+  const m = String(message || '');
+
+  const getLineValue = (label: string) => {
+    const re = new RegExp(`^${label}\\s*:\\s*(.*)$`, 'mi');
+    const match = m.match(re);
+    return match?.[1]?.trim() || '';
+  };
+
+  const location = getLineValue('Lieu');
+  const start = getLineValue('Date') || getLineValue('Start');
+  const end = getLineValue('End');
+  const paxRaw = getLineValue('Convives');
+  const budgetRange = getLineValue('Budget') || getLineValue('Budget/pers') || '';
+  const clientType = getLineValue('ClientType'); // concierge | private etc
+  const company = getLineValue('Société');
+
+  const guestCount = paxRaw ? Number(String(paxRaw).replace(/[^\d]/g, '')) : undefined;
+
+  return {
+    location,
+    startDate: start,
+    endDate: end,
+    guestCount: Number.isFinite(guestCount as any) ? guestCount : undefined,
+    budgetRange: budgetRange ? String(budgetRange) : '',
+    userType: clientType === 'concierge' ? 'b2b' : 'b2c',
+    companyName: company,
+  };
+}
+
+function toRequestEntity(row: ClientRequestRow): RequestEntity {
+  const brief = parseBrief(row.message);
+
+  return {
+    id: row.id,
+    // on met "new" par défaut (vu que ta table client_requests ne stocke pas encore un status)
+    status: 'new' as any,
+    mode: (row.match_type === 'fast' ? 'fast' : 'concierge') as any,
+    userType: (brief.userType === 'b2b' ? 'b2b' : 'b2c') as any,
+
+    createdAt: row.created_at || new Date().toISOString(),
+
+    location: brief.location || '',
+
+    guestCount: brief.guestCount ?? null,
+
+    budgetRange: brief.budgetRange || '',
+
+    dates: {
+      start: brief.startDate || '',
+      end: brief.endDate || '',
+    } as any,
+
+    contact: {
+      name: row.first_name || '',
+      company: brief.companyName || '',
+      email: row.email,
+    } as any,
+
+    missionType: '' as any,
+  } as RequestEntity;
+}
 
 export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
@@ -18,9 +90,21 @@ export default function AdminRequestsPage() {
 
   const refresh = async () => {
     setLoading(true);
-    const list = await (api.getRequests?.() ?? Promise.resolve([]));
-    setRequests(list ?? []);
-    setLoading(false);
+    try {
+      const r = await fetch('/api/admin/requests', { cache: 'no-store' });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => '');
+        console.error('GET /api/admin/requests failed', r.status, txt);
+        setRequests([]);
+        return;
+      }
+
+      const json = (await r.json().catch(() => ({}))) as { items?: ClientRequestRow[] };
+      const rows = json.items ?? [];
+      setRequests(rows.map(toRequestEntity));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -124,27 +208,9 @@ export default function AdminRequestsPage() {
 
       {/* KPI quick */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Kpi
-          title="À traiter"
-          value={counts.todo}
-          hint="new + in_review"
-          active={statusGroup === 'todo'}
-          onClick={() => setStatusGroup('todo')}
-        />
-        <Kpi
-          title="En cours"
-          value={counts.active}
-          hint="assigned"
-          active={statusGroup === 'active'}
-          onClick={() => setStatusGroup('active')}
-        />
-        <Kpi
-          title="Clos"
-          value={counts.closed}
-          hint="closed"
-          active={statusGroup === 'closed'}
-          onClick={() => setStatusGroup('closed')}
-        />
+        <Kpi title="À traiter" value={counts.todo} hint="new + in_review" active={statusGroup === 'todo'} onClick={() => setStatusGroup('todo')} />
+        <Kpi title="En cours" value={counts.active} hint="assigned" active={statusGroup === 'active'} onClick={() => setStatusGroup('active')} />
+        <Kpi title="Clos" value={counts.closed} hint="closed" active={statusGroup === 'closed'} onClick={() => setStatusGroup('closed')} />
       </div>
 
       {/* Toolbar */}
@@ -160,24 +226,9 @@ export default function AdminRequestsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Segment
-              label="Tous"
-              active={typeFilter === 'all'}
-              onClick={() => setTypeFilter('all')}
-              badge={counts.all}
-            />
-            <Segment
-              label="B2B"
-              active={typeFilter === 'b2b'}
-              onClick={() => setTypeFilter('b2b')}
-              badge={requests.filter(r => r.userType === 'b2b').length}
-            />
-            <Segment
-              label="B2C"
-              active={typeFilter === 'b2c'}
-              onClick={() => setTypeFilter('b2c')}
-              badge={requests.filter(r => r.userType !== 'b2b').length}
-            />
+            <Segment label="Tous" active={typeFilter === 'all'} onClick={() => setTypeFilter('all')} badge={counts.all} />
+            <Segment label="B2B" active={typeFilter === 'b2b'} onClick={() => setTypeFilter('b2b')} badge={requests.filter(r => r.userType === 'b2b').length} />
+            <Segment label="B2C" active={typeFilter === 'b2c'} onClick={() => setTypeFilter('b2c')} badge={requests.filter(r => r.userType !== 'b2b').length} />
           </div>
         </div>
 
@@ -206,31 +257,19 @@ export default function AdminRequestsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={7}>
-                    Chargement…
-                  </td>
+                  <td className="p-4 text-white/60" colSpan={7}>Chargement…</td>
                 </tr>
               ) : view.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-white/60" colSpan={7}>
-                    Aucune demande.
-                  </td>
+                  <td className="p-4 text-white/60" colSpan={7}>Aucune demande.</td>
                 </tr>
               ) : (
                 view.map(r => (
-                  <tr
-                    key={r.id}
-                    className="border-t border-white/10 hover:bg-white/5 transition"
-                  >
-                    {/* Client */}
+                  <tr key={r.id} className="border-t border-white/10 hover:bg-white/5 transition">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <Badge tone={r.userType === 'b2b' ? 'dark' : 'stone'}>
-                          {r.userType === 'b2b' ? 'B2B' : 'B2C'}
-                        </Badge>
-                        <Badge tone={r.mode === 'fast' ? 'violet' : 'stone'}>
-                          {r.mode === 'fast' ? 'Fast' : 'Standard'}
-                        </Badge>
+                        <Badge tone={r.userType === 'b2b' ? 'dark' : 'stone'}>{r.userType === 'b2b' ? 'B2B' : 'B2C'}</Badge>
+                        <Badge tone={r.mode === 'fast' ? 'violet' : 'stone'}>{r.mode === 'fast' ? 'Fast' : 'Standard'}</Badge>
                       </div>
 
                       <div className="mt-2">
@@ -238,33 +277,20 @@ export default function AdminRequestsPage() {
                           {shortText(r.contact?.company || r.contact?.name || 'Client', 40)}
                         </div>
                         {r.contact?.email ? (
-                          <div className="text-xs text-white/45 mt-0.5">
-                            {shortText(r.contact.email, 50)}
-                          </div>
+                          <div className="text-xs text-white/45 mt-0.5">{shortText(r.contact.email, 50)}</div>
                         ) : null}
                       </div>
                     </td>
 
-                    {/* Lieu */}
                     <td className="p-3 text-white/85">{r.location || '—'}</td>
-
-                    {/* Pax */}
                     <td className="p-3 text-white/85">{r.guestCount ?? '—'}</td>
-
-                    {/* Budget */}
                     <td className="p-3 text-white/85">{formatBudget(r.budgetRange)}</td>
+                    <td className="p-3 text-white/70 whitespace-nowrap">{formatDates(r)}</td>
 
-                    {/* Dates */}
-                    <td className="p-3 text-white/70 whitespace-nowrap">
-                      {formatDates(r)}
-                    </td>
-
-                    {/* Statut */}
                     <td className="p-3">
                       <StatusBadge status={String(r.status || '')} />
                     </td>
 
-                    {/* Action */}
                     <td className="p-3 text-right">
                       <Link
                         href={`/admin/requests/${encodeURIComponent(r.id)}`}
@@ -281,7 +307,7 @@ export default function AdminRequestsPage() {
         </div>
 
         <div className="p-3 border-t border-white/10 text-xs text-white/45">
-          {view.length} résultat(s) • source : localStorage (MVP)
+          {view.length} résultat(s) • source : Supabase (client_requests)
         </div>
       </div>
     </div>
@@ -290,19 +316,7 @@ export default function AdminRequestsPage() {
 
 /* ---------------- UI components ---------------- */
 
-function Kpi({
-  title,
-  value,
-  hint,
-  active,
-  onClick,
-}: {
-  title: string;
-  value: number;
-  hint?: string;
-  active?: boolean;
-  onClick?: () => void;
-}) {
+function Kpi({ title, value, hint, active, onClick }: { title: string; value: number; hint?: string; active?: boolean; onClick?: () => void; }) {
   return (
     <button
       onClick={onClick}
@@ -319,25 +333,13 @@ function Kpi({
   );
 }
 
-function Segment({
-  label,
-  active,
-  onClick,
-  badge,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  badge?: number;
-}) {
+function Segment({ label, active, onClick, badge }: { label: string; active: boolean; onClick: () => void; badge?: number; }) {
   return (
     <button
       onClick={onClick}
       className={[
         'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
-        active
-          ? 'bg-white/15 text-white border-white/15'
-          : 'bg-white/5 text-white/75 border-white/10 hover:bg-white/10 hover:text-white',
+        active ? 'bg-white/15 text-white border-white/15' : 'bg-white/5 text-white/75 border-white/10 hover:bg-white/10 hover:text-white',
       ].join(' ')}
     >
       <span className="font-medium">{label}</span>
@@ -355,13 +357,7 @@ function Segment({
   );
 }
 
-function Badge({
-  children,
-  tone = 'stone',
-}: {
-  children: React.ReactNode;
-  tone?: 'stone' | 'dark' | 'violet';
-}) {
+function Badge({ children, tone = 'stone' }: { children: React.ReactNode; tone?: 'stone' | 'dark' | 'violet'; }) {
   const cls =
     tone === 'dark'
       ? 'bg-white/15 text-white border-white/15'
@@ -369,11 +365,7 @@ function Badge({
       ? 'bg-violet-500/15 text-violet-200 border-violet-500/20'
       : 'bg-white/10 text-white/75 border-white/10';
 
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
-      {children}
-    </span>
-  );
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{children}</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -390,11 +382,7 @@ function StatusBadge({ status }: { status: string }) {
       ? 'bg-white/10 text-white/60 border-white/10'
       : 'bg-white/10 text-white/60 border-white/10';
 
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
-      {s || '—'}
-    </span>
-  );
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{s || '—'}</span>;
 }
 
 /* ---------------- Helpers ---------------- */
@@ -412,7 +400,7 @@ function formatBudget(b: any) {
   return '—';
 }
 
-function formatDates(r: RequestEntity) {
+function formatDates(r: any) {
   const start = r.dates?.start ? new Date(r.dates.start).toLocaleDateString('fr-FR') : '—';
   const end = r.dates?.end ? new Date(r.dates.end).toLocaleDateString('fr-FR') : '';
   return end ? `${start} → ${end}` : start;
