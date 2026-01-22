@@ -18,7 +18,7 @@ export async function sendClientConfirmation({
       : 'sous 48 à 72h';
 
   return resend.emails.send({
-    from: process.env.MAIL_FROM!,
+from: "onboarding@resend.dev",
     to: email,
     subject: 'Nous avons bien reçu votre demande – Chef Talents',
     text: `Bonjour ${firstName || ''},
