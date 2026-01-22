@@ -522,7 +522,8 @@ function RequestFormContent() {
   ========================================================= */
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
+  console.log('🔥 handleSubmit triggered', { mode, step, formData });
+  setIsSubmitting(true);
     try {
       if (mode === 'fast') {
         const bppRaw = (formData as any).budgetPerPerson;
