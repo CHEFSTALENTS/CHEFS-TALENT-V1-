@@ -1,4 +1,3 @@
-// lib/sendClientConfirmation.ts
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
@@ -14,7 +13,7 @@ export async function sendClientConfirmation({
 }) {
   const delay = type === 'fast' ? 'sous 24 à 48h' : 'sous 48 à 72h';
 
-  const result = await resend.emails.send({
+  return resend.emails.send({
     from: process.env.MAIL_FROM!,
     to: email,
     subject: 'Nous avons bien reçu votre demande – Chef Talents',
@@ -31,8 +30,4 @@ Aucune réservation n’est effectuée sans votre validation préalable.
 À très bientôt,
 Chef Talents`,
   });
-
-  console.log('RESEND RESULT', result);
-
-  return result;
 }
