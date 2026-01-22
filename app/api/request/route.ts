@@ -3,21 +3,20 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendClientConfirmation } from '@/lib/sendClientConfirmation';
+import { sendInternalNewRequest } from '@/lib/sendInternalNewRequest';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
-    if (!body?.email || !body?.matchType) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // 1) Insert DB
+    // 1) Insert + récupérer l’ID
+    const createdAtISO = new Date().toISOString();
+
     const { data, error } = await supabase
       .from('client_requests')
       .insert({
@@ -25,41 +24,48 @@ export async function POST(req: Request) {
         first_name: body.firstName,
         match_type: body.matchType, // 'fast' | 'concierge'
         message: body.message,
+        created_at: createdAtISO,
       })
       .select('id')
       .single();
 
     if (error || !data) {
-      console.error('DB insert error', error);
+      console.error(error);
       return NextResponse.json({ error: 'DB error' }, { status: 500 });
     }
 
-    const requestId = data.id;
+    const requestId = data.id as string;
 
-    // 2) Send email
-    try {
-      const result = await sendClientConfirmation({
-        email: body.email,
-        firstName: body.firstName,
-        type: body.matchType,
-      });
+    // 2) Email client
+    await sendClientConfirmation({
+      email: body.email,
+      firstName: body.firstName,
+      type: body.matchType,
+    });
 
-      console.log('RESEND RESULT', result);
+    // 3) Email interne (toi / équipe)
+    await sendInternalNewRequest({
+      requestId,
+      matchType: body.matchType,
+      email: body.email,
+      firstName: body.firstName,
+      message: body.message,
+      createdAtISO,
+    });
 
-      // 3) Mark email sent
-      await supabase
-        .from('client_requests')
-        .update({ email_sent_at: new Date().toISOString() })
-        .eq('id', requestId);
-    } catch (e) {
-      // 👇 si tu veux que l'API échoue quand l'email échoue, remplace par return 500
-      console.error('EMAIL SEND ERROR', e);
-      // on continue quand même pour ne pas bloquer la création de demande
-    }
+    // 4) Log en DB
+    await supabase
+      .from('client_requests')
+      .update({
+        email_sent_at: new Date().toISOString(),
+        internal_email_sent_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
 
     return NextResponse.json({ ok: true, requestId });
+
   } catch (err) {
-    console.error('Server error', err);
+    console.error(err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
