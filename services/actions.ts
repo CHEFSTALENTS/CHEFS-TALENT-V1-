@@ -1,3 +1,5 @@
+// services/actions.ts
+
 import type {
   RequestForm,
   FastMatchResult,
@@ -51,7 +53,7 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
           .filter(Boolean)
           .join('\n');
 
-  // 3) POST vers l’API Next
+  // 3) POST vers l’API Next (stock + emails)
   const r = await fetch('/api/request', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -140,22 +142,19 @@ export const boListRequests = async () => {
     throw new Error(`Failed to fetch requests: ${r.status}`);
   }
 
-  const json = await r.json();
-  return json.items ?? [];
-};
-export const boListRequests = async () => {
-  const r = await fetch('/api/admin/requests', { cache: 'no-store' });
-  if (!r.ok) throw new Error(`Failed to fetch requests: ${r.status}`);
+  const { items } = (await r.json().catch(() => ({ items: [] }))) as { items?: any[] };
 
-  const { items } = await r.json();
-
+  // Normalise champs snake_case -> camelCase pour ton UI/admin
   return (items ?? []).map((x: any) => ({
     ...x,
     firstName: x.first_name ?? x.firstName,
     matchType: x.match_type ?? x.matchType,
     createdAt: x.created_at ?? x.createdAt,
+    emailSentAt: x.email_sent_at ?? x.emailSentAt,
+    internalEmailSentAt: x.internal_email_sent_at ?? x.internalEmailSentAt,
   }));
 };
+
 export const boGetRequest = async (id: string) => {
   return api.getRequest(id);
 };
