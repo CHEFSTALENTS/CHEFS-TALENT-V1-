@@ -6,50 +6,65 @@ import type { ChefProposalEntity } from './storage';
 // PUBLIC ACTIONS
 // --------------------
 
+import { RequestForm, FastMatchResult } from '../types';
+
 export const submitRequest = async (data: RequestForm): Promise<FastMatchResult> => {
-  // 1) Crée la demande (ton storage actuel)
-  const entity = await api.createRequest(data);
+  // 1) construire firstName depuis fullName
+  const fullName = (data.fullName || '').trim();
+  const firstName = fullName ? fullName.split(' ')[0] : undefined;
 
-  // 2) Envoie l’email via ton endpoint Next (Resend)
-  //    (On essaye de mapper au mieux avec ton formulaire actuel)
-  try {
-    const firstName =
-      (data.fullName || '').trim().split(' ')[0] || 'Client';
+  // 2) construire un message lisible pour ton backoffice / email
+  const message =
+    data.mode === 'fast'
+      ? [
+          `MODE: FAST`,
+          `Lieu: ${data.location}`,
+          `Date: ${data.startDate}`,
+          `Convives: ${data.guestCount}`,
+          `Budget/pers: ${(data as any).budgetPerPerson ?? ''}`,
+          `Préférences: ${data.cuisinePreferences || ''}`,
+          `Téléphone: ${data.phone || ''}`,
+        ].filter(Boolean).join('\n')
+      : [
+          `MODE: CONCIERGE`,
+          `ClientType: ${data.clientType}`,
+          `Société: ${data.companyName || ''}`,
+          `Lieu: ${data.location}`,
+          `Start: ${data.startDate}`,
+          `End: ${(data as any).endDate || ''}`,
+          `Assignation: ${(data as any).assignmentType || ''}`,
+          `Convives: ${data.guestCount}`,
+          `Budget: ${data.budgetRange || ''}`,
+          `Notes: ${data.notes || ''}`,
+          `Téléphone: ${data.phone || ''}`,
+        ].filter(Boolean).join('\n');
 
-    const message =
-      data.notes ||
-      data.cuisinePreferences ||
-      data.dietaryRestrictions ||
-      '';
+  // 3) POST vers l’API Next
+  const r = await fetch('/api/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: data.email,
+      firstName,
+      matchType: data.mode, // 'fast' | 'concierge'
+      message,
+    }),
+  });
 
-    const res = await fetch('/api/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: data.email,
-        firstName,
-        matchType: data.mode === 'fast' ? 'fast' : 'concierge',
-        message,
-      }),
-    });
-
-    const json = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      console.error('EMAIL API ERROR', res.status, json);
-    } else {
-      console.log('EMAIL API OK', json);
-    }
-  } catch (e) {
-    console.error('EMAIL API EXCEPTION', e);
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    console.error('API /api/request error', r.status, txt);
+    throw new Error(`API request failed: ${r.status}`);
   }
 
-  // 3) Retour UI (inchangé)
+  const json = await r.json().catch(() => ({}));
+
+  // 4) retour UI
   if (data.mode === 'fast') {
     return {
       success: true,
       mode: 'instant_match',
-      referenceId: entity.id,
+      referenceId: json.requestId || crypto.randomUUID(),
       matchedChef: 'Chef Selection Pending',
     };
   }
@@ -57,11 +72,9 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
   return {
     success: true,
     mode: 'concierge_manual',
-    referenceId: entity.id,
+    referenceId: json.requestId || crypto.randomUUID(),
   };
 };
-
-
 /**
  * ⚠️ IMPORTANT :
  * Dans ton modèle actuel, une "application chef" = un compte chef (ChefUser) en pending_validation.
