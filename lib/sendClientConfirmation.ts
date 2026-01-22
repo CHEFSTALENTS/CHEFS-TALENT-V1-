@@ -12,6 +12,11 @@ export async function sendClientConfirmation({
   firstName?: string;
   type: 'fast' | 'concierge';
 }) {
+  const result = await resend.emails.send({ ... });
+
+console.log("RESEND RESULT", result);
+
+return result;
   const delay =
     type === 'fast'
       ? 'sous 24 à 48h'
