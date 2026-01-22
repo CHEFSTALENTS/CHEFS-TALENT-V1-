@@ -12,18 +12,10 @@ export async function sendClientConfirmation({
   firstName?: string;
   type: 'fast' | 'concierge';
 }) {
-  const result = await resend.emails.send({ ... });
+  const delay = type === 'fast' ? 'sous 24 à 48h' : 'sous 48 à 72h';
 
-console.log("RESEND RESULT", result);
-
-return result;
-  const delay =
-    type === 'fast'
-      ? 'sous 24 à 48h'
-      : 'sous 48 à 72h';
-
-  return resend.emails.send({
-from: "onboarding@resend.dev",
+  const result = await resend.emails.send({
+    from: process.env.MAIL_FROM!,
     to: email,
     subject: 'Nous avons bien reçu votre demande – Chef Talents',
     text: `Bonjour ${firstName || ''},
@@ -39,4 +31,8 @@ Aucune réservation n’est effectuée sans votre validation préalable.
 À très bientôt,
 Chef Talents`,
   });
+
+  console.log('RESEND RESULT', result);
+
+  return result;
 }
