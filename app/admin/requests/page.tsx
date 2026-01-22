@@ -89,23 +89,36 @@ export default function AdminRequestsPage() {
   const [statusGroup, setStatusGroup] = useState<StatusGroup>('todo');
 
   const refresh = async () => {
-    setLoading(true);
-    try {
-      const r = await fetch('/api/admin/requests', { cache: 'no-store' });
-      if (!r.ok) {
-        const txt = await r.text().catch(() => '');
-        console.error('GET /api/admin/requests failed', r.status, txt);
-        setRequests([]);
-        return;
-      }
+  setLoading(true);
 
-      const json = (await r.json().catch(() => ({}))) as { items?: ClientRequestRow[] };
-      const rows = json.items ?? [];
-      setRequests(rows.map(toRequestEntity));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const r = await fetch('/api/admin/requests', { cache: 'no-store' });
+  const json = await r.json();
+
+  const list = (json.items ?? []).map((x: any) => ({
+    id: x.id,
+    status: x.status ?? 'new',
+    mode: x.match_type ?? x.mode ?? 'fast',
+    userType: x.user_type ?? (x.client_type === 'concierge' ? 'b2b' : 'b2c'),
+    createdAt: x.created_at ?? x.createdAt,
+
+    location: x.location ?? '',
+    guestCount: x.guest_count ?? x.guestCount ?? null,
+    budgetRange: x.budget_range ?? x.budgetRange ?? '',
+
+    dates: { start: x.start_date ?? x.startDate ?? x.created_at, end: x.end_date ?? x.endDate ?? null },
+
+    contact: {
+      name: x.first_name ?? x.firstName ?? 'Client',
+      company: x.company_name ?? x.companyName ?? '',
+      email: x.email ?? '',
+    },
+
+    missionType: x.assignment_type ?? x.missionType ?? '',
+  }));
+
+  setRequests(list);
+  setLoading(false);
+};
 
   useEffect(() => {
     refresh();
