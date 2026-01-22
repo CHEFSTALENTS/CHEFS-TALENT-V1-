@@ -42,10 +42,10 @@ export async function sendInternalNewRequest(input: {
   ].join('\n');
 
   return resend.emails.send({
-    from: process.env.MAIL_FROM!,
-    to,
-    reply_to: 'contact@chefstalents.com',
-    subject,
-    text: txt,
-  });
-}
+  from: process.env.MAIL_FROM!,
+  to,
+  replyTo: 'contact@chefstalents.com', // ✅ pas reply_to
+  subject,
+  text: txt,
+  html,
+});
