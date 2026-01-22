@@ -16,14 +16,12 @@ import type { ChefProposalEntity } from './storage';
 // PUBLIC ACTIONS
 // --------------------
 
-import { RequestForm, FastMatchResult } from '../types';
-
 export const submitRequest = async (data: RequestForm): Promise<FastMatchResult> => {
   // 1) construire firstName depuis fullName
   const fullName = (data.fullName || '').trim();
   const firstName = fullName ? fullName.split(' ')[0] : undefined;
 
-  // 2) construire un message lisible pour ton backoffice / email
+  // 2) construire un message lisible (stock/backoffice)
   const message =
     data.mode === 'fast'
       ? [
@@ -34,7 +32,9 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
           `Budget/pers: ${(data as any).budgetPerPerson ?? ''}`,
           `Préférences: ${data.cuisinePreferences || ''}`,
           `Téléphone: ${data.phone || ''}`,
-        ].filter(Boolean).join('\n')
+        ]
+          .filter(Boolean)
+          .join('\n')
       : [
           `MODE: CONCIERGE`,
           `ClientType: ${data.clientType}`,
@@ -47,7 +47,9 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
           `Budget: ${data.budgetRange || ''}`,
           `Notes: ${data.notes || ''}`,
           `Téléphone: ${data.phone || ''}`,
-        ].filter(Boolean).join('\n');
+        ]
+          .filter(Boolean)
+          .join('\n');
 
   // 3) POST vers l’API Next
   const r = await fetch('/api/request', {
@@ -67,7 +69,7 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     throw new Error(`API request failed: ${r.status}`);
   }
 
-  const json = await r.json().catch(() => ({}));
+  const json = (await r.json().catch(() => ({}))) as { ok?: boolean; requestId?: string };
 
   // 4) retour UI
   if (data.mode === 'fast') {
@@ -85,13 +87,13 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     referenceId: json.requestId || crypto.randomUUID(),
   };
 };
+
 /**
  * ⚠️ IMPORTANT :
  * Dans ton modèle actuel, une "application chef" = un compte chef (ChefUser) en pending_validation.
  * Donc on mappe ChefApplicationForm -> registerChef + updateChefProfile.
  */
 export const submitChefApplication = async (data: ChefApplicationForm) => {
-  // Split fullName
   const parts = (data.fullName || '').trim().split(' ');
   const firstName = parts.shift() || 'Chef';
   const lastName = parts.join(' ') || '';
@@ -99,7 +101,7 @@ export const submitChefApplication = async (data: ChefApplicationForm) => {
   // 1) create user (pending_validation)
   const res = await auth.registerChef({
     email: data.email,
-    password: crypto.randomUUID().slice(0, 10), // password temporaire V1 (à remplacer par un flow email)
+    password: crypto.randomUUID().slice(0, 10), // password temporaire V1
     firstName,
     lastName,
   });
@@ -110,7 +112,6 @@ export const submitChefApplication = async (data: ChefApplicationForm) => {
   await auth.updateChefProfile(res.user.id, {
     phone: data.phone,
     baseCity: data.baseCity,
-    // tu as travelRadiusKm (number) mais le form travelRange est string → on tente une extraction
     travelRadiusKm: extractKm(data.travelRange),
     languages: splitList(data.languages),
     specialties: splitList(data.specialties),
@@ -121,7 +122,6 @@ export const submitChefApplication = async (data: ChefApplicationForm) => {
       ...(data.background?.privateHousehold ? ['private_household'] : []),
       ...(data.background?.michelin ? ['restaurant'] : []),
     ],
-    // petit défaut structurel: portfolioLink non prévu dans ChefProfile → à stocker ailleurs plus tard
   });
 
   return { success: true, id: res.user.id };
@@ -175,8 +175,6 @@ export const boListChefs = async (): Promise<ChefUser[]> => {
 };
 
 export const boApproveChef = async (chefId: string) => {
-  // status allowed by your type: pending_validation | approved | active | paused
-  // simplest: approved first; you can switch to 'active' once profileCompleted
   return auth.updateChefStatus(chefId, 'approved');
 };
 
@@ -216,7 +214,7 @@ function splitList(value: string): string[] {
   if (!value) return [];
   return value
     .split(/,|\n|;|\|/g)
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
 }
 
