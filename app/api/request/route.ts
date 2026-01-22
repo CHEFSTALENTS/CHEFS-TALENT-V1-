@@ -69,11 +69,16 @@ export async function POST(req: Request) {
       console.log('📧 Sending confirmation to:', email, 'type:', matchType);
 
       await sendClientConfirmation({
-        email,
-        firstName: firstName || '',
-        type: matchType,
-      });
-
+  email: body.email,
+  firstName: body.fullName,
+  type: body.mode === 'fast' ? 'fast' : 'concierge',
+});
+      
+console.log("EMAIL PAYLOAD", {
+  email: body.email,
+  fullName: body.fullName,
+  mode: body.mode,
+});
       // 3) Mark sent
       await supabase
         .from('client_requests')
