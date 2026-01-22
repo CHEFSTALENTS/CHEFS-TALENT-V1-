@@ -1206,15 +1206,23 @@ function RequestFormContent() {
               </Button>
             )}
 
-            {step < getTotalSteps() ? (
-              <Button onClick={nextStep} className="w-40">
-                Continuer
-              </Button>
-            ) : (
-              <Button onClick={handleSubmit} disabled={isSubmitting} className="w-64">
-                {isSubmitting ? <Loader2 className="animate-spin" /> : mode === 'fast' ? 'Envoyer la demande' : 'Soumettre le dossier'}
-              </Button>
-            )}
+           {step < getTotalSteps() ? (
+  <Button onClick={nextStep} className="w-40">
+    Continuer
+  </Button>
+) : (
+  <button
+    type="button"
+    onClick={() => {
+      console.log('✅ CLICK SUBMIT');
+      handleSubmit();
+    }}
+    disabled={isSubmitting}
+    className="w-64 h-14 bg-stone-900 text-white"
+  >
+    {isSubmitting ? 'Envoi...' : mode === 'fast' ? 'Envoyer la demande' : 'Soumettre le dossier'}
+  </button>
+)}
           </div>
 
           {step === getTotalSteps() && (
