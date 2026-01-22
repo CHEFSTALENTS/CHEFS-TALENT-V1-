@@ -85,7 +85,7 @@ console.log("EMAIL PAYLOAD", {
         .update({ email_sent_at: new Date().toISOString() })
         .eq('id', requestId);
 
-      return NextResponse.json({ ok: true, requestId, emailSent: true });
+return NextResponse.json({ ok: true, requestId });
     } catch (e) {
       console.error('EMAIL ERROR:', e);
 
