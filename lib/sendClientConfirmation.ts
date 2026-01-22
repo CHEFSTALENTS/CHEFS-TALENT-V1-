@@ -16,8 +16,9 @@ export async function sendClientConfirmation({
   return resend.emails.send({
     from: process.env.MAIL_FROM!,
     to: email,
-    subject: 'Nous avons bien reçu votre demande – Chef Talents',
-    text: `Bonjour ${firstName || ''},
+    reply_to: 'contact@cheftalents.com',
+  subject: 'Nous avons bien reçu votre demande – Chef Talents',
+  text: `Bonjour ${firstName || ''},
 
 Nous avons bien reçu votre demande.
 
