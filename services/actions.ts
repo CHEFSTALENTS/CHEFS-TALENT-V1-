@@ -7,8 +7,44 @@ import type { ChefProposalEntity } from './storage';
 // --------------------
 
 export const submitRequest = async (data: RequestForm): Promise<FastMatchResult> => {
+  // 1) Crée la demande (ton storage actuel)
   const entity = await api.createRequest(data);
 
+  // 2) Envoie l’email via ton endpoint Next (Resend)
+  //    (On essaye de mapper au mieux avec ton formulaire actuel)
+  try {
+    const firstName =
+      (data.fullName || '').trim().split(' ')[0] || 'Client';
+
+    const message =
+      data.notes ||
+      data.cuisinePreferences ||
+      data.dietaryRestrictions ||
+      '';
+
+    const res = await fetch('/api/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: data.email,
+        firstName,
+        matchType: data.mode === 'fast' ? 'fast' : 'concierge',
+        message,
+      }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      console.error('EMAIL API ERROR', res.status, json);
+    } else {
+      console.log('EMAIL API OK', json);
+    }
+  } catch (e) {
+    console.error('EMAIL API EXCEPTION', e);
+  }
+
+  // 3) Retour UI (inchangé)
   if (data.mode === 'fast') {
     return {
       success: true,
@@ -24,6 +60,7 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     referenceId: entity.id,
   };
 };
+
 
 /**
  * ⚠️ IMPORTANT :
