@@ -57,12 +57,24 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
   const r = await fetch('/api/request', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: data.email,
-      firstName,
-      matchType: data.mode, // 'fast' | 'concierge'
-      message,
-    }),
+   body: JSON.stringify({
+  email: data.email,
+  firstName,
+  matchType: data.mode, // 'fast' | 'concierge'
+
+  // ✅ AJOUTS STRUCTURÉS
+  clientType: data.clientType,              // 'private' | 'concierge'
+  companyName: data.companyName || null,
+  location: data.location || null,
+  startDate: data.startDate || null,
+  endDate: (data as any).endDate || null,
+  guestCount: data.guestCount ?? null,
+  budgetRange: data.budgetRange || null,
+  assignmentType: (data as any).assignmentType || null,
+
+  // on garde aussi le message texte (utile)
+  message,
+}),
   });
 
   if (!r.ok) {
