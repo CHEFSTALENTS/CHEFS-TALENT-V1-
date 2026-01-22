@@ -26,8 +26,9 @@ Notre équipe analyse actuellement votre besoin afin de vous proposer une sélec
 
 ⏱️ Délai indicatif de réponse : ${delay}
 
-Aucune réservation n’est effectuée sans votre validation préalable.
+Aucune réservation n’est effectuée sans votre validation préalable. Si vous avez la moindre précision à ajouter, vous pouvez simplement répondre à cet email ou nous contacter sur Whatsapp.
 
++33756827612
 À très bientôt,
 Chef Talents`,
   });
