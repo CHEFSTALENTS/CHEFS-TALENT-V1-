@@ -17,17 +17,19 @@ export async function POST(req: Request) {
     // 1) Insert + récupérer l’ID
     const createdAtISO = new Date().toISOString();
 
-    const { data, error } = await supabase
-      .from('client_requests')
-      .insert({
-        email: body.email,
-        first_name: body.firstName,
-        match_type: body.matchType, // 'fast' | 'concierge'
-        message: body.message,
-        created_at: createdAtISO,
-      })
-      .select('id')
-      .single();
+   const { data, error } = await supabase
+  .from('client_requests')
+  .insert({
+    email: body.email,
+    first_name: body.firstName,
+    match_type: body.matchType,
+    message: body.message,
+
+    status: 'new', // ✅ IMPORTANT
+    user_type: body.clientType === 'concierge' ? 'b2b' : 'b2c',
+  })
+  .select('id')
+  .single();
 
     if (error || !data) {
       console.error(error);
