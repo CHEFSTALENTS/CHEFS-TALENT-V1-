@@ -5,14 +5,23 @@ import { createClient } from '@supabase/supabase-js';
 import { sendClientConfirmation } from '@/lib/sendClientConfirmation';
 import { sendInternalNewRequest } from '@/lib/sendInternalNewRequest';
 
-const asStrOrNull = (v: any) => {
-  const s = typeof v === 'string' ? v.trim() : '';
+const strOrNull = (v: any): string | null => {
+  const s = String(v ?? '').trim();
   return s ? s : null;
 };
 
-const asIntOrNull = (v: any) => {
-  const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(/[^\d]/g, ''));
-  return Number.isFinite(n) && n > 0 ? n : null;
+const intOrNull = (v: any): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(String(v).replace(/[^\d]/g, ''));
+  return Number.isFinite(n) ? n : null;
+};
+
+const dateOrNull = (v: any): string | null => {
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  // Supabase column type = date => attend YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  return s;
 };
 
 export async function POST(req: Request) {
@@ -24,33 +33,52 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const createdAtISO = new Date().toISOString();
+    // champs normalisés
+    const email = strOrNull(body.email);
+    const firstName = strOrNull(body.firstName);
+    const matchType = strOrNull(body.matchType); // 'fast' | 'concierge'
+    const message = strOrNull(body.message);
 
-    // ✅ IMPORTANT: pour les colonnes "date" -> jamais ""
-    const start_date = asStrOrNull(body.startDate);
-    const end_date = asStrOrNull(body.endDate);
+    const phone = strOrNull(body.phone);
+    const clientType = strOrNull(body.clientType);
+    const companyName = strOrNull(body.companyName);
+    const location = strOrNull(body.location);
 
+    const start_date = dateOrNull(body.startDate);
+    const end_date = dateOrNull(body.endDate);
+
+    const guest_count = intOrNull(body.guestCount);
+    const budget_range = strOrNull(body.budgetRange);
+    const assignment_type = strOrNull(body.assignmentType);
+
+    if (!email) {
+      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+    }
+    if (matchType !== 'fast' && matchType !== 'concierge') {
+      return NextResponse.json({ error: 'Invalid matchType' }, { status: 400 });
+    }
+
+    // 1) Insert
     const { data, error } = await supabase
       .from('client_requests')
       .insert({
-        email: asStrOrNull(body.email),
-        first_name: asStrOrNull(body.firstName),
-        match_type: body.matchType, // 'fast' | 'concierge'
-        message: asStrOrNull(body.message),
-
+        email,
+        first_name: firstName,
+        match_type: matchType,
+        message,
         status: 'new',
 
-        client_type: asStrOrNull(body.clientType),
-        company_name: asStrOrNull(body.companyName),
-        location: asStrOrNull(body.location),
+        client_type: clientType,
+        company_name: companyName,
+        location,
 
-        start_date, // ✅ colonne DB
-        end_date,   // ✅ colonne DB
+        start_date,
+        end_date,
 
-        guest_count: asIntOrNull(body.guestCount),
-        budget_range: asStrOrNull(body.budgetRange),
-        assignment_type: asStrOrNull(body.assignmentType),
-        phone: asStrOrNull(body.phone),
+        guest_count,
+        budget_range,
+        assignment_type,
+        phone,
       })
       .select('id')
       .single();
@@ -67,13 +95,17 @@ export async function POST(req: Request) {
 
     const requestId = data.id as string;
 
-    // Emails (non bloquants)
+    // 2) Emails (non bloquants) + timestamps only if success
+    let clientEmailOk = false;
+    let internalEmailOk = false;
+
     try {
       await sendClientConfirmation({
-        email: body.email,
-        firstName: body.firstName,
-        type: body.matchType,
+        email,
+        firstName: firstName ?? undefined,
+        type: matchType as any,
       });
+      clientEmailOk = true;
     } catch (e) {
       console.error('[sendClientConfirmation error]', e);
     }
@@ -81,25 +113,32 @@ export async function POST(req: Request) {
     try {
       await sendInternalNewRequest({
         requestId,
-        matchType: body.matchType,
-        email: body.email,
-        firstName: body.firstName,
-        message: body.message,
-        createdAtISO,
+        matchType: matchType as any,
+        email,
+        firstName: firstName ?? undefined,
+        message: message ?? undefined,
+        createdAtISO: new Date().toISOString(),
       });
+      internalEmailOk = true;
     } catch (e) {
       console.error('[sendInternalNewRequest error]', e);
     }
 
-    await supabase
-      .from('client_requests')
-      .update({
-        email_sent_at: new Date().toISOString(),
-        internal_email_sent_at: new Date().toISOString(),
-      })
-      .eq('id', requestId);
+    // 3) Update logs (seulement si ok)
+    const patch: Record<string, any> = {};
+    if (clientEmailOk) patch.email_sent_at = new Date().toISOString();
+    if (internalEmailOk) patch.internal_email_sent_at = new Date().toISOString();
 
-    return NextResponse.json({ ok: true, requestId });
+    if (Object.keys(patch).length) {
+      await supabase.from('client_requests').update(patch).eq('id', requestId);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      requestId,
+      emailClientSent: clientEmailOk,
+      emailInternalSent: internalEmailOk,
+    });
   } catch (err) {
     console.error('[api/request] server error', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
