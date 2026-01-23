@@ -41,10 +41,18 @@ export async function POST(req: Request) {
   .select('id')
   .single();
 
-    if (error || !data) {
-      console.error(error);
-      return NextResponse.json({ error: 'DB error' }, { status: 500 });
-    }
+   if (error) {
+  console.error('[client_requests insert error]', {
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+    code: error.code,
+  });
+  return NextResponse.json(
+    { error: error.message },
+    { status: 500 }
+  );
+}
 
     const requestId = data.id as string;
 
