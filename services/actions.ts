@@ -56,22 +56,23 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // IMPORTANT: envoie aussi les champs structurés si tu veux les stocker en colonnes
-    body: JSON.stringify({
-      email: data.email,
-      firstName,
-      matchType: data.mode, // 'fast' | 'concierge'
-      message,
+  body: JSON.stringify({
+  email: data.email,
+  firstName,
+  matchType: data.mode,
+  message,
 
-      // champs structurés (alignés avec ton route.ts)
-      clientType: (data as any).clientType ?? null,
-      companyName: (data as any).companyName ?? null,
-      location: (data as any).location ?? null,
-      startDate: (data as any).startDate ?? null,
-      endDate: (data as any).endDate ?? null,
-      guestCount: (data as any).guestCount ?? null,
-      budgetRange: (data as any).budgetRange ?? null,
-      assignmentType: (data as any).assignmentType ?? null,
-    }),
+  // ✅ champs structurés
+  phone: data.phone ?? null,
+  clientType: (data as any).clientType ?? null,
+  companyName: (data as any).companyName ?? null,
+  location: data.location ?? null,
+  startDate: data.startDate ?? null,
+  endDate: (data as any).endDate ?? null,
+  guestCount: data.guestCount ?? null,
+  budgetRange: (data as any).budgetRange ?? (data as any).budgetPerPerson ?? null,
+  assignmentType: (data as any).assignmentType ?? null,
+}),
   });
 
   if (!r.ok) {
