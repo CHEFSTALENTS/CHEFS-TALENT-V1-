@@ -19,39 +19,97 @@ import type { ChefProposalEntity } from './storage';
 // --------------------
 
 export const submitRequest = async (data: RequestForm): Promise<FastMatchResult> => {
-  // 1) construire firstName depuis fullName
   const fullName = (data.fullName || '').trim();
   const firstName = fullName ? fullName.split(' ')[0] : undefined;
 
-  // 2) construire un message lisible (stock/backoffice)
-  const message =
-    data.mode === 'fast'
-      ? [
-          `MODE: FAST`,
-          `Lieu: ${data.location}`,
-          `Date: ${data.startDate}`,
-          `Convives: ${data.guestCount}`,
-          `Budget/pers: ${(data as any).budgetPerPerson ?? ''}`,
-          `Préférences: ${data.cuisinePreferences || ''}`,
-          `Téléphone: ${data.phone || ''}`,
-        ]
-          .filter(Boolean)
-          .join('\n')
-      : [
-          `MODE: CONCIERGE`,
-          `ClientType: ${data.clientType}`,
-          `Société: ${data.companyName || ''}`,
-          `Lieu: ${data.location}`,
-          `Start: ${data.startDate}`,
-          `End: ${(data as any).endDate || ''}`,
-          `Assignation: ${(data as any).assignmentType || ''}`,
-          `Convives: ${data.guestCount}`,
-          `Budget: ${data.budgetRange || ''}`,
-          `Notes: ${data.notes || ''}`,
-          `Téléphone: ${data.phone || ''}`,
-        ]
-          .filter(Boolean)
-          .join('\n');
+  const isFast = data.mode === 'fast';
+
+  const payload = {
+    // email meta
+    email: data.email,
+    firstName,
+    matchType: data.mode, // 'fast' | 'concierge'
+    message: buildMessageForBackoffice(data),
+
+    // ✅ champs DB (pour admin + tri + affichage)
+    clientType: (data as any).clientType ?? null,
+    companyName: (data as any).companyName ?? null,
+    location: data.location ?? null,
+    startDate: data.startDate ?? null,
+    endDate: (data as any).endDate ?? null,
+    guestCount: data.guestCount ?? null,
+    budgetRange: isFast
+      ? (() => {
+          const bppRaw = (data as any).budgetPerPerson;
+          const bpp =
+            typeof bppRaw === 'string' ? Number(bppRaw.replace(',', '.')) : Number(bppRaw || 0);
+          return Number.isFinite(bpp) && bpp > 0 ? `${bpp}€ / pers (hors frais de service)` : (data.budgetRange ?? null);
+        })()
+      : (data.budgetRange ?? null),
+    assignmentType: (data as any).assignmentType ?? null,
+  };
+
+  const r = await fetch('/api/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    console.error('API /api/request error', r.status, txt);
+    throw new Error(`API request failed: ${r.status}`);
+  }
+
+  const json = (await r.json().catch(() => ({}))) as { ok?: boolean; requestId?: string };
+
+  if (data.mode === 'fast') {
+    return {
+      success: true,
+      mode: 'instant_match',
+      referenceId: json.requestId || crypto.randomUUID(),
+      matchedChef: 'Chef Selection Pending',
+    };
+  }
+
+  return {
+    success: true,
+    mode: 'concierge_manual',
+    referenceId: json.requestId || crypto.randomUUID(),
+  };
+};
+
+function buildMessageForBackoffice(data: RequestForm) {
+  if (data.mode === 'fast') {
+    return [
+      `MODE: FAST`,
+      `Lieu: ${data.location}`,
+      `Date: ${data.startDate}`,
+      `Convives: ${data.guestCount}`,
+      `Budget/pers: ${(data as any).budgetPerPerson ?? ''}`,
+      `Préférences: ${data.cuisinePreferences || ''}`,
+      `Téléphone: ${data.phone || ''}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return [
+    `MODE: CONCIERGE`,
+    `ClientType: ${(data as any).clientType}`,
+    `Société: ${(data as any).companyName || ''}`,
+    `Lieu: ${data.location}`,
+    `Start: ${data.startDate}`,
+    `End: ${(data as any).endDate || ''}`,
+    `Assignation: ${(data as any).assignmentType || ''}`,
+    `Convives: ${data.guestCount}`,
+    `Budget: ${data.budgetRange || ''}`,
+    `Notes: ${data.notes || ''}`,
+    `Téléphone: ${data.phone || ''}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
 
   // 3) POST vers l’API Next (stock + emails)
   const r = await fetch('/api/request', {
