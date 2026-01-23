@@ -13,7 +13,14 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+const asDateOrNull = (v: any) => {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s ? s : null; // ✅ jamais ""
+};
 
+const start_date = asDateOrNull(body.startDate);
+const end_date = asDateOrNull(body.endDate);
+    
     // 1) Insert + récupérer l’ID
     const createdAtISO = new Date().toISOString();
 
@@ -24,18 +31,18 @@ const { data, error } = await supabase
     first_name: body.firstName ?? null,
     match_type: body.matchType,
     message: body.message ?? null,
-
     status: 'new',
 
     client_type: body.clientType ?? null,
     company_name: body.companyName ?? null,
     location: body.location ?? null,
-    start_date: body.startDate ?? null,
-    end_date: body.endDate ?? null,
+
+   startDate: data.startDate?.trim() || null,
+endDate: (data as any).endDate?.trim() || null,
+
     guest_count: body.guestCount ?? null,
     budget_range: body.budgetRange ?? null,
 
-    // ✅ AJOUTS
     phone: body.phone ?? null,
     assignment_type: body.assignmentType ?? null,
   })
