@@ -5,6 +5,16 @@ import { createClient } from '@supabase/supabase-js';
 import { sendClientConfirmation } from '@/lib/sendClientConfirmation';
 import { sendInternalNewRequest } from '@/lib/sendInternalNewRequest';
 
+const asStrOrNull = (v: any) => {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s ? s : null;
+};
+
+const asIntOrNull = (v: any) => {
+  const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(/[^\d]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -13,75 +23,74 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-const asDateOrNull = (v: any) => {
-  const s = typeof v === 'string' ? v.trim() : '';
-  return s ? s : null; // ✅ jamais ""
-};
 
-const start_date = asDateOrNull(body.startDate);
-const end_date = asDateOrNull(body.endDate);
-    
-    // 1) Insert + récupérer l’ID
     const createdAtISO = new Date().toISOString();
 
-const { data, error } = await supabase
-  .from('client_requests')
-  .insert({
-    email: body.email,
-    first_name: body.firstName ?? null,
-    match_type: body.matchType,
-    message: body.message ?? null,
-    status: 'new',
+    // ✅ IMPORTANT: pour les colonnes "date" -> jamais ""
+    const start_date = asStrOrNull(body.startDate);
+    const end_date = asStrOrNull(body.endDate);
 
-    client_type: body.clientType ?? null,
-    company_name: body.companyName ?? null,
-    location: body.location ?? null,
+    const { data, error } = await supabase
+      .from('client_requests')
+      .insert({
+        email: asStrOrNull(body.email),
+        first_name: asStrOrNull(body.firstName),
+        match_type: body.matchType, // 'fast' | 'concierge'
+        message: asStrOrNull(body.message),
 
-   startDate: data.startDate?.trim() || null,
-endDate: (data as any).endDate?.trim() || null,
+        status: 'new',
 
-    guest_count: body.guestCount ?? null,
-    budget_range: body.budgetRange ?? null,
+        client_type: asStrOrNull(body.clientType),
+        company_name: asStrOrNull(body.companyName),
+        location: asStrOrNull(body.location),
 
-    phone: body.phone ?? null,
-    assignment_type: body.assignmentType ?? null,
-  })
-  .select('id')
-  .single();
+        start_date, // ✅ colonne DB
+        end_date,   // ✅ colonne DB
 
-   if (error) {
-  console.error('[client_requests insert error]', {
-    message: error.message,
-    details: error.details,
-    hint: error.hint,
-    code: error.code,
-  });
-  return NextResponse.json(
-    { error: error.message },
-    { status: 500 }
-  );
-}
+        guest_count: asIntOrNull(body.guestCount),
+        budget_range: asStrOrNull(body.budgetRange),
+        assignment_type: asStrOrNull(body.assignmentType),
+        phone: asStrOrNull(body.phone),
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[client_requests insert error]', {
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        code: (error as any).code,
+      });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     const requestId = data.id as string;
 
-    // 2) Email client
-    await sendClientConfirmation({
-      email: body.email,
-      firstName: body.firstName,
-      type: body.matchType,
-    });
+    // Emails (non bloquants)
+    try {
+      await sendClientConfirmation({
+        email: body.email,
+        firstName: body.firstName,
+        type: body.matchType,
+      });
+    } catch (e) {
+      console.error('[sendClientConfirmation error]', e);
+    }
 
-    // 3) Email interne (toi / équipe)
-    await sendInternalNewRequest({
-      requestId,
-      matchType: body.matchType,
-      email: body.email,
-      firstName: body.firstName,
-      message: body.message,
-      createdAtISO,
-    });
+    try {
+      await sendInternalNewRequest({
+        requestId,
+        matchType: body.matchType,
+        email: body.email,
+        firstName: body.firstName,
+        message: body.message,
+        createdAtISO,
+      });
+    } catch (e) {
+      console.error('[sendInternalNewRequest error]', e);
+    }
 
-    // 4) Log en DB
     await supabase
       .from('client_requests')
       .update({
@@ -91,9 +100,8 @@ endDate: (data as any).endDate?.trim() || null,
       .eq('id', requestId);
 
     return NextResponse.json({ ok: true, requestId });
-
   } catch (err) {
-    console.error(err);
+    console.error('[api/request] server error', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
