@@ -145,7 +145,12 @@ export default function AdminRequestDetailPage() {
 
     return { daySum, weekSum, monthSum };
   }, [missions]);
-
+const humanMissionType = (v?: string | null) => {
+  if (!v) return '—';
+  if (v === 'daily') return 'Présence quotidienne';
+  if (v === 'event') return 'Événement';
+  return v;
+};
   const onSelectChef = async (chefId: string) => {
     try {
       setActionChefId(chefId);
@@ -222,7 +227,9 @@ export default function AdminRequestDetailPage() {
             <Row label="Lieu" value={req.location || '—'} />
             <Row label="Pax" value={String(req.guestCount ?? '—')} />
             <Row label="Budget" value={formatBudget(req.budgetRange)} />
-            <Row label="Type" value={String(req.missionType || '—')} />
+            <Row label="Type" value={String(req.missionType ?? req.serviceLevel ?? '—')} />
+            <Row label="Type de mission" value={humanMissionType(req.missionType)} />
+            
           </div>
 
           {req.notes ? (
