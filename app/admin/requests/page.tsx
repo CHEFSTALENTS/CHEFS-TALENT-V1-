@@ -88,8 +88,50 @@ export default function AdminRequestsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusGroup, setStatusGroup] = useState<StatusGroup>('todo');
 
-  const refresh = async () => {
+ const refresh = async () => {
   setLoading(true);
+  try {
+    const r = await fetch('/api/admin/requests', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`GET /api/admin/requests failed: ${r.status}`);
+
+    const json = await r.json();
+
+    // ✅ mapping DB -> RequestEntity attendu par l’UI
+    const mapped: RequestEntity[] = (json.items ?? []).map((x: any) => ({
+      id: x.id,
+      status: x.status ?? 'new',
+      mode: x.match_type ?? x.mode,                // 'fast' | 'concierge'
+      userType: x.client_type === 'concierge' ? 'b2b' : 'b2c',
+
+      location: x.location ?? x.city ?? null,
+      guestCount: x.guest_count ?? x.guests ?? null,
+      budgetRange: x.budget_range ?? null,
+
+      createdAt: x.created_at ?? null,
+
+      dates: {
+        start: x.start_date ?? null,
+        end: x.end_date ?? null,
+      },
+
+      contact: {
+        name: x.first_name ?? null,
+        company: x.company_name ?? null,
+        email: x.email ?? null,
+        phone: x.phone ?? null,
+      },
+
+      missionType: x.assignment_type ?? null,
+    }));
+
+    setRequests(mapped);
+  } catch (e) {
+    console.error('Admin refresh error', e);
+    setRequests([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const r = await fetch('/api/admin/requests', { cache: 'no-store' });
   const json = await r.json();
@@ -320,8 +362,8 @@ export default function AdminRequestsPage() {
         </div>
 
         <div className="p-3 border-t border-white/10 text-xs text-white/45">
-          {view.length} résultat(s) • source : Supabase (client_requests)
-        </div>
+  {view.length} résultat(s) • source : Supabase
+</div>
       </div>
     </div>
   );
