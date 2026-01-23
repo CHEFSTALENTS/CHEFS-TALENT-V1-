@@ -21,9 +21,9 @@ export async function POST(req: Request) {
   .from('client_requests')
   .insert({
     email: body.email,
-    first_name: body.firstName,
+    first_name: body.firstName ?? null,
     match_type: body.matchType,
-    message: body.message,
+    message: body.message ?? null,
 
     // ✅ IMPORTANT : sinon invisible dans l’admin
     status: 'new',
@@ -36,7 +36,6 @@ export async function POST(req: Request) {
     end_date: body.endDate ?? null,
     guest_count: body.guestCount ?? null,
     budget_range: body.budgetRange ?? null,
-    assignment_type: body.assignmentType ?? null,
   })
   .select('id')
   .single();
