@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     // 1) Insert + récupérer l’ID
     const createdAtISO = new Date().toISOString();
 
-  const { data, error } = await supabase
+const { data, error } = await supabase
   .from('client_requests')
   .insert({
     email: body.email,
@@ -25,10 +25,8 @@ export async function POST(req: Request) {
     match_type: body.matchType,
     message: body.message ?? null,
 
-    // ✅ IMPORTANT : sinon invisible dans l’admin
     status: 'new',
 
-    // ✅ Colonnes affichées par l’admin
     client_type: body.clientType ?? null,
     company_name: body.companyName ?? null,
     location: body.location ?? null,
@@ -36,6 +34,10 @@ export async function POST(req: Request) {
     end_date: body.endDate ?? null,
     guest_count: body.guestCount ?? null,
     budget_range: body.budgetRange ?? null,
+
+    // ✅ AJOUTS
+    phone: body.phone ?? null,
+    assignment_type: body.assignmentType ?? null,
   })
   .select('id')
   .single();
