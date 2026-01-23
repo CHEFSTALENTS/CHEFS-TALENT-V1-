@@ -3,11 +3,43 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api, auth } from '@/services/storage';
+import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForFastRequest } from '@/services/fastMatch';
 
 type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
+
+function mapRowToRequestEntity(x: any): RequestEntity {
+  return {
+    id: x.id,
+
+    status: x.status ?? 'new',
+    mode: x.match_type ?? x.mode ?? 'fast', // 'fast' | 'concierge'
+    userType: x.client_type === 'concierge' ? ('b2b' as any) : ('b2c' as any),
+
+    location: x.location ?? x.city ?? '',
+    guestCount: x.guest_count ?? x.guests ?? null,
+    budgetRange: x.budget_range ?? x.budget ?? '',
+
+    createdAt: x.created_at ?? null,
+
+    dates: {
+      start: x.start_date ?? null,
+      end: x.end_date ?? null,
+    } as any,
+
+    contact: {
+      name: x.first_name ?? null,
+      company: x.company_name ?? null,
+      email: x.email ?? null,
+      phone: x.phone ?? null,
+    } as any,
+
+    missionType: x.assignment_type ?? null,
+    notes: x.message ?? null,
+    serviceLevel: null as any,
+  } as RequestEntity;
+}
 
 export default function AdminRequestDetailPage() {
   const params = useParams();
@@ -23,16 +55,32 @@ export default function AdminRequestDetailPage() {
   const refresh = async () => {
     setLoading(true);
 
-    const [r, c, m] = await Promise.all([
-      (api.getRequest?.(id) ?? Promise.resolve(null)) as Promise<RequestEntity | null>,
-      (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
-      ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
-    ]);
+    try {
+      const [rReq, rChefs, rMissions] = await Promise.all([
+        fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
+        (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
+        ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
+      ]);
 
-    setReq(r ?? null);
-    setChefs(c ?? []);
-    setMissions(m ?? []);
-    setLoading(false);
+      if (!rReq.ok) {
+        setReq(null);
+        setChefs(rChefs ?? []);
+        setMissions(rMissions ?? []);
+        return;
+      }
+
+      const json = await rReq.json();
+      const mapped = mapRowToRequestEntity(json.item);
+
+      setReq(mapped);
+      setChefs(rChefs ?? []);
+      setMissions(rMissions ?? []);
+    } catch (e) {
+      console.error('Admin request detail refresh error', e);
+      setReq(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -64,8 +112,6 @@ export default function AdminRequestDetailPage() {
   }, [req, chefs, q]);
 
   const revenue = useMemo(() => {
-    // On fait robuste: si tes missions n'ont pas encore de champs prix,
-    // ça restera 0 sans planter.
     const amountOf = (m: any) =>
       Number(m?.priceTotal ?? m?.amount ?? m?.revenue ?? m?.total ?? 0) || 0;
 
@@ -74,7 +120,6 @@ export default function AdminRequestDetailPage() {
     startOfDay.setHours(0, 0, 0, 0);
 
     const startOfWeek = new Date(now);
-    // semaine ISO-ish simplifiée: lundi
     const day = (startOfWeek.getDay() + 6) % 7; // 0=lundi
     startOfWeek.setDate(startOfWeek.getDate() - day);
     startOfWeek.setHours(0, 0, 0, 0);
@@ -88,27 +133,23 @@ export default function AdminRequestDetailPage() {
       return d.getTime() >= start.getTime();
     };
 
-    const daySum = missions.filter(m => inRange((m as any).createdAt, startOfDay)).reduce((s, m) => s + amountOf(m), 0);
-    const weekSum = missions.filter(m => inRange((m as any).createdAt, startOfWeek)).reduce((s, m) => s + amountOf(m), 0);
-    const monthSum = missions.filter(m => inRange((m as any).createdAt, startOfMonth)).reduce((s, m) => s + amountOf(m), 0);
+    const daySum = missions
+      .filter(m => inRange((m as any).createdAt, startOfDay))
+      .reduce((s, m) => s + amountOf(m), 0);
+    const weekSum = missions
+      .filter(m => inRange((m as any).createdAt, startOfWeek))
+      .reduce((s, m) => s + amountOf(m), 0);
+    const monthSum = missions
+      .filter(m => inRange((m as any).createdAt, startOfMonth))
+      .reduce((s, m) => s + amountOf(m), 0);
 
     return { daySum, weekSum, monthSum };
   }, [missions]);
 
   const onSelectChef = async (chefId: string) => {
-    // On branche visuellement + placeholder action
-    // (tu me diras ensuite si tu veux créer une proposal ou créer directement une mission)
     try {
       setActionChefId(chefId);
-
-      // Option A (future): api.selectChefForRequest(req.id, chefId)
-      // Option B (future): api.createProposal({requestId, chefId, ...})
-      // Option C (future): api.createMission({requestId, chefId, ...}) + api.updateStatus(req.id,'assigned')
-
-      // Pour l’instant: on ne casse rien → juste un log
       console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
-      // Tu pourras remplacer par un vrai call quand tu veux.
-
       await refresh();
     } finally {
       setActionChefId(null);
@@ -165,8 +206,6 @@ export default function AdminRequestDetailPage() {
         </div>
       </div>
 
-      
-
       {/* Content */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Fiche demande */}
@@ -184,12 +223,11 @@ export default function AdminRequestDetailPage() {
             <Row label="Pax" value={String(req.guestCount ?? '—')} />
             <Row label="Budget" value={formatBudget(req.budgetRange)} />
             <Row label="Type" value={String(req.missionType || '—')} />
-            <Row label="Service" value={String(req.serviceLevel || '—')} />
           </div>
 
           {req.notes ? (
             <div className="mt-4">
-              <div className="text-xs font-semibold text-white/70">Notes</div>
+              <div className="text-xs font-semibold text-white/70">Notes / Brief</div>
               <div className="text-sm text-white/80 mt-1 whitespace-pre-wrap">{req.notes}</div>
             </div>
           ) : null}
@@ -202,9 +240,7 @@ export default function AdminRequestDetailPage() {
             subtitle="Actifs + tri score (moteur existant)"
             right={
               <div className="flex items-center gap-2">
-                <div className="text-xs text-white/50 hidden sm:block">
-                  {matched.length} chef(s)
-                </div>
+                <div className="text-xs text-white/50 hidden sm:block">{matched.length} chef(s)</div>
                 <input
                   value={q}
                   onChange={e => setQ(e.target.value)}
@@ -289,7 +325,7 @@ export default function AdminRequestDetailPage() {
             </div>
 
             <div className="mt-4 text-xs text-white/45">
-              Prochaine étape : “Sélectionner” = création d’une <span className="text-white/70 font-medium">proposal</span> OU création directe d’une <span className="text-white/70 font-medium">mission</span> + update statut request.
+              Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
             </div>
           </Panel>
         </div>
@@ -327,16 +363,6 @@ function Panel({
   );
 }
 
-function Kpi({ title, value, hint }: { title: string; value: string; hint?: string }) {
-  return (
-    <div className="border border-white/10 rounded-2xl bg-white/5 p-4">
-      <div className="text-sm text-white/70">{title}</div>
-      <div className="text-3xl font-semibold text-white mt-1">{value}</div>
-      {hint ? <div className="text-xs text-white/40 mt-1">{hint}</div> : null}
-    </div>
-  );
-}
-
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -360,11 +386,7 @@ function StatusBadge({ status }: { status: string }) {
       ? 'bg-white/10 text-white/60 border-white/10'
       : 'bg-white/10 text-white/60 border-white/10';
 
-  return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
-      {s || '—'}
-    </span>
-  );
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{s || '—'}</span>;
 }
 
 /* ---------- Helpers ---------- */
@@ -384,12 +406,4 @@ function formatBudget(b: any) {
   if (min) return `≥ ${min}`;
   if (max) return `≤ ${max}`;
   return '—';
-}
-
-function money(n: number) {
-  try {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
-  } catch {
-    return `${Math.round(n || 0)}€`;
-  }
 }
