@@ -1,85 +1,14 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { RequestEntity } from '@/types';
 
 type TypeFilter = 'all' | 'b2b' | 'b2c';
 type StatusGroup = 'todo' | 'active' | 'closed';
-
-/** Données brutes venant de Supabase (table client_requests) */
-type ClientRequestRow = {
-  id: string;
-  email: string;
-  first_name?: string | null;
-  match_type?: 'fast' | 'concierge' | string | null;
-  message?: string | null;
-  created_at?: string | null;
-  email_sent_at?: string | null;
-};
-
-function parseBrief(message?: string | null) {
-  const m = String(message || '');
-
-  const getLineValue = (label: string) => {
-    const re = new RegExp(`^${label}\\s*:\\s*(.*)$`, 'mi');
-    const match = m.match(re);
-    return match?.[1]?.trim() || '';
-  };
-
-  const location = getLineValue('Lieu');
-  const start = getLineValue('Date') || getLineValue('Start');
-  const end = getLineValue('End');
-  const paxRaw = getLineValue('Convives');
-  const budgetRange = getLineValue('Budget') || getLineValue('Budget/pers') || '';
-  const clientType = getLineValue('ClientType'); // concierge | private etc
-  const company = getLineValue('Société');
-
-  const guestCount = paxRaw ? Number(String(paxRaw).replace(/[^\d]/g, '')) : undefined;
-
-  return {
-    location,
-    startDate: start,
-    endDate: end,
-    guestCount: Number.isFinite(guestCount as any) ? guestCount : undefined,
-    budgetRange: budgetRange ? String(budgetRange) : '',
-    userType: clientType === 'concierge' ? 'b2b' : 'b2c',
-    companyName: company,
-  };
-}
-
-function toRequestEntity(row: ClientRequestRow): RequestEntity {
-  const brief = parseBrief(row.message);
-
-  return {
-    id: row.id,
-    // on met "new" par défaut (vu que ta table client_requests ne stocke pas encore un status)
-    status: 'new' as any,
-    mode: (row.match_type === 'fast' ? 'fast' : 'concierge') as any,
-    userType: (brief.userType === 'b2b' ? 'b2b' : 'b2c') as any,
-
-    createdAt: row.created_at || new Date().toISOString(),
-
-    location: brief.location || '',
-
-    guestCount: brief.guestCount ?? null,
-
-    budgetRange: brief.budgetRange || '',
-
-    dates: {
-      start: brief.startDate || '',
-      end: brief.endDate || '',
-    } as any,
-
-    contact: {
-      name: row.first_name || '',
-      company: brief.companyName || '',
-      email: row.email,
-    } as any,
-
-    missionType: '' as any,
-  } as RequestEntity;
-}
 
 export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
@@ -88,79 +17,53 @@ export default function AdminRequestsPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusGroup, setStatusGroup] = useState<StatusGroup>('todo');
 
- const refresh = async () => {
-  setLoading(true);
-  try {
-    const r = await fetch('/api/admin/requests', { cache: 'no-store' });
-    if (!r.ok) throw new Error(`GET /api/admin/requests failed: ${r.status}`);
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/admin/requests', { cache: 'no-store' });
+      if (!r.ok) throw new Error(`GET /api/admin/requests failed: ${r.status}`);
 
-    const json = await r.json();
+      const json = await r.json();
 
-    // ✅ mapping DB -> RequestEntity attendu par l’UI
-    const mapped: RequestEntity[] = (json.items ?? []).map((x: any) => ({
-      id: x.id,
-      status: x.status ?? 'new',
-      mode: x.match_type ?? x.mode,                // 'fast' | 'concierge'
-      userType: x.client_type === 'concierge' ? 'b2b' : 'b2c',
+      const mapped: RequestEntity[] = (json.items ?? []).map((x: any) => ({
+        id: x.id,
+        status: x.status ?? 'new',
 
-      location: x.location ?? x.city ?? null,
-      guestCount: x.guest_count ?? x.guests ?? null,
-      budgetRange: x.budget_range ?? null,
+        // match_type dans ta table => fast|concierge
+        mode: (x.match_type ?? 'concierge') as any,
 
-      createdAt: x.created_at ?? null,
+        // client_type: concierge => b2b sinon b2c
+        userType: x.client_type === 'concierge' ? 'b2b' : 'b2c',
 
-      dates: {
-        start: x.start_date ?? null,
-        end: x.end_date ?? null,
-      },
+        createdAt: x.created_at ?? null,
 
-      contact: {
-        name: x.first_name ?? null,
-        company: x.company_name ?? null,
-        email: x.email ?? null,
-        phone: x.phone ?? null,
-      },
+        location: x.location ?? x.city ?? '—',
+        guestCount: x.guest_count ?? x.guests ?? null,
+        budgetRange: x.budget_range ?? (x.budget ? String(x.budget) : null),
 
-      missionType: x.assignment_type ?? null,
-    }));
+        dates: {
+          start: x.start_date ?? null,
+          end: x.end_date ?? null,
+        } as any,
 
-    setRequests(mapped);
-  } catch (e) {
-    console.error('Admin refresh error', e);
-    setRequests([]);
-  } finally {
-    setLoading(false);
-  }
-};
+        contact: {
+          name: x.first_name ?? 'Client',
+          company: x.company_name ?? '',
+          email: x.email ?? '',
+          phone: x.phone ?? '',
+        } as any,
 
-  const r = await fetch('/api/admin/requests', { cache: 'no-store' });
-  const json = await r.json();
+        missionType: x.assignment_type ?? '' as any,
+      }));
 
-  const list = (json.items ?? []).map((x: any) => ({
-    id: x.id,
-    status: x.status ?? 'new',
-    mode: x.match_type ?? x.mode ?? 'fast',
-    userType: x.user_type ?? (x.client_type === 'concierge' ? 'b2b' : 'b2c'),
-    createdAt: x.created_at ?? x.createdAt,
-
-    location: x.location ?? '',
-    guestCount: x.guest_count ?? x.guestCount ?? null,
-    budgetRange: x.budget_range ?? x.budgetRange ?? '',
-
-    dates: { start: x.start_date ?? x.startDate ?? x.created_at, end: x.end_date ?? x.endDate ?? null },
-
-    contact: {
-      name: x.first_name ?? x.firstName ?? 'Client',
-      company: x.company_name ?? x.companyName ?? '',
-      email: x.email ?? '',
-    },
-
-    missionType: x.assignment_type ?? x.missionType ?? '',
-  }));
-
-  setRequests(list);
-  setLoading(false);
-};
+      setRequests(mapped);
+    } catch (e) {
+      console.error('Admin refresh error', e);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     refresh();
@@ -311,13 +214,9 @@ export default function AdminRequestsPage() {
 
             <tbody>
               {loading ? (
-                <tr>
-                  <td className="p-4 text-white/60" colSpan={7}>Chargement…</td>
-                </tr>
+                <tr><td className="p-4 text-white/60" colSpan={7}>Chargement…</td></tr>
               ) : view.length === 0 ? (
-                <tr>
-                  <td className="p-4 text-white/60" colSpan={7}>Aucune demande.</td>
-                </tr>
+                <tr><td className="p-4 text-white/60" colSpan={7}>Aucune demande.</td></tr>
               ) : (
                 view.map(r => (
                   <tr key={r.id} className="border-t border-white/10 hover:bg-white/5 transition">
@@ -342,9 +241,7 @@ export default function AdminRequestsPage() {
                     <td className="p-3 text-white/85">{formatBudget(r.budgetRange)}</td>
                     <td className="p-3 text-white/70 whitespace-nowrap">{formatDates(r)}</td>
 
-                    <td className="p-3">
-                      <StatusBadge status={String(r.status || '')} />
-                    </td>
+                    <td className="p-3"><StatusBadge status={String(r.status || '')} /></td>
 
                     <td className="p-3 text-right">
                       <Link
@@ -362,8 +259,8 @@ export default function AdminRequestsPage() {
         </div>
 
         <div className="p-3 border-t border-white/10 text-xs text-white/45">
-  {view.length} résultat(s) • source : Supabase
-</div>
+          {view.length} résultat(s) • source : Supabase
+        </div>
       </div>
     </div>
   );
