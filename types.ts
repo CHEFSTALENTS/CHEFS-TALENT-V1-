@@ -149,7 +149,55 @@ export interface RequestForm {
   dietaryRestrictions: string;
   preferredLanguage: string;
 
+  // ----------------------------
+  // ✅ Budget (UI + estimation)
+  // ----------------------------
+
+  /**
+   * Affichage / texte libre (ex: "600€ – 900€ / jour (hors frais de service)")
+   * On le garde pour l’UI et le backoffice.
+   */
   budgetRange: string;
+
+  /**
+   * ✅ Champ numérique FAST : budget par personne
+   * (utilisé pour calculer chefTotal = pax * budgetPerPerson)
+   */
+  budgetPerPerson?: number | null;
+
+  /**
+   * ✅ Champ numérique CONCIERGE : budget par jour
+   * (utilisé pour calculer chefTotal = days * budgetPerDay)
+   */
+  budgetPerDay?: number | null;
+
+  /**
+   * Optionnel : moment (fast)
+   * (si tu veux arrêter les @ts-ignore sur mealMoment)
+   */
+  mealMoment?: 'lunch' | 'dinner';
+
+  /**
+   * Optionnel : bloc pricing calculé avant submit (pour stocker / afficher)
+   * Tu peux aussi le mettre côté API uniquement, mais si tu l’envoies depuis le front, typage ici.
+   */
+  pricing?: {
+    rate: number | null; // null => sur devis (yacht)
+    rateLabel: string;
+
+    chefTotal?: number;
+    serviceFee?: number;
+    totalWithService?: number;
+
+    unitLabel?: '€/pers' | '€/jour';
+    qty?: number;
+
+    reason?: string; // si pas calculable
+  };
+
+  // ----------------------------
+  // Notes & contact
+  // ----------------------------
   notes: string;
 
   fullName: string;
