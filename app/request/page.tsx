@@ -983,9 +983,15 @@ function RequestFormContent() {
                         min={0}
                         placeholder="Ex : 150"
                         // @ts-ignore
-                        value={(formData as any).budgetPerPerson}
-                        onChange={(e) => setFormData({ ...formData, /* @ts-ignore */ budgetPerPerson: e.target.value })}
-                      />
+value={(formData as any).budgetPerPerson ?? ''}
+                         onChange={(e) => {
+  const raw = e.target.value;          // string
+  const n = raw === '' ? null : Number(raw);
+  setFormData({
+    ...(formData as any),
+    budgetPerPerson: Number.isFinite(n as any) ? n : null,
+  });
+}}                      />
                       <p className="text-xs text-stone-400 italic">Confidentiel. Sert à proposer des chefs cohérents.</p>
                     </div>
                   </div>
