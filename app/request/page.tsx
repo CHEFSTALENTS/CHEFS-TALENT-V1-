@@ -1195,14 +1195,20 @@ value={(formData as any).budgetPerPerson ?? ''}
                   {/* ✅ Champ numérique budget/day */}
                   <div className="space-y-2">
                     <Label>Budget par jour</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="Ex : 750"
-                      // @ts-ignore
-                      value={(formData as any).budgetPerDay || ''}
-                      onChange={(e) => setFormData({ ...formData, /* @ts-ignore */ budgetPerDay: e.target.value })}
-                    />
+                   <Input
+  type="number"
+  min={0}
+  placeholder="Ex : 750"
+  value={(formData as any).budgetPerDay ?? ''}
+  onChange={(e) => {
+    const raw = e.target.value;
+    const n = raw === '' ? null : Number(raw);
+    setFormData({
+      ...(formData as any),
+      budgetPerDay: Number.isFinite(n as any) ? n : null,
+    });
+  }}
+/>
                     <p className="text-xs text-stone-400 italic">Prestation du chef uniquement (approvisionnements non inclus).</p>
                   </div>
 
