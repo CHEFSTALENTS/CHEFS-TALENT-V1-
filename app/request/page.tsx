@@ -223,7 +223,9 @@ function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null
     const end = String((formData as any).endDate || '').trim();
     if (end.length < 8) return null;
   }
-
+budgetPerPerson?: number | null; // FAST
+budgetPerDay?: number | null;    // CONCIERGE (si tu veux du 100% clean)
+   
   const assignment = String((formData as any).assignmentType || 'dinner');
   const kind = getBudgetKindFromForm(formData);
 
@@ -445,41 +447,40 @@ function BudgetBenchmarkCard({
 
 type FastMealMoment = 'lunch' | 'dinner';
 
-const makeEmptyForm = (m: RequestMode): RequestForm =>
-  ({
-    mode: m,
-    clientType: 'private',
-    location: '',
-    dateMode: m === 'concierge' ? 'multi' : 'single',
-    startDate: '',
-    // @ts-ignore
-    endDate: '',
-    assignmentType: m === 'fast' ? 'dinner' : 'daily',
-    guestCount: 2,
-    serviceExpectations: 'chef_only',
-    cuisinePreferences: '',
-    dietaryRestrictions: '',
-    preferredLanguage: '',
-    budgetRange: '',
-    notes: '',
-    fullName: '',
-    email: '',
-    phone: '',
-    companyName: '',
-    serviceRhythm: 'daily',
-    accommodationProvided: 'yes',
-    sailingArea: '',
-    crewSize: 0,
-    // additions (soft typed)
-    // @ts-ignore
-    mealMoment: 'dinner' as FastMealMoment,
-    // FAST numeric
-    // @ts-ignore
-    budgetPerPerson: '',
-    // CONCIERGE numeric
-    // @ts-ignore
-    budgetPerDay: '',
-  } as any);
+const makeEmptyForm = (m: RequestMode): RequestForm => ({
+  mode: m,
+  clientType: 'private',
+  location: '',
+  dateMode: m === 'concierge' ? 'multi' : 'single',
+  startDate: '',
+  endDate: '',
+
+  assignmentType: m === 'fast' ? 'dinner' : 'daily',
+  guestCount: 2,
+  serviceExpectations: 'chef_only',
+
+  cuisinePreferences: '',
+  dietaryRestrictions: '',
+  preferredLanguage: '',
+  budgetRange: '',
+  notes: '',
+  fullName: '',
+  email: '',
+  phone: '',
+  companyName: '',
+
+  serviceRhythm: 'daily',
+  accommodationProvided: 'yes',
+  sailingArea: '',
+  crewSize: 0,
+
+  // ✅ champs numériques
+  budgetPerPerson: null,
+  budgetPerDay: null,
+
+  // optionnel si tu le gardes
+  // mealMoment: 'dinner',
+});
 
 /* =========================================================
    Page
@@ -963,7 +964,18 @@ function RequestFormContent() {
                   <div className="grid md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <Label>Nombre de convives</Label>
-                      <Input type="number" min={1} value={formData.guestCount} onChange={(e) => setFormData({ ...formData, guestCount: parseInt(e.target.value || '0', 10) })} />
+<Input
+  type="number"
+  min={0}
+  placeholder="Ex : 150"
+  value={formData.budgetPerPerson ?? ''}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      budgetPerPerson: e.target.value ? Number(e.target.value) : null,
+    })
+  }
+/>
                     </div>
 
                     <div className="space-y-4">
