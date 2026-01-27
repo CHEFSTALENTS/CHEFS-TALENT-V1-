@@ -763,7 +763,10 @@ function RequestFormContent() {
             qty: pricing.qty,
           }
         : { rate: null, rateLabel: pricing.rateLabel, reason: pricing.reason };
-
+       
+const pax = formData.guestCount || 0;
+const bpp = formData.budgetPerPerson || 0;
+       
       const response = await submitRequest(payload);
       if (response?.success) setResult(response);
     } catch (error) {
@@ -978,20 +981,19 @@ function RequestFormContent() {
 
                     <div className="space-y-4">
                       <Label>Budget par personne</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Ex : 150"
-                        // @ts-ignore
-value={(formData as any).budgetPerPerson ?? ''}
-                         onChange={(e) => {
-  const raw = e.target.value;          // string
-  const n = raw === '' ? null : Number(raw);
-  setFormData({
-    ...(formData as any),
-    budgetPerPerson: Number.isFinite(n as any) ? n : null,
-  });
-}}                      />
+                     <Input
+  type="number"
+  min={0}
+  placeholder="Ex : 150"
+  value={formData.budgetPerPerson ?? 0}
+  onChange={(e) => {
+    const v = Number(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      budgetPerPerson: Number.isFinite(v) ? v : 0,
+    }));
+  }}
+/
                       <p className="text-xs text-stone-400 italic">Confidentiel. Sert à proposer des chefs cohérents.</p>
                     </div>
                   </div>
@@ -1164,7 +1166,18 @@ value={(formData as any).budgetPerPerson ?? ''}
 
                   <div className="space-y-4">
                     <Label>Convives (principal)</Label>
-                    <Input type="number" min={1} value={formData.guestCount} onChange={(e) => setFormData({ ...formData, guestCount: parseInt(e.target.value || '0', 10) })} />
+<Input
+  type="number"
+  min={1}
+  value={formData.guestCount ?? 0}
+  onChange={(e) => {
+    const v = Number(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      guestCount: Number.isFinite(v) ? v : 0,
+    }));
+  }}
+/>
                   </div>
                 </div>
               </Reveal>
@@ -1198,15 +1211,14 @@ value={(formData as any).budgetPerPerson ?? ''}
                    <Input
   type="number"
   min={0}
-  placeholder="Ex : 750"
-  value={(formData as any).budgetPerDay ?? ''}
+  placeholder="Ex : 700"
+  value={formData.budgetPerDay ?? 0}
   onChange={(e) => {
-    const raw = e.target.value;
-    const n = raw === '' ? null : Number(raw);
-    setFormData({
-      ...(formData as any),
-      budgetPerDay: Number.isFinite(n as any) ? n : null,
-    });
+    const v = Number(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      budgetPerDay: Number.isFinite(v) ? v : 0,
+    }));
   }}
 />
                     <p className="text-xs text-stone-400 italic">Prestation du chef uniquement (approvisionnements non inclus).</p>
