@@ -47,6 +47,10 @@ type PricingKo = {
 
 type PricingResult = PricingOk | PricingKo;
 
+function isPricingKo(p: PricingResult): p is PricingKo {
+  return p.ok === false;
+}
+
 const isValidISODate = (s?: string) => !!s && !Number.isNaN(new Date(s).getTime());
 
 const daysBetweenInclusive = (start?: string, end?: string) => {
@@ -311,13 +315,13 @@ function SoftCard({ title, children }: { title?: string; children: React.ReactNo
 function ClientEstimateInline({ formData }: { formData: RequestFormState }) {
   const p = useMemo(() => computePricing(formData), [formData]);
 
-  if (!p.ok) {
-    return (
-      <SoftCard title="Estimation">
-        <div className="text-sm text-stone-600">{p.reason}</div>
-      </SoftCard>
-    );
-  }
+  if (isPricingKo(p)) {
+  return (
+    <SoftCard title="Estimation">
+      <div className="text-sm text-stone-600">{p.reason}</div>
+    </SoftCard>
+  );
+}
 
   return (
     <SoftCard title="Estimation">
