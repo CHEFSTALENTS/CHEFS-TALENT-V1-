@@ -149,6 +149,20 @@ export interface RequestForm {
   dietaryRestrictions: string;
   preferredLanguage: string;
 
+  // texte (référence marché / lecture DB)
+  budgetRange: string;
+
+  // ✅ numériques (saisie)
+  budgetPerPerson?: number | null; // FAST
+  budgetPerDay?: number | null;    // CONCIERGE
+
+  notes: string;
+
+  fullName: string;
+  email: string;
+  phone: string;
+  companyName?: string;
+}
   // ----------------------------
   // ✅ Budget (UI + estimation)
   // ----------------------------
