@@ -664,45 +664,70 @@ function RequestFormContent() {
   const handleSubmit = async () => {
   console.log('🔥 handleSubmit triggered', { mode, step, formData });
   setIsSubmitting(true);
-    try {
-      if (mode === 'fast') {
-        const bppRaw = (formData as any).budgetPerPerson;
-        const bpp = typeof bppRaw === 'string' ? Number(bppRaw.replace(',', '.')) : Number(bppRaw || 0);
 
-        const payload: any = {
-          ...formData,
-          budgetRange: Number.isFinite(bpp) && bpp > 0 ? `${formatMoney(bpp)} / pers (hors frais de service)` : '',
-          budgetPerPerson: Number.isFinite(bpp) ? bpp : undefined,
-          // safety: fast is always ponctuel
-          dateMode: 'single',
+  try {
+    if (mode === 'fast') {
+      const bppRaw = (formData as any).budgetPerPerson;
+      const bpp = typeof bppRaw === 'string' ? Number(bppRaw.replace(',', '.')) : Number(bppRaw || 0);
+
+      const payload: any = {
+        ...formData,
+        budgetRange: Number.isFinite(bpp) && bpp > 0 ? `${formatMoney(bpp)} / pers (hors frais de service)` : '',
+        budgetPerPerson: Number.isFinite(bpp) ? bpp : undefined,
+        dateMode: 'single',
+      };
+
+      // ✅ pricing
+      const pricing = computePricing(payload);
+      payload.pricing = pricing.ok
+        ? {
+            rate: pricing.rate,
+            rateLabel: pricing.rateLabel,
+            chefTotal: pricing.chefTotal,
+            serviceFee: pricing.serviceFee,
+            totalWithService: pricing.totalWithService,
+            unitLabel: pricing.unitLabel,
+            qty: pricing.qty,
+          }
+        : {
+            rate: null,
+            rateLabel: pricing.rateLabel,
+            reason: pricing.reason,
+          };
+
+      const response = await submitRequest(payload);
+      if (response?.success) setResult(response);
+      return;
+    }
+
+    // ✅ concierge
+    const payload: any = { ...formData };
+
+    const pricing = computePricing(payload);
+    payload.pricing = pricing.ok
+      ? {
+          rate: pricing.rate,
+          rateLabel: pricing.rateLabel,
+          chefTotal: pricing.chefTotal,
+          serviceFee: pricing.serviceFee,
+          totalWithService: pricing.totalWithService,
+          unitLabel: pricing.unitLabel,
+          qty: pricing.qty,
+        }
+      : {
+          rate: null,
+          rateLabel: pricing.rateLabel,
+          reason: pricing.reason,
         };
 
-        const response = await submitRequest(payload);
-        if (response?.success) setResult(response);
-      } else {
-        const response = await submitRequest(formData);
-        if (response?.success) setResult(response);
-      }
-       const pricing = computePricing(payload);
-       pricing: pricing.ok ? {
-  rate: pricing.rate,
-  rateLabel: pricing.rateLabel,
-  chefTotal: pricing.chefTotal,
-  serviceFee: pricing.serviceFee,
-  totalWithService: pricing.totalWithService,
-  unitLabel: pricing.unitLabel,
-  qty: pricing.qty,
-} : {
-  rate: null,
-  rateLabel: pricing.rateLabel,
-  reason: pricing.reason,
-},
-    } catch (error) {
-      console.error('Error submitting', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    const response = await submitRequest(payload);
+    if (response?.success) setResult(response);
+  } catch (error) {
+    console.error('Error submitting', error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   /* =========================
      SUCCESS SCREEN
