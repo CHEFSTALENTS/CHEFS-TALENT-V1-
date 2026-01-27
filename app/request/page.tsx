@@ -5,10 +5,20 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input, Textarea, Reveal, Marker, Label } from '../../components/ui';
 import { submitRequest } from '../../services/actions';
-import { RequestForm, RequestMode } from '../../types';
+import type { RequestForm, RequestMode } from '../../types';
 import { Loader2, CheckCircle2, Clock } from 'lucide-react';
 import { getMarketBudgetRange } from '@/lib/budgetBenchmark';
 import type { BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
+
+/* =========================================================
+   Types (local state extension)
+========================================================= */
+
+type RequestFormState = RequestForm & {
+  endDate?: string; // déjà dans RequestForm mais parfois optional selon ton fichier types
+  budgetPerPerson?: number | null; // FAST
+  budgetPerDay?: number | null; // CONCIERGE
+};
 
 /* =========================================================
    Pricing rules (service fee)
@@ -26,7 +36,6 @@ type PricingOk = {
   totalWithService: number;
   unitLabel: '€/pers' | '€/jour';
   qty: number;
-  reason?: string; // ✅ ajout pour calmer TS
 };
 
 type PricingKo = {
@@ -37,6 +46,7 @@ type PricingKo = {
 };
 
 type PricingResult = PricingOk | PricingKo;
+
 const isValidISODate = (s?: string) => !!s && !Number.isNaN(new Date(s).getTime());
 
 const daysBetweenInclusive = (start?: string, end?: string) => {
@@ -55,9 +65,9 @@ const isLastMinute72h = (startDate?: string) => {
   return hours <= 72;
 };
 
-function pickServiceFeeRate(formData: any): { rate: number | null; label: string; reason?: string } {
+function pickServiceFeeRate(formData: RequestFormState): { rate: number | null; label: string; reason?: string } {
   const mode = String(formData.mode || 'fast'); // 'fast' | 'concierge'
-  const assignment = String(formData.assignmentType || '');
+  const assignment = String((formData as any).assignmentType || '');
   const startDate = String(formData.startDate || '');
 
   // 1) Yacht sur devis
@@ -77,18 +87,18 @@ function pickServiceFeeRate(formData: any): { rate: number | null; label: string
 
   // 4) Concierge selon durée
   const dateMode = String(formData.dateMode || 'single');
-  const endDate = String(formData.endDate || '');
+  const endDate = String((formData as any).endDate || '');
   const days = dateMode === 'multi' ? daysBetweenInclusive(startDate, endDate) : 1;
 
   if (days >= 8) return { rate: 0.13, label: '13% (concierge ≥8j)', reason: 'concierge_long' };
   return { rate: 0.15, label: '15% (concierge <8j)', reason: 'concierge_short' };
 }
 
-function computePricing(formData: any): PricingResult {
+function computePricing(formData: RequestFormState): PricingResult {
   const mode = String(formData.mode || 'fast');
   const dateMode = String(formData.dateMode || (mode === 'concierge' ? 'multi' : 'single'));
   const startDate = String(formData.startDate || '');
-  const endDate = String(formData.endDate || '');
+  const endDate = String((formData as any).endDate || '');
 
   const { rate, label } = pickServiceFeeRate(formData);
 
@@ -100,7 +110,7 @@ function computePricing(formData: any): PricingResult {
   // FAST = €/pers
   if (mode === 'fast') {
     const pax = Number(formData.guestCount ?? 0) || 0;
-    const bpp = Number(String(formData.budgetPerPerson ?? '').replace(',', '.')) || 0;
+    const bpp = Number(formData.budgetPerPerson ?? 0) || 0;
 
     if (pax <= 0 || bpp <= 0) {
       return { ok: false, rate, rateLabel: label, reason: 'Renseignez convives + budget/pers pour calculer.' };
@@ -122,9 +132,9 @@ function computePricing(formData: any): PricingResult {
     };
   }
 
-  // CONCIERGE
+  // CONCIERGE = €/jour
   const days = dateMode === 'multi' ? daysBetweenInclusive(startDate, endDate) : 1;
-  const perDay = Number(String(formData.budgetPerDay ?? '').replace(',', '.')) || 0;
+  const perDay = Number(formData.budgetPerDay ?? 0) || 0;
 
   if (days <= 0 || perDay <= 0) {
     return { ok: false, rate, rateLabel: label, reason: 'Renseignez un budget / jour pour calculer.' };
@@ -207,24 +217,23 @@ function isInternationalFromLocation(location?: string) {
 }
 
 /**
- * ✅ Benchmark kind:
- * - Ponctuel (single) => EVENT => €/pers
- * - Résidence (multi + >=2 jours) => RESIDENCE => €/jour
+ * Benchmark kind:
+ * - Ponctuel (single) => event => €/pers
+ * - Résidence (multi + >=2 jours) => residence => €/jour
  */
-function getBudgetKindFromForm(formData: RequestForm): RequestKind {
+function getBudgetKindFromForm(formData: RequestFormState): RequestKind {
   const isMulti = formData.dateMode === 'multi';
   const days = daysBetweenInclusive(formData.startDate, (formData as any).endDate);
   return isMulti && days >= 2 ? 'residence' : 'event';
 }
 
-function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null {
-  // Bloquer benchmark résidence tant qu'on n'a pas endDate (évite le "ponctuel" parasite)
+function buildBudgetContextFromForm(formData: RequestFormState): BudgetContext | null {
+  // Bloquer benchmark résidence tant qu'on n'a pas endDate
   if (formData.dateMode === 'multi') {
     const end = String((formData as any).endDate || '').trim();
     if (end.length < 8) return null;
   }
 
-   
   const assignment = String((formData as any).assignmentType || 'dinner');
   const kind = getBudgetKindFromForm(formData);
 
@@ -232,8 +241,7 @@ function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null
   const guests = kind === 'event' ? Math.max(1, Number((formData as any).guestCount ?? 1)) : null;
 
   const yacht = assignment === 'yacht';
-  const brigade =
-    String((formData as any).serviceExpectations || '') === 'full_team' || String((formData as any).serviceExpectations || '') === 'brigade';
+  const brigade = String((formData as any).serviceExpectations || '') === 'full_team';
 
   const highSeason = isHighSeasonFromStartDate(formData.startDate);
   const international = isInternationalFromLocation(formData.location);
@@ -264,8 +272,6 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
       max: data.perUnit.max,
       recommended: data.perUnit.recommended,
       totalRecommended: data.recommended,
-      totalMin: data.min,
-      totalMax: data.max,
       qtyLabel: `${guests} pers.`,
     };
   }
@@ -277,166 +283,105 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
     max: data.perUnit.max,
     recommended: data.perUnit.recommended,
     totalRecommended: data.recommended,
-    totalMin: data.min,
-    totalMax: data.max,
     qtyLabel: `${days} jour${days > 1 ? 's' : ''}`,
   };
 }
 
+function parseNumberOrNull(raw: string): number | null {
+  const cleaned = String(raw ?? '').replace(',', '.').trim();
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 /* =========================================================
-   UI components (local)
+   UI components (local) — version compact / moins blanche
 ========================================================= */
 
-function PricingSummary({ formData }: { formData: any }) {
-  const p = useMemo(() => computePricing(formData), [formData]);
-
+function SoftCard({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <div className="border border-stone-200 bg-white p-5 space-y-2">
-      <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Estimation (service inclus)</div>
-
-      <div className="text-sm text-stone-700">
-        Frais de service : <b>{p.rateLabel}</b>
-      </div>
-
-      {!p.ok ? (
-        <div className="text-sm text-stone-500">{p.reason}</div>
-      ) : (
-        <>
-          <div className="text-sm text-stone-700">
-            Base chef : <b>{formatMoney(p.chefTotal)}</b>{' '}
-            <span className="text-stone-400">
-              ({p.qty} {p.unitLabel === '€/jour' ? 'jour(s)' : 'pers.'})
-            </span>
-          </div>
-          <div className="text-sm text-stone-700">
-            Frais de service : <b>{formatMoney(p.serviceFee)}</b>
-          </div>
-          <div className="text-sm text-stone-900">
-            Total estimé : <b>{formatMoney(p.totalWithService)}</b>
-          </div>
-        </>
-      )}
-
-      <div className="text-xs text-stone-400 italic">
-        {String(formData.assignmentType || '') === 'yacht'
-          ? 'Mission yacht : tarification sur devis.'
-          : formData.mode === 'concierge'
-          ? 'Approvisionnements non inclus.'
-          : 'Tarifs indiqués hors approvisionnements.'}
-      </div>
+    <div className="rounded-xl border border-stone-200/70 bg-stone-50/70 backdrop-blur-sm p-5 md:p-6 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.25)]">
+      {title ? <div className="text-[10px] uppercase tracking-[0.2em] text-stone-500 mb-3">{title}</div> : null}
+      {children}
     </div>
   );
 }
 
-function BudgetBenchmarkCard({
+/** ✅ Estimation client (simple, sans explication de logique) */
+function ClientEstimateInline({ formData }: { formData: RequestFormState }) {
+  const p = useMemo(() => computePricing(formData), [formData]);
+
+  if (!p.ok) {
+    return (
+      <SoftCard title="Estimation">
+        <div className="text-sm text-stone-600">{p.reason}</div>
+      </SoftCard>
+    );
+  }
+
+  return (
+    <SoftCard title="Estimation">
+      <div className="flex items-end justify-between gap-6">
+        <div className="space-y-1">
+          <div className="text-sm text-stone-600">Total estimé (service inclus)</div>
+          <div className="text-3xl md:text-4xl font-serif text-stone-900 leading-none">{formatMoney(p.totalWithService)}</div>
+          <div className="text-xs text-stone-500">
+            {p.unitLabel === '€/jour' ? `${p.qty} jour(s)` : `${p.qty} pers.`} · approvisionnements non inclus
+          </div>
+        </div>
+
+        <div className="text-right text-xs text-stone-500">
+          <div>Base chef : <span className="text-stone-800">{formatMoney(p.chefTotal)}</span></div>
+          <div>Frais de service : <span className="text-stone-800">{formatMoney(p.serviceFee)}</span></div>
+        </div>
+      </div>
+    </SoftCard>
+  );
+}
+
+/** ✅ Référence marché compacte (plus de “gros encart”) */
+function MarketHintInline({
   loading,
   data,
-  onUseRecommended,
-  onUseRange,
-  variant,
 }: {
   loading: boolean;
   data: ReturnType<typeof getMarketBudgetRange> | null;
-  onUseRecommended: () => void;
-  onUseRange: () => void;
-  variant: 'fast' | 'concierge';
 }) {
   const per = useMemo(() => calcPerUnit(data), [data]);
   const currency = data?.currency || 'EUR';
 
-  const headerTitle =
-    data?.kind === 'residence'
-      ? `Référence marché · Résidence (${per?.qtyLabel ?? '—'})`
-      : `Référence marché · Prestation ponctuelle (${per?.qtyLabel ?? '—'})`;
-
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-[0_10px_30px_-20px_rgba(0,0,0,0.25)] overflow-hidden">
-      <div className="p-6 md:p-7">
-        <div className="flex items-start justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400">Référence marché</div>
-              {data?.tier ? (
-                <span className="text-[10px] uppercase tracking-[0.22em] text-stone-500 border border-stone-200 px-2 py-1 rounded-full">
-                  {data.tier}
-                </span>
-              ) : null}
-              {typeof data?.multiplier === 'number' ? (
-                <span className="text-[10px] uppercase tracking-[0.22em] text-stone-500 border border-stone-200 px-2 py-1 rounded-full">
-                  ×{Number(data.multiplier).toFixed(2)}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="text-xl md:text-2xl font-serif text-stone-900 leading-tight">{headerTitle}</div>
-
-            {variant === 'concierge' ? (
-              <p className="text-sm text-stone-500 font-light leading-relaxed max-w-2xl">
-                Estimation indicative basée sur la prestation du chef. <span className="text-stone-700">Approvisionnements non inclus.</span>{' '}
-                <span className="text-stone-700">Tarifs hors frais de service.</span>
-              </p>
-            ) : (
-              <p className="text-sm text-stone-500 font-light leading-relaxed max-w-2xl">
-                Estimation indicative. <span className="text-stone-700">Tarifs hors frais de service.</span>
-              </p>
-            )}
-          </div>
-
-          <div className="shrink-0 text-right">
-            {loading ? (
-              <div className="inline-flex items-center gap-2 text-stone-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-xs uppercase tracking-widest">Calcul…</span>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <div className="text-[10px] uppercase tracking-widest text-stone-400">Recommandé</div>
-
-                <div className="text-2xl md:text-3xl font-serif text-stone-900 leading-none">
-                  {per ? formatMoney(per.recommended, currency) : '—'}
-                </div>
-                <div className="text-[11px] text-stone-500">{per ? `${per.unitLabel}` : ''}</div>
-
-                {per ? (
-                  <div className="text-[11px] text-stone-400 pt-1">
-                    Total estimé : <span className="text-stone-700">{formatMoney(per.totalRecommended, currency)}</span>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
+    <SoftCard title="Référence marché">
+      {loading ? (
+        <div className="inline-flex items-center gap-2 text-stone-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Calcul…</span>
         </div>
-
-        <div className="mt-6 border-t border-stone-100 pt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="text-sm text-stone-600">
-            <span className="text-stone-400">Fourchette :</span>{' '}
-            <span className="font-medium text-stone-900">
-              {loading || !per ? '—' : `${formatMoney(per.min, currency)} – ${formatMoney(per.max, currency)} ${per.unitLabel}`}
+      ) : per ? (
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="text-sm text-stone-700">
+            <span className="text-stone-500">Fourchette :</span>{' '}
+            <b>
+              {formatMoney(per.min, currency)} – {formatMoney(per.max, currency)} {per.unitLabel}
+            </b>{' '}
+            <span className="text-stone-500">({per.qtyLabel})</span>
+          </div>
+          <div className="text-sm text-stone-700">
+            <span className="text-stone-500">Recommandé :</span>{' '}
+            <b>
+              {formatMoney(per.recommended, currency)} {per.unitLabel}
+            </b>{' '}
+            <span className="text-stone-500">
+              · total ~ {formatMoney(per.totalRecommended, currency)}
             </span>
-            {!loading && per ? (
-              <span className="block text-xs text-stone-400 mt-1">
-                Total : {formatMoney(per.totalMin, currency)} – {formatMoney(per.totalMax, currency)}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="flex gap-3 justify-start md:justify-end">
-            <Button type="button" onClick={onUseRecommended} disabled={loading || !per} className="w-auto px-5">
-              Utiliser recommandé
-            </Button>
-            <Button
-              type="button"
-              variant="link"
-              onClick={onUseRange}
-              disabled={loading || !per}
-              className="w-auto px-0 text-stone-500 hover:text-stone-900"
-            >
-              Utiliser la fourchette
-            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="text-sm text-stone-600">
+          Renseignez <b>lieu</b>, <b>dates</b> et <b>volume</b> pour afficher une estimation.
+        </div>
+      )}
+    </SoftCard>
   );
 }
 
@@ -444,9 +389,7 @@ function BudgetBenchmarkCard({
    Form factory
 ========================================================= */
 
-type FastMealMoment = 'lunch' | 'dinner';
-
-const makeEmptyForm = (m: RequestMode): RequestForm => ({
+const makeEmptyForm = (m: RequestMode): RequestFormState => ({
   mode: m,
   clientType: 'private',
   location: '',
@@ -473,12 +416,8 @@ const makeEmptyForm = (m: RequestMode): RequestForm => ({
   sailingArea: '',
   crewSize: 0,
 
-  // ✅ champs numériques
   budgetPerPerson: null,
   budgetPerDay: null,
-
-  // optionnel si tu le gardes
-  // mealMoment: 'dinner',
 });
 
 /* =========================================================
@@ -500,7 +439,7 @@ function RequestFormContent() {
     matchedChef?: string;
   } | null>(null);
 
-  const [formData, setFormData] = useState<RequestForm>(() => makeEmptyForm('fast'));
+  const [formData, setFormData] = useState<RequestFormState>(() => makeEmptyForm('fast'));
 
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [marketBudget, setMarketBudget] = useState<ReturnType<typeof getMarketBudgetRange> | null>(null);
@@ -545,9 +484,9 @@ function RequestFormContent() {
       setFormData((prev) => {
         const next = makeEmptyForm(m);
         if (typeParam === 'concierge' || typeParam === 'private') {
-          (next as any).clientType = typeParam;
+          next.clientType = typeParam as any;
         } else if (m === 'fast') {
-          (next as any).clientType = (prev as any).clientType ?? 'private';
+          next.clientType = prev.clientType ?? 'private';
         }
         return next;
       });
@@ -580,13 +519,14 @@ function RequestFormContent() {
     const phone = String(formData.phone || '').trim();
 
     if (m === 'fast') {
-      const pax = Number((formData as any).guestCount || 0);
-      const bpp = Number(String((formData as any).budgetPerPerson || '').replace(',', '.')) || 0;
+      const pax = Number(formData.guestCount || 0);
+      const bpp = Number(formData.budgetPerPerson || 0);
 
       if (loc.length < 2) errors.push('Lieu');
       if (start.length < 8) errors.push('Date');
       if (!pax || pax <= 0) errors.push('Nombre de convives');
       if (!bpp || bpp <= 0) errors.push('Budget par personne');
+
       if (step === 2) {
         if (name.length < 2) errors.push('Nom complet');
         if (!email.includes('@')) errors.push('Email');
@@ -599,7 +539,7 @@ function RequestFormContent() {
     // concierge
     const dateMode = String(formData.dateMode || 'multi');
     const end = String((formData as any).endDate || '').trim();
-    const perDay = Number(String((formData as any).budgetPerDay || '').replace(',', '.')) || 0;
+    const perDay = Number(formData.budgetPerDay || 0);
 
     if (loc.length < 2) errors.push('Lieu');
     if (start.length < 8) errors.push('Date de début');
@@ -617,7 +557,7 @@ function RequestFormContent() {
   }, [mode, step, formData]);
 
   /* =========================================================
-     Benchmark logic
+     Benchmark logic (compact)
   ========================================================= */
 
   const shouldShowBenchmark = useMemo(() => {
@@ -627,10 +567,9 @@ function RequestFormContent() {
     const hasStart = String(formData.startDate || '').trim().length >= 8;
 
     if (mode === 'fast' && step === 1) {
-      const guestsOk = Number((formData as any).guestCount || 0) > 0;
-      const bppRaw = (formData as any).budgetPerPerson;
-      const bpp = typeof bppRaw === 'string' ? Number(bppRaw.replace(',', '.')) : Number(bppRaw || 0);
-      return hasLocation && hasStart && guestsOk && Number.isFinite(bpp) && bpp > 0;
+      const guestsOk = Number(formData.guestCount || 0) > 0;
+      const bpp = Number(formData.budgetPerPerson || 0);
+      return hasLocation && hasStart && guestsOk && bpp > 0;
     }
 
     if (mode === 'concierge' && step === 3) {
@@ -640,16 +579,7 @@ function RequestFormContent() {
     }
 
     return false;
-  }, [
-    mode,
-    step,
-    formData.location,
-    formData.startDate,
-    formData.dateMode,
-    (formData as any).endDate,
-    (formData as any).guestCount,
-    (formData as any).budgetPerPerson,
-  ]);
+  }, [mode, step, formData]);
 
   useEffect(() => {
     if (!shouldShowBenchmark) {
@@ -679,7 +609,7 @@ function RequestFormContent() {
       } finally {
         if (!cancelled) setBudgetLoading(false);
       }
-    }, 250);
+    }, 220);
 
     return () => {
       cancelled = true;
@@ -690,37 +620,11 @@ function RequestFormContent() {
     formData.location,
     formData.startDate,
     (formData as any).endDate,
-    (formData as any).guestCount,
-    (formData as any).assignmentType,
-    (formData as any).serviceExpectations,
+    formData.guestCount,
+    formData.assignmentType,
+    formData.serviceExpectations,
     formData.dateMode,
   ]);
-
-  const applyRecommendedBudget = () => {
-    if (!marketBudget) return;
-    const per = calcPerUnit(marketBudget);
-    if (!per) return;
-
-    const s =
-      marketBudget.kind === 'event'
-        ? `≈ ${formatMoney(per.recommended, marketBudget.currency)} / pers (hors frais de service)`
-        : `≈ ${formatMoney(per.recommended, marketBudget.currency)} / jour (hors frais de service)`;
-
-    setFormData((prev) => ({ ...prev, budgetRange: s }));
-  };
-
-  const applyRangeBudget = () => {
-    if (!marketBudget) return;
-    const per = calcPerUnit(marketBudget);
-    if (!per) return;
-
-    const s =
-      marketBudget.kind === 'event'
-        ? `${formatMoney(per.min, marketBudget.currency)} – ${formatMoney(per.max, marketBudget.currency)} / pers (hors frais de service)`
-        : `${formatMoney(per.min, marketBudget.currency)} – ${formatMoney(per.max, marketBudget.currency)} / jour (hors frais de service)`;
-
-    setFormData((prev) => ({ ...prev, budgetRange: s }));
-  };
 
   /* =========================================================
      Submit
@@ -731,26 +635,17 @@ function RequestFormContent() {
     try {
       const payload: any = { ...formData };
 
-      // FAST normalize numeric
       if (mode === 'fast') {
-        const raw = (formData as any).budgetPerPerson;
-        const bpp = typeof raw === 'string' ? Number(raw.replace(',', '.')) : Number(raw || 0);
-        payload.budgetPerPerson = Number.isFinite(bpp) ? bpp : undefined;
         payload.dateMode = 'single';
-        // budgetRange textual for DB readability
+        payload.budgetPerPerson = Number(formData.budgetPerPerson || 0) || undefined;
         payload.budgetRange = payload.budgetPerPerson ? `${formatMoney(payload.budgetPerPerson)} / pers (hors frais de service)` : '';
       }
 
-      // CONCIERGE normalize numeric
       if (mode === 'concierge') {
-        const raw = (formData as any).budgetPerDay;
-        const bpd = typeof raw === 'string' ? Number(raw.replace(',', '.')) : Number(raw || 0);
-        payload.budgetPerDay = Number.isFinite(bpd) ? bpd : undefined;
-        // budgetRange textual
+        payload.budgetPerDay = Number(formData.budgetPerDay || 0) || undefined;
         payload.budgetRange = payload.budgetPerDay ? `${formatMoney(payload.budgetPerDay)} / jour (hors frais de service)` : '';
       }
 
-      // Pricing snapshot
       const pricing = computePricing(payload);
       payload.pricing = pricing.ok
         ? {
@@ -763,10 +658,7 @@ function RequestFormContent() {
             qty: pricing.qty,
           }
         : { rate: null, rateLabel: pricing.rateLabel, reason: pricing.reason };
-       
-const pax = formData.guestCount || 0;
-const bpp = formData.budgetPerPerson || 0;
-       
+
       const response = await submitRequest(payload);
       if (response?.success) setResult(response);
     } catch (error) {
@@ -784,7 +676,7 @@ const bpp = formData.budgetPerPerson || 0;
     const isFastMode = result.mode === 'instant_match';
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFCFB] px-6">
+      <div className="min-h-screen flex items-center justify-center bg-stone-100 px-6">
         <Reveal className="max-w-lg w-full text-center">
           <Marker className="mx-auto mb-8 bg-stone-900" />
 
@@ -792,29 +684,31 @@ const bpp = formData.budgetPerPerson || 0;
             {isFastMode ? (
               <CheckCircle2 className="w-16 h-16 text-stone-900" strokeWidth={1} />
             ) : (
-              <Clock className="w-16 h-16 text-stone-400" strokeWidth={1} />
+              <Clock className="w-16 h-16 text-stone-500" strokeWidth={1} />
             )}
           </div>
 
-          <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">{isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}</h2>
+          <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">
+            {isFastMode ? 'Demande enregistrée' : 'Dossier ouvert'}
+          </h2>
 
-          <div className="text-stone-500 mb-12 text-lg font-light space-y-4">
+          <div className="text-stone-600 mb-12 text-lg font-light space-y-4">
             {isFastMode ? (
               <>
                 <p>Votre demande Fast Match a bien été reçue.</p>
                 <p>Nous vérifions la disponibilité immédiate de nos chefs et vous confirmerons l’attribution sous 2h.</p>
-                <p className="text-xs text-stone-400">Tarifs hors frais de service (estimation service inclus affichée avant validation).</p>
+                <p className="text-xs text-stone-500">Estimation affichée service inclus. Approvisionnements non inclus.</p>
               </>
             ) : (
               <>
-                <p>Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et reviendrons vers vous avec une proposition structurée.</p>
-                <p className="text-xs text-stone-400">
-                  Prix / jour = prestation du chef uniquement (approvisionnements non inclus). Estimation service inclus affichée avant validation.
+                <p>Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et revenons vers vous avec une proposition structurée.</p>
+                <p className="text-xs text-stone-500">
+                  Prix/jour = prestation du chef uniquement (approvisionnements non inclus). Estimation service inclus affichée avant validation.
                 </p>
               </>
             )}
 
-            <p className="text-xs uppercase tracking-widest pt-4 text-stone-400">Ref: {result.referenceId}</p>
+            <p className="text-xs uppercase tracking-widest pt-4 text-stone-500">Ref: {result.referenceId}</p>
           </div>
 
           <Link href="/">
@@ -831,23 +725,23 @@ const bpp = formData.budgetPerPerson || 0;
 
   if (!mode) {
     return (
-      <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-100 pt-32 pb-24 px-6 md:px-12 flex items-center justify-center">
         <Reveal className="max-w-5xl w-full">
           <div className="text-center mb-16">
             <Marker className="mx-auto mb-6" />
             <h1 className="text-4xl md:text-5xl font-serif text-stone-900 mb-4">Quel est votre besoin ?</h1>
-            <p className="text-stone-500 font-light">Sélectionnez le type d’accompagnement souhaité.</p>
+            <p className="text-stone-600 font-light">Sélectionnez le type d’accompagnement souhaité.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 md:gap-16">
             <button
               type="button"
               onClick={() => selectMode('fast')}
-              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900 bg-white"
+              className="group rounded-2xl border border-stone-200/80 p-10 text-left transition hover:border-stone-900 bg-stone-50/70 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.25)]"
             >
-              <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">Date unique</p>
+              <p className="text-xs uppercase tracking-widest text-stone-500 mb-3">Date unique</p>
               <h3 className="text-3xl font-serif text-stone-900 mb-4">Fast Match</h3>
-              <p className="text-stone-500 font-light leading-relaxed">
+              <p className="text-stone-600 font-light leading-relaxed">
                 Pour une demande simple sur une date précise. Budget en <b>€/personne</b>.
               </p>
             </button>
@@ -855,11 +749,11 @@ const bpp = formData.budgetPerPerson || 0;
             <button
               type="button"
               onClick={() => selectMode('concierge')}
-              className="group border border-stone-200 p-10 text-left transition hover:border-stone-900 bg-white"
+              className="group rounded-2xl border border-stone-200/80 p-10 text-left transition hover:border-stone-900 bg-stone-50/70 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.25)]"
             >
-              <p className="text-xs uppercase tracking-widest text-stone-400 mb-3">Demande complexe</p>
+              <p className="text-xs uppercase tracking-widest text-stone-500 mb-3">Demande complexe</p>
               <h3 className="text-3xl font-serif text-stone-900 mb-4">Concierge Match</h3>
-              <p className="text-stone-500 font-light leading-relaxed">
+              <p className="text-stone-600 font-light leading-relaxed">
                 Missions longues/sensibles. Prix en <b>€/jour</b> (prestation du chef uniquement).
               </p>
             </button>
@@ -874,25 +768,25 @@ const bpp = formData.budgetPerPerson || 0;
   ========================= */
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] pt-32 pb-24 px-6 md:px-12 font-sans">
+    <div className="min-h-screen bg-stone-100 pt-32 pb-24 px-6 md:px-12 font-sans">
       <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
         {/* SIDEBAR */}
         <div className="md:col-span-3">
           <div className="sticky top-32 space-y-8">
-            <Marker className={mode === 'concierge' ? 'bg-stone-900' : 'bg-stone-400'} />
+            <Marker className={mode === 'concierge' ? 'bg-stone-900' : 'bg-stone-600'} />
 
             <div className="space-y-2">
               <button
                 type="button"
                 onClick={resetMode}
-                className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors"
+                className="text-[10px] uppercase tracking-[0.2em] text-stone-500 hover:text-stone-900 transition-colors"
               >
                 ← Changer de mode
               </button>
 
               <h1 className="text-2xl font-serif text-stone-900 leading-tight">{mode === 'fast' ? 'Fast Match' : 'Concierge Match'}</h1>
 
-              <p className="text-xs text-stone-500 font-light leading-relaxed">
+              <p className="text-xs text-stone-600 font-light leading-relaxed">
                 {mode === 'fast'
                   ? 'Date unique · budget en €/personne.'
                   : 'Multi-jours · prix en €/jour (prestation chef uniquement) · approvisionnements non inclus.'}
@@ -908,8 +802,12 @@ const bpp = formData.budgetPerPerson || 0;
 
                 return (
                   <div key={s} className="flex items-center gap-3">
-                    <div className={`h-px transition-all duration-500 ${isActive ? 'w-8 bg-stone-900' : isPast ? 'w-4 bg-stone-300' : 'w-2 bg-stone-100'}`} />
-                    <span className={`text-[10px] uppercase tracking-widest transition-colors ${isActive ? 'text-stone-900' : 'text-stone-300'}`}>
+                    <div
+                      className={`h-px transition-all duration-500 ${
+                        isActive ? 'w-8 bg-stone-900' : isPast ? 'w-4 bg-stone-400' : 'w-2 bg-stone-200'
+                      }`}
+                    />
+                    <span className={`text-[10px] uppercase tracking-widest transition-colors ${isActive ? 'text-stone-900' : 'text-stone-400'}`}>
                       {s === 1 && (mode === 'fast' ? 'La demande' : 'Contexte')}
                       {s === 2 && (mode === 'fast' ? 'Coordonnées' : 'La mission')}
                       {s === 3 && 'Détails'}
@@ -923,17 +821,17 @@ const bpp = formData.budgetPerPerson || 0;
         </div>
 
         {/* MAIN FORM */}
-        <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-100 pl-0 md:pl-12">
+        <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-200/60 pl-0 md:pl-12">
           <div key={step} className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* ================= FAST STEP 1 ================= */}
             {mode === 'fast' && step === 1 && (
               <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-2">Votre demande</h2>
+                <div className="space-y-10">
+                  <h2 className="text-3xl font-serif text-stone-900">Votre demande</h2>
 
-                  <div className="space-y-6 pt-4">
+                  <SoftCard title="Profil">
                     <Label>Vous êtes :</Label>
-                    <div className="flex gap-4 flex-wrap">
+                    <div className="flex gap-3 flex-wrap mt-3">
                       {[
                         { val: 'private', label: 'Client Privé' },
                         { val: 'concierge', label: 'Conciergerie / Agence' },
@@ -941,93 +839,80 @@ const bpp = formData.budgetPerPerson || 0;
                         <button
                           key={opt.val}
                           type="button"
-                          onClick={() => setFormData({ ...formData, clientType: opt.val as any })}
-                          className={`px-6 py-3 text-sm border transition-colors bg-white ${
-                            formData.clientType === opt.val ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 text-stone-600 hover:border-stone-900'
+                          onClick={() => setFormData((p) => ({ ...p, clientType: opt.val as any }))}
+                          className={`px-5 py-3 text-sm rounded-lg border transition-colors ${
+                            formData.clientType === opt.val
+                              ? 'border-stone-900 bg-stone-900 text-white'
+                              : 'border-stone-200 bg-white/70 text-stone-700 hover:border-stone-900'
                           }`}
                         >
                           {opt.label}
                         </button>
                       ))}
                     </div>
+                  </SoftCard>
+
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <SoftCard title="Lieu">
+                      <Input
+                        value={formData.location}
+                        onChange={(e) => setFormData((p) => ({ ...p, location: e.target.value }))}
+                        autoFocus
+                      />
+                    </SoftCard>
+
+                    <SoftCard title="Date">
+                      <Input
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))}
+                      />
+                    </SoftCard>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <Label>Lieu</Label>
-                      <Input value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} autoFocus />
-                    </div>
-                    <div className="space-y-4">
-                      <Label>Date</Label>
-                      <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
-                    </div>
+                    {/* ✅ FIX : guestCount relié à guestCount (plus au budget) */}
+                    <SoftCard title="Nombre de convives">
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Ex : 80"
+                        value={formData.guestCount ?? 0}
+                        onChange={(e) => {
+                          const n = parseNumberOrNull(e.target.value);
+                          setFormData((p) => ({ ...p, guestCount: n ? Math.max(1, Math.floor(n)) : 0 }));
+                        }}
+                      />
+                    </SoftCard>
+
+                    <SoftCard title="Budget par personne">
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Ex : 150"
+                        value={formData.budgetPerPerson ?? ''}
+                        onChange={(e) => {
+                          const n = parseNumberOrNull(e.target.value);
+                          setFormData((p) => ({ ...p, budgetPerPerson: n === null ? null : Math.max(0, n) }));
+                        }}
+                      />
+                      <p className="text-xs text-stone-500 italic mt-2">Confidentiel. Sert à proposer des chefs cohérents.</p>
+                    </SoftCard>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <Label>Nombre de convives</Label>
-<Input
-  type="number"
-  min={0}
-  placeholder="Ex : 150"
-  value={(formData as any).budgetPerPerson ?? ''}
-  onChange={(e) => {
-    const raw = e.target.value;
-    const n = raw === '' ? null : Number(raw);
-    setFormData({ ...(formData as any), budgetPerPerson: Number.isFinite(n as any) ? n : null });
-  }}
-/>
-                    </div>
+                  {/* ✅ Référence marché compacte (sous les champs) */}
+                  <MarketHintInline loading={budgetLoading} data={shouldShowBenchmark ? marketBudget : null} />
 
-                    <div className="space-y-4">
-                      <Label>Budget par personne</Label>
-                     <Input
-  type="number"
-  min={0}
-  placeholder="Ex : 150"
-  value={formData.budgetPerPerson ?? 0}
-  onChange={(e) => {
-    const v = Number(e.target.value);
-    setFormData((prev) => ({
-      ...prev,
-      budgetPerPerson: Number.isFinite(v) ? v : 0,
-    }));
-  }}
-/
-                      <p className="text-xs text-stone-400 italic">Confidentiel. Sert à proposer des chefs cohérents.</p>
-                    </div>
-                  </div>
+                  {/* ✅ Estimation compacte (sous les champs) */}
+                  <ClientEstimateInline formData={formData} />
 
-                  {shouldShowBenchmark ? (
-                    <div className="space-y-6 pt-2">
-                      <BudgetBenchmarkCard loading={budgetLoading} data={marketBudget} onUseRecommended={applyRecommendedBudget} onUseRange={applyRangeBudget} variant="fast" />
-                      <div className="space-y-2">
-                        <Label>Référence (lecture seule)</Label>
-                        <Input value={formData.budgetRange} readOnly />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="pt-2">
-                      <div className="border border-stone-200 bg-white p-5 text-sm text-stone-500">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400 mb-2">Référence marché</div>
-                        Renseignez <b>lieu</b>, <b>date</b>, <b>convives</b> et <b>budget / personne</b> pour afficher une estimation.
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Estimation service inclus */}
-                  <PricingSummary
-                    formData={{
-                      ...formData,
-                      // ensure numeric read
-                      budgetPerPerson: Number(String((formData as any).budgetPerPerson || '').replace(',', '.')) || undefined,
-                    }}
-                  />
-
-                  <div className="space-y-4">
-                    <Label>Préférences (facultatif)</Label>
-                    <Textarea value={formData.cuisinePreferences} onChange={(e) => setFormData({ ...formData, cuisinePreferences: e.target.value })} className="min-h-[110px]" />
-                  </div>
+                  <SoftCard title="Préférences (facultatif)">
+                    <Textarea
+                      value={formData.cuisinePreferences}
+                      onChange={(e) => setFormData((p) => ({ ...p, cuisinePreferences: e.target.value }))}
+                      className="min-h-[110px]"
+                    />
+                  </SoftCard>
                 </div>
               </Reveal>
             )}
@@ -1035,32 +920,23 @@ const bpp = formData.budgetPerPerson || 0;
             {/* ================= FAST STEP 2 ================= */}
             {mode === 'fast' && step === 2 && (
               <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">Vos coordonnées</h2>
+                <div className="space-y-10">
+                  <h2 className="text-3xl font-serif text-stone-900">Vos coordonnées</h2>
 
-                  <div className="space-y-6">
-                    <Label>Nom complet</Label>
-                    <Input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} autoFocus />
-                  </div>
+                  <SoftCard title="Nom complet">
+                    <Input value={formData.fullName} onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))} autoFocus />
+                  </SoftCard>
 
                   <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <Label>Email</Label>
-                      <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                    </div>
-                    <div className="space-y-4">
-                      <Label>Téléphone</Label>
-                      <Input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-                    </div>
+                    <SoftCard title="Email">
+                      <Input type="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} />
+                    </SoftCard>
+                    <SoftCard title="Téléphone">
+                      <Input type="tel" value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} />
+                    </SoftCard>
                   </div>
 
-                  {/* Estimation service inclus */}
-                  <PricingSummary
-                    formData={{
-                      ...formData,
-                      budgetPerPerson: Number(String((formData as any).budgetPerPerson || '').replace(',', '.')) || undefined,
-                    }}
-                  />
+                  <ClientEstimateInline formData={formData} />
                 </div>
               </Reveal>
             )}
@@ -1068,12 +944,11 @@ const bpp = formData.budgetPerPerson || 0;
             {/* ================= CONCIERGE STEP 1 ================= */}
             {mode === 'concierge' && step === 1 && (
               <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">Contexte de la demande</h2>
+                <div className="space-y-10">
+                  <h2 className="text-3xl font-serif text-stone-900">Contexte de la demande</h2>
 
-                  <div className="space-y-6">
-                    <Label>Type de client</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-stone-200 border border-stone-200">
+                  <SoftCard title="Type de client">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {[
                         { val: 'concierge', label: 'Une conciergerie / Agence' },
                         { val: 'private', label: 'Un client privé' },
@@ -1081,30 +956,28 @@ const bpp = formData.budgetPerPerson || 0;
                         <button
                           key={opt.val}
                           type="button"
-                          onClick={() => setFormData({ ...formData, clientType: opt.val as any })}
-                          className={`h-16 text-left px-6 transition-colors ${formData.clientType === opt.val ? 'bg-stone-900 text-white' : 'bg-white text-stone-500 hover:text-stone-900'}`}
+                          onClick={() => setFormData((p) => ({ ...p, clientType: opt.val as any }))}
+                          className={`h-14 text-left px-5 rounded-lg border transition-colors ${
+                            formData.clientType === opt.val ? 'bg-stone-900 text-white border-stone-900' : 'bg-white/70 text-stone-700 border-stone-200 hover:border-stone-900'
+                          }`}
                         >
                           {opt.label}
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </SoftCard>
 
                   {formData.clientType === 'concierge' && (
-                    <div className="space-y-4">
-                      <Label>Nom de la structure</Label>
-                      <Input value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Agence, Family Office..." />
-                    </div>
+                    <SoftCard title="Nom de la structure">
+                      <Input value={formData.companyName} onChange={(e) => setFormData((p) => ({ ...p, companyName: e.target.value }))} placeholder="Agence, Family Office..." />
+                    </SoftCard>
                   )}
 
-                  <div className="space-y-4">
-                    <Label>Lieu de la mission</Label>
-                    <Input value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Ville, Pays, Station..." />
-                  </div>
+                  <SoftCard title="Lieu de la mission">
+                    <Input value={formData.location} onChange={(e) => setFormData((p) => ({ ...p, location: e.target.value }))} placeholder="Ville, Pays, Station..." />
+                  </SoftCard>
 
-                  <div className="space-y-4">
-                    <Label>Durée</Label>
-
+                  <SoftCard title="Durée">
                     <div className="flex gap-8 mb-6">
                       {[
                         { val: 'single', label: 'Date unique' },
@@ -1114,19 +987,19 @@ const bpp = formData.budgetPerPerson || 0;
                           <div className={`w-4 h-4 border flex items-center justify-center ${formData.dateMode === m.val ? 'border-stone-900' : 'border-stone-300'}`}>
                             {formData.dateMode === m.val && <div className="w-2 h-2 bg-stone-900" />}
                           </div>
-                          <span className="text-stone-600">{m.label}</span>
-                          <input type="radio" className="hidden" name="dateMode" checked={formData.dateMode === m.val} onChange={() => setFormData({ ...formData, dateMode: m.val as any })} />
+                          <span className="text-stone-700">{m.label}</span>
+                          <input type="radio" className="hidden" name="dateMode" checked={formData.dateMode === m.val} onChange={() => setFormData((p) => ({ ...p, dateMode: m.val as any }))} />
                         </label>
                       ))}
                     </div>
 
                     <div className="grid grid-cols-2 gap-8">
-                      <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
+                      <Input type="date" value={formData.startDate} onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))} />
                       {formData.dateMode === 'multi' && (
-                        <Input type="date" value={(formData as any).endDate || ''} onChange={(e) => setFormData({ ...formData, /* @ts-ignore */ endDate: e.target.value })} />
+                        <Input type="date" value={(formData as any).endDate || ''} onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))} />
                       )}
                     </div>
-                  </div>
+                  </SoftCard>
                 </div>
               </Reveal>
             )}
@@ -1134,51 +1007,52 @@ const bpp = formData.budgetPerPerson || 0;
             {/* ================= CONCIERGE STEP 2 ================= */}
             {mode === 'concierge' && step === 2 && (
               <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">La mission</h2>
+                <div className="space-y-10">
+                  <h2 className="text-3xl font-serif text-stone-900">La mission</h2>
 
-                  <div className="space-y-4">
-                    <Label>Type d’assignation</Label>
+                  <SoftCard title="Type d’assignation">
                     <select
                       value={formData.assignmentType}
-                      onChange={(e) => setFormData({ ...formData, assignmentType: e.target.value as any })}
-                      className="w-full h-14 bg-transparent border-b border-stone-200 text-lg focus:outline-none"
+                      onChange={(e) => setFormData((p) => ({ ...p, assignmentType: e.target.value as any }))}
+                      className="w-full h-14 rounded-lg bg-white/70 border border-stone-200 text-stone-800 px-4 focus:outline-none focus:border-stone-900"
                     >
                       <option value="daily">Service quotidien (Villa/Chalet)</option>
                       <option value="yacht">Mission yachting</option>
                       <option value="event">Événement (complexe)</option>
                       <option value="dinner">Dîner privé (complexe)</option>
                     </select>
-                  </div>
+                  </SoftCard>
 
                   {formData.assignmentType === 'yacht' && (
-                    <div className="grid grid-cols-2 gap-8 p-6 bg-stone-50 border border-stone-100">
-                      <div className="space-y-2">
-                        <Label>Zone de navigation</Label>
-                        <Input value={formData.sailingArea} onChange={(e) => setFormData({ ...formData, sailingArea: e.target.value })} placeholder="Ex: Méditerranée" />
+                    <SoftCard title="Yachting">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label>Zone de navigation</Label>
+                          <Input value={formData.sailingArea} onChange={(e) => setFormData((p) => ({ ...p, sailingArea: e.target.value }))} placeholder="Ex: Méditerranée" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Équipage total</Label>
+                          <Input
+                            type="number"
+                            value={formData.crewSize}
+                            onChange={(e) => setFormData((p) => ({ ...p, crewSize: parseInt(e.target.value || '0', 10) }))}
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Équipage total</Label>
-                        <Input type="number" value={formData.crewSize} onChange={(e) => setFormData({ ...formData, crewSize: parseInt(e.target.value || '0', 10) })} />
-                      </div>
-                    </div>
+                    </SoftCard>
                   )}
 
-                  <div className="space-y-4">
-                    <Label>Convives (principal)</Label>
-<Input
-  type="number"
-  min={1}
-  value={formData.guestCount ?? 0}
-  onChange={(e) => {
-    const v = Number(e.target.value);
-    setFormData((prev) => ({
-      ...prev,
-      guestCount: Number.isFinite(v) ? v : 0,
-    }));
-  }}
-/>
-                  </div>
+                  <SoftCard title="Convives (principal)">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={formData.guestCount ?? 0}
+                      onChange={(e) => {
+                        const n = parseNumberOrNull(e.target.value);
+                        setFormData((p) => ({ ...p, guestCount: n ? Math.max(1, Math.floor(n)) : 0 }));
+                      }}
+                    />
+                  </SoftCard>
                 </div>
               </Reveal>
             )}
@@ -1186,69 +1060,39 @@ const bpp = formData.budgetPerPerson || 0;
             {/* ================= CONCIERGE STEP 3 ================= */}
             {mode === 'concierge' && step === 3 && (
               <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">Précisions</h2>
+                <div className="space-y-10">
+                  <h2 className="text-3xl font-serif text-stone-900">Précisions</h2>
 
-                  <div className="space-y-4">
-                    <Label>Style culinaire</Label>
-                    <Textarea value={formData.cuisinePreferences} onChange={(e) => setFormData({ ...formData, cuisinePreferences: e.target.value })} />
-                  </div>
+                  <SoftCard title="Style culinaire">
+                    <Textarea value={formData.cuisinePreferences} onChange={(e) => setFormData((p) => ({ ...p, cuisinePreferences: e.target.value }))} />
+                  </SoftCard>
 
                   <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <Label>Restrictions / allergies</Label>
-                      <Input value={formData.dietaryRestrictions} onChange={(e) => setFormData({ ...formData, dietaryRestrictions: e.target.value })} placeholder="Sans gluten, etc." />
-                    </div>
-                    <div className="space-y-4">
-                      <Label>Langues parlées</Label>
-                      <Input value={formData.preferredLanguage} onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })} placeholder="FR, EN..." />
-                    </div>
+                    <SoftCard title="Restrictions / allergies">
+                      <Input value={formData.dietaryRestrictions} onChange={(e) => setFormData((p) => ({ ...p, dietaryRestrictions: e.target.value }))} placeholder="Sans gluten, etc." />
+                    </SoftCard>
+
+                    <SoftCard title="Langues parlées">
+                      <Input value={formData.preferredLanguage} onChange={(e) => setFormData((p) => ({ ...p, preferredLanguage: e.target.value }))} placeholder="FR, EN..." />
+                    </SoftCard>
                   </div>
 
-                  {/* ✅ Champ numérique budget/day */}
-                  <div className="space-y-2">
-                    <Label>Budget par jour</Label>
-                   <Input
-  type="number"
-  min={0}
-  placeholder="Ex : 700"
-  value={formData.budgetPerDay ?? 0}
-  onChange={(e) => {
-    const v = Number(e.target.value);
-    setFormData((prev) => ({
-      ...prev,
-      budgetPerDay: Number.isFinite(v) ? v : 0,
-    }));
-  }}
-/>
-                    <p className="text-xs text-stone-400 italic">Prestation du chef uniquement (approvisionnements non inclus).</p>
-                  </div>
+                  <SoftCard title="Budget par jour">
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Ex : 700"
+                      value={formData.budgetPerDay ?? ''}
+                      onChange={(e) => {
+                        const n = parseNumberOrNull(e.target.value);
+                        setFormData((p) => ({ ...p, budgetPerDay: n === null ? null : Math.max(0, n) }));
+                      }}
+                    />
+                    <p className="text-xs text-stone-500 italic mt-2">Prestation du chef uniquement (approvisionnements non inclus).</p>
+                  </SoftCard>
 
-                  {/* Benchmark (Concierge) */}
-                  {shouldShowBenchmark ? (
-                    <div className="space-y-6 pt-6 border-t border-stone-100">
-                      <BudgetBenchmarkCard loading={budgetLoading} data={marketBudget} onUseRecommended={applyRecommendedBudget} onUseRange={applyRangeBudget} variant="concierge" />
-                      <div className="space-y-2">
-                        <Label>Référence (lecture seule)</Label>
-                        <Input value={formData.budgetRange} readOnly />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="pt-6 border-t border-stone-100">
-                      <div className="border border-stone-200 bg-white p-5 text-sm text-stone-500">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400 mb-2">Référence marché</div>
-                        Renseignez <b>lieu</b>, <b>dates</b> (début + fin si multi) pour afficher une estimation.
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Estimation service inclus */}
-                  <PricingSummary
-                    formData={{
-                      ...formData,
-                      budgetPerDay: Number(String((formData as any).budgetPerDay || '').replace(',', '.')) || undefined,
-                    }}
-                  />
+                  <MarketHintInline loading={budgetLoading} data={shouldShowBenchmark ? marketBudget : null} />
+                  <ClientEstimateInline formData={formData} />
                 </div>
               </Reveal>
             )}
@@ -1256,46 +1100,39 @@ const bpp = formData.budgetPerPerson || 0;
             {/* ================= CONCIERGE STEP 4 ================= */}
             {mode === 'concierge' && step === 4 && (
               <Reveal>
-                <div className="space-y-12">
-                  <h2 className="text-3xl font-serif text-stone-900 mb-8">Finalisation</h2>
+                <div className="space-y-10">
+                  <h2 className="text-3xl font-serif text-stone-900">Finalisation</h2>
 
-                  <div className="space-y-4">
-                    <Label>Notes confidentielles</Label>
-                    <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="min-h-[110px]" />
-                  </div>
+                  <SoftCard title="Notes confidentielles">
+                    <Textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="min-h-[110px]" />
+                  </SoftCard>
 
-                  <div className="space-y-6 pt-6">
-                    <Label>Vos coordonnées</Label>
-                    <Input value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} placeholder="Nom complet" autoFocus />
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                      <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Email" />
-                      <Input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="Téléphone" />
+                  <SoftCard title="Vos coordonnées">
+                    <div className="space-y-5">
+                      <Input value={formData.fullName} onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))} placeholder="Nom complet" autoFocus />
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <Input type="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} placeholder="Email" />
+                        <Input type="tel" value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} placeholder="Téléphone" />
+                      </div>
                     </div>
-                  </div>
+                  </SoftCard>
 
-                  {/* Estimation service inclus */}
-                  <PricingSummary
-                    formData={{
-                      ...formData,
-                      budgetPerDay: Number(String((formData as any).budgetPerDay || '').replace(',', '.')) || undefined,
-                    }}
-                  />
+                  <ClientEstimateInline formData={formData} />
                 </div>
               </Reveal>
             )}
           </div>
 
           {/* NAV */}
-          <div className="pt-16 mt-8 flex items-center justify-end gap-6 border-t border-stone-100">
+          <div className="pt-14 mt-10 flex items-center justify-end gap-6 border-t border-stone-200/60">
             {step > 1 && (
-              <Button variant="link" onClick={prevStep} className="text-stone-400 hover:text-stone-900">
+              <Button variant="link" onClick={prevStep} className="text-stone-600 hover:text-stone-900">
                 Revenir
               </Button>
             )}
 
             {step < getTotalSteps() ? (
-              <Button onClick={nextStep} className="w-40">
+              <Button onClick={nextStep} className="w-40" disabled={!requiredState.ok && step === 1 && mode === 'fast'}>
                 Continuer
               </Button>
             ) : (
@@ -1303,7 +1140,9 @@ const bpp = formData.budgetPerPerson || 0;
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting || !requiredState.ok}
-                className={`w-64 h-14 text-white ${isSubmitting || !requiredState.ok ? 'bg-stone-400 cursor-not-allowed' : 'bg-stone-900'}`}
+                className={`w-64 h-14 rounded-xl text-white transition ${
+                  isSubmitting || !requiredState.ok ? 'bg-stone-400 cursor-not-allowed' : 'bg-stone-900 hover:bg-black'
+                }`}
                 title={!requiredState.ok ? `Champs requis: ${requiredState.errors.join(', ')}` : undefined}
               >
                 {isSubmitting ? 'Envoi...' : mode === 'fast' ? 'Envoyer la demande' : 'Soumettre le dossier'}
@@ -1313,7 +1152,7 @@ const bpp = formData.budgetPerPerson || 0;
 
           {!requiredState.ok && step === getTotalSteps() && (
             <div className="text-right mt-3">
-              <p className="text-[11px] text-stone-400">Champs requis manquants : {requiredState.errors.join(', ')}</p>
+              <p className="text-[11px] text-stone-500">Champs requis manquants : {requiredState.errors.join(', ')}</p>
             </div>
           )}
         </div>
@@ -1326,7 +1165,7 @@ export default function RequestPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-stone-100">
           <Loader2 className="animate-spin" />
         </div>
       }
