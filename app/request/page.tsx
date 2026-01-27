@@ -14,6 +14,146 @@ import type { BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
    Helpers
 ========================================================= */
 
+
+const HOUR_MS = 60 * 60 * 1000;
+const SERVICE_FAST = 0.11;
+
+const isValidISODate = (s?: string) => !!s && !Number.isNaN(new Date(s).getTime());
+
+const diffDaysInclusive = (start?: string, end?: string) => {
+  if (!isValidISODate(start)) return 1;
+  if (!isValidISODate(end)) return 1;
+  const a = new Date(start);
+  const b = new Date(end);
+  const days = Math.floor((b.getTime() - a.getTime()) / (24 * HOUR_MS)) + 1;
+  return Math.max(1, days);
+};
+
+const isLastMinute72h = (startDate?: string) => {
+  if (!isValidISODate(startDate)) return false;
+  const now = new Date();
+  const start = new Date(startDate);
+  const hours = (start.getTime() - now.getTime()) / HOUR_MS;
+  return hours <= 72; // <= 72h
+};
+
+type PricingResult =
+  | {
+      ok: true;
+      rate: number;
+      rateLabel: string;
+      chefTotal: number;
+      serviceFee: number;
+      totalWithService: number;
+      unitLabel: '€/pers' | '€/jour';
+      qty: number;
+      reason?: string;
+    }
+  | {
+      ok: false;
+      rate: number | null;
+      rateLabel: string;
+      reason: string;
+    };
+
+function pickServiceFeeRate(formData: any): { rate: number | null; label: string; reason?: string } {
+  const mode = String(formData.mode || 'fast'); // 'fast' | 'concierge'
+  const assignment = String(formData.assignmentType || '');
+  const startDate = String(formData.startDate || '');
+
+  // 1) Yacht sur devis
+  if (assignment === 'yacht') {
+    return { rate: null, label: 'Sur devis', reason: 'yacht' };
+  }
+
+  // 2) Last minute <=72h
+  if (isLastMinute72h(startDate)) {
+    return { rate: 0.18, label: '18% (last minute -72h)', reason: 'last_minute' };
+  }
+
+  // 3) Fast
+  if (mode === 'fast') {
+    return { rate: SERVICE_FAST, label: '11% (fast)', reason: 'fast' };
+  }
+
+  // 4) Concierge selon durée
+  const dateMode = String(formData.dateMode || 'single');
+  const endDate = String(formData.endDate || '');
+  const days = dateMode === 'multi' ? diffDaysInclusive(startDate, endDate) : 1;
+
+  if (days >= 8) return { rate: 0.13, label: '13% (concierge ≥8j)', reason: 'concierge_long' };
+  return { rate: 0.15, label: '15% (concierge <8j)', reason: 'concierge_short' };
+}
+
+// Calcule une estimation "chef" + frais + total
+function computePricing(formData: any): PricingResult {
+  const mode = String(formData.mode || 'fast');
+  const dateMode = String(formData.dateMode || (mode === 'concierge' ? 'multi' : 'single'));
+  const startDate = String(formData.startDate || '');
+  const endDate = String(formData.endDate || '');
+
+  const { rate, label } = pickServiceFeeRate(formData);
+
+  // Yacht => pas d’estimation
+  if (rate === null) {
+    return { ok: false, rate: null, rateLabel: label, reason: 'Mission yacht : tarification sur devis.' };
+  }
+
+  // FAST = €/pers
+  if (mode === 'fast') {
+    const pax = Number(formData.guestCount ?? 0) || 0;
+    const bpp = Number(String(formData.budgetPerPerson ?? '').replace(',', '.')) || 0;
+
+    if (pax <= 0 || bpp <= 0) {
+      return { ok: false, rate, rateLabel: label, reason: 'Renseignez convives + budget/pers pour calculer.' };
+    }
+
+    const chefTotal = bpp * pax;
+    const serviceFee = chefTotal * rate;
+    const totalWithService = chefTotal + serviceFee;
+
+    return {
+      ok: true,
+      rate,
+      rateLabel: label,
+      chefTotal,
+      serviceFee,
+      totalWithService,
+      unitLabel: '€/pers',
+      qty: pax,
+    };
+  }
+
+  // CONCIERGE
+  // On considère €/jour dès que concierge, et on multiplie par nb jours (1 si single)
+  const days = dateMode === 'multi' ? diffDaysInclusive(startDate, endDate) : 1;
+
+  // Ici, il te faut idéalement un champ numérique budgetPerDay.
+  // Si tu n’en as pas encore, on essaie de lire un nombre depuis budgetRange.
+  const raw = String(formData.budgetPerDay ?? formData.budgetRange ?? '').replace(',', '.');
+  const num = Number(raw.match(/(\d+(\.\d+)?)/)?.[1] ?? 0) || 0;
+
+  if (days <= 0 || num <= 0) {
+    return { ok: false, rate, rateLabel: label, reason: 'Renseignez un budget / jour pour calculer.' };
+  }
+
+  const chefTotal = num * days;
+  const serviceFee = chefTotal * rate;
+  const totalWithService = chefTotal + serviceFee;
+
+  return {
+    ok: true,
+    rate,
+    rateLabel: label,
+    chefTotal,
+    serviceFee,
+    totalWithService,
+    unitLabel: '€/jour',
+    qty: days,
+  };
+}
+
+
 function formatMoney(v?: number, currency: string = 'EUR') {
   if (typeof v !== 'number' || Number.isNaN(v)) return '—';
   try {
@@ -543,6 +683,20 @@ function RequestFormContent() {
         const response = await submitRequest(formData);
         if (response?.success) setResult(response);
       }
+       const pricing = computePricing(payload);
+       pricing: pricing.ok ? {
+  rate: pricing.rate,
+  rateLabel: pricing.rateLabel,
+  chefTotal: pricing.chefTotal,
+  serviceFee: pricing.serviceFee,
+  totalWithService: pricing.totalWithService,
+  unitLabel: pricing.unitLabel,
+  qty: pricing.qty,
+} : {
+  rate: null,
+  rateLabel: pricing.rateLabel,
+  reason: pricing.reason,
+},
     } catch (error) {
       console.error('Error submitting', error);
     } finally {
@@ -1165,6 +1319,47 @@ function RequestFormContent() {
             )}
 
             {/* ================= CONCIERGE STEP 4 ================= */}
+
+             function PricingSummary({ formData }: { formData: any }) {
+  const p = useMemo(() => computePricing(formData), [formData]);
+
+  const formatMoney = (v?: number) =>
+    typeof v === 'number' && Number.isFinite(v)
+      ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
+      : '—';
+
+  return (
+    <div className="border border-stone-200 bg-white p-5 space-y-2">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Estimation</div>
+
+      <div className="text-sm text-stone-700">
+        Frais de service : <b>{p.rateLabel}</b>
+      </div>
+
+      {!p.ok ? (
+        <div className="text-sm text-stone-500">{p.reason}</div>
+      ) : (
+        <>
+          <div className="text-sm text-stone-700">
+            Base chef : <b>{formatMoney(p.chefTotal)}</b> <span className="text-stone-400">({p.qty} {p.unitLabel === '€/jour' ? 'jour(s)' : 'pers.'})</span>
+          </div>
+          <div className="text-sm text-stone-700">
+            Frais de service : <b>{formatMoney(p.serviceFee)}</b>
+          </div>
+          <div className="text-sm text-stone-900">
+            Total estimé (service inclus) : <b>{formatMoney(p.totalWithService)}</b>
+          </div>
+        </>
+      )}
+
+      <div className="text-xs text-stone-400 italic">
+        {String(formData.assignmentType || '') === 'yacht'
+          ? 'Mission yacht : tarification sur devis.'
+          : 'Approvisionnements non inclus (si résidence/concierge).'}
+      </div>
+    </div>
+  );
+}
             {mode === 'concierge' && step === 4 && (
               <Reveal>
                 <div className="space-y-12">
