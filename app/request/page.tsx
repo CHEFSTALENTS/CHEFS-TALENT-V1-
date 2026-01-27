@@ -26,6 +26,7 @@ type PricingOk = {
   totalWithService: number;
   unitLabel: '€/pers' | '€/jour';
   qty: number;
+  reason?: string; // ✅ ajout pour calmer TS
 };
 
 type PricingKo = {
@@ -36,7 +37,6 @@ type PricingKo = {
 };
 
 type PricingResult = PricingOk | PricingKo;
-
 const isValidISODate = (s?: string) => !!s && !Number.isNaN(new Date(s).getTime());
 
 const daysBetweenInclusive = (start?: string, end?: string) => {
