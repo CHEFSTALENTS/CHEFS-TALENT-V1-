@@ -15,7 +15,7 @@ import type { BudgetContext, RequestKind } from '@/lib/budgetBenchmark';
 ========================================================= */
 
 type RequestFormState = RequestForm & {
-  endDate?: string; // déjà dans RequestForm mais parfois optional selon ton fichier types
+  endDate?: string;
   budgetPerPerson?: number | null; // FAST
   budgetPerDay?: number | null; // CONCIERGE
 };
@@ -70,26 +70,22 @@ const isLastMinute72h = (startDate?: string) => {
 };
 
 function pickServiceFeeRate(formData: RequestFormState): { rate: number | null; label: string; reason?: string } {
-  const mode = String(formData.mode || 'fast'); // 'fast' | 'concierge'
+  const mode = String(formData.mode || 'fast');
   const assignment = String((formData as any).assignmentType || '');
   const startDate = String(formData.startDate || '');
 
-  // 1) Yacht sur devis
   if (assignment === 'yacht') {
     return { rate: null, label: 'Sur devis', reason: 'yacht' };
   }
 
-  // 2) Last minute <= 72h
   if (isLastMinute72h(startDate)) {
     return { rate: 0.18, label: '18% (last minute -72h)', reason: 'last_minute' };
   }
 
-  // 3) Fast
   if (mode === 'fast') {
     return { rate: 0.11, label: '11% (fast)', reason: 'fast' };
   }
 
-  // 4) Concierge selon durée
   const dateMode = String(formData.dateMode || 'single');
   const endDate = String((formData as any).endDate || '');
   const days = dateMode === 'multi' ? daysBetweenInclusive(startDate, endDate) : 1;
@@ -106,12 +102,11 @@ function computePricing(formData: RequestFormState): PricingResult {
 
   const { rate, label } = pickServiceFeeRate(formData);
 
-  // Yacht => pas d’estimation
   if (rate === null) {
     return { ok: false, rate: null, rateLabel: label, reason: 'Mission yacht : tarification sur devis.' };
   }
 
-  // FAST = €/pers
+  // FAST = €/pers (budget inclut l’approvisionnement)
   if (mode === 'fast') {
     const pax = Number(formData.guestCount ?? 0) || 0;
     const bpp = Number(formData.budgetPerPerson ?? 0) || 0;
@@ -136,7 +131,7 @@ function computePricing(formData: RequestFormState): PricingResult {
     };
   }
 
-  // CONCIERGE = €/jour
+  // CONCIERGE = €/jour (approvisionnements non inclus)
   const days = dateMode === 'multi' ? daysBetweenInclusive(startDate, endDate) : 1;
   const perDay = Number(formData.budgetPerDay ?? 0) || 0;
 
@@ -212,7 +207,18 @@ function isInternationalFromLocation(location?: string) {
     'maroc',
     'dubai',
   ];
-  const hintsFR = ['france', 'paris', 'lyon', 'marseille', 'nice', 'cannes', 'saint tropez', 'courchevel', 'megeve', 'bordeaux'];
+  const hintsFR = [
+    'france',
+    'paris',
+    'lyon',
+    'marseille',
+    'nice',
+    'cannes',
+    'saint tropez',
+    'courchevel',
+    'megeve',
+    'bordeaux',
+  ];
 
   const nonfr = hintsNonFR.some((x) => s.includes(x));
   const fr = hintsFR.some((x) => s.includes(x));
@@ -220,11 +226,6 @@ function isInternationalFromLocation(location?: string) {
   return nonfr && !fr;
 }
 
-/**
- * Benchmark kind:
- * - Ponctuel (single) => event => €/pers
- * - Résidence (multi + >=2 jours) => residence => €/jour
- */
 function getBudgetKindFromForm(formData: RequestFormState): RequestKind {
   const isMulti = formData.dateMode === 'multi';
   const days = daysBetweenInclusive(formData.startDate, (formData as any).endDate);
@@ -232,7 +233,6 @@ function getBudgetKindFromForm(formData: RequestFormState): RequestKind {
 }
 
 function buildBudgetContextFromForm(formData: RequestFormState): BudgetContext | null {
-  // Bloquer benchmark résidence tant qu'on n'a pas endDate
   if (formData.dateMode === 'multi') {
     const end = String((formData as any).endDate || '').trim();
     if (end.length < 8) return null;
@@ -271,7 +271,7 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
   if (data.kind === 'event') {
     const guests = Number(data.meta?.guests ?? 0) || 0;
     return {
-      unitLabel: '€/pers',
+      unitLabel: '€/pers' as const,
       min: data.perUnit.min,
       max: data.perUnit.max,
       recommended: data.perUnit.recommended,
@@ -282,7 +282,7 @@ function calcPerUnit(data: ReturnType<typeof getMarketBudgetRange> | null) {
 
   const days = Number(data.meta?.days ?? 0) || 0;
   return {
-    unitLabel: '€/jour',
+    unitLabel: '€/jour' as const,
     min: data.perUnit.min,
     max: data.perUnit.max,
     recommended: data.perUnit.recommended,
@@ -299,7 +299,7 @@ function parseNumberOrNull(raw: string): number | null {
 }
 
 /* =========================================================
-   UI components (local) — version compact / moins blanche
+   UI components (local) — compact / moins blanche
 ========================================================= */
 
 function SoftCard({ title, children }: { title?: string; children: React.ReactNode }) {
@@ -311,17 +311,17 @@ function SoftCard({ title, children }: { title?: string; children: React.ReactNo
   );
 }
 
-/** ✅ Estimation client (simple, sans explication de logique) */
+/** ✅ Estimation client (simple) */
 function ClientEstimateInline({ formData }: { formData: RequestFormState }) {
   const p = useMemo(() => computePricing(formData), [formData]);
 
   if (isPricingKo(p)) {
-  return (
-    <SoftCard title="Estimation">
-      <div className="text-sm text-stone-600">{p.reason}</div>
-    </SoftCard>
-  );
-}
+    return (
+      <SoftCard title="Estimation">
+        <div className="text-sm text-stone-600">{p.reason}</div>
+      </SoftCard>
+    );
+  }
 
   return (
     <SoftCard title="Estimation">
@@ -329,28 +329,33 @@ function ClientEstimateInline({ formData }: { formData: RequestFormState }) {
         <div className="space-y-1">
           <div className="text-sm text-stone-600">Total estimé (service inclus)</div>
           <div className="text-3xl md:text-4xl font-serif text-stone-900 leading-none">{formatMoney(p.totalWithService)}</div>
-          <div className="text-xs text-stone-500">
-            {p.unitLabel === '€/jour' ? `${p.qty} jour(s)` : `${p.qty} pers.`} · approvisionnements non inclus
-          </div>
+          <div className="text-xs text-stone-500">{p.unitLabel === '€/jour' ? `${p.qty} jour(s)` : `${p.qty} pers.`}</div>
         </div>
 
         <div className="text-right text-xs text-stone-500">
-          <div>Base chef : <span className="text-stone-800">{formatMoney(p.chefTotal)}</span></div>
-          <div>Frais de service : <span className="text-stone-800">{formatMoney(p.serviceFee)}</span></div>
+          <div>
+            Base : <span className="text-stone-800">{formatMoney(p.chefTotal)}</span>
+          </div>
+          <div>
+            Service : <span className="text-stone-800">{formatMoney(p.serviceFee)}</span>
+          </div>
         </div>
       </div>
+
+      {/* ✅ Texte demandé */}
+      {formData.mode === 'fast' ? (
+        <p className="text-xs text-stone-500 mt-3 italic">
+          Approvisionnements inclus dans ce budget, sous réserve d’acceptation d’un chef à ce niveau de budget.
+        </p>
+      ) : (
+        <p className="text-xs text-stone-500 mt-3 italic">Approvisionnements non inclus (prestation du chef uniquement).</p>
+      )}
     </SoftCard>
   );
 }
 
-/** ✅ Référence marché compacte (plus de “gros encart”) */
-function MarketHintInline({
-  loading,
-  data,
-}: {
-  loading: boolean;
-  data: ReturnType<typeof getMarketBudgetRange> | null;
-}) {
+/** ✅ Référence marché compacte */
+function MarketHintInline({ loading, data }: { loading: boolean; data: ReturnType<typeof getMarketBudgetRange> | null }) {
   const per = useMemo(() => calcPerUnit(data), [data]);
   const currency = data?.currency || 'EUR';
 
@@ -375,15 +380,11 @@ function MarketHintInline({
             <b>
               {formatMoney(per.recommended, currency)} {per.unitLabel}
             </b>{' '}
-            <span className="text-stone-500">
-              · total ~ {formatMoney(per.totalRecommended, currency)}
-            </span>
+            <span className="text-stone-500">· total ~ {formatMoney(per.totalRecommended, currency)}</span>
           </div>
         </div>
       ) : (
-        <div className="text-sm text-stone-600">
-          Renseignez <b>lieu</b>, <b>dates</b> et <b>volume</b> pour afficher une estimation.
-        </div>
+        <div className="text-sm text-stone-600">Renseignez lieu + dates + volume pour afficher une estimation.</div>
       )}
     </SoftCard>
   );
@@ -470,7 +471,6 @@ function RequestFormContent() {
     router.push('/request');
   };
 
-  // Init from URL
   useEffect(() => {
     const modeParam = searchParams?.get('mode');
     const typeParam = searchParams?.get('type');
@@ -540,7 +540,6 @@ function RequestFormContent() {
       return { ok: errors.length === 0, errors };
     }
 
-    // concierge
     const dateMode = String(formData.dateMode || 'multi');
     const end = String((formData as any).endDate || '').trim();
     const perDay = Number(formData.budgetPerDay || 0);
@@ -561,7 +560,7 @@ function RequestFormContent() {
   }, [mode, step, formData]);
 
   /* =========================================================
-     Benchmark logic (compact)
+     Benchmark logic
   ========================================================= */
 
   const shouldShowBenchmark = useMemo(() => {
@@ -642,29 +641,31 @@ function RequestFormContent() {
       if (mode === 'fast') {
         payload.dateMode = 'single';
         payload.budgetPerPerson = Number(formData.budgetPerPerson || 0) || undefined;
-        payload.budgetRange = payload.budgetPerPerson ? `${formatMoney(payload.budgetPerPerson)} / pers (hors frais de service)` : '';
+        payload.budgetRange = payload.budgetPerPerson
+          ? `${formatMoney(payload.budgetPerPerson)} / pers (hors frais de service)`
+          : '';
       }
 
       if (mode === 'concierge') {
         payload.budgetPerDay = Number(formData.budgetPerDay || 0) || undefined;
-        payload.budgetRange = payload.budgetPerDay ? `${formatMoney(payload.budgetPerDay)} / jour (hors frais de service)` : '';
+        payload.budgetRange = payload.budgetPerDay
+          ? `${formatMoney(payload.budgetPerDay)} / jour (hors frais de service)`
+          : '';
       }
 
-  const pricing = computePricing(payload);
+      const pricing = computePricing(payload);
 
-payload.pricing = pricing.ok
-  ? {
-      rate: pricing.rate,
-      rateLabel: pricing.rateLabel,
-      chefTotal: pricing.chefTotal,
-      serviceFee: pricing.serviceFee,
-      totalWithService: pricing.totalWithService,
-      unitLabel: pricing.unitLabel,
-      qty: pricing.qty,
-    }
-  : isPricingKo(pricing)
-  ? { rate: null, rateLabel: pricing.rateLabel, reason: pricing.reason }
-  : { rate: null, rateLabel: '—', reason: 'Estimation indisponible.' };
+      payload.pricing = pricing.ok
+        ? {
+            rate: pricing.rate,
+            rateLabel: pricing.rateLabel,
+            chefTotal: pricing.chefTotal,
+            serviceFee: pricing.serviceFee,
+            totalWithService: pricing.totalWithService,
+            unitLabel: pricing.unitLabel,
+            qty: pricing.qty,
+          }
+        : { rate: null, rateLabel: pricing.rateLabel, reason: (pricing as PricingKo).reason };
 
       const response = await submitRequest(payload);
       if (response?.success) setResult(response);
@@ -704,11 +705,14 @@ payload.pricing = pricing.ok
               <>
                 <p>Votre demande Fast Match a bien été reçue.</p>
                 <p>Nous vérifions la disponibilité immédiate de nos chefs et vous confirmerons l’attribution sous 2h.</p>
-                <p className="text-xs text-stone-500">Estimation affichée service inclus. Approvisionnements non inclus.</p>
+                <p className="text-xs text-stone-500">Estimation affichée service inclus.</p>
               </>
             ) : (
               <>
-                <p>Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et revenons vers vous avec une proposition structurée.</p>
+                <p>
+                  Votre demande a été attribuée à notre équipe Concierge. Nous étudions le cahier des charges et revenons
+                  vers vous avec une proposition structurée.
+                </p>
                 <p className="text-xs text-stone-500">
                   Prix/jour = prestation du chef uniquement (approvisionnements non inclus). Estimation service inclus affichée avant validation.
                 </p>
@@ -719,7 +723,9 @@ payload.pricing = pricing.ok
           </div>
 
           <Link href="/">
-            <Button variant="link">Retour à l’accueil</Button>
+            <Button type="button" variant="link">
+              Retour à l’accueil
+            </Button>
           </Link>
         </Reveal>
       </div>
@@ -800,7 +806,6 @@ payload.pricing = pricing.ok
               </p>
             </div>
 
-            {/* STEPS */}
             <div className="flex flex-col gap-3 pt-4">
               {Array.from({ length: getTotalSteps() }).map((_, i) => {
                 const s = i + 1;
@@ -878,12 +883,12 @@ payload.pricing = pricing.ok
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-8">
-                    {/* ✅ FIX : guestCount relié à guestCount (plus au budget) */}
                     <SoftCard title="Nombre de convives">
+                      {/* ✅ FIX : relié à guestCount */}
                       <Input
                         type="number"
                         min={1}
-                        placeholder="Ex : 80"
+                        placeholder="Ex : 8"
                         value={formData.guestCount ?? 0}
                         onChange={(e) => {
                           const n = parseNumberOrNull(e.target.value);
@@ -907,10 +912,7 @@ payload.pricing = pricing.ok
                     </SoftCard>
                   </div>
 
-                  {/* ✅ Référence marché compacte (sous les champs) */}
                   <MarketHintInline loading={budgetLoading} data={shouldShowBenchmark ? marketBudget : null} />
-
-                  {/* ✅ Estimation compacte (sous les champs) */}
                   <ClientEstimateInline formData={formData} />
 
                   <SoftCard title="Préférences (facultatif)">
@@ -931,7 +933,11 @@ payload.pricing = pricing.ok
                   <h2 className="text-3xl font-serif text-stone-900">Vos coordonnées</h2>
 
                   <SoftCard title="Nom complet">
-                    <Input value={formData.fullName} onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))} autoFocus />
+                    <Input
+                      value={formData.fullName}
+                      onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))}
+                      autoFocus
+                    />
                   </SoftCard>
 
                   <div className="grid md:grid-cols-2 gap-8">
@@ -965,7 +971,9 @@ payload.pricing = pricing.ok
                           type="button"
                           onClick={() => setFormData((p) => ({ ...p, clientType: opt.val as any }))}
                           className={`h-14 text-left px-5 rounded-lg border transition-colors ${
-                            formData.clientType === opt.val ? 'bg-stone-900 text-white border-stone-900' : 'bg-white/70 text-stone-700 border-stone-200 hover:border-stone-900'
+                            formData.clientType === opt.val
+                              ? 'bg-stone-900 text-white border-stone-900'
+                              : 'bg-white/70 text-stone-700 border-stone-200 hover:border-stone-900'
                           }`}
                         >
                           {opt.label}
@@ -976,7 +984,11 @@ payload.pricing = pricing.ok
 
                   {formData.clientType === 'concierge' && (
                     <SoftCard title="Nom de la structure">
-                      <Input value={formData.companyName} onChange={(e) => setFormData((p) => ({ ...p, companyName: e.target.value }))} placeholder="Agence, Family Office..." />
+                      <Input
+                        value={formData.companyName}
+                        onChange={(e) => setFormData((p) => ({ ...p, companyName: e.target.value }))}
+                        placeholder="Agence, Family Office..."
+                      />
                     </SoftCard>
                   )}
 
@@ -1039,11 +1051,7 @@ payload.pricing = pricing.ok
                         </div>
                         <div className="space-y-2">
                           <Label>Équipage total</Label>
-                          <Input
-                            type="number"
-                            value={formData.crewSize}
-                            onChange={(e) => setFormData((p) => ({ ...p, crewSize: parseInt(e.target.value || '0', 10) }))}
-                          />
+                          <Input type="number" value={formData.crewSize} onChange={(e) => setFormData((p) => ({ ...p, crewSize: parseInt(e.target.value || '0', 10) }))} />
                         </div>
                       </div>
                     </SoftCard>
@@ -1133,13 +1141,14 @@ payload.pricing = pricing.ok
           {/* NAV */}
           <div className="pt-14 mt-10 flex items-center justify-end gap-6 border-t border-stone-200/60">
             {step > 1 && (
-              <Button variant="link" onClick={prevStep} className="text-stone-600 hover:text-stone-900">
+              <Button type="button" variant="link" onClick={prevStep} className="text-stone-600 hover:text-stone-900">
                 Revenir
               </Button>
             )}
 
             {step < getTotalSteps() ? (
-              <Button onClick={nextStep} className="w-40" disabled={!requiredState.ok && step === 1 && mode === 'fast'}>
+              // ✅ IMPORTANT : type="button" sinon submit par défaut
+              <Button type="button" onClick={nextStep} className="w-40">
                 Continuer
               </Button>
             ) : (
