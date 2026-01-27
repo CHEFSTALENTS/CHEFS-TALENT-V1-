@@ -223,8 +223,7 @@ function buildBudgetContextFromForm(formData: RequestForm): BudgetContext | null
     const end = String((formData as any).endDate || '').trim();
     if (end.length < 8) return null;
   }
-budgetPerPerson?: number | null; // FAST
-budgetPerDay?: number | null;    // CONCIERGE (si tu veux du 100% clean)
+
    
   const assignment = String((formData as any).assignmentType || 'dinner');
   const kind = getBudgetKindFromForm(formData);
