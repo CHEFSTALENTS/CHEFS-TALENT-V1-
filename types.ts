@@ -159,17 +159,18 @@ export interface RequestForm {
    */
   budgetRange: string;
 
+  guestCount : number ;
   /**
    * ✅ Champ numérique FAST : budget par personne
    * (utilisé pour calculer chefTotal = pax * budgetPerPerson)
    */
-  budgetPerPerson?: number | null;
+  budgetPerPerson?: number ;
 
   /**
    * ✅ Champ numérique CONCIERGE : budget par jour
    * (utilisé pour calculer chefTotal = days * budgetPerDay)
    */
-  budgetPerDay?: number | null;
+  budgetPerDay?: number ;
 
   /**
    * Optionnel : moment (fast)
