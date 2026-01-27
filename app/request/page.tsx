@@ -650,18 +650,21 @@ function RequestFormContent() {
         payload.budgetRange = payload.budgetPerDay ? `${formatMoney(payload.budgetPerDay)} / jour (hors frais de service)` : '';
       }
 
-      const pricing = computePricing(payload);
-      payload.pricing = pricing.ok
-        ? {
-            rate: pricing.rate,
-            rateLabel: pricing.rateLabel,
-            chefTotal: pricing.chefTotal,
-            serviceFee: pricing.serviceFee,
-            totalWithService: pricing.totalWithService,
-            unitLabel: pricing.unitLabel,
-            qty: pricing.qty,
-          }
-        : { rate: null, rateLabel: pricing.rateLabel, reason: pricing.reason };
+  const pricing = computePricing(payload);
+
+payload.pricing = pricing.ok
+  ? {
+      rate: pricing.rate,
+      rateLabel: pricing.rateLabel,
+      chefTotal: pricing.chefTotal,
+      serviceFee: pricing.serviceFee,
+      totalWithService: pricing.totalWithService,
+      unitLabel: pricing.unitLabel,
+      qty: pricing.qty,
+    }
+  : isPricingKo(pricing)
+  ? { rate: null, rateLabel: pricing.rateLabel, reason: pricing.reason }
+  : { rate: null, rateLabel: '—', reason: 'Estimation indisponible.' };
 
       const response = await submitRequest(payload);
       if (response?.success) setResult(response);
