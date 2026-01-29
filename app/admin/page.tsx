@@ -30,7 +30,47 @@ export default function AdminDashboardPage() {
     const json = await fetch('/api/admin/requests', { cache: 'no-store' }).then((x) => x.json());
 
     // ⚠️ ton endpoint renvoie { items: [...] }
-    setRequests(json.items ?? []);
+    const normalizeRequestRow = (x: any): RequestEntity => ({
+  id: x.id,
+  status: x.status ?? 'new',
+
+  // match_type dans ta table => 'fast' | 'concierge'
+  mode: (x.match_type ?? 'concierge') as any,
+
+  // client_type: 'concierge' => B2B sinon B2C
+  userType: x.client_type === 'concierge' ? 'b2b' : 'b2c',
+
+  createdAt: x.created_at ?? null,
+
+  location: x.location ?? x.city ?? '—',
+  guestCount: x.guest_count ?? x.guests ?? null,
+
+  // ✅ budgetRange (ta colonne) + fallback si tu changes plus tard
+  budgetRange: x.budget_range ?? x.budgetRange ?? (x.budget ? String(x.budget) : null),
+
+  // ✅ dates
+  dates: {
+    start: x.start_date ?? null,
+    end: x.end_date ?? null,
+    type: x.date_mode ?? (x.end_date ? 'multi' : 'single'),
+  } as any,
+
+  // ✅ contact (ta table semble utiliser full_name)
+  contact: {
+    name: x.full_name ?? x.first_name ?? 'Client',
+    company: x.company_name ?? '',
+    email: x.email ?? '',
+    phone: x.phone ?? '',
+  } as any,
+
+  missionType: x.assignment_type ?? '',
+  serviceLevel: x.service_expectations ?? x.service_level ?? '',
+  preferences: {
+    cuisine: x.cuisine_preferences ?? '',
+    allergies: x.dietary_restrictions ?? '',
+    languages: x.preferred_language ?? '',
+  },
+});
 
     // ✅ on garde chefs + missions comme avant (si tu veux)
     const [c, m] = await Promise.all([
@@ -52,6 +92,9 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     refresh();
+    const json = await fetch('/api/admin/requests', { cache: 'no-store' }).then(r => r.json());
+const rows = json.items ?? [];
+setRequests(rows.map(normalizeRequestRow));
   }, []);
 
   /* =========================
