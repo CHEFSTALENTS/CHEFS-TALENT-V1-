@@ -25,11 +25,8 @@ export default function AdminDashboardPage() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const [r, c, m] = await Promise.all([
-        (api.getRequests?.() ?? Promise.resolve([])) as Promise<RequestEntity[]>,
-        (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
-        (api.getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
-      ]);
+      cconst r = await fetch('/api/admin/requests', { cache: 'no-store' }).then(x => x.json());
+setRequests(r.items ?? []);
 
       setRequests(r ?? []);
       setChefs(c ?? []);
