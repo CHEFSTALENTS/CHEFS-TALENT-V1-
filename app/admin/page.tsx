@@ -22,19 +22,33 @@ export default function AdminDashboardPage() {
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
 
-  const refresh = async () => {
-    setLoading(true);
-    try {
-      cconst r = await fetch('/api/admin/requests', { cache: 'no-store' }).then(x => x.json());
-setRequests(r.items ?? []);
+ const refresh = async () => {
+  setLoading(true);
 
-      setRequests(r ?? []);
-      setChefs(c ?? []);
-      setMissions(m ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    // ✅ source unique : Supabase via ton API admin
+    const json = await fetch('/api/admin/requests', { cache: 'no-store' }).then((x) => x.json());
+
+    // ⚠️ ton endpoint renvoie { items: [...] }
+    setRequests(json.items ?? []);
+
+    // ✅ on garde chefs + missions comme avant (si tu veux)
+    const [c, m] = await Promise.all([
+      (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
+      (api.getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
+    ]);
+
+    setChefs(c ?? []);
+    setMissions(m ?? []);
+  } catch (e) {
+    console.error('Admin refresh error', e);
+    setRequests([]);
+    setChefs([]);
+    setMissions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     refresh();
