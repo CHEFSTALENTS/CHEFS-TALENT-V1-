@@ -4,230 +4,166 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
 
-type ChefPin = {
+type ChefPoint = {
   id: string;
   name: string;
-  city: string;
-  country: string;
-  status: string;
-  lat: number | null;
-  lng: number | null;
-  query: string; // "Paris, FR"
+  city?: string;
+  country?: string;
+  lat: number;
+  lng: number;
+  status?: string;
 };
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-
 export default function AdminMapPage() {
-  const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
-
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chefs, setChefs] = useState<ChefPin[]>([]);
-  const [stats, setStats] = useState({ total: 0, located: 0, missing: 0 });
+  const [points, setPoints] = useState<ChefPoint[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // 1) Fetch chefs
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  const stats = useMemo(() => {
+    const total = points.length;
+    const byStatus: Record<string, number> = {};
+    for (const p of points) {
+      const k = String(p.status || 'unknown');
+      byStatus[k] = (byStatus[k] || 0) + 1;
+    }
+    return { total, byStatus };
+  }, [points]);
+
+  // Fetch chefs points
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/admin/chefs/locations', { cache: 'no-store' });
+      if (!r.ok) throw new Error(`GET /api/admin/chefs/locations failed: ${r.status}`);
+      const json = await r.json();
+      setPoints((json.items || []) as ChefPoint[]);
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Erreur');
+      setPoints([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    refresh();
+  }, []);
+
+  // Init map once
+  useEffect(() => {
+    if (!token) {
+      setError('NEXT_PUBLIC_MAPBOX_TOKEN manquant');
+      return;
+    }
+    if (!mapDivRef.current) return;
+    if (mapRef.current) return;
+
+    let cancelled = false;
+
     (async () => {
-      setLoading(true);
       try {
-        const json = await fetch('/api/admin/chefs/locations', { cache: 'no-store' }).then(r => r.json());
-        const items: ChefPin[] = json.items || [];
-        setChefs(items);
-      } finally {
-        setLoading(false);
+        const mapboxgl = (await import('mapbox-gl')).default as any;
+
+        if (cancelled) return;
+
+        mapboxgl.accessToken = token;
+
+        const map = new mapboxgl.Map({
+          container: mapDivRef.current!,
+          style: 'mapbox://styles/mapbox/dark-v11',
+          center: [8, 48], // Europe
+          zoom: 3.6,
+        });
+
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+        mapRef.current = map;
+      } catch (e: any) {
+        console.error(e);
+        setError(e?.message || 'Erreur init map');
       }
     })();
-  }, []);
-
-  // 2) Geocode missing coords (MVP)
-  useEffect(() => {
-    if (!chefs.length) return;
-
-    const run = async () => {
-      // on géocode max 25 par refresh (évite de spam)
-      const missing = chefs.filter(c => (!c.lat || !c.lng) && c.query).slice(0, 25);
-      if (missing.length === 0) return;
-
-      const updates: Record<string, { lat: number; lng: number }> = {};
-
-      for (const c of missing) {
-        try {
-          const res = await fetch('/api/admin/geocode', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: c.query }),
-          }).then(r => r.json());
-
-          if (res?.lat && res?.lng) {
-            updates[c.id] = { lat: res.lat, lng: res.lng };
-          }
-        } catch {}
-      }
-
-      if (Object.keys(updates).length) {
-        setChefs(prev =>
-          prev.map(c => (updates[c.id] ? { ...c, ...updates[c.id] } : c))
-        );
-      }
-    };
-
-    run();
-  }, [chefs.length]); // intentionnel: déclenche au premier load uniquement
-
-  const geojson = useMemo(() => {
-    const features = chefs
-      .filter(c => typeof c.lat === 'number' && typeof c.lng === 'number')
-      .map(c => ({
-        type: 'Feature' as const,
-        properties: {
-          id: c.id,
-          name: c.name,
-          status: c.status,
-          city: c.city,
-          country: c.country,
-        },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [c.lng as number, c.lat as number],
-        },
-      }));
-
-    return { type: 'FeatureCollection' as const, features };
-  }, [chefs]);
-
-  // stats
-  useEffect(() => {
-    const located = chefs.filter(c => c.lat && c.lng).length;
-    const missing = chefs.length - located;
-    setStats({ total: chefs.length, located, missing });
-  }, [chefs]);
-
-  // 3) Init map once
-  useEffect(() => {
-    if (!mapDivRef.current) return;
-    if (!mapboxgl.accessToken) return;
-
-    const map = new mapboxgl.Map({
-      container: mapDivRef.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [7.5, 47.0], // Europe
-      zoom: 3.6,
-    });
-
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    mapRef.current = map;
 
     return () => {
-      map.remove();
+      cancelled = true;
+      try {
+        if (mapRef.current) mapRef.current.remove();
+      } catch {}
       mapRef.current = null;
     };
-  }, []);
+  }, [token]);
 
-  // 4) Add/update source + layers
+  // Render markers when points change
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (!geojson) return;
 
-    const onLoad = () => {
-      const sourceId = 'chefs';
+    let cancelled = false;
 
-      if (!map.getSource(sourceId)) {
-        map.addSource(sourceId, {
-          type: 'geojson',
-          data: geojson as any,
-          cluster: true,
-          clusterMaxZoom: 8,
-          clusterRadius: 40,
-        });
+    (async () => {
+      const mapboxgl = (await import('mapbox-gl')).default as any;
+      if (cancelled) return;
 
-        // clusters
-        map.addLayer({
-          id: 'clusters',
-          type: 'circle',
-          source: sourceId,
-          filter: ['has', 'point_count'],
-          paint: {
-            'circle-color': '#7c3aed',
-            'circle-radius': ['step', ['get', 'point_count'], 16, 20, 22, 50, 28],
-            'circle-opacity': 0.35,
-          },
-        });
-
-        map.addLayer({
-          id: 'cluster-count',
-          type: 'symbol',
-          source: sourceId,
-          filter: ['has', 'point_count'],
-          layout: {
-            'text-field': '{point_count_abbreviated}',
-            'text-size': 12,
-          },
-          paint: { 'text-color': '#ffffff' },
-        });
-
-        // points
-        map.addLayer({
-          id: 'unclustered-point',
-          type: 'circle',
-          source: sourceId,
-          filter: ['!', ['has', 'point_count']],
-          paint: {
-            'circle-color': '#22c55e',
-            'circle-radius': 6,
-            'circle-stroke-width': 1,
-            'circle-stroke-color': '#0b0b0b',
-          },
-        });
-
-        // click cluster -> zoom
-        map.on('click', 'clusters', (e) => {
-          const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-          const clusterId = features[0]?.properties?.cluster_id;
-          const source = map.getSource(sourceId) as any;
-          source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
-            if (err) return;
-            map.easeTo({
-              center: (features[0].geometry as any).coordinates,
-              zoom,
-            });
-          });
-        });
-
-        // click point -> popup
-        map.on('click', 'unclustered-point', (e) => {
-          const f = e.features?.[0] as any;
-          const props = f?.properties || {};
-          const coords = f?.geometry?.coordinates?.slice();
-
-          new mapboxgl.Popup({ closeButton: true })
-            .setLngLat(coords)
-            .setHTML(
-              `<div style="font-family: ui-sans-serif; min-width:200px;">
-                <div style="font-weight:700; margin-bottom:4px;">${props.name || 'Chef'}</div>
-                <div style="opacity:.8; font-size:12px;">${props.city || ''} ${props.country || ''}</div>
-                <div style="opacity:.7; font-size:12px; margin-top:6px;">status: ${props.status || '—'}</div>
-              </div>`
-            )
-            .addTo(map);
-        });
-
-        map.on('mouseenter', 'clusters', () => (map.getCanvas().style.cursor = 'pointer'));
-        map.on('mouseleave', 'clusters', () => (map.getCanvas().style.cursor = ''));
-        map.on('mouseenter', 'unclustered-point', () => (map.getCanvas().style.cursor = 'pointer'));
-        map.on('mouseleave', 'unclustered-point', () => (map.getCanvas().style.cursor = ''));
-      } else {
-        (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(geojson as any);
+      // clear old
+      for (const m of markersRef.current) {
+        try {
+          m.remove();
+        } catch {}
       }
+      markersRef.current = [];
+
+      // add new
+      for (const p of points) {
+        if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+
+        const el = document.createElement('div');
+        el.className = 'ct-marker';
+        el.style.width = '10px';
+        el.style.height = '10px';
+        el.style.borderRadius = '999px';
+        el.style.background = 'rgba(255,255,255,0.9)';
+        el.style.boxShadow = '0 0 0 3px rgba(255,255,255,0.15)';
+
+        const popup = new mapboxgl.Popup({ offset: 12 }).setHTML(
+          `<div style="font-size:12px;line-height:1.3">
+            <div style="font-weight:600;margin-bottom:4px">${escapeHtml(p.name || 'Chef')}</div>
+            <div style="opacity:.8">${escapeHtml([p.city, p.country].filter(Boolean).join(', ') || '—')}</div>
+            <div style="opacity:.7;margin-top:6px">status: ${escapeHtml(p.status || '—')}</div>
+          </div>`
+        );
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([p.lng, p.lat])
+          .setPopup(popup)
+          .addTo(map);
+
+        markersRef.current.push(marker);
+      }
+
+      // Fit bounds (si assez de points)
+      if (points.length >= 2) {
+        const bounds = new mapboxgl.LngLatBounds();
+        for (const p of points) {
+          if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) bounds.extend([p.lng, p.lat]);
+        }
+        try {
+          map.fitBounds(bounds, { padding: 80, maxZoom: 6, duration: 600 });
+        } catch {}
+      }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-
-    if (map.loaded()) onLoad();
-    else map.once('load', onLoad);
-
-    return () => {};
-  }, [geojson]);
+  }, [points]);
 
   return (
     <div className="p-6 space-y-4">
@@ -235,45 +171,61 @@ export default function AdminMapPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Carte des chefs</h1>
           <p className="text-sm text-white/50 mt-1">
-            Europe • clusters • source Supabase (cache geocode)
+            Source: Supabase (chef_profile + geo_cache)
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <a
-            href="/admin/chefs"
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
-          >
-            Gérer chefs
-          </a>
-        </div>
+        <button
+          onClick={refresh}
+          className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+        >
+          Rafraîchir
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Stat title="Total chefs" value={stats.total} />
-        <Stat title="Localisés" value={stats.located} />
-        <Stat title="Sans localisation" value={stats.missing} />
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs text-white/50">Chefs géolocalisés</div>
+          <div className="text-3xl text-white font-semibold mt-1">{stats.total}</div>
+          <div className="text-xs text-white/40 mt-2">
+            {loading ? 'Chargement…' : 'OK'}
+          </div>
+        </div>
+
+        <div className="md:col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs text-white/50 mb-2">Répartition status</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(stats.byStatus).length === 0 ? (
+              <span className="text-sm text-white/60">—</span>
+            ) : (
+              Object.entries(stats.byStatus).map(([k, v]) => (
+                <span key={k} className="text-xs text-white/75 border border-white/10 bg-white/5 rounded-full px-2 py-1">
+                  {k}: <b className="text-white">{v}</b>
+                </span>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-        <div ref={mapDivRef} style={{ height: 620, width: '100%' }} />
-      </div>
-
-      {loading ? <div className="text-sm text-white/60">Chargement…</div> : null}
-      {!mapboxgl.accessToken ? (
-        <div className="text-sm text-rose-200">
-          ⚠️ NEXT_PUBLIC_MAPBOX_TOKEN manquant.
+      {error ? (
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-200">
+          {error}
         </div>
       ) : null}
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <div ref={mapDivRef} style={{ height: '70vh', width: '100%' }} />
+      </div>
     </div>
   );
 }
 
-function Stat({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="text-xs text-white/50">{title}</div>
-      <div className="text-2xl font-semibold text-white mt-1">{value}</div>
-    </div>
-  );
+function escapeHtml(s: string) {
+  return String(s || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
