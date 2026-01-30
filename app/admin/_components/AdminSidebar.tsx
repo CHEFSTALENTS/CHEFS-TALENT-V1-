@@ -16,6 +16,10 @@ export function AdminSidebar({ badges }: { badges?: Record<string, string | numb
     { label: 'Dashboard', href: '/admin' },
     { label: 'Demandes', href: '/admin/requests', badge: badges?.requestsNew },
     { label: 'Chefs', href: '/admin/chefs', badge: badges?.chefsPending },
+
+    // ✅ NEW
+    { label: 'Carte', href: '/admin/map', badge: badges?.chefsOnMap },
+
     { label: 'Proposals', href: '/admin/proposals' },
     { label: 'Missions', href: '/admin/missions' },
   ];
