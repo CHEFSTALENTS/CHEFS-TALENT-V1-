@@ -10,52 +10,29 @@ const supabase = createClient(
 );
 
 type ChefRow = {
-  email: string;
+  email: string | null;
   profile: any; // JSONB
-  created_at?: string;
-  updated_at?: string;
 };
 
-function getChefId(row: ChefRow): string {
-  // id est dans profile
-  const pid =
-    row?.profile?.id ||
-    row?.profile?.userId ||
-    row?.profile?.chefId ||
-    row?.profile?.uid;
-
-  return (typeof pid === 'string' && pid.trim()) ? pid.trim() : row.email;
-}
-
 function getCity(profile: any): string | null {
-  const city =
-    profile?.location?.baseCity ||
-    profile?.baseCity ||
-    profile?.BaseCity;
-
-  if (!city || typeof city !== 'string') return null;
-  const trimmed = city.trim();
-  return trimmed.length ? trimmed : null;
+  const city = profile?.baseCity || profile?.location?.baseCity || null;
+  return typeof city === 'string' ? city.trim() || null : null;
 }
 
 function getName(profile: any): string {
-  if (profile?.name && typeof profile.name === 'string') return profile.name;
-
-  const fn = (profile?.firstName || '').toString();
-  const ln = (profile?.lastName || '').toString();
+  if (profile?.name) return String(profile.name);
+  const fn = profile?.firstName ? String(profile.firstName) : '';
+  const ln = profile?.lastName ? String(profile.lastName) : '';
   const full = `${fn} ${ln}`.trim();
-
   return full || 'Chef';
 }
 
 function getAvatar(profile: any): string | null {
-  const url = profile?.avatarUrl || profile?.photoUrl;
-  if (!url || typeof url !== 'string') return null;
-  return url.trim() || null;
+  return profile?.avatarUrl || profile?.photoUrl || null;
 }
 
 async function geocode(query: string) {
-  const token = process.env.MAPBOX_SECRET_TOKEN;
+  const token = process.env.MAPBOX_SECRET_TOKEN; // ✅ important : côté server
   if (!token) throw new Error('Missing MAPBOX_SECRET_TOKEN');
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
@@ -67,51 +44,38 @@ async function geocode(query: string) {
 
   const j = await r.json();
   const f = j?.features?.[0];
-  if (!f?.center || !Array.isArray(f.center) || f.center.length < 2) return null;
+  if (!f?.center) return null;
 
-  return { lng: Number(f.center[0]), lat: Number(f.center[1]) };
+  return { lng: f.center[0], lat: f.center[1] };
 }
 
 export async function GET() {
   try {
-    // 1) Load chefs (SANS id colonne)
+    // 1) Load chefs (email + profile JSONB)
     const { data, error } = await supabase
       .from('chef_profiles')
-      .select('email,profile') // ✅ important
-      .limit(2000);
+      .select('email,profile')
+      .limit(3000);
 
     if (error) throw error;
 
-    const chefs = (data || []) as ChefRow[];
+    const rows = (data || []) as ChefRow[];
 
-    // 2) Normalize
-    const chefId = c.profile?.id; // <-- UUID dans le JSON
-...
-return {
-  id: chefId,
-  email: c.email,
-  name: getName(c.profile),
-  avatarUrl: getAvatar(c.profile),
-  baseCity: city,
-  query: city,
-};
-    
-    const prepared = chefs
-      .map(row => {
-        const city = getCity(row.profile);
-        if (!city) return null;
-
-        // Si tu veux améliorer la précision, tu peux forcer un pays:
-        // ex: `${city}, France` (mais là tu perds l'Europe)
-        const query = city;
+    // 2) Normalize (id vient du JSON profile.id)
+    const prepared = rows
+      .map((c) => {
+        const profile = c.profile || {};
+        const chefId = profile?.id; // ✅ UUID stocké dans le JSON
+        const city = getCity(profile);
+        if (!chefId || !city) return null;
 
         return {
-          id: getChefId(row),
-          email: row.email,
-          name: getName(row.profile),
-          avatarUrl: getAvatar(row.profile),
+          id: String(chefId),
+          email: c.email ? String(c.email) : '',
+          name: getName(profile),
+          avatarUrl: getAvatar(profile),
           baseCity: city,
-          query,
+          query: city, // (ex: "Marseille")
         };
       })
       .filter(Boolean) as Array<{
@@ -123,9 +87,9 @@ return {
         query: string;
       }>;
 
-    const queries = [...new Set(prepared.map(c => c.query).filter(Boolean))];
+    const queries = Array.from(new Set(prepared.map((x) => x.query)));
 
-    if (!queries.length) {
+    if (queries.length === 0) {
       return NextResponse.json({ items: [] });
     }
 
@@ -139,12 +103,12 @@ return {
 
     const cache = new Map<string, { lat: number; lng: number }>();
     (cached || []).forEach((c: any) => {
-      if (c?.query && c?.lat != null && c?.lng != null) {
-        cache.set(String(c.query), { lat: Number(c.lat), lng: Number(c.lng) });
+      if (c?.query && typeof c.lat === 'number' && typeof c.lng === 'number') {
+        cache.set(String(c.query), { lat: c.lat, lng: c.lng });
       }
     });
 
-    // 4) Geocode missing (séquentiel simple, OK pour 2k mais idéalement on batch)
+    // 4) Geocode missing + upsert
     for (const q of queries) {
       if (cache.has(q)) continue;
 
@@ -153,15 +117,14 @@ return {
 
       cache.set(q, coords);
 
-      await supabase.from('geo_cache').upsert(
-        { query: q, ...coords },
-        { onConflict: 'query' }
-      );
+      await supabase
+        .from('geo_cache')
+        .upsert({ query: q, lat: coords.lat, lng: coords.lng }, { onConflict: 'query' });
     }
 
     // 5) Final payload
     const items = prepared
-      .map(c => {
+      .map((c) => {
         const geo = cache.get(c.query);
         if (!geo) return null;
 
@@ -180,6 +143,6 @@ return {
     return NextResponse.json({ items });
   } catch (e: any) {
     console.error('admin/chefs/map error', e);
-    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 });
+    return NextResponse.json({ error: e.message || 'Unknown error' }, { status: 500 });
   }
 }
