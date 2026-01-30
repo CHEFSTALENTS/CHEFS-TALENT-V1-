@@ -65,7 +65,29 @@ export default function AdminMapPage() {
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     mapRef.current = map;
+const el = document.createElement('div');
+el.style.width = '34px';
+el.style.height = '34px';
+el.style.borderRadius = '999px';
+el.style.border = '2px solid rgba(255,255,255,0.8)';
+el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+el.style.background = p.avatarUrl
+  ? `url(${p.avatarUrl}) center/cover no-repeat`
+  : 'rgba(255,255,255,0.12)';
 
+new mapboxgl.Marker({ element: el })
+  .setLngLat([p.lng, p.lat])
+  .setPopup(
+    new mapboxgl.Popup({ offset: 12 }).setHTML(`
+      <div style="font-size:12px">
+        <div style="font-weight:600">${escapeHtml(p.name)}</div>
+        <div style="opacity:.75">${escapeHtml(p.baseCity)}</div>
+        ${p.email ? `<div style="opacity:.6;margin-top:4px">${escapeHtml(p.email)}</div>` : ''}
+        ${p.status ? `<div style="opacity:.6;margin-top:4px">status: ${escapeHtml(p.status)}</div>` : ''}
+      </div>
+    `)
+  )
+  .addTo(map);
     return () => {
       map.remove();
       mapRef.current = null;
