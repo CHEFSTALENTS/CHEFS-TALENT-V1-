@@ -9,8 +9,8 @@ export const revalidate = 0;
 type ChefPoint = {
   id: string;
   name: string;
-  city: string;
-  country?: string;
+  email?: string;
+  baseCity: string;
   status?: string;
   lat: number;
   lng: number;
@@ -96,13 +96,14 @@ export default function AdminMapPage() {
       el.style.background = 'rgba(255,255,255,0.85)';
       el.style.boxShadow = '0 0 0 6px rgba(255,255,255,0.10)';
 
-      const popup = new mapboxgl.Popup({ offset: 12 }).setHTML(
-        `<div style="font-size:12px">
-          <div style="font-weight:600">${escapeHtml(p.name)}</div>
-          <div style="opacity:.75">${escapeHtml(p.city)}${p.country ? ', ' + escapeHtml(p.country) : ''}</div>
-          ${p.status ? `<div style="opacity:.6;margin-top:4px">status: ${escapeHtml(p.status)}</div>` : ''}
-        </div>`
-      );
+    const popup = new mapboxgl.Popup({ offset: 12 }).setHTML(
+  `<div style="font-size:12px">
+    <div style="font-weight:600">${escapeHtml(p.name)}</div>
+    <div style="opacity:.75">${escapeHtml(p.baseCity)}</div>
+    ${p.email ? `<div style="opacity:.6;margin-top:4px">${escapeHtml(p.email)}</div>` : ''}
+    ${p.status ? `<div style="opacity:.6;margin-top:4px">status: ${escapeHtml(p.status)}</div>` : ''}
+  </div>`
+);
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([p.lng, p.lat])
