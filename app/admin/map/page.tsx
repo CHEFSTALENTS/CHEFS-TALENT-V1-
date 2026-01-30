@@ -9,9 +9,9 @@ export const revalidate = 0;
 type ChefPoint = {
   id: string;
   name: string;
-  email?: string;
+  email: string;
+  avatarUrl?: string | null;
   baseCity: string;
-  status?: string;
   lat: number;
   lng: number;
 };
@@ -23,9 +23,11 @@ export default function AdminMapPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ChefPoint[]>([]);
 
-  // ⚠️ token public côté client
-  (mapboxgl as any).accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_PUBLIC_TOKEN;
+  // ✅ token public côté client
+  (mapboxgl as any).accessToken =
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_PUBLIC_TOKEN || '';
 
+  // fetch points
   useEffect(() => {
     let cancelled = false;
 
@@ -36,7 +38,7 @@ export default function AdminMapPage() {
         const json = await r.json();
         if (cancelled) return;
 
-        setItems(json.items || []);
+        setItems(Array.isArray(json.items) ? json.items : []);
       } catch (e) {
         console.error(e);
         if (!cancelled) setItems([]);
@@ -65,34 +67,43 @@ export default function AdminMapPage() {
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     mapRef.current = map;
-const el = document.createElement('div');
-el.style.width = '34px';
-el.style.height = '34px';
-el.style.borderRadius = '999px';
-el.style.border = '2px solid rgba(255,255,255,0.8)';
-el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
-el.style.background = p.avatarUrl
-  ? `url(${p.avatarUrl}) center/cover no-repeat`
-  : 'rgba(255,255,255,0.12)';
 
-new mapboxgl.Marker({ element: el })
-  .setLngLat([p.lng, p.lat])
-  .setPopup(
-    new mapboxgl.Popup({ offset: 12 }).setHTML(`
-      <div style="font-size:12px">
-        <div style="font-weight:600">${escapeHtml(p.name)}</div>
-        <div style="opacity:.75">${escapeHtml(p.baseCity)}</div>
-        ${p.email ? `<div style="opacity:.6;margin-top:4px">${escapeHtml(p.email)}</div>` : ''}
-        ${p.status ? `<div style="opacity:.6;margin-top:4px">status: ${escapeHtml(p.status)}</div>` : ''}
-      </div>
-    `)
-  )
-  .addTo(map);
     return () => {
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  function openChef(chefId: string) {
+    // ✅ si tu as une page détail:
+    window.location.href = `/admin/chefs/${encodeURIComponent(chefId)}`;
+
+    // 🔁 fallback si pas de page détail:
+    // window.location.href = `/admin/chefs?chefId=${encodeURIComponent(chefId)}`;
+  }
+
+  function createChefMarkerEl(chef: ChefPoint) {
+    const el = document.createElement('div');
+    el.style.width = '34px';
+    el.style.height = '34px';
+    el.style.borderRadius = '999px';
+    el.style.border = '2px solid rgba(255,255,255,0.85)';
+    el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+    el.style.cursor = 'pointer';
+
+    el.style.background = chef.avatarUrl
+      ? `url(${chef.avatarUrl}) center/cover no-repeat`
+      : 'rgba(255,255,255,0.12)';
+
+    // ✅ clic => ouvrir fiche
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openChef(chef.id);
+    });
+
+    return el;
+  }
 
   // render markers when items change
   useEffect(() => {
@@ -107,39 +118,53 @@ new mapboxgl.Marker({ element: el })
 
     const bounds = new mapboxgl.LngLatBounds();
 
-    for (const p of items) {
-      bounds.extend([p.lng, p.lat]);
+    for (const chef of items) {
+      if (
+        typeof chef.lat !== 'number' ||
+        typeof chef.lng !== 'number' ||
+        Number.isNaN(chef.lat) ||
+        Number.isNaN(chef.lng)
+      ) {
+        continue;
+      }
 
-      const el = document.createElement('div');
-      el.className = 'chef-dot';
-      el.style.width = '10px';
-      el.style.height = '10px';
-      el.style.borderRadius = '999px';
-      el.style.background = 'rgba(255,255,255,0.85)';
-      el.style.boxShadow = '0 0 0 6px rgba(255,255,255,0.10)';
+      bounds.extend([chef.lng, chef.lat]);
 
-    const popup = new mapboxgl.Popup({ offset: 12 }).setHTML(
-  `<div style="font-size:12px">
-    <div style="font-weight:600">${escapeHtml(p.name)}</div>
-    <div style="opacity:.75">${escapeHtml(p.baseCity)}</div>
-    ${p.email ? `<div style="opacity:.6;margin-top:4px">${escapeHtml(p.email)}</div>` : ''}
-    ${p.status ? `<div style="opacity:.6;margin-top:4px">status: ${escapeHtml(p.status)}</div>` : ''}
-  </div>`
-);
+      const el = createChefMarkerEl(chef);
+
+      // ✅ popup optionnel (tu peux enlever si tu veux “full click”)
+      const popup = new mapboxgl.Popup({ offset: 16 }).setHTML(`
+        <div style="min-width:220px; font-size:12px">
+          <div style="font-weight:600; margin-bottom:4px">${escapeHtml(chef.name)}</div>
+          <div style="opacity:.75">${escapeHtml(chef.baseCity)}</div>
+          ${chef.email ? `<div style="opacity:.6;margin-top:6px">${escapeHtml(chef.email)}</div>` : ''}
+          <div style="margin-top:10px; opacity:.85; text-decoration:underline">
+            Ouvrir fiche →
+          </div>
+        </div>
+      `);
 
       const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([p.lng, p.lat])
+        .setLngLat([chef.lng, chef.lat])
         .setPopup(popup)
         .addTo(map);
+
+      // ✅ aussi possible: ouvrir la fiche si on clique la popup
+      marker.getElement().addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openChef(chef.id);
+      });
 
       markersRef.current.push(marker);
     }
 
     // fit bounds
     if (items.length >= 2) {
-      map.fitBounds(bounds, { padding: 60, maxZoom: 7 });
+      map.fitBounds(bounds, { padding: 70, maxZoom: 7 });
     } else {
-      map.flyTo({ center: [items[0].lng, items[0].lat], zoom: 7 });
+      const c = items[0];
+      map.flyTo({ center: [c.lng, c.lat], zoom: 7 });
     }
   }, [items]);
 
@@ -158,9 +183,7 @@ new mapboxgl.Marker({ element: el })
         <div ref={mapDivRef} style={{ height: 600, width: '100%' }} />
       </div>
 
-      <div className="text-xs text-white/40">
-        Source: chef_profiles + geo_cache (Mapbox geocoding)
-      </div>
+      <div className="text-xs text-white/40">Source: chef_profiles + geo_cache (Mapbox geocoding)</div>
     </div>
   );
 }
