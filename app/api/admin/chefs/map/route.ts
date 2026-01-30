@@ -10,25 +10,48 @@ const supabase = createClient(
 );
 
 type ChefRow = {
-  id: string;
   email: string;
   profile: any; // JSONB
+  created_at?: string;
+  updated_at?: string;
 };
 
+function getChefId(row: ChefRow): string {
+  // id est dans profile
+  const pid =
+    row?.profile?.id ||
+    row?.profile?.userId ||
+    row?.profile?.chefId ||
+    row?.profile?.uid;
+
+  return (typeof pid === 'string' && pid.trim()) ? pid.trim() : row.email;
+}
+
 function getCity(profile: any): string | null {
-  return profile?.baseCity?.trim() || null;
+  const city =
+    profile?.location?.baseCity ||
+    profile?.baseCity ||
+    profile?.BaseCity;
+
+  if (!city || typeof city !== 'string') return null;
+  const trimmed = city.trim();
+  return trimmed.length ? trimmed : null;
 }
 
 function getName(profile: any): string {
-  if (profile?.name) return profile.name;
-  const fn = profile?.firstName || '';
-  const ln = profile?.lastName || '';
+  if (profile?.name && typeof profile.name === 'string') return profile.name;
+
+  const fn = (profile?.firstName || '').toString();
+  const ln = (profile?.lastName || '').toString();
   const full = `${fn} ${ln}`.trim();
+
   return full || 'Chef';
 }
 
 function getAvatar(profile: any): string | null {
-  return profile?.avatarUrl || profile?.photoUrl || null;
+  const url = profile?.avatarUrl || profile?.photoUrl;
+  if (!url || typeof url !== 'string') return null;
+  return url.trim() || null;
 }
 
 async function geocode(query: string) {
@@ -44,54 +67,73 @@ async function geocode(query: string) {
 
   const j = await r.json();
   const f = j?.features?.[0];
-  if (!f?.center) return null;
+  if (!f?.center || !Array.isArray(f.center) || f.center.length < 2) return null;
 
-  return { lng: f.center[0], lat: f.center[1] };
+  return { lng: Number(f.center[0]), lat: Number(f.center[1]) };
 }
 
 export async function GET() {
   try {
-    // 1️⃣ Load chefs
+    // 1) Load chefs (SANS id colonne)
     const { data, error } = await supabase
       .from('chef_profiles')
-      .select('id,email,profile')
+      .select('email,profile') // ✅ important
       .limit(2000);
 
     if (error) throw error;
 
     const chefs = (data || []) as ChefRow[];
 
-    // 2️⃣ Normalize
+    // 2) Normalize
     const prepared = chefs
-      .map(c => {
-        const city = getCity(c.profile);
+      .map(row => {
+        const city = getCity(row.profile);
         if (!city) return null;
 
+        // Si tu veux améliorer la précision, tu peux forcer un pays:
+        // ex: `${city}, France` (mais là tu perds l'Europe)
+        const query = city;
+
         return {
-          id: c.id,
-          email: c.email,
-          name: getName(c.profile),
-          avatarUrl: getAvatar(c.profile),
+          id: getChefId(row),
+          email: row.email,
+          name: getName(row.profile),
+          avatarUrl: getAvatar(row.profile),
           baseCity: city,
-          query: city,
+          query,
         };
       })
-      .filter(Boolean) as any[];
+      .filter(Boolean) as Array<{
+        id: string;
+        email: string;
+        name: string;
+        avatarUrl: string | null;
+        baseCity: string;
+        query: string;
+      }>;
 
-    const queries = [...new Set(prepared.map(c => c.query))];
+    const queries = [...new Set(prepared.map(c => c.query).filter(Boolean))];
 
-    // 3️⃣ Load geo cache
-    const { data: cached } = await supabase
+    if (!queries.length) {
+      return NextResponse.json({ items: [] });
+    }
+
+    // 3) Load geo cache
+    const { data: cached, error: cacheErr } = await supabase
       .from('geo_cache')
       .select('query,lat,lng')
       .in('query', queries);
 
-    const cache = new Map<string, { lat: number; lng: number }>();
-    (cached || []).forEach((c: any) =>
-      cache.set(c.query, { lat: c.lat, lng: c.lng })
-    );
+    if (cacheErr) throw cacheErr;
 
-    // 4️⃣ Geocode missing
+    const cache = new Map<string, { lat: number; lng: number }>();
+    (cached || []).forEach((c: any) => {
+      if (c?.query && c?.lat != null && c?.lng != null) {
+        cache.set(String(c.query), { lat: Number(c.lat), lng: Number(c.lng) });
+      }
+    });
+
+    // 4) Geocode missing (séquentiel simple, OK pour 2k mais idéalement on batch)
     for (const q of queries) {
       if (cache.has(q)) continue;
 
@@ -100,12 +142,13 @@ export async function GET() {
 
       cache.set(q, coords);
 
-      await supabase
-        .from('geo_cache')
-        .upsert({ query: q, ...coords }, { onConflict: 'query' });
+      await supabase.from('geo_cache').upsert(
+        { query: q, ...coords },
+        { onConflict: 'query' }
+      );
     }
 
-    // 5️⃣ Final payload
+    // 5) Final payload
     const items = prepared
       .map(c => {
         const geo = cache.get(c.query);
@@ -126,6 +169,6 @@ export async function GET() {
     return NextResponse.json({ items });
   } catch (e: any) {
     console.error('admin/chefs/map error', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 });
   }
 }
