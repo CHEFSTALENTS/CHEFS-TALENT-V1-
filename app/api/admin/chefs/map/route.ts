@@ -85,6 +85,17 @@ export async function GET() {
     const chefs = (data || []) as ChefRow[];
 
     // 2) Normalize
+    const chefId = c.profile?.id; // <-- UUID dans le JSON
+...
+return {
+  id: chefId,
+  email: c.email,
+  name: getName(c.profile),
+  avatarUrl: getAvatar(c.profile),
+  baseCity: city,
+  query: city,
+};
+    
     const prepared = chefs
       .map(row => {
         const city = getCity(row.profile);
