@@ -55,7 +55,187 @@ function getName(profile: any) {
 function getAvatar(profile: any) {
   return profile?.avatarUrl || profile?.photoUrl || null;
 }
+function AdminActions({
+  chefId,
+  name,
+  email,
+  phone,
+  status,
+  onStatusSaved,
+}: {
+  chefId: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  onStatusSaved?: (newStatus: string) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [nextStatus, setNextStatus] = useState(status || 'approved');
 
+  // WhatsApp: format simple (FR), tu peux adapter
+  const waPhone = (phone || '').replace(/[^\d+]/g, '');
+  const waText = encodeURIComponent(
+    `Hello ${name},\n\nIci Thomas / Chef Talents.\nJe te contacte au sujet d’une mission.\nTu es dispo pour en parler ?`
+  );
+  const waHref = waPhone ? `https://wa.me/${waPhone.startsWith('+') ? waPhone.slice(1) : waPhone}?text=${waText}` : '';
+
+  // Mailto (admin)
+  const mailSubject = encodeURIComponent(`[Chef Talents] Mission / dispo — ${name}`);
+  const mailBody = encodeURIComponent(
+    `Bonjour ${name},\n\nJ’ai une mission potentielle à te proposer.\nPeux-tu me confirmer :\n- tes dispos (dates)\n- ta mobilité\n- ton tarif à jour\n\nMerci,\nThomas — Chef Talents`
+  );
+  const mailHref = email ? `mailto:${email}?subject=${mailSubject}&body=${mailBody}` : '';
+
+  async function togglePause() {
+    // Exemple: si status = paused -> approved, sinon paused
+    const target = (status || '').toLowerCase() === 'paused' ? 'approved' : 'paused';
+    await saveStatus(target);
+  }
+
+  async function saveStatus(s: string) {
+    setSaving(true);
+    try {
+      const r = await fetch(`/api/admin/chefs/${encodeURIComponent(chefId)}/status`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: s }),
+      });
+      if (!r.ok) throw new Error(`status update failed: ${r.status}`);
+      setOpen(false);
+      onStatusSaved?.(s);
+    } catch (e) {
+      console.error(e);
+      alert("Impossible de mettre à jour le statut (endpoint à brancher ?).");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="text-sm text-white/70">
+          Actions rapides (admin)
+          <div className="text-xs text-white/40 mt-0.5">
+            WhatsApp / Mail / statut / mission
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {/* Créer mission */}
+          <Link
+            href={`/admin/missions/new?chefId=${encodeURIComponent(chefId)}`}
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+          >
+            + Créer mission
+          </Link>
+
+          {/* WhatsApp */}
+          <a
+            href={waHref || '#'}
+            target="_blank"
+            rel="noreferrer"
+            className={[
+              'px-3 py-2 rounded-xl border text-sm transition',
+              waHref
+                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15'
+                : 'border-white/10 bg-white/5 text-white/40 cursor-not-allowed',
+            ].join(' ')}
+            onClick={(e) => {
+              if (!waHref) e.preventDefault();
+            }}
+            title={waHref ? 'Ouvrir WhatsApp' : 'Pas de numéro'}
+          >
+            WhatsApp
+          </a>
+
+          {/* Mail */}
+          <a
+            href={mailHref || '#'}
+            className={[
+              'px-3 py-2 rounded-xl border text-sm transition',
+              mailHref
+                ? 'border-sky-500/20 bg-sky-500/10 text-sky-200 hover:bg-sky-500/15'
+                : 'border-white/10 bg-white/5 text-white/40 cursor-not-allowed',
+            ].join(' ')}
+            onClick={(e) => {
+              if (!mailHref) e.preventDefault();
+            }}
+            title={mailHref ? 'Envoyer un email' : 'Pas d’email'}
+          >
+            Mail
+          </a>
+
+          {/* Pause */}
+          <button
+            onClick={togglePause}
+            disabled={saving}
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition disabled:opacity-50"
+          >
+            {String(status || '').toLowerCase() === 'paused' ? 'Activer' : 'Mettre en pause'}
+          </button>
+
+          {/* Changer statut */}
+          <button
+            onClick={() => setOpen(true)}
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
+          >
+            Changer status
+          </button>
+        </div>
+      </div>
+
+      {/* Modal status */}
+      {open ? (
+        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Changer le statut</div>
+                <div className="text-xs text-white/45 mt-0.5">Chef: {name}</div>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
+              >
+                Fermer ✕
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <label className="text-xs text-white/50">Statut</label>
+              <select
+                value={nextStatus}
+                onChange={(e) => setNextStatus(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white focus:outline-none"
+              >
+                <option value="pending_validation">pending_validation</option>
+                <option value="approved">approved</option>
+                <option value="active">active</option>
+                <option value="paused">paused</option>
+                <option value="rejected">rejected</option>
+              </select>
+
+              <button
+                onClick={() => saveStatus(nextStatus)}
+                disabled={saving}
+                className="w-full mt-3 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
+              >
+                {saving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+
+              <div className="text-[11px] text-white/40 mt-2">
+                Endpoint attendu : <span className="font-mono">POST /api/admin/chefs/[id]/status</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 export default function ChefProfileClient({
   chefId,
   chefEmail,
@@ -249,7 +429,19 @@ export default function ChefProfileClient({
           </div>
         )}
       </Panel>
-
+      
+{/* CTA Admin */}
+<AdminActions
+  chefId={chefId}
+  name={name}
+  email={chefEmail || profile?.email || ''}
+  phone={profile?.phone || ''}
+  status={String(profile?.status || '')}
+  onStatusSaved={(newStatus) => {
+    // Option: tu peux aussi refresh via router.refresh()
+    // ici on ne modifie pas le profile en local pour rester simple
+  }}
+/>
       {/* Lightbox */}
       {lightbox.open ? (
         <Lightbox
