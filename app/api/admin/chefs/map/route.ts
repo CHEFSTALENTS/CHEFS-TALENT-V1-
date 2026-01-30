@@ -6,19 +6,54 @@ export const revalidate = 0;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // server-only
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function normalizeQuery(baseCity?: string) {
-  const c = (baseCity || '').trim();
-  if (!c) return null;
-  // tu peux forcer Europe/FR si tu veux : `${c}, Europe`
-  return c;
+type ChefRow = {
+  id: string;
+  // selon ta table : soit colonnes directes, soit jsonb "profile"
+  name?: string | null;
+  email?: string | null;
+  status?: string | null;
+
+  baseCity?: string | null;
+  location?: { baseCity?: string | null } | null;
+
+  firstName?: string | null;
+  lastName?: string | null;
+
+  avatarUrl?: string | null;
+  photoUrl?: string | null;
+};
+
+function pickCity(c: ChefRow) {
+  return (
+    (c.baseCity || '').trim() ||
+    (c.location?.baseCity || '').trim() ||
+    ''
+  );
+}
+
+function pickName(c: ChefRow) {
+  const n = (c.name || '').trim();
+  if (n) return n;
+
+  const fn = (c.firstName || '').trim();
+  const ln = (c.lastName || '').trim();
+  const combined = `${fn} ${ln}`.trim();
+  return combined || 'Chef';
+}
+
+function normalizeQuery(city: string) {
+  const q = (city || '').trim();
+  if (!q) return null;
+  // tu peux ajouter ", France" si tu veux plus de stabilité sur les petites villes
+  return q;
 }
 
 async function geocodeMapbox(q: string) {
   const token = process.env.MAPBOX_SECRET_TOKEN || process.env.MAPBOX_TOKEN;
-  if (!token) throw new Error('Missing MAPBOX token');
+  if (!token) throw new Error('Missing MAPBOX token env');
 
   const url =
     `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
@@ -26,8 +61,8 @@ async function geocodeMapbox(q: string) {
 
   const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`Mapbox geocoding failed ${r.status}`);
-  const json = await r.json();
 
+  const json = await r.json();
   const feat = json?.features?.[0];
   if (!feat?.center?.length) return null;
 
@@ -37,31 +72,41 @@ async function geocodeMapbox(q: string) {
 
 export async function GET() {
   try {
-    // ✅ adapte aux champs réels dans chef_profiles
-    const { data: chefs, error } = await supabase
+    /**
+     * ✅ IMPORTANT
+     * Ici, tu dois sélectionner les champs EXACTS de ta table.
+     * Vu ton JSON, tu as très probablement des colonnes directes:
+     * id, name, email, status, baseCity, location, firstName, lastName, avatarUrl
+     */
+    const { data, error } = await supabase
       .from('chef_profiles')
-      .select('id, first_name, last_name, email, BaseCity, status')
-      .neq('status', 'deleted'); // optionnel
+      .select('id,name,email,status,baseCity,location,firstName,lastName,avatarUrl,photoUrl')
+      .limit(2000);
 
     if (error) throw error;
 
-    const rows = (chefs || [])
-      .map((c: any) => {
-        const q = normalizeQuery(c.BaseCity);
+    const rows = (data || []) as ChefRow[];
+
+    const prepared = rows
+      .map((c) => {
+        const city = pickCity(c);
+        const query = normalizeQuery(city);
+
         return {
           id: c.id,
-          name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Chef',
+          name: pickName(c),
           email: c.email || '',
-          baseCity: c.BaseCity || '',
           status: c.status || '',
-          query: q,
+          avatarUrl: c.avatarUrl || c.photoUrl || '',
+          baseCity: city,
+          query,
         };
       })
-      .filter(x => !!x.query);
+      .filter((x) => !!x.query);
 
-    const queries = Array.from(new Set(rows.map(r => r.query))) as string[];
+    const queries = Array.from(new Set(prepared.map((r) => r.query!)));
 
-    // cache batch
+    // ✅ cache lookup
     const { data: cached } = await supabase
       .from('geo_cache')
       .select('query, lat, lng')
@@ -70,8 +115,8 @@ export async function GET() {
     const cacheMap = new Map<string, { lat: number; lng: number }>();
     (cached || []).forEach((x: any) => cacheMap.set(x.query, { lat: x.lat, lng: x.lng }));
 
-    // geocode manquants
-    const missing = queries.filter(q => !cacheMap.has(q));
+    // ✅ geocode missing
+    const missing = queries.filter((q) => !cacheMap.has(q));
 
     for (const q of missing) {
       const coords = await geocodeMapbox(q);
@@ -84,23 +129,25 @@ export async function GET() {
         .upsert({ query: q, lat: coords.lat, lng: coords.lng }, { onConflict: 'query' });
     }
 
-    const points = rows
-      .map(r => {
-        const coords = cacheMap.get(r.query!);
+    const items = prepared
+      .map((p) => {
+        const coords = cacheMap.get(p.query!);
         if (!coords) return null;
+
         return {
-          id: r.id,
-          name: r.name,
-          email: r.email,
-          baseCity: r.baseCity,
-          status: r.status,
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          status: p.status,
+          avatarUrl: p.avatarUrl,
+          baseCity: p.baseCity,
           lat: coords.lat,
           lng: coords.lng,
         };
       })
       .filter(Boolean);
 
-    return NextResponse.json({ items: points });
+    return NextResponse.json({ items });
   } catch (e: any) {
     console.error('GET /api/admin/chefs/map error', e);
     return NextResponse.json({ error: e?.message || 'error' }, { status: 500 });
