@@ -10,13 +10,21 @@ const strOrNull = (v: any): string | null => {
   return s ? s : null;
 };
 
+const toStr = (x: any) => {
+  if (x === null || x === undefined) return '';
+  if (typeof x === 'string' || typeof x === 'number') return String(x);
+  if (typeof x === 'object') return String(x.label ?? x.value ?? x.name ?? '').trim();
+  return String(x).trim();
+};
+
 const joinIfArray = (v: any): string | null => {
   if (v === null || v === undefined) return null;
   if (Array.isArray(v)) {
-    const cleaned = v.map(x => String(x ?? '').trim()).filter(Boolean);
+    const cleaned = v.map(toStr).map(s => s.trim()).filter(Boolean);
     return cleaned.length ? cleaned.join(', ') : null;
   }
-  return strOrNull(v);
+  const s = toStr(v).trim();
+  return s ? s : null;
 };
 
 const intOrNull = (v: any): number | null => {
@@ -28,7 +36,6 @@ const intOrNull = (v: any): number | null => {
 const dateOrNull = (v: any): string | null => {
   const s = String(v ?? '').trim();
   if (!s) return null;
-  // Supabase column type = date => attend YYYY-MM-DD
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
   return s;
 };
@@ -36,13 +43,7 @@ const dateOrNull = (v: any): string | null => {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    
-console.log('[api/request] keys:', Object.keys(body || {}));
-console.log('[api/request] preferences:', body?.preferences);
-console.log('[api/request] raw preferredLanguage:', body?.preferredLanguage, body?.preferred_language, body?.language, body?.lang);
-console.log('[api/request] raw dietary:', body?.dietaryRestrictions, body?.dietary_restrictions, body?.restrictions, body?.allergies);
-console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisine_preferences, body?.cuisineStyle, body?.cuisine_style, body?.cuisine);
-    
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -66,7 +67,7 @@ console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisin
     const budget_range = strOrNull(body.budgetRange);
     const assignment_type = strOrNull(body.assignmentType);
 
-    // ✅ champs préférences (tolérant sur la forme du payload)
+    // ✅ NOUVEAUX champs (tolérant sur la forme du payload)
     const preferred_language = joinIfArray(
       body.preferredLanguage ??
         body.preferred_language ??
@@ -125,10 +126,13 @@ console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisin
         assignment_type,
         phone,
 
-        // ✅ champs manquants sauvegardés en base
+        // ✅ champs ajoutés
         preferred_language,
         dietary_restrictions,
         cuisine_preferences,
+
+        // ✅ debug (temporaire) : DOIT être dans l'insert
+        debug_payload: body,
       })
       .select('id')
       .single();
@@ -145,7 +149,7 @@ console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisin
 
     const requestId = data.id as string;
 
-    // 2) Emails (non bloquants) + timestamps only if success
+    // 2) Emails (non bloquants)
     let clientEmailOk = false;
     let internalEmailOk = false;
 
@@ -174,7 +178,7 @@ console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisin
       console.error('[sendInternalNewRequest error]', e);
     }
 
-    // 3) Update logs (seulement si ok)
+    // 3) Update logs
     const patch: Record<string, any> = {};
     if (clientEmailOk) patch.email_sent_at = new Date().toISOString();
     if (internalEmailOk) patch.internal_email_sent_at = new Date().toISOString();
@@ -182,8 +186,7 @@ console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisin
     if (Object.keys(patch).length) {
       await supabase.from('client_requests').update(patch).eq('id', requestId);
     }
-debug_payload: body,
-  
+
     return NextResponse.json({
       ok: true,
       requestId,
