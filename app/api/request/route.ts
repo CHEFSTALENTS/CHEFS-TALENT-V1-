@@ -36,7 +36,13 @@ const dateOrNull = (v: any): string | null => {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
+    
+console.log('[api/request] keys:', Object.keys(body || {}));
+console.log('[api/request] preferences:', body?.preferences);
+console.log('[api/request] raw preferredLanguage:', body?.preferredLanguage, body?.preferred_language, body?.language, body?.lang);
+console.log('[api/request] raw dietary:', body?.dietaryRestrictions, body?.dietary_restrictions, body?.restrictions, body?.allergies);
+console.log('[api/request] raw cuisine:', body?.cuisinePreferences, body?.cuisine_preferences, body?.cuisineStyle, body?.cuisine_style, body?.cuisine);
+    
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -176,7 +182,8 @@ export async function POST(req: Request) {
     if (Object.keys(patch).length) {
       await supabase.from('client_requests').update(patch).eq('id', requestId);
     }
-
+debug_payload: body,
+  
     return NextResponse.json({
       ok: true,
       requestId,
