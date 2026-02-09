@@ -10,6 +10,15 @@ const strOrNull = (v: any): string | null => {
   return s ? s : null;
 };
 
+const joinIfArray = (v: any): string | null => {
+  if (v === null || v === undefined) return null;
+  if (Array.isArray(v)) {
+    const cleaned = v.map(x => String(x ?? '').trim()).filter(Boolean);
+    return cleaned.length ? cleaned.join(', ') : null;
+  }
+  return strOrNull(v);
+};
+
 const intOrNull = (v: any): number | null => {
   if (v === null || v === undefined || v === '') return null;
   const n = Number(String(v).replace(/[^\d]/g, ''));
@@ -33,7 +42,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // champs normalisés
+    // champs normalisés (existants)
     const email = strOrNull(body.email);
     const firstName = strOrNull(body.firstName);
     const matchType = strOrNull(body.matchType); // 'fast' | 'concierge'
@@ -50,6 +59,36 @@ export async function POST(req: Request) {
     const guest_count = intOrNull(body.guestCount);
     const budget_range = strOrNull(body.budgetRange);
     const assignment_type = strOrNull(body.assignmentType);
+
+    // ✅ NOUVEAUX champs (tolérant sur la forme du payload)
+    const preferred_language = joinIfArray(
+      body.preferredLanguage ??
+        body.preferred_language ??
+        body.language ??
+        body.lang ??
+        body.preferences?.language ??
+        body.preferences?.languages
+    );
+
+    const dietary_restrictions = joinIfArray(
+      body.dietaryRestrictions ??
+        body.dietary_restrictions ??
+        body.restrictions ??
+        body.allergies ??
+        body.preferences?.dietaryRestrictions ??
+        body.preferences?.dietary_restrictions ??
+        body.preferences?.allergies
+    );
+
+    const cuisine_preferences = joinIfArray(
+      body.cuisinePreferences ??
+        body.cuisine_preferences ??
+        body.cuisineStyle ??
+        body.cuisine_style ??
+        body.cuisine ??
+        body.preferences?.cuisine ??
+        body.preferences?.cuisines
+    );
 
     if (!email) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
@@ -79,6 +118,11 @@ export async function POST(req: Request) {
         budget_range,
         assignment_type,
         phone,
+
+        // ✅ insert des champs manquants
+        preferred_language,
+        dietary_restrictions,
+        cuisine_preferences,
       })
       .select('id')
       .single();
