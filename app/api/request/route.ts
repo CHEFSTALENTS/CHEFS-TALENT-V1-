@@ -60,6 +60,10 @@ export async function POST(req: Request) {
     const budget_range = strOrNull(body.budgetRange);
     const assignment_type = strOrNull(body.assignmentType);
 
+    const preferred_language = strOrNull(body.preferredLanguage ?? body.preferred_language ?? body.language);
+const dietary_restrictions = strOrNull(body.dietaryRestrictions ?? body.dietary_restrictions ?? body.restrictions);
+const cuisine_preferences = strOrNull(body.cuisinePreferences ?? body.cuisine_preferences ?? body.cuisine);
+
     // ✅ NOUVEAUX champs (tolérant sur la forme du payload)
     const preferred_language = joinIfArray(
       body.preferredLanguage ??
@@ -113,6 +117,10 @@ export async function POST(req: Request) {
 
         start_date,
         end_date,
+
+        preferred_language,
+dietary_restrictions,
+cuisine_preferences,
 
         guest_count,
         budget_range,
