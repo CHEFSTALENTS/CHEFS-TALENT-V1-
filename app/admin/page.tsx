@@ -56,6 +56,8 @@ function normalizeRequestRow(x: any): RequestEntity {
     (x.budget_per_day ? `${x.budget_per_day}€ / jour` : null) ??
     (x.budget ? String(x.budget) : null);
 
+  
+
   return {
     id: x.id,
     status: (x.status ?? 'new') as any,
@@ -77,10 +79,26 @@ function normalizeRequestRow(x: any): RequestEntity {
     serviceLevel: x.service_expectations ?? x.service_level ?? x.serviceLevel ?? '',
 
     preferences: {
-      cuisine: x.cuisine_preferences ?? x.cuisinePreferences ?? '',
-      allergies: x.dietary_restrictions ?? x.dietaryRestrictions ?? '',
-      languages: x.preferred_language ?? x.preferredLanguage ?? '',
-    },
+  cuisine:
+    x.cuisine_preferences ??
+    x.cuisinePreferences ??
+    x.cuisine_style ??
+    x.cuisineStyle ??
+    x.cuisine ??
+    '',
+  allergies:
+    x.dietary_restrictions ??
+    x.dietaryRestrictions ??
+    x.restrictions ??
+    x.allergies ??
+    '',
+  languages:
+    x.preferred_language ??
+    x.preferredLanguage ??
+    x.language ??
+    x.lang ??
+    '',
+},
 
     contact: {
       name: x.full_name ?? x.fullName ?? x.first_name ?? 'Client',
