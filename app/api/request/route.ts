@@ -5,8 +5,6 @@ import { createClient } from '@supabase/supabase-js';
 import { sendClientConfirmation } from '@/lib/sendClientConfirmation';
 import { sendInternalNewRequest } from '@/lib/sendInternalNewRequest';
 
-/* ---------------- helpers ---------------- */
-
 const strOrNull = (v: any): string | null => {
   const s = String(v ?? '').trim();
   return s ? s : null;
@@ -38,61 +36,18 @@ const intOrNull = (v: any): number | null => {
 const dateOrNull = (v: any): string | null => {
   const s = String(v ?? '').trim();
   if (!s) return null;
-  // Supabase column type = date => YYYY-MM-DD
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
   return s;
 };
-
-function buildPrefs(body: any) {
-  const preferred_language = joinIfArray(
-    body.preferredLanguage ??
-      body.preferred_language ??
-      body.language ??
-      body.lang ??
-      body.preferences?.language ??
-      body.preferences?.languages
-  );
-
-  const dietary_restrictions = joinIfArray(
-    body.dietaryRestrictions ??
-      body.dietary_restrictions ??
-      body.restrictions ??
-      body.allergies ??
-      body.preferences?.dietaryRestrictions ??
-      body.preferences?.dietary_restrictions ??
-      body.preferences?.allergies
-  );
-
-  const cuisine_preferences = joinIfArray(
-    body.cuisinePreferences ??
-      body.cuisine_preferences ??
-      body.cuisineStyle ??
-      body.cuisine_style ??
-      body.cuisine ??
-      body.preferences?.cuisine ??
-      body.preferences?.cuisines
-  );
-
-  return { preferred_language, dietary_restrictions, cuisine_preferences };
-}
-
-/* ---------------- route ---------------- */
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { error: 'Missing Supabase env vars', missing: { supabaseUrl: !supabaseUrl, serviceKey: !serviceKey } },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // champs normalisés (existants)
     const email = strOrNull(body.email);
@@ -112,79 +67,90 @@ export async function POST(req: Request) {
     const budget_range = strOrNull(body.budgetRange);
     const assignment_type = strOrNull(body.assignmentType);
 
-    const { preferred_language, dietary_restrictions, cuisine_preferences } = buildPrefs(body);
-
-    if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+    }
     if (matchType !== 'fast' && matchType !== 'concierge') {
       return NextResponse.json({ error: 'Invalid matchType' }, { status: 400 });
     }
 
-    const insertPayload: Record<string, any> = {
-      email,
-      first_name: firstName,
-      match_type: matchType,
-      message,
-      status: 'new',
+    // ✅ NOUVEAUX champs (tolérant sur la forme du payload)
+    // On accepte:
+    // - camelCase: preferredLanguage, dietaryRestrictions, cuisinePreferences
+    // - snake_case: preferred_language, dietary_restrictions, cuisine_preferences
+    // - nested: preferences.languages / preferences.allergies / preferences.cuisine
+    const preferred_language = joinIfArray(
+      body.preferredLanguage ??
+        body.preferred_language ??
+        body.language ??
+        body.lang ??
+        body.preferences?.preferredLanguage ??
+        body.preferences?.preferred_language ??
+        body.preferences?.language ??
+        body.preferences?.languages
+    );
 
-      client_type: clientType,
-      company_name: companyName,
-      location,
+    const dietary_restrictions = joinIfArray(
+      body.dietaryRestrictions ??
+        body.dietary_restrictions ??
+        body.restrictions ??
+        body.allergies ??
+        body.preferences?.dietaryRestrictions ??
+        body.preferences?.dietary_restrictions ??
+        body.preferences?.restrictions ??
+        body.preferences?.allergies
+    );
 
-      start_date,
-      end_date,
+    const cuisine_preferences = joinIfArray(
+      body.cuisinePreferences ??
+        body.cuisine_preferences ??
+        body.cuisineStyle ??
+        body.cuisine_style ??
+        body.cuisine ??
+        body.preferences?.cuisinePreferences ??
+        body.preferences?.cuisine_preferences ??
+        body.preferences?.cuisine ??
+        body.preferences?.cuisines
+    );
 
-      guest_count,
-      budget_range,
-      assignment_type,
-      phone,
+    // 1) Insert (✅ une seule fois chaque champ)
+    const { data, error } = await supabase
+      .from('client_requests')
+      .insert({
+        email,
+        first_name: firstName,
+        match_type: matchType,
+        message,
+        status: 'new',
 
-      preferred_language,
-      dietary_restrictions,
-      cuisine_preferences,
+        client_type: clientType,
+        company_name: companyName,
+        location,
 
-      // debug utile (si colonne existe)
-      debug_payload: body,
-    };
+        start_date,
+        end_date,
 
-    // 1) Insert (avec fallback si debug_payload n'existe pas)
-    let data: any = null;
+        guest_count,
+        budget_range,
+        assignment_type,
+        phone,
 
-    {
-      const res = await supabase
-        .from('client_requests')
-        .insert(insertPayload)
-        .select('id')
-        .single();
+        // ✅ champs concierge (peuvent être null, ok)
+        preferred_language,
+        dietary_restrictions,
+        cuisine_preferences,
+      })
+      .select('id')
+      .single();
 
-      if (res.error) {
-        // Si la colonne debug_payload n'existe pas, on réessaie sans
-        const msg = String(res.error.message || '');
-        const looksLikeMissingDebug =
-          msg.toLowerCase().includes('debug_payload') &&
-          (msg.toLowerCase().includes('column') || msg.toLowerCase().includes('schema'));
-
-        if (looksLikeMissingDebug) {
-          delete insertPayload.debug_payload;
-
-          const res2 = await supabase
-            .from('client_requests')
-            .insert(insertPayload)
-            .select('id')
-            .single();
-
-          if (res2.error) {
-            console.error('[client_requests insert error #2]', res2.error, insertPayload);
-            return NextResponse.json({ error: res2.error.message, details: (res2.error as any).details }, { status: 500 });
-          }
-
-          data = res2.data;
-        } else {
-          console.error('[client_requests insert error]', res.error, insertPayload);
-          return NextResponse.json({ error: res.error.message, details: (res.error as any).details }, { status: 500 });
-        }
-      } else {
-        data = res.data;
-      }
+    if (error) {
+      console.error('[client_requests insert error]', {
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        code: (error as any).code,
+      });
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     const requestId = data.id as string;
@@ -218,33 +184,23 @@ export async function POST(req: Request) {
       console.error('[sendInternalNewRequest error]', e);
     }
 
-    // 3) Update logs (seulement si ok)
+    // 3) Update logs
     const patch: Record<string, any> = {};
     if (clientEmailOk) patch.email_sent_at = new Date().toISOString();
     if (internalEmailOk) patch.internal_email_sent_at = new Date().toISOString();
 
     if (Object.keys(patch).length) {
-      const up = await supabase.from('client_requests').update(patch).eq('id', requestId);
-      if (up.error) console.error('[client_requests update logs error]', up.error);
+      await supabase.from('client_requests').update(patch).eq('id', requestId);
     }
 
     return NextResponse.json({
       ok: true,
       requestId,
-      saved: {
-        preferred_language,
-        dietary_restrictions,
-        cuisine_preferences,
-      },
       emailClientSent: clientEmailOk,
       emailInternalSent: internalEmailOk,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error('[api/request] server error', err);
-    // IMPORTANT : on renvoie l’erreur réelle pour debug (tu peux resserrer après)
-    return NextResponse.json(
-      { error: err?.message ?? 'Server error', hint: err?.hint, details: err?.details },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
