@@ -86,7 +86,9 @@ export default function AdminRequestDetailPage() {
     try {
       const [rReq, rChefs, rMissions] = await Promise.all([
         fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
-        (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
+fetch(`/api/admin/chefs`, { cache: 'no-store' })
+  .then(r => r.json())
+  .then(j => j.items ?? []),
         ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
       ]);
 
@@ -116,8 +118,9 @@ export default function AdminRequestDetailPage() {
 
   const matchedAll: MatchedChef[] = useMemo(() => {
     if (!req) return [];
-    const active = chefs.filter((c) => c.role === 'chef' && c.status === 'active');
-    return matchChefsForRequestV2(req, active);
+const active = chefs.filter(c =>
+  c.role === 'chef' && (c.status === 'active' || c.status === 'approved')
+);    return matchChefsForRequestV2(req, active);
   }, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
