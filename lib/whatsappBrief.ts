@@ -49,13 +49,6 @@ export function buildWhatsappBrief(r: RequestEntity) {
     ? `📝 Brief :${nl}${r.notes}`
     : null;
 
-  const contact = joinLines([
-    r.userType === 'b2b'
-      ? labelLine('🏢 Conciergerie :', r.contact?.company || r.contact?.name)
-      : labelLine('👤 Client :', r.contact?.name),
-    labelLine('✉️ Email :', r.contact?.email),
-    labelLine('📞 Téléphone :', r.contact?.phone),
-  ]);
 
  const footer = joinLines([
   `Votre profil a retenu toute notre attention pour cette demande.`,
