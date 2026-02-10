@@ -141,3 +141,4 @@ export function openWhatsappWithText(text: string, phoneE164?: string | null) {
     }
   }, 400);
 }
+
