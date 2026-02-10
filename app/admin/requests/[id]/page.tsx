@@ -5,13 +5,10 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
-import { matchChefsForFastRequest } from '@/services/fastMatch';
+import { matchChefsForRequestV2 } from '@/services/matching';
 import { buildWhatsappBriefForChef, openWhatsappWithText } from '@/lib/whatsappBrief';
-import { scoreChefForRequest } from '@/services/matching';
 
-
-
-type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
+type MatchedChef = import('@/services/matching').MatchedChefV2;
 
 /**
  * Map DB row -> RequestEntity (admin)
@@ -58,10 +55,10 @@ function mapRowToRequestEntity(x: any): RequestEntity {
       languages: x.preferred_language ?? x.preferredLanguage ?? '',
     },
 
-    // ✅ Notes = brief/message global
+    // ✅ Notes = brief/message global (c’est ici que tu as toute la demande)
     notes: x.message ?? x.notes ?? null,
 
-    // ⚠️ On garde pour l’admin, mais on ne doit PAS l’envoyer au chef via WhatsApp.
+    // ⚠️ visible en admin seulement (PAS dans le brief WhatsApp)
     contact: {
       name: x.full_name ?? x.fullName ?? x.first_name ?? x.firstName ?? 'Client',
       company: x.company_name ?? x.companyName ?? '',
@@ -81,6 +78,7 @@ export default function AdminRequestDetailPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [q, setQ] = useState('');
   const [actionChefId, setActionChefId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -116,26 +114,24 @@ export default function AdminRequestDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const matched: MatchedChef[] = useMemo(() => {
+  const matchedAll: MatchedChef[] = useMemo(() => {
     if (!req) return [];
-
     const active = chefs.filter((c) => c.role === 'chef' && c.status === 'active');
-    const m = matchChefsForFastRequest(req, active);
+    return matchChefsForRequestV2(req, active);
+  }, [req, chefs]);
 
-    const withScore = m
-  .map((c) => {
-    const base = auth.computeChefScore(c);
-    const fit = scoreChefForRequest(req, c);
+  const matched: MatchedChef[] = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const filtered = !needle
+      ? matchedAll
+      : matchedAll.filter((x) => {
+          const name = `${x.chef.firstName || ''} ${x.chef.lastName || ''}`.toLowerCase();
+          const email = (x.chef.email || '').toLowerCase();
+          return name.includes(needle) || email.includes(needle);
+        });
 
-    const finalScore = Math.round(base.score * 0.45 + fit.fitScore * 0.55);
-
-    return {
-      chef: c,
-      score: finalScore,
-      badges: [...(base.badges || []), ...fit.reasons.slice(0, 2)], // affiche 2 raisons max en badges
-    };
-  })
-  .sort((a, b) => b.score - a.score);
+    return showAll ? filtered : filtered.slice(0, 15);
+  }, [matchedAll, q, showAll]);
 
   const revenue = useMemo(() => {
     const amountOf = (m: any) =>
@@ -187,7 +183,6 @@ export default function AdminRequestDetailPage() {
   // ✅ Brief WhatsApp (uniquement quand req est dispo)
   const whatsappBrief = useMemo(() => {
     if (!req) return '';
-    // garde-fou : buildWhatsappBriefForChef ne doit pas inclure contact client/conciergerie
     return buildWhatsappBriefForChef(req);
   }, [req]);
 
@@ -291,7 +286,7 @@ export default function AdminRequestDetailPage() {
           right={<StatusBadge status={String(req.status || '')} />}
         >
           <div className="space-y-2 text-sm">
-            {/* ⚠️ On affiche en admin, mais pas dans le brief WhatsApp */}
+            {/* ⚠️ visible admin seulement */}
             <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
             <Row label="Lieu" value={req.location || '—'} />
             <Row label="Dates" value={formatDates(req)} />
@@ -316,10 +311,20 @@ export default function AdminRequestDetailPage() {
         <div className="xl:col-span-2 space-y-4">
           <Panel
             title="Chefs matchables"
-            subtitle="Actifs + tri score (moteur existant)"
+            subtitle="Actifs + soft matching (large, non bloquant)"
             right={
               <div className="flex items-center gap-2">
-                <div className="text-xs text-white/50 hidden sm:block">{matched.length} chef(s)</div>
+                <div className="text-xs text-white/50 hidden sm:block">
+                  {matchedAll.length} chef(s)
+                </div>
+
+                <button
+                  onClick={() => setShowAll((v) => !v)}
+                  className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
+                >
+                  {showAll ? 'Afficher moins' : 'Afficher +'}
+                </button>
+
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -329,13 +334,17 @@ export default function AdminRequestDetailPage() {
               </div>
             }
           >
+            <div className="text-xs text-white/45 mb-3">
+              Affichage: {showAll ? 'Tous les profils' : 'Top 15'} (triés par fitScore)
+            </div>
+
             <div className="overflow-auto -mx-4 px-4">
               <table className="min-w-full text-sm">
                 <thead className="text-white/70">
                   <tr>
                     <th className="text-left py-3">Chef</th>
-                    <th className="text-left py-3">Score</th>
-                    <th className="text-left py-3">Badges</th>
+                    <th className="text-left py-3">Fit</th>
+                    <th className="text-left py-3">Raisons</th>
                     <th className="text-right py-3">Action</th>
                   </tr>
                 </thead>
@@ -355,19 +364,36 @@ export default function AdminRequestDetailPage() {
                       </td>
 
                       <td className="py-3 pr-4 whitespace-nowrap">
-                        <span className="text-white font-semibold">{x.score}</span>
-                        <span className="text-white/45"> / 100</span>
+                        <div className="text-white font-semibold">{x.fitScore} / 100</div>
+                        <div className="text-xs mt-1">
+                          <span
+                            className={[
+                              'px-2 py-0.5 rounded-full border',
+                              x.confidence === 'high'
+                                ? 'bg-emerald-500/10 text-emerald-100 border-emerald-500/20'
+                                : x.confidence === 'medium'
+                                ? 'bg-amber-500/10 text-amber-100 border-amber-500/20'
+                                : 'bg-white/5 text-white/60 border-white/10',
+                            ].join(' ')}
+                          >
+                            {x.confidence === 'high'
+                              ? '✅ High'
+                              : x.confidence === 'medium'
+                              ? '⚠️ Medium'
+                              : '❓ Low'}
+                          </span>
+                        </div>
                       </td>
 
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-2">
-                          {x.badges?.length ? (
-                            x.badges.map((b) => (
+                          {x.reasons?.length ? (
+                            x.reasons.slice(0, 3).map((r) => (
                               <span
-                                key={b}
+                                key={r}
                                 className="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/10 text-white/80"
                               >
-                                {b}
+                                {r}
                               </span>
                             ))
                           ) : (
