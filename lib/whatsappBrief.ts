@@ -57,18 +57,27 @@ export function buildWhatsappBrief(r: RequestEntity) {
     labelLine('📞 Téléphone :', r.contact?.phone),
   ]);
 
-  const footer = `—${nl}Répondre ici si intéressé + dispo + tarif.`;
+ const footer = joinLines([
+  `Votre profil a retenu toute notre attention pour cette demande.`,
+  ``,
+  `Seriez-vous disponible sur ces dates ?`,
+  `Est-ce que le budget vous convient ?`,
+  ``,
+  `Si oui, nous pourrons présenter votre profil au client très rapidement.`,
+  ``,
+  `—`,
+  `Chef Talents`,
+]);
 
-  return joinLines([
-    header,
-    '—',
-    top,
-    prefs ? `—${nl}${prefs}` : null,
-    notes ? `—${nl}${notes}` : null,
-    contact ? `—${nl}${contact}` : null,
-    '—',
-    footer,
-  ]);
+return joinLines([
+  header,
+  '—',
+  top,
+  prefs ? `—${nl}${prefs}` : null,
+  notes ? `—${nl}${notes}` : null,
+  '—',
+  footer,
+]);
 }
 
 // Ouvre WhatsApp (web/app) avec le message prérempli
