@@ -6,6 +6,15 @@ import { useParams } from 'next/navigation';
 import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForFastRequest } from '@/services/fastMatch';
+import { buildWhatsappBrief, openWhatsappWithText } from '@/lib/whatsappBrief';
+
+const brief = buildWhatsappBrief(request);
+
+// bouton copier
+navigator.clipboard.writeText(brief);
+
+// bouton WhatsApp
+openWhatsappWithText(brief);
 
 type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
 
