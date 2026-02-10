@@ -8,51 +8,69 @@ import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForFastRequest } from '@/services/fastMatch';
 import { buildWhatsappBrief, openWhatsappWithText } from '@/lib/whatsappBrief';
 
-const brief = buildWhatsappBrief(request);
-
-// bouton copier
-navigator.clipboard.writeText(brief);
-
-// bouton WhatsApp
-openWhatsappWithText(brief);
-
 type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
 
+/**
+ * Map DB row -> RequestEntity (admin)
+ * ⚠️ On remplit bien preferences + notes pour que whatsappBrief ait tout.
+ */
 function mapRowToRequestEntity(x: any): RequestEntity {
+  const userType: RequestEntity['userType'] =
+    x.client_type === 'concierge' || x.user_type === 'b2b' ? 'b2b' : 'b2c';
+
+  const mode: RequestEntity['mode'] =
+    (x.match_type ?? x.mode ?? 'concierge') === 'fast' ? 'fast' : 'concierge';
+
+  const budgetRange =
+    x.budget_range ??
+    x.budgetRange ??
+    (x.budget_per_person ? `${x.budget_per_person}€ / pers` : null) ??
+    (x.budget_per_day ? `${x.budget_per_day}€ / jour` : null) ??
+    (x.budget ? String(x.budget) : null) ??
+    '';
+
   return {
     id: x.id,
+    status: (x.status ?? 'new') as any,
+    mode,
+    userType,
+    createdAt: x.created_at ?? x.createdAt ?? null,
 
-    status: x.status ?? 'new',
-    mode: x.match_type ?? x.mode ?? 'fast', // 'fast' | 'concierge'
-    userType: x.client_type === 'concierge' ? ('b2b' as any) : ('b2c' as any),
-
-    location: x.location ?? x.city ?? '',
-    guestCount: x.guest_count ?? x.guests ?? null,
-    budgetRange: x.budget_range ?? x.budget ?? '',
-
-    createdAt: x.created_at ?? null,
+    location: x.location ?? x.city ?? '—',
+    guestCount: x.guest_count ?? x.guestCount ?? x.guests ?? null,
+    budgetRange: budgetRange || undefined,
 
     dates: {
-      start: x.start_date ?? null,
-      end: x.end_date ?? null,
+      start: x.start_date ?? x.startDate ?? null,
+      end: x.end_date ?? x.endDate ?? null,
+      type: x.date_mode ?? (x.end_date ? 'multi' : 'single'),
     } as any,
+
+    missionType: x.assignment_type ?? x.assignmentType ?? '',
+    serviceLevel: x.service_expectations ?? x.service_level ?? x.serviceLevel ?? '',
+
+    // ✅ On met les champs structurés si dispo
+    preferences: {
+      cuisine: x.cuisine_preferences ?? x.cuisinePreferences ?? '',
+      allergies: x.dietary_restrictions ?? x.dietaryRestrictions ?? '',
+      languages: x.preferred_language ?? x.preferredLanguage ?? '',
+    },
+
+    // ✅ Notes = le brief / message global
+    notes: x.message ?? x.notes ?? null,
 
     contact: {
-      name: x.first_name ?? null,
-      company: x.company_name ?? null,
-      email: x.email ?? null,
-      phone: x.phone ?? null,
+      name: x.full_name ?? x.fullName ?? x.first_name ?? x.firstName ?? 'Client',
+      company: x.company_name ?? x.companyName ?? '',
+      email: x.email ?? '',
+      phone: x.phone ?? '',
     } as any,
-
-    missionType: x.assignment_type ?? null,
-    notes: x.message ?? null,
-    serviceLevel: null as any,
   } as RequestEntity;
 }
 
 export default function AdminRequestDetailPage() {
   const params = useParams();
-  const id = String(params?.id || '');
+  const id = String((params as any)?.id || '');
 
   const [loading, setLoading] = useState(true);
   const [req, setReq] = useState<RequestEntity | null>(null);
@@ -71,19 +89,17 @@ export default function AdminRequestDetailPage() {
         ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
       ]);
 
+      setChefs(rChefs ?? []);
+      setMissions(rMissions ?? []);
+
       if (!rReq.ok) {
         setReq(null);
-        setChefs(rChefs ?? []);
-        setMissions(rMissions ?? []);
         return;
       }
 
       const json = await rReq.json();
-      const mapped = mapRowToRequestEntity(json.item);
-
-      setReq(mapped);
-      setChefs(rChefs ?? []);
-      setMissions(rMissions ?? []);
+      const row = json?.normalized ?? json?.item ?? json; // tolérant
+      setReq(mapRowToRequestEntity(row));
     } catch (e) {
       console.error('Admin request detail refresh error', e);
       setReq(null);
@@ -100,11 +116,11 @@ export default function AdminRequestDetailPage() {
   const matched: MatchedChef[] = useMemo(() => {
     if (!req) return [];
 
-    const active = chefs.filter(c => c.role === 'chef' && c.status === 'active');
+    const active = chefs.filter((c) => c.role === 'chef' && c.status === 'active');
     const m = matchChefsForFastRequest(req, active);
 
     const withScore = m
-      .map(c => {
+      .map((c) => {
         const sc = auth.computeChefScore(c);
         return { chef: c, score: sc.score, badges: sc.badges };
       })
@@ -113,7 +129,7 @@ export default function AdminRequestDetailPage() {
     const needle = q.trim().toLowerCase();
     if (!needle) return withScore;
 
-    return withScore.filter(x => {
+    return withScore.filter((x) => {
       const name = `${x.chef.firstName || ''} ${x.chef.lastName || ''}`.toLowerCase();
       const email = (x.chef.email || '').toLowerCase();
       return name.includes(needle) || email.includes(needle);
@@ -122,7 +138,7 @@ export default function AdminRequestDetailPage() {
 
   const revenue = useMemo(() => {
     const amountOf = (m: any) =>
-      Number(m?.priceTotal ?? m?.amount ?? m?.revenue ?? m?.total ?? 0) || 0;
+      Number(m?.priceTotal ?? m?.amount ?? m?.revenue ?? m?.total ?? m?.estimatedAmount ?? 0) || 0;
 
     const now = new Date();
     const startOfDay = new Date(now);
@@ -143,27 +159,53 @@ export default function AdminRequestDetailPage() {
     };
 
     const daySum = missions
-      .filter(m => inRange((m as any).createdAt, startOfDay))
+      .filter((m) => inRange((m as any).createdAt, startOfDay))
       .reduce((s, m) => s + amountOf(m), 0);
     const weekSum = missions
-      .filter(m => inRange((m as any).createdAt, startOfWeek))
+      .filter((m) => inRange((m as any).createdAt, startOfWeek))
       .reduce((s, m) => s + amountOf(m), 0);
     const monthSum = missions
-      .filter(m => inRange((m as any).createdAt, startOfMonth))
+      .filter((m) => inRange((m as any).createdAt, startOfMonth))
       .reduce((s, m) => s + amountOf(m), 0);
 
     return { daySum, weekSum, monthSum };
   }, [missions]);
-const humanMissionType = (v?: string | null) => {
-  if (!v) return '—';
-  if (v === 'daily') return 'Présence quotidienne';
-  if (v === 'event') return 'Événement';
-  return v;
-};
+
+  const humanMissionType = (v?: string | null) => {
+    if (!v) return '—';
+    if (v === 'daily') return 'Présence quotidienne';
+    if (v === 'event') return 'Événement';
+    if (v === 'residence') return 'Résidence';
+    if (v === 'yacht') return 'Yacht';
+    if (v === 'dinner') return 'Dîner';
+    return v;
+  };
+
+  // ✅ Brief WhatsApp (uniquement quand req est dispo)
+  const whatsappBrief = useMemo(() => {
+    if (!req) return '';
+    return buildWhatsappBrief(req);
+  }, [req]);
+
+  const onCopyBrief = async () => {
+    if (!whatsappBrief) return;
+    try {
+      await navigator.clipboard.writeText(whatsappBrief);
+    } catch (e) {
+      console.error('clipboard error', e);
+    }
+  };
+
+  const onOpenWhatsapp = () => {
+    if (!whatsappBrief) return;
+    openWhatsappWithText(whatsappBrief);
+  };
+
   const onSelectChef = async (chefId: string) => {
     try {
       setActionChefId(chefId);
       console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
+      // TODO: call API to create proposal/mission and update status
       await refresh();
     } finally {
       setActionChefId(null);
@@ -186,7 +228,7 @@ const humanMissionType = (v?: string | null) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
@@ -204,18 +246,33 @@ const humanMissionType = (v?: string | null) => {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             href={`/admin/requests?status=${encodeURIComponent(String(req.status || ''))}`}
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
           >
             Voir statut ({String(req.status || '—')})
           </Link>
+
           <button
             onClick={refresh}
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
           >
             Rafraîchir
+          </button>
+
+          <button
+            onClick={onCopyBrief}
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+          >
+            Copier brief
+          </button>
+
+          <button
+            onClick={onOpenWhatsapp}
+            className="px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-100 hover:bg-emerald-500/15 transition"
+          >
+            WhatsApp →
           </button>
         </div>
       </div>
@@ -231,14 +288,16 @@ const humanMissionType = (v?: string | null) => {
         >
           <div className="space-y-2 text-sm">
             <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
-            <Row label="Email" value={req.contact?.email || '—'} />
-            <Row label="Téléphone" value={req.contact?.phone || '—'} />
             <Row label="Lieu" value={req.location || '—'} />
+            <Row label="Dates" value={formatDates(req)} />
             <Row label="Pax" value={String(req.guestCount ?? '—')} />
             <Row label="Budget" value={formatBudget(req.budgetRange)} />
-            <Row label="Type" value={String(req.missionType ?? req.serviceLevel ?? '—')} />
             <Row label="Type de mission" value={humanMissionType(req.missionType)} />
-            
+            <Row label="Service" value={String(req.serviceLevel || '—')} />
+
+            <Row label="Cuisine" value={String(req.preferences?.cuisine || '—')} />
+            <Row label="Restrictions" value={String(req.preferences?.allergies || '—')} />
+            <Row label="Langues" value={String(req.preferences?.languages || '—')} />
           </div>
 
           {req.notes ? (
@@ -259,7 +318,7 @@ const humanMissionType = (v?: string | null) => {
                 <div className="text-xs text-white/50 hidden sm:block">{matched.length} chef(s)</div>
                 <input
                   value={q}
-                  onChange={e => setQ(e.target.value)}
+                  onChange={(e) => setQ(e.target.value)}
                   placeholder="Recherche (nom/email)…"
                   className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
                 />
@@ -278,7 +337,7 @@ const humanMissionType = (v?: string | null) => {
                 </thead>
 
                 <tbody className="divide-y divide-white/10">
-                  {matched.map(x => (
+                  {matched.map((x) => (
                     <tr key={x.chef.id} className="hover:bg-white/5 transition">
                       <td className="py-3 pr-4">
                         <div className="text-white font-medium leading-tight">
@@ -299,7 +358,7 @@ const humanMissionType = (v?: string | null) => {
                       <td className="py-3 pr-4">
                         <div className="flex flex-wrap gap-2">
                           {x.badges?.length ? (
-                            x.badges.map(b => (
+                            x.badges.map((b) => (
                               <span
                                 key={b}
                                 className="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/10 text-white/80"
@@ -345,6 +404,11 @@ const humanMissionType = (v?: string | null) => {
             </div>
           </Panel>
         </div>
+      </div>
+
+      {/* Debug revenue (optionnel) */}
+      <div className="text-xs text-white/35">
+        CA jour: {Math.round(revenue.daySum)}€ • semaine: {Math.round(revenue.weekSum)}€ • mois: {Math.round(revenue.monthSum)}€
       </div>
     </div>
   );
