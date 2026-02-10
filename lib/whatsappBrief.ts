@@ -3,17 +3,19 @@ import type { RequestEntity } from '@/types';
 
 const nl = '\n';
 
-type BuildOptions = {
-  brandName?: string;             // default: 'Chef Talents'
-  // sécurité: on scrub email/tel dans le brief (au cas où dans notes)
-  scrubContacts?: boolean;        // default: true
-  // version plus "compréhensible chef"
-  chefFriendly?: boolean;         // default: true
+type BriefOptions = {
+  /** Si tu veux zéro emoji (ultra safe) */
+  noEmoji?: boolean;
 };
 
-function clean(s?: string | number | null) {
-  const t = String(s ?? '').trim();
-  return t ? t : null;
+function clean(v: any): string | null {
+  const s = String(v ?? '').trim();
+  return s ? s : null;
+}
+
+function line(label: string, value?: string | number | null) {
+  const v = clean(value);
+  return v ? `${label} ${v}` : null;
 }
 
 function joinLines(lines: Array<string | null | undefined>) {
@@ -23,122 +25,142 @@ function joinLines(lines: Array<string | null | undefined>) {
 function formatDates(r: RequestEntity) {
   const start = clean(r.dates?.start);
   const end = clean(r.dates?.end);
+
   if (start && end) return `${start} → ${end}`;
-  return start || end || null;
+  if (start) return start;
+  if (end) return end;
+  return null;
 }
 
-function humanMissionType(v?: string | null) {
-  const x = (v || '').toLowerCase();
-  if (!x) return null;
-  if (x === 'residence') return 'Résidence (plusieurs jours)';
-  if (x === 'yacht') return 'Yacht';
-  if (x === 'daily') return 'Présence quotidienne';
-  if (x === 'event') return 'Événement';
-  if (x === 'dinner') return 'Dîner privé';
-  return v;
+function normalizeCuisine(v?: string | null) {
+  const s = clean(v);
+  if (!s) return null;
+  return s;
 }
 
-function humanServiceLevel(v?: string | null) {
-  const x = (v || '').toLowerCase();
-  if (!x) return null;
-  if (x === 'chef_only') return 'Chef uniquement';
-  if (x === 'chef_service') return 'Chef + service';
-  if (x === 'full_team') return 'Équipe complète';
-  return v;
+function normalizeAllergies(v?: string | null) {
+  const s = clean(v);
+  if (!s) return null;
+  return s;
 }
 
-function scrubContactsText(text: string) {
-  // emails
-  let t = text.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[contact masqué]');
-  // phones (simple)
-  t = t.replace(/(\+?\d[\d\s().-]{7,}\d)/g, '[contact masqué]');
-  return t;
+function normalizeLanguages(v?: string | null) {
+  const s = clean(v);
+  if (!s) return null;
+
+  // si c’est déjà "FR, EN" ou "Français, Anglais" => ok
+  return s;
 }
 
-export function buildWhatsappBriefForChef(r: RequestEntity, opts: BuildOptions = {}) {
-  const brandName = opts.brandName ?? 'Chef Talents';
-  const scrub = opts.scrubContacts ?? true;
-  const chefFriendly = opts.chefFriendly ?? true;
+function normalizeBudget(v?: string | null) {
+  const s = clean(v);
+  if (!s) return null;
+  return s;
+}
 
-  const header = `👨‍🍳 DEMANDE CHEF PRIVÉ — ${brandName}`;
+function normalizeMission(v?: string | null) {
+  const s = clean(v);
+  if (!s) return null;
+  return s;
+}
+
+function normalizeService(v?: string | null) {
+  const s = clean(v);
+  if (!s) return null;
+  return s;
+}
+
+/**
+ * ✅ Message envoyé au Chef (aucun contact, aucun détail sensible)
+ */
+export function buildWhatsappBriefForChef(r: RequestEntity, opts: BriefOptions = {}) {
+  const noEmoji = !!opts.noEmoji;
+
+  const E = {
+    header: noEmoji ? 'DEMANDE CHEF PRIVÉ — CHEF TALENTS' : '👨‍🍳 DEMANDE CHEF PRIVÉ — CHEF TALENTS',
+    loc: noEmoji ? 'Lieu :' : '📍 Lieu :',
+    dates: noEmoji ? 'Dates :' : '📅 Dates :',
+    pax: noEmoji ? 'Convives :' : '👥 Convives :',
+    mission: noEmoji ? 'Mission :' : '🎯 Mission :',
+    service: noEmoji ? 'Service :' : '🧩 Service :',
+    budget: noEmoji ? 'Budget :' : '💰 Budget :',
+    cuisine: noEmoji ? 'Style culinaire :' : '🍽️ Style culinaire :',
+    allergies: noEmoji ? 'Restrictions / allergies :' : '⚠️ Restrictions / allergies :',
+    languages: noEmoji ? 'Langues souhaitées :' : '🗣️ Langues souhaitées :',
+    brief: noEmoji ? 'Brief :' : '📝 Brief :',
+  };
 
   const top = joinLines([
-    clean(r.location) ? `📍 Lieu : ${clean(r.location)}` : null,
-    formatDates(r) ? `📅 Dates : ${formatDates(r)}` : null,
-    r.guestCount ? `👥 Convives : ${r.guestCount} pers` : null,
-    humanMissionType(r.missionType) ? `🎯 Mission : ${humanMissionType(r.missionType)}` : null,
-    humanServiceLevel(r.serviceLevel) ? `🧩 Service : ${humanServiceLevel(r.serviceLevel)}` : null,
-    clean(r.budgetRange) ? `💰 Budget : ${clean(r.budgetRange)}` : null,
+    line(E.loc, clean(r.location) || null),
+    line(E.dates, formatDates(r)),
+    line(E.pax, r.guestCount ? `${r.guestCount} pers` : null),
+    line(E.mission, normalizeMission(r.missionType)),
+    line(E.service, normalizeService(r.serviceLevel)),
+    line(E.budget, normalizeBudget(r.budgetRange)),
   ]);
 
-  const prefsLines = joinLines([
-    clean(r.preferences?.cuisine) ? `🍽️ Style culinaire : ${clean(r.preferences?.cuisine)}` : null,
-    clean(r.preferences?.allergies) ? `⚠️ Restrictions : ${clean(r.preferences?.allergies)}` : null,
-    clean(r.preferences?.languages) ? `🗣️ Langues : ${clean(r.preferences?.languages)}` : null,
+  const prefsBlock = joinLines([
+    normalizeCuisine(r.preferences?.cuisine) ? `${E.cuisine}${nl}${normalizeCuisine(r.preferences?.cuisine)}` : null,
+    normalizeAllergies(r.preferences?.allergies) ? `${E.allergies}${nl}${normalizeAllergies(r.preferences?.allergies)}` : null,
+    normalizeLanguages(r.preferences?.languages) ? `${E.languages}${nl}${normalizeLanguages(r.preferences?.languages)}` : null,
   ]);
 
-  let notes = clean(r.notes) || null;
-  if (notes && scrub) notes = scrubContactsText(notes);
-
-  const briefBlock =
-    notes && chefFriendly
-      ? joinLines([
-          `📝 Brief :`,
-          notes,
-          ``,
-          `👉 Réponse attendue : dispo + tarif + éventuelles questions`,
-        ])
-      : notes
-      ? `📝 Brief :${nl}${notes}`
-      : null;
+  const notes = clean(r.notes)
+    ? `${E.brief}${nl}${String(r.notes).trim()}`
+    : null;
 
   const footer = joinLines([
-    `Votre profil a retenu mon attention pour cette demande.`,
+    noEmoji ? `Votre profil a retenu toute notre attention pour cette demande.` : `✨ Votre profil a retenu toute notre attention pour cette demande.`,
+    ``,
     `Seriez-vous disponible sur ces dates ?`,
     `Est-ce que le budget vous convient ?`,
-    `Si oui, je présente votre profil au client au plus vite.`,
+    ``,
+    `Si oui, nous présenterons votre profil au client au plus vite.`,
+    ``,
     `—`,
-    `${brandName}`,
+    `Chef Talents`,
   ]);
 
   return joinLines([
-    header,
+    E.header,
     '—',
     top,
-    prefsLines ? `—${nl}${prefsLines}` : null,
-    briefBlock ? `—${nl}${briefBlock}` : null,
+    prefsBlock ? `—${nl}${prefsBlock}` : null,
+    notes ? `—${nl}${notes}` : null,
     '—',
     footer,
   ]);
 }
 
 /**
- * ✅ Ouvrir WhatsApp (deep link) + fallback web.
- * NOTE: iOS/Android peut choisir WhatsApp ou WhatsApp Business selon app par défaut.
+ * Ouvre WhatsApp Business si installé (mobile), sinon fallback WhatsApp classique / web.
+ * - iOS/Android: "whatsapp-business://send?text=..."
+ * - Fallback: "https://wa.me/?text=..."
  */
 export function openWhatsappWithText(text: string, phoneE164?: string | null) {
   const encoded = encodeURIComponent(text);
-  const digits = phoneE164 ? phoneE164.replace(/\D/g, '') : '';
+  const digits = phoneE164 ? phoneE164.replace(/\D/g, '') : null;
 
-  // Deep link (app)
-  const appUrl = digits
-    ? `whatsapp://send?phone=${digits}&text=${encoded}`
-    : `whatsapp://send?text=${encoded}`;
+  // 1) Tentative WhatsApp Business (mobile)
+  const waBusinessUrl = digits
+    ? `whatsapp-business://send?phone=${digits}&text=${encoded}`
+    : `whatsapp-business://send?text=${encoded}`;
 
-  // Fallback web
-  const webUrl = digits
+  // 2) Fallback universel
+  const waFallback = digits
     ? `https://wa.me/${digits}?text=${encoded}`
     : `https://wa.me/?text=${encoded}`;
 
-  // tente l'app, puis fallback
-  const opened = window.open(appUrl, '_blank');
-  // Certains navigateurs bloquent/échouent -> fallback
-  setTimeout(() => {
-    try {
-      if (!opened || opened.closed) window.open(webUrl, '_blank', 'noopener,noreferrer');
-    } catch {
-      window.open(webUrl, '_blank', 'noopener,noreferrer');
-    }
-  }, 400);
-}
+  // ⚠️ Sur desktop, whatsapp-business:// ne marche pas => on tente puis fallback rapide.
+  try {
+    // tentative
+    window.location.href = waBusinessUrl;
 
+    // fallback (si rien ne s’ouvre)
+    setTimeout(() => {
+      window.open(waFallback, '_blank', 'noopener,noreferrer');
+    }, 400);
+  } catch {
+    window.open(waFallback, '_blank', 'noopener,noreferrer');
+  }
+}
