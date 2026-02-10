@@ -362,7 +362,9 @@ export default function AdminRequestDetailPage() {
                           {x.chef.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
                         </div>
                       </td>
-
+<div className="text-xs text-white/50">
+  chefs total: {chefs.length} • active: {chefs.filter(c => c.role === 'chef' && c.status === 'active').length}
+</div>
                       <td className="py-3 pr-4 whitespace-nowrap">
                         <div className="text-white font-semibold">{x.fitScore} / 100</div>
                         <div className="text-xs mt-1">
