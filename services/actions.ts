@@ -84,16 +84,19 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
           `Budget: ${(data as any).budgetRange || ''}`,
           `Notes: ${(data as any).notes || ''}`,
           `Téléphone: ${data.phone || ''}`,
+        `Langues: ${(data as any).preferredLanguage ?? ''}`,
+`Restrictions: ${(data as any).dietaryRestrictions ?? ''}`,
+`Cuisine: ${(data as any).cuisinePreferences ?? ''}`,
         ]
           .filter(Boolean)
           .join('\n');
 
   // 3) payload structuré (⚠️ dates safe)
-  const payload = {
-    email: toNullIfEmpty(data.email), // tu peux laisser string si tu veux, mais safe
+    const payload = {
+    email: toNullIfEmpty(data.email),
     firstName: toNullIfEmpty(firstName),
 
-    matchType: data.mode, // 'fast' | 'concierge'
+    matchType: data.mode,
     message: toNullIfEmpty(message),
 
     phone: toNullIfEmpty((data as any).phone),
@@ -103,7 +106,6 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
 
     location: toNullIfEmpty((data as any).location),
 
-    // ✅ CRITIQUE: jamais "" ici
     startDate: toISODateOrNull((data as any).startDate),
     endDate: toISODateOrNull((data as any).endDate),
 
@@ -112,6 +114,23 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     budgetRange: toBudgetRangeText(data),
 
     assignmentType: toNullIfEmpty((data as any).assignmentType),
+
+    // ✅ AJOUTS : CE SONT EUX QUI REMPLISSENT TES COLONNES
+    // On supporte string OU array (ton backend joinIfArray gère les deux)
+    preferredLanguage:
+      data.mode === 'concierge'
+        ? ((data as any).preferredLanguage ?? (data as any).languages ?? (data as any).language)
+        : null,
+
+    dietaryRestrictions:
+      data.mode === 'concierge'
+        ? ((data as any).dietaryRestrictions ?? (data as any).restrictions ?? (data as any).allergies)
+        : null,
+
+    cuisinePreferences:
+      data.mode === 'concierge'
+        ? ((data as any).cuisinePreferences ?? (data as any).cuisineStyle ?? (data as any).cuisines)
+        : null,
   };
 
   // (optionnel) garde-fou: si fast => endDate null ok, si startDate null => laisse passer mais tu verras "—"
