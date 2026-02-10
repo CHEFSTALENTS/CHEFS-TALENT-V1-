@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForFastRequest } from '@/services/fastMatch';
-import { buildWhatsappBrief, openWhatsappWithText } from '@/lib/whatsappBrief';
+import { buildWhatsappBriefForChef, openWhatsappWithText } from '@/lib/whatsappBrief';
 
 type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
 
@@ -49,16 +49,16 @@ function mapRowToRequestEntity(x: any): RequestEntity {
     missionType: x.assignment_type ?? x.assignmentType ?? '',
     serviceLevel: x.service_expectations ?? x.service_level ?? x.serviceLevel ?? '',
 
-    // ✅ On met les champs structurés si dispo
     preferences: {
       cuisine: x.cuisine_preferences ?? x.cuisinePreferences ?? '',
       allergies: x.dietary_restrictions ?? x.dietaryRestrictions ?? '',
       languages: x.preferred_language ?? x.preferredLanguage ?? '',
     },
 
-    // ✅ Notes = le brief / message global
+    // ✅ Notes = brief/message global
     notes: x.message ?? x.notes ?? null,
 
+    // ⚠️ On garde pour l’admin, mais on ne doit PAS l’envoyer au chef via WhatsApp.
     contact: {
       name: x.full_name ?? x.fullName ?? x.first_name ?? x.firstName ?? 'Client',
       company: x.company_name ?? x.companyName ?? '',
@@ -161,9 +161,11 @@ export default function AdminRequestDetailPage() {
     const daySum = missions
       .filter((m) => inRange((m as any).createdAt, startOfDay))
       .reduce((s, m) => s + amountOf(m), 0);
+
     const weekSum = missions
       .filter((m) => inRange((m as any).createdAt, startOfWeek))
       .reduce((s, m) => s + amountOf(m), 0);
+
     const monthSum = missions
       .filter((m) => inRange((m as any).createdAt, startOfMonth))
       .reduce((s, m) => s + amountOf(m), 0);
@@ -184,7 +186,8 @@ export default function AdminRequestDetailPage() {
   // ✅ Brief WhatsApp (uniquement quand req est dispo)
   const whatsappBrief = useMemo(() => {
     if (!req) return '';
-    return buildWhatsappBrief(req);
+    // garde-fou : buildWhatsappBriefForChef ne doit pas inclure contact client/conciergerie
+    return buildWhatsappBriefForChef(req);
   }, [req]);
 
   const onCopyBrief = async () => {
@@ -287,6 +290,7 @@ export default function AdminRequestDetailPage() {
           right={<StatusBadge status={String(req.status || '')} />}
         >
           <div className="space-y-2 text-sm">
+            {/* ⚠️ On affiche en admin, mais pas dans le brief WhatsApp */}
             <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
             <Row label="Lieu" value={req.location || '—'} />
             <Row label="Dates" value={formatDates(req)} />
@@ -294,7 +298,6 @@ export default function AdminRequestDetailPage() {
             <Row label="Budget" value={formatBudget(req.budgetRange)} />
             <Row label="Type de mission" value={humanMissionType(req.missionType)} />
             <Row label="Service" value={String(req.serviceLevel || '—')} />
-
             <Row label="Cuisine" value={String(req.preferences?.cuisine || '—')} />
             <Row label="Restrictions" value={String(req.preferences?.allergies || '—')} />
             <Row label="Langues" value={String(req.preferences?.languages || '—')} />
