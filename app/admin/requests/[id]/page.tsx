@@ -7,6 +7,9 @@ import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForFastRequest } from '@/services/fastMatch';
 import { buildWhatsappBriefForChef, openWhatsappWithText } from '@/lib/whatsappBrief';
+import { scoreChefForRequest } from '@/services/matching';
+
+
 
 type MatchedChef = { chef: ChefUser; score: number; badges: string[] };
 
@@ -120,21 +123,19 @@ export default function AdminRequestDetailPage() {
     const m = matchChefsForFastRequest(req, active);
 
     const withScore = m
-      .map((c) => {
-        const sc = auth.computeChefScore(c);
-        return { chef: c, score: sc.score, badges: sc.badges };
-      })
-      .sort((a, b) => b.score - a.score);
+  .map((c) => {
+    const base = auth.computeChefScore(c);
+    const fit = scoreChefForRequest(req, c);
 
-    const needle = q.trim().toLowerCase();
-    if (!needle) return withScore;
+    const finalScore = Math.round(base.score * 0.45 + fit.fitScore * 0.55);
 
-    return withScore.filter((x) => {
-      const name = `${x.chef.firstName || ''} ${x.chef.lastName || ''}`.toLowerCase();
-      const email = (x.chef.email || '').toLowerCase();
-      return name.includes(needle) || email.includes(needle);
-    });
-  }, [req, chefs, q]);
+    return {
+      chef: c,
+      score: finalScore,
+      badges: [...(base.badges || []), ...fit.reasons.slice(0, 2)], // affiche 2 raisons max en badges
+    };
+  })
+  .sort((a, b) => b.score - a.score);
 
   const revenue = useMemo(() => {
     const amountOf = (m: any) =>
