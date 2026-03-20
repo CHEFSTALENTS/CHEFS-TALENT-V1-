@@ -135,20 +135,26 @@ export default function AdminRequestDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const matchedAll: MatchedChef[] = useMemo(() => {
-    if (!req) return [];
+const matchedAll: MatchedChef[] = useMemo(() => {
+  if (!req) return [];
 
-    const eligibleChefs = chefs.filter((c) => chefIsEligibleForRequest(req, c));
+  const activeChefs = chefs.filter((c) => {
+    const status = String(c.status || (c as any)?.profile?.status || '').toLowerCase();
+    return status === 'active';
+  });
 
-    console.log('MATCH DEBUG', {
-      req,
-      chefsTotal: chefs.length,
-      chefsEligible: eligibleChefs.length,
-      eligibleChefs,
-    });
+  const eligibleChefs = activeChefs.filter((c) => chefIsEligibleForRequest(req, c));
 
-    return matchChefsForRequestV2(req, eligibleChefs);
-  }, [req, chefs]);
+  console.log('MATCH DEBUG', {
+    req,
+    chefsTotal: chefs.length,
+    chefsActive: activeChefs.length,
+    chefsEligible: eligibleChefs.length,
+    eligibleChefs,
+  });
+
+  return matchChefsForRequestV2(req, eligibleChefs);
+}, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -358,7 +364,7 @@ export default function AdminRequestDetailPage() {
             }
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-white/45 mb-4">
-              <span>{matchedAll.length} chefs éligibles</span>
+<span>{matchedAll.length} chefs actifs éligibles</span>
               <span className="text-white/20">•</span>
               <span>{showAll ? 'Tous les profils affichés' : 'Top 15 affichés'}</span>
               <span className="text-white/20">•</span>
