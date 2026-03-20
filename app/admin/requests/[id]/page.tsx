@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { auth, api } from '@/services/storage';
+import { api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForRequestV2, chefIsEligibleForRequest } from '@/services/matching';
 import { buildWhatsappBriefForChef, openWhatsappWithText } from '@/lib/whatsappBrief';
@@ -36,12 +36,13 @@ function mapRowToRequestEntity(x: any): RequestEntity {
     userType,
     createdAt: x.created_at ?? x.createdAt ?? null,
 
-location:
-  x.location?.destination ??
-  x.location?.city ??
-  x.city ??
-  x.destination ??
-  '—',
+    location:
+      x.location?.destination ??
+      x.location?.city ??
+      x.city ??
+      x.destination ??
+      '—',
+
     guestCount: x.guest_count ?? x.guestCount ?? x.guests ?? null,
     budgetRange: budgetRange || undefined,
 
@@ -60,10 +61,8 @@ location:
       languages: x.preferred_language ?? x.preferredLanguage ?? '',
     },
 
-    // ✅ Notes = brief/message global (c’est ici que tu as toute la demande)
     notes: x.message ?? x.notes ?? null,
 
-    // ⚠️ visible en admin seulement (PAS dans le brief WhatsApp)
     contact: {
       name: x.full_name ?? x.fullName ?? x.first_name ?? x.firstName ?? 'Client',
       company: x.company_name ?? x.companyName ?? '',
@@ -85,34 +84,35 @@ export default function AdminRequestDetailPage() {
   const [q, setQ] = useState('');
   const [actionChefId, setActionChefId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-const onViewChefProfile = (chef: ChefUser) => {
-  router.push(`/admin/chefs?email=${encodeURIComponent(String(chef.email || ''))}`);
-};
-  
+
+  const onViewChefProfile = (chef: ChefUser) => {
+    router.push(`/admin/chefs?email=${encodeURIComponent(String(chef.email || ''))}`);
+  };
+
   const refresh = async () => {
     setLoading(true);
 
     try {
       const [rReq, rChefsJson, rMissions] = await Promise.all([
-  fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
-  fetch(`/api/admin/chefs`, {
-    cache: 'no-store',
-    headers: {
-      'x-admin-email': 'thomas@chef-talents.com',
-    },
-  }).then(async (r) => {
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      console.error('ADMIN CHEFS API ERROR', r.status, j);
-      return { chefs: [] };
-    }
-    return j;
-  }),
-  ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
-]);
+        fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
+        fetch(`/api/admin/chefs`, {
+          cache: 'no-store',
+          headers: {
+            'x-admin-email': 'thomas@chef-talents.com',
+          },
+        }).then(async (r) => {
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            console.error('ADMIN CHEFS API ERROR', r.status, j);
+            return { chefs: [] };
+          }
+          return j;
+        }),
+        ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
+      ]);
 
-setChefs(Array.isArray(rChefsJson?.chefs) ? rChefsJson.chefs : []);
-setMissions(rMissions ?? []);
+      setChefs(Array.isArray(rChefsJson?.chefs) ? rChefsJson.chefs : []);
+      setMissions(rMissions ?? []);
 
       if (!rReq.ok) {
         setReq(null);
@@ -120,7 +120,7 @@ setMissions(rMissions ?? []);
       }
 
       const json = await rReq.json();
-      const row = json?.normalized ?? json?.item ?? json; // tolérant
+      const row = json?.normalized ?? json?.item ?? json;
       setReq(mapRowToRequestEntity(row));
     } catch (e) {
       console.error('Admin request detail refresh error', e);
@@ -135,20 +135,20 @@ setMissions(rMissions ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-const matchedAll: MatchedChef[] = useMemo(() => {
-  if (!req) return [];
+  const matchedAll: MatchedChef[] = useMemo(() => {
+    if (!req) return [];
 
-  const eligibleChefs = chefs.filter((c) => chefIsEligibleForRequest(req, c));
+    const eligibleChefs = chefs.filter((c) => chefIsEligibleForRequest(req, c));
 
-  console.log('MATCH DEBUG', {
-    req,
-    chefsTotal: chefs.length,
-    chefsEligible: eligibleChefs.length,
-    eligibleChefs,
-  });
+    console.log('MATCH DEBUG', {
+      req,
+      chefsTotal: chefs.length,
+      chefsEligible: eligibleChefs.length,
+      eligibleChefs,
+    });
 
-  return matchChefsForRequestV2(req, eligibleChefs);
-}, [req, chefs]);
+    return matchChefsForRequestV2(req, eligibleChefs);
+  }, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -172,7 +172,7 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     startOfDay.setHours(0, 0, 0, 0);
 
     const startOfWeek = new Date(now);
-    const day = (startOfWeek.getDay() + 6) % 7; // 0=lundi
+    const day = (startOfWeek.getDay() + 6) % 7;
     startOfWeek.setDate(startOfWeek.getDate() - day);
     startOfWeek.setHours(0, 0, 0, 0);
 
@@ -210,7 +210,6 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     return v;
   };
 
-  // ✅ Brief WhatsApp (uniquement quand req est dispo)
   const whatsappBrief = useMemo(() => {
     if (!req) return '';
     return buildWhatsappBriefForChef(req);
@@ -234,7 +233,6 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     try {
       setActionChefId(chefId);
       console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
-      // TODO: call API to create proposal/mission and update status
       await refresh();
     } finally {
       setActionChefId(null);
@@ -258,7 +256,6 @@ const matchedAll: MatchedChef[] = useMemo(() => {
 
   return (
     <div className="space-y-4 p-6">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
           <Link href="/admin/requests" className="text-sm text-white/60 hover:text-white/90">
@@ -306,9 +303,7 @@ const matchedAll: MatchedChef[] = useMemo(() => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Fiche demande */}
         <Panel
           title="Fiche demande"
           subtitle="Résumé client + critères"
@@ -316,7 +311,6 @@ const matchedAll: MatchedChef[] = useMemo(() => {
           right={<StatusBadge status={String(req.status || '')} />}
         >
           <div className="space-y-2 text-sm">
-            {/* ⚠️ visible admin seulement */}
             <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
             <Row label="Lieu" value={req.location || '—'} />
             <Row label="Dates" value={formatDates(req)} />
@@ -337,159 +331,86 @@ const matchedAll: MatchedChef[] = useMemo(() => {
           ) : null}
         </Panel>
 
-{/* Matching */}
-<div className="xl:col-span-2 space-y-4">
-  <Panel
-    title="Chefs matchables"
-    subtitle="Chefs éligibles, triés pour décision rapide"
-    right={
-      <div className="flex items-center gap-2">
-        <div className="text-xs text-white/50 hidden sm:block">
-          {matchedAll.length} chef(s)
+        <div className="xl:col-span-2 space-y-4">
+          <Panel
+            title="Chefs matchables"
+            subtitle="Chefs éligibles, triés pour décision rapide"
+            right={
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-white/50 hidden sm:block">
+                  {matched.length} chef(s)
+                </div>
+
+                <button
+                  onClick={() => setShowAll((v) => !v)}
+                  className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
+                >
+                  {showAll ? 'Afficher moins' : 'Afficher +'}
+                </button>
+
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Recherche (nom/email)…"
+                  className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
+                />
+              </div>
+            }
+          >
+            <div className="flex flex-wrap items-center gap-3 text-xs text-white/45 mb-4">
+              <span>{matchedAll.length} chefs éligibles</span>
+              <span className="text-white/20">•</span>
+              <span>{showAll ? 'Tous les profils affichés' : 'Top 15 affichés'}</span>
+              <span className="text-white/20">•</span>
+              <span>Triés par compatibilité</span>
+            </div>
+
+            <div className="space-y-3">
+              {matched.map((x) => {
+                const baseLabel = getChefBaseLabel(x.chef);
+                const contactLabel = getChefContactLabel(x.chef);
+                const availability = getChefAvailabilityLabel(x.chef);
+                const profileState = isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet';
+
+                return (
+                  <ChefMatchCard
+                    key={x.chef.id}
+                    chef={x.chef}
+                    fitScore={x.fitScore}
+                    confidence={x.confidence}
+                    reasons={x.reasons}
+                    baseLabel={baseLabel}
+                    contactLabel={contactLabel}
+                    availability={availability}
+                    profileState={profileState}
+                    loading={actionChefId === x.chef.id}
+                    onViewProfile={() => onViewChefProfile(x.chef)}
+                    onSelect={() => onSelectChef(x.chef.id)}
+                  />
+                );
+              })}
+
+              {matched.length === 0 && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+                  Aucun chef matchable pour cette demande.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 text-xs text-white/45">
+              Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
+            </div>
+          </Panel>
         </div>
-
-        <button
-          onClick={() => setShowAll((v) => !v)}
-          className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
-        >
-          {showAll ? 'Afficher moins' : 'Afficher +'}
-        </button>
-
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Recherche (nom/email)…"
-          className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
-        />
-      </div>
-    }
-  >
-    <div className="flex flex-wrap items-center gap-3 text-xs text-white/45 mb-4">
-      <span>{matchedAll.length} chefs éligibles</span>
-      <span className="text-white/20">•</span>
-      <span>{showAll ? 'Tous les profils affichés' : 'Top 15 affichés'}</span>
-      <span className="text-white/20">•</span>
-      <span>Triés par compatibilité</span>
-    </div>
-
-    <div className="space-y-3">
-      {matched.map((x) => {
-        const baseLabel = getChefBaseLabel(x.chef);
-        const contactLabel = getChefContactLabel(x.chef);
-        const availability = getChefAvailabilityLabel(x.chef);
-        const profileState = isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet';
-
-        return (
-          <ChefMatchCard
-            key={x.chef.id}
-            chef={x.chef}
-            fitScore={x.fitScore}
-            confidence={x.confidence}
-            reasons={x.reasons}
-            baseLabel={baseLabel}
-            contactLabel={contactLabel}
-            availability={availability}
-            profileState={profileState}
-            loading={actionChefId === x.chef.id}
-            onViewProfile={() => onViewChefProfile(x.chef)}
-            onSelect={() => onSelectChef(x.chef.id)}
-          />
-        );
-      })}
-
-      {matched.length === 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-          Aucun chef matchable pour cette demande.
-        </div>
-      )}
-    </div>
-
-    <div className="mt-4 text-xs text-white/45">
-      Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
-    </div>
-  </Panel>
-</div>
       </div>
 
-      {/* Debug revenue (optionnel) */}
       <div className="text-xs text-white/35">
         CA jour: {Math.round(revenue.daySum)}€ • semaine: {Math.round(revenue.weekSum)}€ • mois: {Math.round(revenue.monthSum)}€
       </div>
     </div>
   );
 }
-{/* Matching */}
-<div className="xl:col-span-2 space-y-4">
-  <Panel
-    title="Chefs matchables"
-    subtitle="Chefs éligibles, triés pour décision rapide"
-    right={
-      <div className="flex items-center gap-2">
-        <div className="text-xs text-white/50 hidden sm:block">
-          {matchedAll.length} chef(s)
-        </div>
 
-        <button
-          onClick={() => setShowAll((v) => !v)}
-          className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
-        >
-          {showAll ? 'Afficher moins' : 'Afficher +'}
-        </button>
-
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Recherche (nom/email)…"
-          className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
-        />
-      </div>
-    }
-  >
-    <div className="flex flex-wrap items-center gap-3 text-xs text-white/45 mb-4">
-      <span>{matchedAll.length} chefs éligibles</span>
-      <span className="text-white/20">•</span>
-      <span>{showAll ? 'Tous les profils affichés' : 'Top 15 affichés'}</span>
-      <span className="text-white/20">•</span>
-      <span>Triés par compatibilité</span>
-    </div>
-
-    <div className="space-y-3">
-      {matched.map((x) => {
-        const baseLabel = getChefBaseLabel(x.chef);
-        const contactLabel = getChefContactLabel(x.chef);
-        const availability = getChefAvailabilityLabel(x.chef);
-        const profileState = isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet';
-
-        return (
-          <ChefMatchCard
-            key={x.chef.id}
-            chef={x.chef}
-            fitScore={x.fitScore}
-            confidence={x.confidence}
-            reasons={x.reasons}
-            baseLabel={baseLabel}
-            contactLabel={contactLabel}
-            availability={availability}
-            profileState={profileState}
-            loading={actionChefId === x.chef.id}
-            onViewProfile={() => onViewChefProfile(x.chef)}
-            onSelect={() => onSelectChef(x.chef.id)}
-          />
-        );
-      })}
-
-      {matched.length === 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-          Aucun chef matchable pour cette demande.
-        </div>
-      )}
-    </div>
-
-    <div className="mt-4 text-xs text-white/45">
-      Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
-    </div>
-  </Panel>
-</div>
 /* ---------- UI ---------- */
 
 function Panel({
@@ -563,6 +484,7 @@ function formatBudget(b: any) {
   if (max) return `≤ ${max}`;
   return '—';
 }
+
 function isChefProfileComplete(chef: ChefUser) {
   const p: any = chef.profile ?? {};
 
@@ -581,14 +503,7 @@ function isChefProfileComplete(chef: ChefUser) {
 function getChefBaseLabel(chef: ChefUser) {
   const p: any = chef.profile ?? {};
   const loc = p.location ?? {};
-
-  return (
-    loc.baseCity ||
-    p.baseCity ||
-    p.city ||
-    p.ville ||
-    '—'
-  );
+  return loc.baseCity || p.baseCity || p.city || p.ville || '—';
 }
 
 function getChefContactLabel(chef: ChefUser) {
@@ -764,8 +679,7 @@ function ConfidenceBadge({ confidence }: { confidence: 'high' | 'medium' | 'low'
       ? 'bg-amber-500/10 text-amber-100 border-amber-500/20'
       : 'bg-white/5 text-white/60 border-white/10';
 
-  const label =
-    confidence === 'high' ? 'High' : confidence === 'medium' ? 'Medium' : 'Low';
+  const label = confidence === 'high' ? 'High' : confidence === 'medium' ? 'Medium' : 'Low';
 
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
