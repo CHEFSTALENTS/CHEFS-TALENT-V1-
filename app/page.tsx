@@ -400,7 +400,7 @@ const InteractiveCard = ({
   cta,
 }: {
   theme: 'light' | 'dark';
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ElementType;
   title: string;
   subtitle?: string;
   description: string;
