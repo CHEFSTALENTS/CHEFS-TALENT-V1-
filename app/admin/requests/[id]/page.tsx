@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForRequestV2 } from '@/services/matching';
@@ -70,6 +70,7 @@ function mapRowToRequestEntity(x: any): RequestEntity {
 
 export default function AdminRequestDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = String((params as any)?.id || '');
 
   const [loading, setLoading] = useState(true);
@@ -79,7 +80,10 @@ export default function AdminRequestDetailPage() {
   const [q, setQ] = useState('');
   const [actionChefId, setActionChefId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-
+const onViewChefProfile = (chef: ChefUser) => {
+  router.push(`/admin/chefs?email=${encodeURIComponent(String(chef.email || ''))}`);
+};
+  
   const refresh = async () => {
     setLoading(true);
 
@@ -428,19 +432,28 @@ const matchedAll: MatchedChef[] = useMemo(() => {
                         </div>
                       </td>
 
-                      <td className="py-3 text-right">
-                        <button
-                          onClick={() => onSelectChef(x.chef.id)}
-                          disabled={actionChefId === x.chef.id}
-                          className={[
-                            'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
-                            'border-white/10 bg-white/10 text-white hover:bg-white/15',
-                            actionChefId === x.chef.id ? 'opacity-60 cursor-not-allowed' : '',
-                          ].join(' ')}
-                        >
-                          Sélectionner <span aria-hidden>→</span>
-                        </button>
-                      </td>
+                 <td className="py-3 text-right">
+  <div className="inline-flex gap-2">
+    <button
+      onClick={() => onViewChefProfile(x.chef)}
+      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition"
+    >
+      Voir profil
+    </button>
+
+    <button
+      onClick={() => onSelectChef(x.chef.id)}
+      disabled={actionChefId === x.chef.id}
+      className={[
+        'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
+        'border-white/10 bg-white/10 text-white hover:bg-white/15',
+        actionChefId === x.chef.id ? 'opacity-60 cursor-not-allowed' : '',
+      ].join(' ')}
+    >
+      Sélectionner <span aria-hidden>→</span>
+    </button>
+  </div>
+</td>
                     </tr>
                   ))}
 
