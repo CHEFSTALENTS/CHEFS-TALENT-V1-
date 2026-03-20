@@ -575,10 +575,5 @@ function isChefProfileComplete(chef: ChefUser) {
   const checks = [hasName, hasEmail, hasPhone, hasLanguages, hasSpecialties, hasLocation, hasBio];
   return checks.filter(Boolean).length >= 5;
 }
-location:
-  x.location?.destination ??
-  x.location?.city ??
-  x.city ??
-  x.destination ??
-  '—',
+
     
