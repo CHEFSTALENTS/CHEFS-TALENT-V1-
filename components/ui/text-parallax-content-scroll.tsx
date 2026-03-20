@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FiArrowUpRight } from 'react-icons/fi';
+import { ArrowUpRight } from 'lucide-react';
 
 const IMG_PADDING = 12;
 
@@ -179,14 +179,14 @@ const ExampleContentBlock = ({
           href={ctaHref}
           className="inline-flex w-full items-center justify-center rounded bg-neutral-900 px-9 py-4 text-lg text-white transition-colors hover:bg-neutral-700 md:w-fit"
         >
-          {ctaLabel} <FiArrowUpRight className="ml-2 inline" />
+          {ctaLabel} <ArrowUpRight className="ml-2 inline h-4 w-4" />
         </a>
       ) : (
         <Link
           href={ctaHref}
           className="inline-flex w-full items-center justify-center rounded bg-neutral-900 px-9 py-4 text-lg text-white transition-colors hover:bg-neutral-700 md:w-fit"
         >
-          {ctaLabel} <FiArrowUpRight className="ml-2 inline" />
+          {ctaLabel} <ArrowUpRight className="ml-2 inline h-4 w-4" />
         </Link>
       )}
     </div>
