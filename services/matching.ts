@@ -5,9 +5,9 @@ export type MatchConfidence = 'high' | 'medium' | 'low';
 
 export type MatchedChefV2 = {
   chef: ChefUser;
-  fitScore: number;            // 0..100 (tri)
-  confidence: MatchConfidence; // high/medium/low
-  reasons: string[];           // raisons lisibles (admin)
+  fitScore: number;
+  confidence: MatchConfidence;
+  reasons: string[];
 };
 
 function norm(s: any) {
@@ -55,6 +55,7 @@ function isMobileEnough(chef: ChefUser) {
   const international = Boolean(p.internationalMobility ?? p.location?.internationalMobility);
   return { radius, international };
 }
+
 function getChefLocation(chef: ChefUser) {
   const p: any = chef.profile ?? {};
   const loc = p.location ?? p.profile?.location ?? {};
@@ -74,49 +75,29 @@ function getChefLocation(chef: ChefUser) {
 }
 
 function getRequestLocation(req: RequestEntity) {
-  const city = norm((req as any).location?.city ?? (req as any).city ?? '');
-  const region = norm((req as any).location?.region ?? (req as any).region ?? '');
-  const country = norm((req as any).location?.country ?? (req as any).country ?? '');
-  const destination = norm(
-    (req as any).location?.destination ??
-    (req as any).destination ??
-    [city, region, country].filter(Boolean).join(' ')
-  );
-
-  return { city, region, country, destination };
+  const raw = norm((req as any).location ?? '');
+  return { raw };
 }
 
-function textIncludesAny(haystack: string, needles: string[]) {
-  if (!haystack || !needles.length) return false;
-  return needles.some((n) => n && haystack.includes(n));
-}
-
-/**
- * ✅ Soft scoring:
- * - jamais d'exclusion sur cuisine/langues/restrictions
- * - mismatch = petite pénalité (3)
- * - match = bonus
- * - confidence = nb de "strong hits"
- */
-export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<MatchedChefV2, 'chef'> {
+export function scoreChefForRequestV2(
+  req: RequestEntity,
+  chef: ChefUser
+): Omit<MatchedChefV2, 'chef'> {
   let score = 50;
   const reasons: string[] = [];
 
-  // --- Request prefs
   const wantCuisines = splitPrefs(req.preferences?.cuisine ?? '');
   const wantLangs = splitPrefs(req.preferences?.languages ?? '');
   const restrictions = String(req.preferences?.allergies ?? '').trim();
 
-  // --- Chef data
   const chefLangs = getChefLanguages(chef);
   const chefCuisines = getChefCuisines(chef);
   const mobility = isMobileEnough(chef);
   const chefLoc = getChefLocation(chef);
   const reqLoc = getRequestLocation(req);
-  
+
   let strongHits = 0;
 
-  // Cuisine
   if (wantCuisines.length) {
     const hits = intersectCount(wantCuisines, chefCuisines);
     if (hits > 0) {
@@ -124,12 +105,11 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
       strongHits++;
       reasons.push(`✅ Cuisine match (${hits})`);
     } else {
-      score -= 3; // 👈 soft
+      score -= 3;
       reasons.push(`⚠️ Cuisine à confirmer`);
     }
   }
 
-  // Langues
   if (wantLangs.length) {
     const hits = intersectCount(wantLangs, chefLangs);
     if (hits > 0) {
@@ -137,12 +117,11 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
       strongHits++;
       reasons.push(`✅ Langues match (${hits})`);
     } else {
-      score -= 3; // 👈 soft
+      score -= 3;
       reasons.push(`⚠️ Langues à confirmer`);
     }
   }
 
-  // Mobilité (soft bonus)
   if (mobility.international) {
     score += 6;
     strongHits++;
@@ -157,37 +136,35 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
   } else {
     reasons.push(`⚠️ Mobilité non renseignée`);
   }
-  // Localisation
-  if (reqLoc.destination || reqLoc.city || reqLoc.region || reqLoc.country) {
-    const requestTokens = [reqLoc.city, reqLoc.region, reqLoc.country, reqLoc.destination].filter(Boolean);
 
-    const baseCityMatch = textIncludesAny(chefLoc.baseCity, requestTokens);
+  if (reqLoc.raw) {
+    const baseMatch =
+      chefLoc.baseCity.includes(reqLoc.raw) || reqLoc.raw.includes(chefLoc.baseCity);
 
-    const zoneMatch = chefLoc.coverageZones.some((z) =>
-      textIncludesAny(z, requestTokens)
+    const zoneMatch = chefLoc.coverageZones.some(
+      (z) => z.includes(reqLoc.raw) || reqLoc.raw.includes(z)
     );
 
-    if (baseCityMatch) {
+    if (baseMatch) {
+      score += 22;
+      strongHits++;
+      reasons.push('📍 Base chef compatible');
+    } else if (zoneMatch) {
       score += 18;
       strongHits++;
-      reasons.push(`✅ Base chef compatible avec la destination`);
-    } else if (zoneMatch) {
-      score += 14;
-      strongHits++;
-      reasons.push(`✅ Zone couverte compatible`);
+      reasons.push('📍 Zone couverte compatible');
     } else if (chefLoc.internationalMobility) {
       score += 8;
-      reasons.push(`🌍 Mobile à l’international`);
+      reasons.push('🌍 Mobilité internationale');
     } else if (chefLoc.travelRadiusKm >= 150) {
       score += 4;
-      reasons.push(`🚗 Mobilité large (${chefLoc.travelRadiusKm} km)`);
+      reasons.push(`🚗 Rayon ${chefLoc.travelRadiusKm} km`);
     } else {
       score -= 4;
-      reasons.push(`⚠️ Localisation à confirmer`);
+      reasons.push('⚠️ Localisation à confirmer');
     }
   }
-  
-  // Profil complété = bonus
+
   if (chef.profileCompleted) {
     score += 5;
     reasons.push(`✅ Profil complet`);
@@ -195,12 +172,10 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
     reasons.push(`⚠️ Profil incomplet`);
   }
 
-  // Restrictions = pas de pénalité (info)
   if (restrictions) {
     reasons.push(`⚠️ Restrictions: ${restrictions} (à valider)`);
   }
 
-  // Clamp 0..100
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   const confidence: MatchConfidence =
@@ -209,7 +184,10 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
   return { fitScore: score, confidence, reasons };
 }
 
-export function matchChefsForRequestV2(req: RequestEntity, chefs: ChefUser[]): MatchedChefV2[] {
+export function matchChefsForRequestV2(
+  req: RequestEntity,
+  chefs: ChefUser[]
+): MatchedChefV2[] {
   return chefs
     .map((chef) => {
       const scored = scoreChefForRequestV2(req, chef);
