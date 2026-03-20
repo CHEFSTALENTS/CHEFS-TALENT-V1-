@@ -371,12 +371,15 @@ const matchedAll: MatchedChef[] = useMemo(() => {
             <div className="overflow-auto -mx-4 px-4">
               <table className="min-w-full text-sm">
                 <thead className="text-white/70">
-                  <tr>
-                    <th className="text-left py-3">Chef</th>
-                    <th className="text-left py-3">Fit</th>
-                    <th className="text-left py-3">Raisons</th>
-                    <th className="text-right py-3">Action</th>
-                  </tr>
+            <tr>
+  <th className="text-left py-3">Chef</th>
+  <th className="text-left py-3">Base</th>
+  <th className="text-left py-3">Disponibilité</th>
+  <th className="text-left py-3">Contact</th>
+  <th className="text-left py-3">Fit</th>
+  <th className="text-left py-3">Raisons</th>
+  <th className="text-right py-3">Actions</th>
+</tr>
                 </thead>
 
                 <tbody className="divide-y divide-white/10">
@@ -572,3 +575,10 @@ function isChefProfileComplete(chef: ChefUser) {
   const checks = [hasName, hasEmail, hasPhone, hasLanguages, hasSpecialties, hasLocation, hasBio];
   return checks.filter(Boolean).length >= 5;
 }
+location:
+  x.location?.destination ??
+  x.location?.city ??
+  x.city ??
+  x.destination ??
+  '—',
+    
