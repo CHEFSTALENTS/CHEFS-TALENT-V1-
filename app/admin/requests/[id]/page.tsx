@@ -18,8 +18,7 @@ function mapRowToRequestEntity(x: any): RequestEntity {
   const userType: RequestEntity['userType'] =
     x.client_type === 'concierge' || x.user_type === 'b2b' ? 'b2b' : 'b2c';
 
-  const mode: RequestEntity['mode'] =
-    (x.match_type ?? x.mode ?? 'concierge') === 'fast' ? 'fast' : 'concierge';
+ const mode: RequestEntity['mode'] = 'concierge';
 
   const budgetRange =
     x.budget_range ??
@@ -272,10 +271,9 @@ const matchedAll: MatchedChef[] = useMemo(() => {
             {req.userType === 'b2b' ? 'B2B' : 'B2C'} — {req.location || 'Lieu'}
           </h1>
 
-          <div className="text-sm text-white/55 mt-1">
-            {formatDates(req)} • {req.guestCount ?? '—'} pers • {formatBudget(req.budgetRange)}
-            {req.mode === 'fast' ? ' • Fast' : ' • Standard'}
-          </div>
+         <div className="text-sm text-white/55 mt-1">
+  {formatDates(req)} • {req.guestCount ?? '—'} pers • {formatBudget(req.budgetRange)}
+</div>
         </div>
 
         <div className="flex flex-wrap gap-2">
