@@ -78,13 +78,6 @@ function getRequestLocation(req: RequestEntity) {
   const raw = norm((req as any).location ?? '');
   return { raw };
 }
-function normalizeLocationText(v: any) {
-  return norm(
-    typeof v === 'string'
-      ? v
-      : v?.destination || v?.city || v?.region || v?.country || ''
-  );
-}
 
 function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
   const chefLoc = getChefLocation(chef);
@@ -93,7 +86,8 @@ function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
   if (!reqLoc.raw) return true;
 
   const baseMatch =
-    chefLoc.baseCity.includes(reqLoc.raw) || reqLoc.raw.includes(chefLoc.baseCity);
+    (chefLoc.baseCity && chefLoc.baseCity.includes(reqLoc.raw)) ||
+    (chefLoc.baseCity && reqLoc.raw.includes(chefLoc.baseCity));
 
   const zoneMatch = chefLoc.coverageZones.some(
     (z) => z.includes(reqLoc.raw) || reqLoc.raw.includes(z)
@@ -106,22 +100,21 @@ function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
 
 function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
   const p: any = chef.profile ?? {};
-  const availability = p.availability ?? p.availableDates ?? p.calendar ?? p.profile?.availability ?? null;
+  const availability =
+    p.availability ?? p.availableDates ?? p.calendar ?? p.profile?.availability ?? null;
 
   const reqStart = req?.dates?.start ? new Date(String(req.dates.start)) : null;
   const reqEnd = req?.dates?.end ? new Date(String(req.dates.end)) : reqStart;
 
   if (!reqStart || Number.isNaN(reqStart.getTime())) return true;
 
-  // si aucune donnée de dispo, on considère "à confirmer" => false pour ton besoin strict
+  // si aucune donnée de dispo => non éligible pour ton besoin strict
   if (!availability) return false;
 
-  // cas simple string
   if (typeof availability === 'string') {
     return true;
   }
 
-  // cas objet structuré
   const unavailableDates = Array.isArray(availability.unavailableDates)
     ? availability.unavailableDates
     : [];
@@ -144,7 +137,11 @@ function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
     ? new Date(String(availability.nextAvailableFrom))
     : null;
 
-  if (nextAvailableFrom && !Number.isNaN(nextAvailableFrom.getTime()) && nextAvailableFrom > reqStart) {
+  if (
+    nextAvailableFrom &&
+    !Number.isNaN(nextAvailableFrom.getTime()) &&
+    nextAvailableFrom > reqStart
+  ) {
     return false;
   }
 
@@ -154,12 +151,15 @@ function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
 export function chefIsEligibleForRequest(req: RequestEntity, chef: ChefUser) {
   const status = String(chef.status || (chef as any)?.profile?.status || '').toLowerCase();
 
-  if (!(status === 'active' || status === 'approved')) return false;
+  // ✅ uniquement les chefs ACTIFS
+  if (status !== 'active') return false;
+
   if (!chefMatchesLocation(req, chef)) return false;
   if (!chefMatchesDates(req, chef)) return false;
 
   return true;
 }
+
 export function scoreChefForRequestV2(
   req: RequestEntity,
   chef: ChefUser
@@ -179,6 +179,7 @@ export function scoreChefForRequestV2(
 
   let strongHits = 0;
 
+  // Cuisine
   if (wantCuisines.length) {
     const hits = intersectCount(wantCuisines, chefCuisines);
     if (hits > 0) {
@@ -191,6 +192,7 @@ export function scoreChefForRequestV2(
     }
   }
 
+  // Langues
   if (wantLangs.length) {
     const hits = intersectCount(wantLangs, chefLangs);
     if (hits > 0) {
@@ -203,35 +205,22 @@ export function scoreChefForRequestV2(
     }
   }
 
-  if (mobility.international) {
-    score += 6;
-    strongHits++;
-    reasons.push(`✅ Mobilité internationale`);
-  } else if (mobility.radius >= 150) {
-    score += 4;
-    strongHits++;
-    reasons.push(`✅ Rayon ${mobility.radius} km`);
-  } else if (mobility.radius > 0) {
-    score += 2;
-    reasons.push(`ℹ️ Rayon ${mobility.radius} km`);
-  } else {
-    reasons.push(`⚠️ Mobilité non renseignée`);
-  }
-
+  // ✅ Localisation = critère prioritaire
   if (reqLoc.raw) {
     const baseMatch =
-      chefLoc.baseCity.includes(reqLoc.raw) || reqLoc.raw.includes(chefLoc.baseCity);
+      (chefLoc.baseCity && chefLoc.baseCity.includes(reqLoc.raw)) ||
+      (chefLoc.baseCity && reqLoc.raw.includes(chefLoc.baseCity));
 
     const zoneMatch = chefLoc.coverageZones.some(
       (z) => z.includes(reqLoc.raw) || reqLoc.raw.includes(z)
     );
 
     if (baseMatch) {
-      score += 22;
+      score += 30;
       strongHits++;
       reasons.push('📍 Base chef compatible');
     } else if (zoneMatch) {
-      score += 18;
+      score += 22;
       strongHits++;
       reasons.push('📍 Zone couverte compatible');
     } else if (chefLoc.internationalMobility) {
@@ -240,9 +229,30 @@ export function scoreChefForRequestV2(
     } else if (chefLoc.travelRadiusKm >= 150) {
       score += 4;
       reasons.push(`🚗 Rayon ${chefLoc.travelRadiusKm} km`);
+    } else if (chefLoc.travelRadiusKm > 0) {
+      score += 2;
+      reasons.push(`ℹ️ Rayon ${chefLoc.travelRadiusKm} km`);
     } else {
-      score -= 4;
+      score -= 6;
       reasons.push('⚠️ Localisation à confirmer');
+    }
+  }
+
+  // ✅ Mobilité = bonus secondaire seulement
+  if (!reqLoc.raw) {
+    if (mobility.international) {
+      score += 6;
+      strongHits++;
+      reasons.push(`✅ Mobilité internationale`);
+    } else if (mobility.radius >= 150) {
+      score += 4;
+      strongHits++;
+      reasons.push(`✅ Rayon ${mobility.radius} km`);
+    } else if (mobility.radius > 0) {
+      score += 2;
+      reasons.push(`ℹ️ Rayon ${mobility.radius} km`);
+    } else {
+      reasons.push(`⚠️ Mobilité non renseignée`);
     }
   }
 
