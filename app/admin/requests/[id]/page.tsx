@@ -133,19 +133,19 @@ setMissions(rMissions ?? []);
 const matchedAll: MatchedChef[] = useMemo(() => {
   if (!req) return [];
 
-  const active = chefs.filter((c) => {
+  const activeChefs = chefs.filter((c) => {
     const status = String(c.status || (c as any)?.profile?.status || '').toLowerCase();
-    return status === 'active' || status === 'approved' || status === 'pending_validation';
+    return status === 'active';
   });
 
   console.log('MATCH DEBUG', {
     req,
     chefsTotal: chefs.length,
-    chefsEligible: active.length,
-    active,
+    chefsActive: activeChefs.length,
+    activeChefs,
   });
 
-  return matchChefsForRequestV2(req, active);
+  return matchChefsForRequestV2(req, activeChefs);
 }, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
@@ -391,7 +391,7 @@ const matchedAll: MatchedChef[] = useMemo(() => {
                         </div>
                       </td>
 <div className="text-xs text-white/50 mb-2">
-  chefs total: {chefs.length} • éligibles: {matchedAll.length}
+  chefs total: {chefs.length} • actifs: {matchedAll.length}
 </div>
                       <td className="py-3 pr-4 whitespace-nowrap">
                         <div className="text-white font-semibold">{x.fitScore} / 100</div>
