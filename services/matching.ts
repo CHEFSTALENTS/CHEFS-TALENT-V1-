@@ -55,6 +55,41 @@ function isMobileEnough(chef: ChefUser) {
   const international = Boolean(p.internationalMobility ?? p.location?.internationalMobility);
   return { radius, international };
 }
+function getChefLocation(chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+  const loc = p.location ?? p.profile?.location ?? {};
+
+  const baseCity = norm(loc.baseCity ?? p.baseCity ?? p.city ?? p.ville ?? '');
+  const coverageZonesRaw = loc.coverageZones ?? p.coverageZones ?? [];
+  const coverageZones = Array.isArray(coverageZonesRaw)
+    ? coverageZonesRaw.map(norm).filter(Boolean)
+    : splitPrefs(coverageZonesRaw);
+
+  const travelRadiusKm = Number(loc.travelRadiusKm ?? p.travelRadiusKm ?? 0) || 0;
+  const internationalMobility = Boolean(
+    loc.internationalMobility ?? p.internationalMobility ?? false
+  );
+
+  return { baseCity, coverageZones, travelRadiusKm, internationalMobility };
+}
+
+function getRequestLocation(req: RequestEntity) {
+  const city = norm((req as any).location?.city ?? (req as any).city ?? '');
+  const region = norm((req as any).location?.region ?? (req as any).region ?? '');
+  const country = norm((req as any).location?.country ?? (req as any).country ?? '');
+  const destination = norm(
+    (req as any).location?.destination ??
+    (req as any).destination ??
+    [city, region, country].filter(Boolean).join(' ')
+  );
+
+  return { city, region, country, destination };
+}
+
+function textIncludesAny(haystack: string, needles: string[]) {
+  if (!haystack || !needles.length) return false;
+  return needles.some((n) => n && haystack.includes(n));
+}
 
 /**
  * ✅ Soft scoring:
@@ -76,7 +111,9 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
   const chefLangs = getChefLanguages(chef);
   const chefCuisines = getChefCuisines(chef);
   const mobility = isMobileEnough(chef);
-
+  const chefLoc = getChefLocation(chef);
+  const reqLoc = getRequestLocation(req);
+  
   let strongHits = 0;
 
   // Cuisine
@@ -120,7 +157,36 @@ export function scoreChefForRequestV2(req: RequestEntity, chef: ChefUser): Omit<
   } else {
     reasons.push(`⚠️ Mobilité non renseignée`);
   }
+  // Localisation
+  if (reqLoc.destination || reqLoc.city || reqLoc.region || reqLoc.country) {
+    const requestTokens = [reqLoc.city, reqLoc.region, reqLoc.country, reqLoc.destination].filter(Boolean);
 
+    const baseCityMatch = textIncludesAny(chefLoc.baseCity, requestTokens);
+
+    const zoneMatch = chefLoc.coverageZones.some((z) =>
+      textIncludesAny(z, requestTokens)
+    );
+
+    if (baseCityMatch) {
+      score += 18;
+      strongHits++;
+      reasons.push(`✅ Base chef compatible avec la destination`);
+    } else if (zoneMatch) {
+      score += 14;
+      strongHits++;
+      reasons.push(`✅ Zone couverte compatible`);
+    } else if (chefLoc.internationalMobility) {
+      score += 8;
+      reasons.push(`🌍 Mobile à l’international`);
+    } else if (chefLoc.travelRadiusKm >= 150) {
+      score += 4;
+      reasons.push(`🚗 Mobilité large (${chefLoc.travelRadiusKm} km)`);
+    } else {
+      score -= 4;
+      reasons.push(`⚠️ Localisation à confirmer`);
+    }
+  }
+  
   // Profil complété = bonus
   if (chef.profileCompleted) {
     score += 5;
