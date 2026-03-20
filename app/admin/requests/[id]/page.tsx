@@ -337,147 +337,78 @@ const matchedAll: MatchedChef[] = useMemo(() => {
           ) : null}
         </Panel>
 
-        {/* Matching */}
-        <div className="xl:col-span-2 space-y-4">
-          <Panel
-            title="Chefs matchables"
-            subtitle="Actifs + soft matching (large, non bloquant)"
-            right={
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-white/50 hidden sm:block">
-                  {matchedAll.length} chef(s)
-                </div>
-
-                <button
-                  onClick={() => setShowAll((v) => !v)}
-                  className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
-                >
-                  {showAll ? 'Afficher moins' : 'Afficher +'}
-                </button>
-
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Recherche (nom/email)…"
-                  className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
-                />
-              </div>
-            }
-          >
-            <div className="text-xs text-white/45 mb-3">
-              Affichage: {showAll ? 'Tous les profils' : 'Top 15'} (triés par fitScore)
-            </div>
-
-            <div className="overflow-auto -mx-4 px-4">
-              <table className="min-w-full text-sm">
-                <thead className="text-white/70">
-            <tr>
-  <th className="text-left py-3">Chef</th>
-  <th className="text-left py-3">Base</th>
-  <th className="text-left py-3">Disponibilité</th>
-  <th className="text-left py-3">Contact</th>
-  <th className="text-left py-3">Fit</th>
-  <th className="text-left py-3">Raisons</th>
-  <th className="text-right py-3">Actions</th>
-</tr>
-                </thead>
-
-                <tbody className="divide-y divide-white/10">
-                  {matched.map((x) => (
-                    <tr key={x.chef.id} className="hover:bg-white/5 transition">
-                      <td className="py-3 pr-4">
-                        <div className="text-white font-medium leading-tight">
-                          {(x.chef.firstName || '')} {(x.chef.lastName || '')}
-                        </div>
-                        <div className="text-xs text-white/45 mt-0.5">
-                          {x.chef.email || '—'}
-                          <span className="text-white/25"> • </span>
-{isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet'}
-                        </div>
-                      </td>
-<div className="text-xs text-white/50 mb-2">
-  chefs total: {chefs.length} • actifs: {matchedAll.length}
-</div>
-                      <td className="py-3 pr-4 whitespace-nowrap">
-                        <div className="text-white font-semibold">{x.fitScore} / 100</div>
-                        <div className="text-xs mt-1">
-                          <span
-                            className={[
-                              'px-2 py-0.5 rounded-full border',
-                              x.confidence === 'high'
-                                ? 'bg-emerald-500/10 text-emerald-100 border-emerald-500/20'
-                                : x.confidence === 'medium'
-                                ? 'bg-amber-500/10 text-amber-100 border-amber-500/20'
-                                : 'bg-white/5 text-white/60 border-white/10',
-                            ].join(' ')}
-                          >
-                            {x.confidence === 'high'
-                              ? '✅ High'
-                              : x.confidence === 'medium'
-                              ? '⚠️ Medium'
-                              : '❓ Low'}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="py-3 pr-4">
-                        <div className="flex flex-wrap gap-2">
-                          {x.reasons?.length ? (
-                            x.reasons.slice(0, 3).map((r) => (
-                              <span
-                                key={r}
-                                className="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/10 text-white/80"
-                              >
-                                {r}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-white/45">—</span>
-                          )}
-                        </div>
-                      </td>
-
-                 <td className="py-3 text-right">
-  <div className="inline-flex gap-2">
-    <button
-      onClick={() => onViewChefProfile(x.chef)}
-      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition"
-    >
-      Voir profil
-    </button>
-
-    <button
-      onClick={() => onSelectChef(x.chef.id)}
-      disabled={actionChefId === x.chef.id}
-      className={[
-        'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
-        'border-white/10 bg-white/10 text-white hover:bg-white/15',
-        actionChefId === x.chef.id ? 'opacity-60 cursor-not-allowed' : '',
-      ].join(' ')}
-    >
-      Sélectionner <span aria-hidden>→</span>
-    </button>
-  </div>
-</td>
-                    </tr>
-                  ))}
-
-                  {matched.length === 0 && (
-                    <tr>
-                      <td className="py-4 text-white/60" colSpan={4}>
-                        Aucun chef matchable (actifs) pour cette demande.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 text-xs text-white/45">
-              Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
-            </div>
-          </Panel>
+{/* Matching */}
+<div className="xl:col-span-2 space-y-4">
+  <Panel
+    title="Chefs matchables"
+    subtitle="Chefs éligibles, triés pour décision rapide"
+    right={
+      <div className="flex items-center gap-2">
+        <div className="text-xs text-white/50 hidden sm:block">
+          {matchedAll.length} chef(s)
         </div>
+
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
+        >
+          {showAll ? 'Afficher moins' : 'Afficher +'}
+        </button>
+
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Recherche (nom/email)…"
+          className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
+        />
+      </div>
+    }
+  >
+    <div className="flex flex-wrap items-center gap-3 text-xs text-white/45 mb-4">
+      <span>{matchedAll.length} chefs éligibles</span>
+      <span className="text-white/20">•</span>
+      <span>{showAll ? 'Tous les profils affichés' : 'Top 15 affichés'}</span>
+      <span className="text-white/20">•</span>
+      <span>Triés par compatibilité</span>
+    </div>
+
+    <div className="space-y-3">
+      {matched.map((x) => {
+        const baseLabel = getChefBaseLabel(x.chef);
+        const contactLabel = getChefContactLabel(x.chef);
+        const availability = getChefAvailabilityLabel(x.chef);
+        const profileState = isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet';
+
+        return (
+          <ChefMatchCard
+            key={x.chef.id}
+            chef={x.chef}
+            fitScore={x.fitScore}
+            confidence={x.confidence}
+            reasons={x.reasons}
+            baseLabel={baseLabel}
+            contactLabel={contactLabel}
+            availability={availability}
+            profileState={profileState}
+            loading={actionChefId === x.chef.id}
+            onViewProfile={() => onViewChefProfile(x.chef)}
+            onSelect={() => onSelectChef(x.chef.id)}
+          />
+        );
+      })}
+
+      {matched.length === 0 && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+          Aucun chef matchable pour cette demande.
+        </div>
+      )}
+    </div>
+
+    <div className="mt-4 text-xs text-white/45">
+      Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
+    </div>
+  </Panel>
+</div>
       </div>
 
       {/* Debug revenue (optionnel) */}
@@ -487,7 +418,78 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     </div>
   );
 }
+{/* Matching */}
+<div className="xl:col-span-2 space-y-4">
+  <Panel
+    title="Chefs matchables"
+    subtitle="Chefs éligibles, triés pour décision rapide"
+    right={
+      <div className="flex items-center gap-2">
+        <div className="text-xs text-white/50 hidden sm:block">
+          {matchedAll.length} chef(s)
+        </div>
 
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition"
+        >
+          {showAll ? 'Afficher moins' : 'Afficher +'}
+        </button>
+
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Recherche (nom/email)…"
+          className="w-[240px] max-w-full px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
+        />
+      </div>
+    }
+  >
+    <div className="flex flex-wrap items-center gap-3 text-xs text-white/45 mb-4">
+      <span>{matchedAll.length} chefs éligibles</span>
+      <span className="text-white/20">•</span>
+      <span>{showAll ? 'Tous les profils affichés' : 'Top 15 affichés'}</span>
+      <span className="text-white/20">•</span>
+      <span>Triés par compatibilité</span>
+    </div>
+
+    <div className="space-y-3">
+      {matched.map((x) => {
+        const baseLabel = getChefBaseLabel(x.chef);
+        const contactLabel = getChefContactLabel(x.chef);
+        const availability = getChefAvailabilityLabel(x.chef);
+        const profileState = isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet';
+
+        return (
+          <ChefMatchCard
+            key={x.chef.id}
+            chef={x.chef}
+            fitScore={x.fitScore}
+            confidence={x.confidence}
+            reasons={x.reasons}
+            baseLabel={baseLabel}
+            contactLabel={contactLabel}
+            availability={availability}
+            profileState={profileState}
+            loading={actionChefId === x.chef.id}
+            onViewProfile={() => onViewChefProfile(x.chef)}
+            onSelect={() => onSelectChef(x.chef.id)}
+          />
+        );
+      })}
+
+      {matched.length === 0 && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+          Aucun chef matchable pour cette demande.
+        </div>
+      )}
+    </div>
+
+    <div className="mt-4 text-xs text-white/45">
+      Prochaine étape : “Sélectionner” = création d’une proposal OU création d’une mission + update statut request.
+    </div>
+  </Panel>
+</div>
 /* ---------- UI ---------- */
 
 function Panel({
