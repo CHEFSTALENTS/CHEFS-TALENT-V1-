@@ -126,21 +126,23 @@ setMissions(rMissions ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const matchedAll: MatchedChef[] = useMemo(() => {
-    if (!req) return [];
-const active = chefs;
-    {
-  const status = String(c.status || (c as any)?.profile?.status || '').toLowerCase();
-  return status === 'active' || status === 'approved' || status === 'pending_validation';
-});
+const matchedAll: MatchedChef[] = useMemo(() => {
+  if (!req) return [];
+
+  const active = chefs.filter((c) => {
+    const status = String(c.status || (c as any)?.profile?.status || '').toLowerCase();
+    return status === 'active' || status === 'approved' || status === 'pending_validation';
+  });
+
   console.log('MATCH DEBUG', {
-  req,
-  chefsTotal: chefs.length,
-  chefsEligible: active.length,
-  active,
-});
-    return matchChefsForRequestV2(req, active);
-  }, [req, chefs]);
+    req,
+    chefsTotal: chefs.length,
+    chefsEligible: active.length,
+    active,
+  });
+
+  return matchChefsForRequestV2(req, active);
+}, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
     const needle = q.trim().toLowerCase();
