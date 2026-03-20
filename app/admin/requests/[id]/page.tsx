@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { auth, api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
-import { matchChefsForRequestV2 } from '@/services/matching';
+import { matchChefsForRequestV2, chefIsEligibleForRequest } from '@/services/matching';
 import { buildWhatsappBriefForChef, openWhatsappWithText } from '@/lib/whatsappBrief';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
@@ -36,7 +36,12 @@ function mapRowToRequestEntity(x: any): RequestEntity {
     userType,
     createdAt: x.created_at ?? x.createdAt ?? null,
 
-    location: x.location ?? x.city ?? '—',
+location:
+  x.location?.destination ??
+  x.location?.city ??
+  x.city ??
+  x.destination ??
+  '—',
     guestCount: x.guest_count ?? x.guestCount ?? x.guests ?? null,
     budgetRange: budgetRange || undefined,
 
@@ -133,19 +138,16 @@ setMissions(rMissions ?? []);
 const matchedAll: MatchedChef[] = useMemo(() => {
   if (!req) return [];
 
-  const activeChefs = chefs.filter((c) => {
-    const status = String(c.status || (c as any)?.profile?.status || '').toLowerCase();
-    return status === 'active';
-  });
+  const eligibleChefs = chefs.filter((c) => chefIsEligibleForRequest(req, c));
 
   console.log('MATCH DEBUG', {
     req,
     chefsTotal: chefs.length,
-    chefsActive: activeChefs.length,
-    activeChefs,
+    chefsEligible: eligibleChefs.length,
+    eligibleChefs,
   });
 
-  return matchChefsForRequestV2(req, activeChefs);
+  return matchChefsForRequestV2(req, eligibleChefs);
 }, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
