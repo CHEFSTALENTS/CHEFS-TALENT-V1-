@@ -78,7 +78,88 @@ function getRequestLocation(req: RequestEntity) {
   const raw = norm((req as any).location ?? '');
   return { raw };
 }
+function normalizeLocationText(v: any) {
+  return norm(
+    typeof v === 'string'
+      ? v
+      : v?.destination || v?.city || v?.region || v?.country || ''
+  );
+}
 
+function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
+  const chefLoc = getChefLocation(chef);
+  const reqLoc = getRequestLocation(req);
+
+  if (!reqLoc.raw) return true;
+
+  const baseMatch =
+    chefLoc.baseCity.includes(reqLoc.raw) || reqLoc.raw.includes(chefLoc.baseCity);
+
+  const zoneMatch = chefLoc.coverageZones.some(
+    (z) => z.includes(reqLoc.raw) || reqLoc.raw.includes(z)
+  );
+
+  const internationalFallback = chefLoc.internationalMobility === true;
+
+  return baseMatch || zoneMatch || internationalFallback;
+}
+
+function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+  const availability = p.availability ?? p.availableDates ?? p.calendar ?? p.profile?.availability ?? null;
+
+  const reqStart = req?.dates?.start ? new Date(String(req.dates.start)) : null;
+  const reqEnd = req?.dates?.end ? new Date(String(req.dates.end)) : reqStart;
+
+  if (!reqStart || Number.isNaN(reqStart.getTime())) return true;
+
+  // si aucune donnée de dispo, on considère "à confirmer" => false pour ton besoin strict
+  if (!availability) return false;
+
+  // cas simple string
+  if (typeof availability === 'string') {
+    return true;
+  }
+
+  // cas objet structuré
+  const unavailableDates = Array.isArray(availability.unavailableDates)
+    ? availability.unavailableDates
+    : [];
+
+  const availableNow =
+    availability.availableNow === undefined ? true : Boolean(availability.availableNow);
+
+  if (!availableNow) return false;
+
+  const blocked = unavailableDates.some((d: any) => {
+    const x = new Date(String(d));
+    if (Number.isNaN(x.getTime())) return false;
+    if (!reqEnd) return x.toDateString() === reqStart.toDateString();
+    return x >= reqStart && x <= reqEnd;
+  });
+
+  if (blocked) return false;
+
+  const nextAvailableFrom = availability.nextAvailableFrom
+    ? new Date(String(availability.nextAvailableFrom))
+    : null;
+
+  if (nextAvailableFrom && !Number.isNaN(nextAvailableFrom.getTime()) && nextAvailableFrom > reqStart) {
+    return false;
+  }
+
+  return true;
+}
+
+export function chefIsEligibleForRequest(req: RequestEntity, chef: ChefUser) {
+  const status = String(chef.status || (chef as any)?.profile?.status || '').toLowerCase();
+
+  if (!(status === 'active' || status === 'approved')) return false;
+  if (!chefMatchesLocation(req, chef)) return false;
+  if (!chefMatchesDates(req, chef)) return false;
+
+  return true;
+}
 export function scoreChefForRequestV2(
   req: RequestEntity,
   chef: ChefUser
