@@ -383,7 +383,7 @@ const matchedAll: MatchedChef[] = useMemo(() => {
                         <div className="text-xs text-white/45 mt-0.5">
                           {x.chef.email || '—'}
                           <span className="text-white/25"> • </span>
-                          {x.chef.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
+{isChefProfileComplete(x.chef) ? 'Profil complet' : 'Profil incomplet'}
                         </div>
                       </td>
 <div className="text-xs text-white/50 mb-2">
@@ -542,4 +542,18 @@ function formatBudget(b: any) {
   if (min) return `≥ ${min}`;
   if (max) return `≤ ${max}`;
   return '—';
+}
+function isChefProfileComplete(chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+
+  const hasName = Boolean((chef.firstName || p.firstName) && (chef.lastName || p.lastName));
+  const hasEmail = Boolean(chef.email || p.email);
+  const hasPhone = Boolean(p.phone || p.phoneNumber || p.tel || p.telephone);
+  const hasLanguages = Array.isArray(p.languages) ? p.languages.length > 0 : Boolean(p.languages);
+  const hasSpecialties = Array.isArray(p.specialties) ? p.specialties.length > 0 : Boolean(p.specialties || p.cuisines);
+  const hasLocation = Boolean(p.location || p.baseCity || p.city || p.ville);
+  const hasBio = Boolean(p.bio || p.about || p.description);
+
+  const checks = [hasName, hasEmail, hasPhone, hasLanguages, hasSpecialties, hasLocation, hasBio];
+  return checks.filter(Boolean).length >= 5;
 }
