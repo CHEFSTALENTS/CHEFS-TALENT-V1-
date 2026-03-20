@@ -84,16 +84,26 @@ export default function AdminRequestDetailPage() {
     setLoading(true);
 
     try {
-      const [rReq, rChefs, rMissions] = await Promise.all([
-        fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
-fetch(`/api/admin/chefs`, { cache: 'no-store' })
-  .then(r => r.json())
-  .then(j => j.items ?? []),
-        ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
-      ]);
+      const [rReq, rChefsJson, rMissions] = await Promise.all([
+  fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
+  fetch(`/api/admin/chefs`, {
+    cache: 'no-store',
+    headers: {
+      'x-admin-email': 'thomas@chef-talents.com',
+    },
+  }).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error('ADMIN CHEFS API ERROR', r.status, j);
+      return { chefs: [] };
+    }
+    return j;
+  }),
+  ((api as any).getAllMissions?.() ?? Promise.resolve([])) as Promise<Mission[]>,
+]);
 
-      setChefs(rChefs ?? []);
-      setMissions(rMissions ?? []);
+setChefs(Array.isArray(rChefsJson?.chefs) ? rChefsJson.chefs : []);
+setMissions(rMissions ?? []);
 
       if (!rReq.ok) {
         setReq(null);
@@ -118,9 +128,18 @@ fetch(`/api/admin/chefs`, { cache: 'no-store' })
 
   const matchedAll: MatchedChef[] = useMemo(() => {
     if (!req) return [];
-const active = chefs.filter(c =>
-  c.role === 'chef' && (c.status === 'active' || c.status === 'approved')
-);    return matchChefsForRequestV2(req, active);
+const active = chefs;
+    {
+  const status = String(c.status || (c as any)?.profile?.status || '').toLowerCase();
+  return status === 'active' || status === 'approved' || status === 'pending_validation';
+});
+  console.log('MATCH DEBUG', {
+  req,
+  chefsTotal: chefs.length,
+  chefsEligible: active.length,
+  active,
+});
+    return matchChefsForRequestV2(req, active);
   }, [req, chefs]);
 
   const matched: MatchedChef[] = useMemo(() => {
@@ -365,8 +384,8 @@ const active = chefs.filter(c =>
                           {x.chef.profileCompleted ? 'Profil complet' : 'Profil incomplet'}
                         </div>
                       </td>
-<div className="text-xs text-white/50">
-  chefs total: {chefs.length} • active: {chefs.filter(c => c.role === 'chef' && c.status === 'active').length}
+<div className="text-xs text-white/50 mb-2">
+  chefs total: {chefs.length} • éligibles: {matchedAll.length}
 </div>
                       <td className="py-3 pr-4 whitespace-nowrap">
                         <div className="text-white font-semibold">{x.fitScore} / 100</div>
