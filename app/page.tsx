@@ -263,22 +263,12 @@ export default function Home() {
         <div className="max-w-[100rem] mx-auto">
           <Reveal>
             <div className="grid lg:grid-cols-2 gap-12">
-              <InteractiveCard
-                theme="light"
-                icon={Star}
-                title="Fast Match"
-                subtitle="DATE UNIQUE"
-                description="Pour des demandes simples, sur une date unique. Nous identifions des chefs disponibles correspondant à votre brief et encadrons la mission dans des conditions claires."
-                hint="Si votre demande nécessite un process plus accompagné, nous vous orientons vers l’autre format."
-                link="/request"
-                cta="Décrire mon besoin"
-              />
+          
 
               <InteractiveCard
                 theme="dark"
                 icon={ShieldCheck}
-                title="Concierge Match"
-                subtitle="DEMANDE COMPLEXE"
+                title="Soumettre une demande"
                 description="Pour les demandes complexes. Séjours prolongés, résidences, yachts ou exigences particulières sont gérés via un processus accompagné et curaté par notre équipe."
                 hint="Vous ne pouvez pas vous tromper : on valide ensemble le format après votre brief."
                 link="/request"
