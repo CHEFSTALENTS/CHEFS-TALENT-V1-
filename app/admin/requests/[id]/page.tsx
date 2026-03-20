@@ -578,4 +578,205 @@ function isChefProfileComplete(chef: ChefUser) {
   return checks.filter(Boolean).length >= 5;
 }
 
-    
+function getChefBaseLabel(chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+  const loc = p.location ?? {};
+
+  return (
+    loc.baseCity ||
+    p.baseCity ||
+    p.city ||
+    p.ville ||
+    '—'
+  );
+}
+
+function getChefContactLabel(chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+  return p.phone || p.phoneNumber || p.tel || p.telephone || chef.email || '—';
+}
+
+function getChefAvailabilityLabel(chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+  const availability = p.availability ?? p.availableDates ?? p.calendar ?? null;
+
+  if (!availability) return { label: 'À confirmer', tone: 'warn' as const };
+
+  if (typeof availability === 'object') {
+    if (availability.availableNow === true) return { label: 'Disponible', tone: 'ok' as const };
+    if (availability.availableNow === false) return { label: 'Indispo', tone: 'bad' as const };
+  }
+
+  return { label: 'À confirmer', tone: 'warn' as const };
+}
+
+function SmallBadge({
+  children,
+  tone = 'default',
+}: {
+  children: React.ReactNode;
+  tone?: 'default' | 'ok' | 'warn' | 'bad';
+}) {
+  const cls =
+    tone === 'ok'
+      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20'
+      : tone === 'warn'
+      ? 'bg-amber-500/15 text-amber-200 border-amber-500/20'
+      : tone === 'bad'
+      ? 'bg-red-500/15 text-red-200 border-red-500/20'
+      : 'bg-white/10 text-white/70 border-white/10';
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
+function ChefMatchCard({
+  chef,
+  fitScore,
+  confidence,
+  reasons,
+  baseLabel,
+  contactLabel,
+  availability,
+  profileState,
+  loading,
+  onViewProfile,
+  onSelect,
+}: {
+  chef: ChefUser;
+  fitScore: number;
+  confidence: 'high' | 'medium' | 'low';
+  reasons: string[];
+  baseLabel: string;
+  contactLabel: string;
+  availability: { label: string; tone: 'default' | 'ok' | 'warn' | 'bad' };
+  profileState: string;
+  loading: boolean;
+  onViewProfile: () => void;
+  onSelect: () => void;
+}) {
+  const fullName = `${chef.firstName || ''} ${chef.lastName || ''}`.trim() || 'Chef';
+  const initials = getChefInitials(chef);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] transition p-4">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/10 flex items-center justify-center text-sm font-semibold text-white">
+            {initials}
+          </div>
+
+          <div className="min-w-0">
+            <div className="text-white font-medium text-base truncate">{fullName}</div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/60">
+              <span className="truncate">{chef.email || '—'}</span>
+              <span className="text-white/20">•</span>
+              <span>{profileState}</span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <MetaBox label="Base" value={baseLabel} />
+              <MetaBox
+                label="Disponibilité"
+                value={<SmallBadge tone={availability.tone}>{availability.label}</SmallBadge>}
+              />
+              <MetaBox label="Contact" value={contactLabel} />
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:w-[120px] shrink-0">
+          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center">
+            <div className="text-white text-2xl font-semibold leading-none">{fitScore}</div>
+            <div className="text-xs text-white/45 mt-1">/100</div>
+            <div className="mt-2">
+              <ConfidenceBadge confidence={confidence} />
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:w-[330px] shrink-0">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {reasons?.length ? (
+              reasons.slice(0, 3).map((r) => (
+                <span
+                  key={r}
+                  className="text-xs px-2.5 py-1.5 rounded-full border border-white/10 bg-white/10 text-white/80"
+                >
+                  {r}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-white/45">—</span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={onViewProfile}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition"
+            >
+              Voir profil
+            </button>
+
+            <button
+              onClick={onSelect}
+              disabled={loading}
+              className={[
+                'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
+                'border-white/10 bg-white/10 text-white hover:bg-white/15',
+                loading ? 'opacity-60 cursor-not-allowed' : '',
+              ].join(' ')}
+            >
+              Sélectionner <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetaBox({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+      <div className="text-[11px] uppercase tracking-wide text-white/40">{label}</div>
+      <div className="text-sm text-white/85 mt-1 break-words">{value}</div>
+    </div>
+  );
+}
+
+function ConfidenceBadge({ confidence }: { confidence: 'high' | 'medium' | 'low' }) {
+  const cls =
+    confidence === 'high'
+      ? 'bg-emerald-500/10 text-emerald-100 border-emerald-500/20'
+      : confidence === 'medium'
+      ? 'bg-amber-500/10 text-amber-100 border-amber-500/20'
+      : 'bg-white/5 text-white/60 border-white/10';
+
+  const label =
+    confidence === 'high' ? 'High' : confidence === 'medium' ? 'Medium' : 'Low';
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function getChefInitials(chef: ChefUser) {
+  const a = String(chef.firstName || '').trim().charAt(0);
+  const b = String(chef.lastName || '').trim().charAt(0);
+  const val = `${a}${b}`.trim();
+  return val || 'CH';
+}
