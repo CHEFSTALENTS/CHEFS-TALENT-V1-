@@ -583,63 +583,34 @@ function ChefMatchCard({
   const initials = getChefInitials(chef);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.06] transition p-4">
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition p-4">
+      {/* Ligne 1 */}
+      <div className="flex flex-col xl:flex-row xl:items-center gap-4">
         <div className="flex items-start gap-3 min-w-0 flex-1">
-          <div className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/10 flex items-center justify-center text-sm font-semibold text-white">
+          <div className="h-12 w-12 shrink-0 rounded-2xl border border-white/10 bg-white/10 flex items-center justify-center text-sm font-semibold text-white">
             {initials}
           </div>
 
-          <div className="min-w-0">
-            <div className="text-white font-medium text-base truncate">{fullName}</div>
-
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/60">
-              <span className="truncate">{chef.email || '—'}</span>
-              <span className="text-white/20">•</span>
-              <span>{profileState}</span>
-            </div>
-
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <MetaBox label="Base" value={baseLabel} />
-              <MetaBox
-                label="Disponibilité"
-                value={<SmallBadge tone={availability.tone}>{availability.label}</SmallBadge>}
-              />
-              <MetaBox label="Contact" value={contactLabel} />
-            </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-white font-semibold text-base truncate">{fullName}</div>
+            <div className="text-sm text-white/55 truncate">{chef.email || '—'}</div>
+            <div className="text-xs text-white/40 mt-1">{profileState}</div>
           </div>
         </div>
 
-        <div className="lg:w-[120px] shrink-0">
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center">
+        <div className="flex items-center gap-3 xl:gap-4">
+          <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center min-w-[96px]">
             <div className="text-white text-2xl font-semibold leading-none">{fitScore}</div>
             <div className="text-xs text-white/45 mt-1">/100</div>
             <div className="mt-2">
               <ConfidenceBadge confidence={confidence} />
             </div>
           </div>
-        </div>
 
-        <div className="lg:w-[330px] shrink-0">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {reasons?.length ? (
-              reasons.slice(0, 3).map((r) => (
-                <span
-                  key={r}
-                  className="text-xs px-2.5 py-1.5 rounded-full border border-white/10 bg-white/10 text-white/80"
-                >
-                  {r}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-white/45">—</span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 min-w-[140px]">
             <button
               onClick={onViewProfile}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition"
             >
               Voir profil
             </button>
@@ -648,8 +619,8 @@ function ChefMatchCard({
               onClick={onSelect}
               disabled={loading}
               className={[
-                'inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
-                'border-white/10 bg-white/10 text-white hover:bg-white/15',
+                'inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
+                'border-white/10 bg-white text-black hover:opacity-90',
                 loading ? 'opacity-60 cursor-not-allowed' : '',
               ].join(' ')}
             >
@@ -658,6 +629,46 @@ function ChefMatchCard({
           </div>
         </div>
       </div>
+
+      {/* Ligne 2 */}
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <InfoLine label="Base" value={baseLabel} />
+        <InfoLine
+          label="Disponibilité"
+          value={<SmallBadge tone={availability.tone}>{availability.label}</SmallBadge>}
+        />
+        <InfoLine label="Contact" value={contactLabel} />
+      </div>
+
+      {/* Raisons */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {reasons?.length ? (
+          reasons.slice(0, 3).map((r) => (
+            <span
+              key={r}
+              className="text-xs px-2.5 py-1.5 rounded-full border border-white/10 bg-white/10 text-white/80"
+            >
+              {r}
+            </span>
+          ))
+        ) : (
+          <span className="text-xs text-white/45">—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+function InfoLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+      <div className="text-[11px] uppercase tracking-wide text-white/40">{label}</div>
+      <div className="text-sm text-white/85 mt-1 break-words">{value}</div>
     </div>
   );
 }
