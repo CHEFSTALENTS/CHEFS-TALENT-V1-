@@ -35,8 +35,10 @@ function mapRowToRequestEntity(x: any): RequestEntity {
     userType,
     createdAt: x.created_at ?? x.createdAt ?? null,
 
-    location:
-      x.location?.destination ??
+ location:
+  typeof x.location === 'string'
+    ? x.location
+    : x.location?.destination ??
       x.location?.city ??
       x.city ??
       x.destination ??
