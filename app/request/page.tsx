@@ -82,8 +82,8 @@ function makeEmptyForm(): UnifiedRequestFormState {
     phone: '',
     companyName: '',
 
-    serviceRhythm: 'dinner_only',
-    accommodationProvided: 'yes',
+serviceRhythm: 'daily',
+     accommodationProvided: 'yes',
     sailingArea: '',
     crewSize: 0,
 
@@ -137,22 +137,14 @@ function getAssignmentType(formData: UnifiedRequestFormState) {
 }
 
 function getServiceRhythm(formData: UnifiedRequestFormState) {
-  switch (formData.mealPlan) {
-    case 'breakfast':
-      return 'breakfast_only';
-    case 'lunch':
-      return 'lunch_only';
-    case 'dinner':
-      return 'dinner_only';
-    case 'breakfast_lunch':
-      return 'breakfast_lunch';
-    case 'lunch_dinner':
-      return 'lunch_dinner';
-    case 'full_time':
-      return 'full_time';
-    default:
-      return 'daily';
-  }
+  if (formData.mealPlan === 'full_time') return 'daily';
+  if (formData.mealPlan === 'breakfast_lunch') return 'daily';
+  if (formData.mealPlan === 'lunch_dinner') return 'daily';
+  if (formData.mealPlan === 'breakfast') return 'daily';
+  if (formData.mealPlan === 'lunch') return 'daily';
+  if (formData.mealPlan === 'dinner') return 'daily';
+  return 'daily';
+}
 }
 
 function getServiceExpectations(formData: UnifiedRequestFormState) {
