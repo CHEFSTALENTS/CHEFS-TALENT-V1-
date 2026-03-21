@@ -86,9 +86,9 @@ export default function AdminRequestDetailPage() {
   const [actionChefId, setActionChefId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
-  const onViewChefProfile = (chef: ChefUser) => {
-    router.push(`/admin/chefs?email=${encodeURIComponent(String(chef.email || ''))}`);
-  };
+ const onViewChefProfile = (chef: ChefUser) => {
+  router.push(`/admin/chefs/${chef.id}`);
+};
 
   const refresh = async () => {
     setLoading(true);
@@ -236,15 +236,19 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     openWhatsappWithText(whatsappBrief);
   };
 
-  const onSelectChef = async (chefId: string) => {
-    try {
-      setActionChefId(chefId);
-      console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
-      await refresh();
-    } finally {
-      setActionChefId(null);
-    }
-  };
+const onSelectChef = async (chefId: string) => {
+  try {
+    setActionChefId(chefId);
+    console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
+
+    // ici plus tard tu mettras ton call API de sélection
+    // await selectChefForRequest(id, chefId);
+
+    router.push(`/admin/chefs/${chefId}`);
+  } finally {
+    setActionChefId(null);
+  }
+};
 
   if (loading) {
     return <div className="p-6 text-sm text-white/60">Chargement…</div>;
