@@ -329,12 +329,12 @@ const matchedAll: MatchedChef[] = useMemo(() => {
             <Row label="Langues" value={String(req.preferences?.languages || '—')} />
           </div>
 
-          {req.notes ? (
-            <div className="mt-4">
-              <div className="text-xs font-semibold text-white/70">Notes / Brief</div>
-              <div className="text-sm text-white/80 mt-1 whitespace-pre-wrap">{req.notes}</div>
-            </div>
-          ) : null}
+         <div className="mt-4">
+  <div className="text-xs font-semibold text-white/70">Brief chef</div>
+  <div className="text-sm text-white/80 mt-1 whitespace-pre-wrap">
+    {getChefShareableBrief(req)}
+  </div>
+</div>
         </Panel>
 
         <div className="xl:col-span-2 space-y-4">
@@ -710,4 +710,78 @@ function getChefInitials(chef: ChefUser) {
   const b = String(chef.lastName || '').trim().charAt(0);
   const val = `${a}${b}`.trim();
   return val || 'CH';
+}
+function getChefShareableBrief(req: RequestEntity) {
+  const lines = [
+    req.missionType ? `Mission : ${humanMissionTypeStatic(req.missionType)}` : '',
+    req.location ? `Lieu : ${req.location}` : '',
+    req.dates?.start
+      ? `Dates : ${formatDates(req)}`
+      : '',
+    req.guestCount ? `Convives : ${req.guestCount}` : '',
+    req.serviceLevel ? `Service : ${humanServiceLevel(req.serviceLevel)}` : '',
+    req.budgetRange ? `Budget : ${formatBudget(req.budgetRange)}` : '',
+    req.preferences?.cuisine ? `Cuisine : ${req.preferences.cuisine}` : '',
+    req.preferences?.allergies ? `Restrictions : ${req.preferences.allergies}` : '',
+    req.preferences?.languages ? `Langues : ${req.preferences.languages}` : '',
+    req.notes ? `Notes : ${extractCleanNotes(req.notes)}` : '',
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
+
+function extractCleanNotes(notes?: string | null) {
+  if (!notes) return '';
+
+  const rawLines = String(notes)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const bannedStarts = [
+    'mode:',
+    'clienttype:',
+    'société:',
+    'societe:',
+    'téléphone:',
+    'telephone:',
+    'assignation:',
+    'service:',
+    'rythme:',
+    'meal plan:',
+    'replacement:',
+    'start:',
+    'end:',
+    'dates:',
+    'convives:',
+    'budget:',
+    'langues:',
+    'restrictions:',
+    'cuisine:',
+    'lieu:',
+  ];
+
+  const cleaned = rawLines.filter((line) => {
+    const lower = line.toLowerCase();
+    return !bannedStarts.some((prefix) => lower.startsWith(prefix));
+  });
+
+  return cleaned.join(' ').trim() || 'RAS';
+}
+
+function humanMissionTypeStatic(v?: string | null) {
+  if (!v) return '—';
+  if (v === 'daily') return 'Présence quotidienne';
+  if (v === 'event') return 'Événement';
+  if (v === 'residence') return 'Résidence';
+  if (v === 'yacht') return 'Yacht';
+  if (v === 'dinner') return 'Dîner';
+  return v;
+}
+
+function humanServiceLevel(v?: string | null) {
+  if (!v) return '—';
+  if (v === 'chef_only') return 'Chef uniquement';
+  if (v === 'full_team') return 'Full team';
+  return v;
 }
