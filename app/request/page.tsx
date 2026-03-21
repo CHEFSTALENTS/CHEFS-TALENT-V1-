@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Button, Input, Textarea, Reveal, Marker } from '../../components/ui';
 import { submitRequest } from '../../services/actions';
 import type { RequestForm } from '../../types';
-import { CheckCircle2 } from 'lucide-react';
 
 /* =========================================================
    Types
@@ -14,7 +14,7 @@ import { CheckCircle2 } from 'lucide-react';
 type UnifiedRequestFormState = RequestForm & {
   endDate?: string;
   budgetAmount?: number | null;
-  budgetUnit?: 'total' | 'per_day';
+  budgetUnit?: 'per_person' | 'per_day' | 'total';
   missionCategory?: 'single_replacement' | 'single_service' | 'residence' | 'yacht';
   mealPlan?:
     | 'breakfast'
@@ -50,6 +50,15 @@ function formatMoney(v?: number, currency: string = 'EUR') {
   }
 }
 
+function daysBetweenInclusive(start?: string, end?: string) {
+  if (!start || !end) return 1;
+  const a = new Date(start);
+  const b = new Date(end);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return 1;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.floor((b.getTime() - a.getTime()) / DAY_MS) + 1);
+}
+
 function makeEmptyForm(): UnifiedRequestFormState {
   return {
     mode: 'concierge',
@@ -59,7 +68,7 @@ function makeEmptyForm(): UnifiedRequestFormState {
     startDate: '',
     endDate: '',
 
-    assignmentType: 'dinner',
+    assignmentType: 'event',
     guestCount: 2,
     serviceExpectations: 'chef_only',
 
@@ -73,7 +82,7 @@ function makeEmptyForm(): UnifiedRequestFormState {
     phone: '',
     companyName: '',
 
-    serviceRhythm: 'daily',
+    serviceRhythm: 'dinner_only',
     accommodationProvided: 'yes',
     sailingArea: '',
     crewSize: 0,
@@ -104,12 +113,19 @@ function humanMealPlan(v?: UnifiedRequestFormState['mealPlan']) {
   return '—';
 }
 
+function humanBudgetUnit(v?: UnifiedRequestFormState['budgetUnit']) {
+  if (v === 'per_person') return '/ pers';
+  if (v === 'per_day') return '/ jour';
+  return 'total';
+}
+
 function buildBudgetRange(formData: UnifiedRequestFormState) {
   const amount = Number(formData.budgetAmount || 0);
   if (!amount || amount <= 0) return '';
-  return formData.budgetUnit === 'per_day'
-    ? `${formatMoney(amount)} / jour`
-    : `${formatMoney(amount)} total`;
+
+  if (formData.budgetUnit === 'per_person') return `${formatMoney(amount)} / pers`;
+  if (formData.budgetUnit === 'per_day') return `${formatMoney(amount)} / jour`;
+  return `${formatMoney(amount)} total`;
 }
 
 function getAssignmentType(formData: UnifiedRequestFormState) {
@@ -139,27 +155,60 @@ function getServiceRhythm(formData: UnifiedRequestFormState) {
   }
 }
 
+function getServiceExpectations(formData: UnifiedRequestFormState) {
+  return formData.mealPlan === 'full_time' ? 'full_team' : 'chef_only';
+}
+
 function buildStructuredNotes(formData: UnifiedRequestFormState) {
   const lines = [
-    `Type de besoin : ${humanMissionCategory(formData.missionCategory)}`,
-    `Remplacement : ${formData.replacementNeeded === 'yes' ? 'Oui' : 'Non'}`,
-    `Rythme de service : ${humanMealPlan(formData.mealPlan)}`,
-    `Dates : ${formData.startDate || '—'}${formData.dateMode === 'multi' ? ` → ${formData.endDate || '—'}` : ''}`,
-    `Convives : ${formData.guestCount ?? '—'}`,
-    `Budget : ${buildBudgetRange(formData) || '—'}`,
-    formData.notes ? `Notes client : ${formData.notes}` : '',
+    `Type de besoin: ${humanMissionCategory(formData.missionCategory)}`,
+    `Remplacement: ${formData.replacementNeeded === 'yes' ? 'Oui' : 'Non'}`,
+    `Rythme de service: ${humanMealPlan(formData.mealPlan)}`,
+    `Dates: ${formData.startDate || '—'}${formData.dateMode === 'multi' ? ` → ${formData.endDate || '—'}` : ''}`,
+    `Convives: ${formData.guestCount ?? '—'}`,
+    `Budget: ${buildBudgetRange(formData) || '—'}`,
+    formData.notes ? `Notes client: ${formData.notes}` : '',
   ].filter(Boolean);
 
   return lines.join('\n');
+}
+
+function computeDisplayedEstimate(formData: UnifiedRequestFormState) {
+  const amount = Number(formData.budgetAmount || 0);
+  if (!amount || amount <= 0) return null;
+
+  if (formData.budgetUnit === 'per_person') {
+    const pax = Number(formData.guestCount || 0);
+    if (!pax || pax <= 0) return null;
+    return amount * pax;
+  }
+
+  if (formData.budgetUnit === 'per_day') {
+    const days =
+      formData.dateMode === 'multi'
+        ? daysBetweenInclusive(formData.startDate, formData.endDate)
+        : 1;
+    return amount * days;
+  }
+
+  return amount;
 }
 
 /* =========================================================
    UI
 ========================================================= */
 
-function Surface({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Surface({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={`rounded-2xl border border-stone-200 bg-white/75 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.2)] ${className}`}>
+    <div
+      className={`rounded-2xl border border-stone-200 bg-white/80 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.2)] ${className}`}
+    >
       {children}
     </div>
   );
@@ -235,10 +284,10 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 }
 
 /* =========================================================
-   Page
+   Content
 ========================================================= */
 
-export default function RequestPage() {
+function RequestFormContent() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{
@@ -256,6 +305,7 @@ export default function RequestPage() {
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const summaryBudget = useMemo(() => buildBudgetRange(formData), [formData]);
+  const estimatedTotal = useMemo(() => computeDisplayedEstimate(formData), [formData]);
 
   const requiredState = useMemo(() => {
     const errors: string[] = [];
@@ -292,58 +342,50 @@ export default function RequestPage() {
   }, [formData, step]);
 
   const handleSubmit = async () => {
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
-  try {
-    const payload: any = {
-      ...formData,
+    try {
+      const payload: any = {
+        ...formData,
 
-      // logique unique
-      mode: 'concierge',
+        mode: 'concierge',
+        assignmentType: getAssignmentType(formData),
+        serviceRhythm: getServiceRhythm(formData),
+        serviceExpectations: getServiceExpectations(formData),
 
-      // champs structurés utiles à l’admin + matching
-      assignmentType: getAssignmentType(formData),
-      serviceRhythm: getServiceRhythm(formData),
-      serviceExpectations:
-        formData.mealPlan === 'full_time' ? 'full_team' : 'chef_only',
+        budgetRange: buildBudgetRange(formData),
+        notes: buildStructuredNotes(formData),
 
-      budgetRange: buildBudgetRange(formData),
+        location: formData.location,
+        startDate: formData.startDate,
+        endDate: formData.dateMode === 'multi' ? formData.endDate : '',
+        dateMode: formData.dateMode,
+        guestCount: Number(formData.guestCount || 0),
 
-      // important : garder les champs natifs bien remplis
-      location: formData.location,
-      startDate: formData.startDate,
-      endDate: formData.dateMode === 'multi' ? formData.endDate : '',
-      dateMode: formData.dateMode,
-      guestCount: Number(formData.guestCount || 0),
+        cuisinePreferences: formData.cuisinePreferences || '',
+        dietaryRestrictions: formData.dietaryRestrictions || '',
+        preferredLanguage: formData.preferredLanguage || '',
 
-      cuisinePreferences: formData.cuisinePreferences || '',
-      dietaryRestrictions: formData.dietaryRestrictions || '',
-      preferredLanguage: formData.preferredLanguage || '',
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        companyName: formData.companyName || '',
 
-      fullName: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-      companyName: formData.companyName || '',
+        missionCategory: formData.missionCategory,
+        mealPlan: formData.mealPlan,
+        replacementNeeded: formData.replacementNeeded,
+        budgetAmount: formData.budgetAmount,
+        budgetUnit: formData.budgetUnit,
+      };
 
-      // nouveaux champs métier
-      missionCategory: formData.missionCategory,
-      mealPlan: formData.mealPlan,
-      replacementNeeded: formData.replacementNeeded,
-      budgetAmount: formData.budgetAmount,
-      budgetUnit: formData.budgetUnit,
-
-      // résumé humain lisible
-      notes: buildStructuredNotes(formData),
-    };
-
-    const response = await submitRequest(payload);
-    if (response?.success) setResult(response);
-  } catch (error) {
-    console.error('Error submitting request', error);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      const response = await submitRequest(payload);
+      if (response?.success) setResult(response);
+    } catch (error) {
+      console.error('Error submitting request', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (result) {
     return (
@@ -389,7 +431,7 @@ export default function RequestPage() {
             </h1>
             <p className="mt-3 max-w-2xl text-stone-600 text-base md:text-lg">
               Un seul formulaire pour toutes les situations : remplacement ponctuel, dîner privé,
-              séjour, résidence ou mission plus longue.
+              déjeuner, séjour, résidence ou mission plus longue.
             </p>
           </div>
 
@@ -431,7 +473,9 @@ export default function RequestPage() {
                             placeholder="Agence, conciergerie, family office..."
                           />
                         </div>
-                      ) : <div />}
+                      ) : (
+                        <div />
+                      )}
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4">
@@ -453,7 +497,11 @@ export default function RequestPage() {
                             title="Prestation"
                             subtitle="Date unique"
                             onClick={() =>
-                              setFormData((p) => ({ ...p, missionCategory: 'single_service', dateMode: 'single' }))
+                              setFormData((p) => ({
+                                ...p,
+                                missionCategory: 'single_service',
+                                dateMode: 'single',
+                              }))
                             }
                           />
                           <ChoiceCard
@@ -461,7 +509,12 @@ export default function RequestPage() {
                             title="Remplacement"
                             subtitle="Ponctuel"
                             onClick={() =>
-                              setFormData((p) => ({ ...p, missionCategory: 'single_replacement', dateMode: 'single' }))
+                              setFormData((p) => ({
+                                ...p,
+                                missionCategory: 'single_replacement',
+                                dateMode: 'single',
+                                replacementNeeded: 'yes',
+                              }))
                             }
                           />
                           <ChoiceCard
@@ -469,7 +522,11 @@ export default function RequestPage() {
                             title="Séjour / résidence"
                             subtitle="Plusieurs jours"
                             onClick={() =>
-                              setFormData((p) => ({ ...p, missionCategory: 'residence', dateMode: 'multi' }))
+                              setFormData((p) => ({
+                                ...p,
+                                missionCategory: 'residence',
+                                dateMode: 'multi',
+                              }))
                             }
                           />
                           <ChoiceCard
@@ -477,7 +534,11 @@ export default function RequestPage() {
                             title="Yacht"
                             subtitle="Mission dédiée"
                             onClick={() =>
-                              setFormData((p) => ({ ...p, missionCategory: 'yacht', dateMode: 'multi' }))
+                              setFormData((p) => ({
+                                ...p,
+                                missionCategory: 'yacht',
+                                dateMode: 'multi',
+                              }))
                             }
                           />
                         </div>
@@ -490,12 +551,23 @@ export default function RequestPage() {
                         <ChoiceCard
                           active={formData.dateMode === 'single'}
                           title="Date unique"
-                          onClick={() => setFormData((p) => ({ ...p, dateMode: 'single', endDate: '' }))}
+                          onClick={() =>
+                            setFormData((p) => ({
+                              ...p,
+                              dateMode: 'single',
+                              endDate: '',
+                            }))
+                          }
                         />
                         <ChoiceCard
                           active={formData.dateMode === 'multi'}
                           title="Plusieurs jours"
-                          onClick={() => setFormData((p) => ({ ...p, dateMode: 'multi' }))}
+                          onClick={() =>
+                            setFormData((p) => ({
+                              ...p,
+                              dateMode: 'multi',
+                            }))
+                          }
                         />
                       </div>
 
@@ -599,7 +671,7 @@ export default function RequestPage() {
 
                     <div>
                       <label className="mb-2 block text-sm text-stone-600">Budget indicatif</label>
-                      <div className="grid grid-cols-[1fr_130px] gap-3">
+                      <div className="grid grid-cols-[1fr_140px] gap-3">
                         <Input
                           type="number"
                           min={0}
@@ -618,12 +690,13 @@ export default function RequestPage() {
                           onChange={(e) =>
                             setFormData((p) => ({
                               ...p,
-                              budgetUnit: e.target.value as 'total' | 'per_day',
+                              budgetUnit: e.target.value as UnifiedRequestFormState['budgetUnit'],
                             }))
                           }
                           className="h-14 rounded-xl border border-stone-200 bg-white px-4 text-stone-800 focus:outline-none focus:border-stone-900"
                         >
                           <option value="total">Total</option>
+                          <option value="per_person">/ pers</option>
                           <option value="per_day">/ jour</option>
                         </select>
                       </div>
@@ -759,7 +832,10 @@ export default function RequestPage() {
               </div>
 
               <div className="divide-y divide-stone-100">
-                <SummaryItem label="Type de client" value={formData.clientType === 'concierge' ? 'Conciergerie' : 'Client privé'} />
+                <SummaryItem
+                  label="Type de client"
+                  value={formData.clientType === 'concierge' ? 'Conciergerie' : 'Client privé'}
+                />
                 <SummaryItem label="Lieu" value={formData.location || '—'} />
                 <SummaryItem
                   label="Dates"
@@ -767,16 +843,42 @@ export default function RequestPage() {
                 />
                 <SummaryItem label="Service" value={humanMealPlan(formData.mealPlan)} />
                 <SummaryItem label="Convives" value={String(formData.guestCount ?? '—')} />
-                <SummaryItem label="Budget" value={summaryBudget || '—'} />
+                <SummaryItem
+                  label="Budget"
+                  value={
+                    summaryBudget
+                      ? `${summaryBudget}${estimatedTotal ? ` · env. ${formatMoney(estimatedTotal)}` : ''}`
+                      : '—'
+                  }
+                />
+                <SummaryItem
+                  label="Remplacement"
+                  value={formData.replacementNeeded === 'yes' ? 'Oui' : 'Non'}
+                />
               </div>
 
               <div className="mt-6 rounded-xl bg-stone-50 p-4 text-sm text-stone-600">
-                Une fois envoyée, votre demande sera transmise à notre équipe et reliée à notre système de matching.
+                Que ce soit pour un dîner, un séjour ou une résidence, nous structurons votre
+                demande et vous proposons les profils les plus pertinents.
               </div>
             </Surface>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RequestPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-stone-100">
+          <Loader2 className="animate-spin" />
+        </div>
+      }
+    >
+      <RequestFormContent />
+    </Suspense>
   );
 }
