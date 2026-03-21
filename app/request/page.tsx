@@ -2,10 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Button, Input, Textarea, Reveal, Marker, Label } from '../../components/ui';
+import { Button, Input, Textarea, Reveal, Marker } from '../../components/ui';
 import { submitRequest } from '../../services/actions';
 import type { RequestForm } from '../../types';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 /* =========================================================
    Types
@@ -50,18 +50,9 @@ function formatMoney(v?: number, currency: string = 'EUR') {
   }
 }
 
-function SoftCard({ title, children }: { title?: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-stone-200/70 bg-stone-50/70 backdrop-blur-sm p-5 md:p-6 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.25)]">
-      {title ? <div className="text-[10px] uppercase tracking-[0.2em] text-stone-500 mb-3">{title}</div> : null}
-      {children}
-    </div>
-  );
-}
-
 function makeEmptyForm(): UnifiedRequestFormState {
   return {
-    mode: 'concierge', // ✅ on garde ça pour ne pas casser l’existant
+    mode: 'concierge',
     clientType: 'private',
     location: '',
     dateMode: 'single',
@@ -95,6 +86,32 @@ function makeEmptyForm(): UnifiedRequestFormState {
   };
 }
 
+function humanMissionCategory(v?: UnifiedRequestFormState['missionCategory']) {
+  if (v === 'single_replacement') return 'Remplacement ponctuel';
+  if (v === 'single_service') return 'Prestation ponctuelle';
+  if (v === 'residence') return 'Séjour / résidence';
+  if (v === 'yacht') return 'Mission yacht';
+  return '—';
+}
+
+function humanMealPlan(v?: UnifiedRequestFormState['mealPlan']) {
+  if (v === 'breakfast') return 'Petit-déjeuner';
+  if (v === 'lunch') return 'Déjeuner';
+  if (v === 'dinner') return 'Dîner';
+  if (v === 'breakfast_lunch') return 'Petit-déjeuner + déjeuner';
+  if (v === 'lunch_dinner') return 'Déjeuner + dîner';
+  if (v === 'full_time') return 'Full time';
+  return '—';
+}
+
+function buildBudgetRange(formData: UnifiedRequestFormState) {
+  const amount = Number(formData.budgetAmount || 0);
+  if (!amount || amount <= 0) return '';
+  return formData.budgetUnit === 'per_day'
+    ? `${formatMoney(amount)} / jour`
+    : `${formatMoney(amount)} total`;
+}
+
 function getAssignmentType(formData: UnifiedRequestFormState) {
   if (formData.missionCategory === 'yacht') return 'yacht';
   if (formData.missionCategory === 'residence') return 'daily';
@@ -122,14 +139,6 @@ function getServiceRhythm(formData: UnifiedRequestFormState) {
   }
 }
 
-function buildBudgetRange(formData: UnifiedRequestFormState) {
-  const amount = Number(formData.budgetAmount || 0);
-  if (!amount || amount <= 0) return '';
-  return formData.budgetUnit === 'per_day'
-    ? `${formatMoney(amount)} / jour`
-    : `${formatMoney(amount)} total`;
-}
-
 function buildStructuredNotes(formData: UnifiedRequestFormState) {
   const lines = [
     `Type de besoin : ${humanMissionCategory(formData.missionCategory)}`,
@@ -144,22 +153,85 @@ function buildStructuredNotes(formData: UnifiedRequestFormState) {
   return lines.join('\n');
 }
 
-function humanMissionCategory(v?: UnifiedRequestFormState['missionCategory']) {
-  if (v === 'single_replacement') return 'Remplacement ponctuel';
-  if (v === 'single_service') return 'Prestation ponctuelle';
-  if (v === 'residence') return 'Séjour / résidence';
-  if (v === 'yacht') return 'Mission yacht';
-  return '—';
+/* =========================================================
+   UI
+========================================================= */
+
+function Surface({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl border border-stone-200 bg-white/75 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.2)] ${className}`}>
+      {children}
+    </div>
+  );
 }
 
-function humanMealPlan(v?: UnifiedRequestFormState['mealPlan']) {
-  if (v === 'breakfast') return 'Petit-déjeuner';
-  if (v === 'lunch') return 'Déjeuner';
-  if (v === 'dinner') return 'Dîner';
-  if (v === 'breakfast_lunch') return 'Petit-déjeuner + déjeuner';
-  if (v === 'lunch_dinner') return 'Déjeuner + dîner';
-  if (v === 'full_time') return 'Full time';
-  return '—';
+function SectionBlock({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Surface className="p-6 md:p-7">
+      <div className="mb-5">
+        <h3 className="text-xl md:text-2xl font-serif text-stone-900">{title}</h3>
+        {subtitle ? <p className="mt-1 text-sm text-stone-500">{subtitle}</p> : null}
+      </div>
+      {children}
+    </Surface>
+  );
+}
+
+function ChoiceCard({
+  active,
+  title,
+  subtitle,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  subtitle?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-2xl border p-4 text-left transition ${
+        active
+          ? 'border-stone-900 bg-stone-900 text-white'
+          : 'border-stone-200 bg-stone-50 text-stone-800 hover:border-stone-400 hover:bg-stone-100'
+      }`}
+    >
+      <div className="text-sm font-medium">{title}</div>
+      {subtitle ? (
+        <div className={`mt-1 text-xs ${active ? 'text-stone-300' : 'text-stone-500'}`}>
+          {subtitle}
+        </div>
+      ) : null}
+    </button>
+  );
+}
+
+function StepBadge({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-600">
+      <span className="font-medium text-stone-900">Étape {current}</span>
+      <span>/ {total}</span>
+    </div>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-2">
+      <span className="text-sm text-stone-500">{label}</span>
+      <span className="text-sm text-stone-900 text-right">{value || '—'}</span>
+    </div>
+  );
 }
 
 /* =========================================================
@@ -169,7 +241,6 @@ function humanMealPlan(v?: UnifiedRequestFormState['mealPlan']) {
 export default function RequestPage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [result, setResult] = useState<{
     success: boolean;
     referenceId?: string;
@@ -183,6 +254,8 @@ export default function RequestPage() {
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, totalSteps));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const summaryBudget = useMemo(() => buildBudgetRange(formData), [formData]);
 
   const requiredState = useMemo(() => {
     const errors: string[] = [];
@@ -218,33 +291,22 @@ export default function RequestPage() {
     return { ok: errors.length === 0, errors };
   }, [formData, step]);
 
-  const summaryBudget = useMemo(() => buildBudgetRange(formData), [formData]);
-
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
     try {
       const payload: any = {
         ...formData,
-
-        // ✅ on garde le mode concierge pour compatibilité backend
         mode: 'concierge',
-
         assignmentType: getAssignmentType(formData),
         serviceRhythm: getServiceRhythm(formData),
         budgetRange: buildBudgetRange(formData),
-
         notes: buildStructuredNotes(formData),
-
-        // on garde les champs usuels pour Supabase / matching
         serviceExpectations: formData.serviceExpectations || 'chef_only',
       };
 
       const response = await submitRequest(payload);
-
-      if (response?.success) {
-        setResult(response);
-      }
+      if (response?.success) setResult(response);
     } catch (error) {
       console.error('Error submitting request', error);
     } finally {
@@ -257,29 +319,24 @@ export default function RequestPage() {
       <div className="min-h-screen flex items-center justify-center bg-stone-100 px-6">
         <Reveal className="max-w-lg w-full text-center">
           <Marker className="mx-auto mb-8 bg-stone-900" />
-
           <div className="flex justify-center mb-6">
             <CheckCircle2 className="w-16 h-16 text-stone-900" strokeWidth={1} />
           </div>
-
           <h2 className="text-4xl font-serif font-normal mb-6 text-stone-900">
             Demande enregistrée
           </h2>
-
           <div className="text-stone-600 mb-12 text-lg font-light space-y-4">
             <p>Votre demande a bien été transmise à notre équipe.</p>
             <p>
               Nous allons analyser le lieu, les dates, le niveau de service et le type de mission
               afin de vous proposer les profils les plus pertinents.
             </p>
-
             {result.referenceId ? (
               <p className="text-xs uppercase tracking-widest pt-4 text-stone-500">
                 Ref: {result.referenceId}
               </p>
             ) : null}
           </div>
-
           <Link href="/">
             <Button type="button" variant="link">
               Retour à l’accueil
@@ -291,291 +348,227 @@ export default function RequestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-100 pt-32 pb-24 px-6 md:px-12 font-sans">
-      <div className="max-w-4xl mx-auto grid md:grid-cols-12 gap-12">
-        {/* SIDEBAR */}
-        <div className="md:col-span-3">
-          <div className="sticky top-32 space-y-8">
-            <Marker className="bg-stone-900" />
-
-            <div className="space-y-2">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500">
-                Soumettre une demande
-              </p>
-
-              <h1 className="text-2xl font-serif text-stone-900 leading-tight">
-                Un seul formulaire, tous les cas de figure.
-              </h1>
-
-              <p className="text-xs text-stone-600 font-light leading-relaxed">
-                Remplacement ponctuel, déjeuner, dîner, full time, séjour prolongé ou yacht.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 pt-4">
-              {[
-                'Contexte',
-                'Service',
-                'Coordonnées',
-              ].map((label, index) => {
-                const s = index + 1;
-                const isActive = s === step;
-                const isPast = s < step;
-
-                return (
-                  <div key={s} className="flex items-center gap-3">
-                    <div
-                      className={`h-px transition-all duration-500 ${
-                        isActive ? 'w-8 bg-stone-900' : isPast ? 'w-4 bg-stone-400' : 'w-2 bg-stone-200'
-                      }`}
-                    />
-                    <span
-                      className={`text-[10px] uppercase tracking-widest transition-colors ${
-                        isActive ? 'text-stone-900' : 'text-stone-400'
-                      }`}
-                    >
-                      {label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <SoftCard title="Résumé">
-              <div className="space-y-3 text-sm text-stone-700">
-                <div>
-                  <span className="text-stone-500">Type :</span>{' '}
-                  {humanMissionCategory(formData.missionCategory)}
-                </div>
-                <div>
-                  <span className="text-stone-500">Service :</span>{' '}
-                  {humanMealPlan(formData.mealPlan)}
-                </div>
-                <div>
-                  <span className="text-stone-500">Lieu :</span>{' '}
-                  {formData.location || '—'}
-                </div>
-                <div>
-                  <span className="text-stone-500">Dates :</span>{' '}
-                  {formData.startDate || '—'}
-                  {formData.dateMode === 'multi' ? ` → ${formData.endDate || '—'}` : ''}
-                </div>
-                <div>
-                  <span className="text-stone-500">Budget :</span>{' '}
-                  {summaryBudget || '—'}
-                </div>
-              </div>
-            </SoftCard>
+    <div className="min-h-screen bg-stone-100 pt-28 pb-20 px-4 md:px-8 lg:px-12">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <Marker className="mb-5 bg-stone-900" />
+            <h1 className="text-4xl md:text-5xl font-serif text-stone-900">
+              Soumettre une demande
+            </h1>
+            <p className="mt-3 max-w-2xl text-stone-600 text-base md:text-lg">
+              Un seul formulaire pour toutes les situations : remplacement ponctuel, dîner privé,
+              séjour, résidence ou mission plus longue.
+            </p>
           </div>
+
+          <StepBadge current={step} total={totalSteps} />
         </div>
 
-        {/* FORM */}
-        <div className="md:col-span-9 min-h-[500px] flex flex-col justify-between border-l border-stone-200/60 pl-0 md:pl-12">
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* STEP 1 */}
-            {step === 1 && (
+        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-6">
+            {step === 1 ? (
               <Reveal>
-                <div className="space-y-10">
-                  <h2 className="text-3xl font-serif text-stone-900">Contexte de la demande</h2>
-
-                  <SoftCard title="Vous êtes">
-                    <div className="flex gap-3 flex-wrap mt-3">
-                      {[
-                        { val: 'private', label: 'Client privé' },
-                        { val: 'concierge', label: 'Conciergerie / Agence' },
-                      ].map((opt) => (
-                        <button
-                          key={opt.val}
-                          type="button"
-                          onClick={() => setFormData((p) => ({ ...p, clientType: opt.val as any }))}
-                          className={`px-5 py-3 text-sm rounded-lg border transition-colors ${
-                            formData.clientType === opt.val
-                              ? 'border-stone-900 bg-stone-900 text-white'
-                              : 'border-stone-200 bg-white/70 text-stone-700 hover:border-stone-900'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </SoftCard>
-
-                  {formData.clientType === 'concierge' ? (
-                    <SoftCard title="Nom de la structure">
-                      <Input
-                        value={formData.companyName}
-                        onChange={(e) => setFormData((p) => ({ ...p, companyName: e.target.value }))}
-                        placeholder="Agence, conciergerie, family office..."
-                      />
-                    </SoftCard>
-                  ) : null}
-
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <SoftCard title="Lieu">
-                      <Input
-                        value={formData.location}
-                        onChange={(e) => setFormData((p) => ({ ...p, location: e.target.value }))}
-                        placeholder="Ville, pays, station, port..."
-                        autoFocus
-                      />
-                    </SoftCard>
-
-                    <SoftCard title="Type de besoin">
-                      <select
-                        value={formData.missionCategory}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            missionCategory: e.target.value as UnifiedRequestFormState['missionCategory'],
-                          }))
-                        }
-                        className="w-full h-14 rounded-lg bg-white/70 border border-stone-200 text-stone-800 px-4 focus:outline-none focus:border-stone-900"
-                      >
-                        <option value="single_service">Prestation ponctuelle</option>
-                        <option value="single_replacement">Remplacement ponctuel</option>
-                        <option value="residence">Séjour / résidence</option>
-                        <option value="yacht">Mission yacht</option>
-                      </select>
-                    </SoftCard>
-                  </div>
-
-                  <SoftCard title="Dates">
-                    <div className="flex gap-8 mb-6 flex-wrap">
-                      {[
-                        { val: 'single', label: 'Date unique' },
-                        { val: 'multi', label: 'Plusieurs jours' },
-                      ].map((m) => (
-                        <label key={m.val} className="flex items-center gap-3 cursor-pointer">
-                          <div
-                            className={`w-4 h-4 border flex items-center justify-center ${
-                              formData.dateMode === m.val ? 'border-stone-900' : 'border-stone-300'
-                            }`}
-                          >
-                            {formData.dateMode === m.val ? <div className="w-2 h-2 bg-stone-900" /> : null}
-                          </div>
-                          <span className="text-stone-700">{m.label}</span>
-                          <input
-                            type="radio"
-                            className="hidden"
-                            checked={formData.dateMode === m.val}
-                            onChange={() => setFormData((p) => ({ ...p, dateMode: m.val as any }))}
+                <SectionBlock
+                  title="Le cadre de la mission"
+                  subtitle="Commencez par le lieu, les dates et la nature du besoin."
+                >
+                  <div className="grid gap-6">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Vous êtes</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <ChoiceCard
+                            active={formData.clientType === 'private'}
+                            title="Client privé"
+                            onClick={() => setFormData((p) => ({ ...p, clientType: 'private' }))}
                           />
-                        </label>
-                      ))}
+                          <ChoiceCard
+                            active={formData.clientType === 'concierge'}
+                            title="Conciergerie"
+                            onClick={() => setFormData((p) => ({ ...p, clientType: 'concierge' }))}
+                          />
+                        </div>
+                      </div>
+
+                      {formData.clientType === 'concierge' ? (
+                        <div>
+                          <label className="mb-2 block text-sm text-stone-600">Nom de la structure</label>
+                          <Input
+                            value={formData.companyName}
+                            onChange={(e) => setFormData((p) => ({ ...p, companyName: e.target.value }))}
+                            placeholder="Agence, conciergerie, family office..."
+                          />
+                        </div>
+                      ) : <div />}
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <Input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))}
-                      />
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Lieu</label>
+                        <Input
+                          value={formData.location}
+                          onChange={(e) => setFormData((p) => ({ ...p, location: e.target.value }))}
+                          placeholder="Ville, pays, station, port..."
+                          autoFocus
+                        />
+                      </div>
 
-                      {formData.dateMode === 'multi' ? (
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Type de besoin</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <ChoiceCard
+                            active={formData.missionCategory === 'single_service'}
+                            title="Prestation"
+                            subtitle="Date unique"
+                            onClick={() =>
+                              setFormData((p) => ({ ...p, missionCategory: 'single_service', dateMode: 'single' }))
+                            }
+                          />
+                          <ChoiceCard
+                            active={formData.missionCategory === 'single_replacement'}
+                            title="Remplacement"
+                            subtitle="Ponctuel"
+                            onClick={() =>
+                              setFormData((p) => ({ ...p, missionCategory: 'single_replacement', dateMode: 'single' }))
+                            }
+                          />
+                          <ChoiceCard
+                            active={formData.missionCategory === 'residence'}
+                            title="Séjour / résidence"
+                            subtitle="Plusieurs jours"
+                            onClick={() =>
+                              setFormData((p) => ({ ...p, missionCategory: 'residence', dateMode: 'multi' }))
+                            }
+                          />
+                          <ChoiceCard
+                            active={formData.missionCategory === 'yacht'}
+                            title="Yacht"
+                            subtitle="Mission dédiée"
+                            onClick={() =>
+                              setFormData((p) => ({ ...p, missionCategory: 'yacht', dateMode: 'multi' }))
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Dates</label>
+                      <div className="mb-4 flex gap-3 flex-wrap">
+                        <ChoiceCard
+                          active={formData.dateMode === 'single'}
+                          title="Date unique"
+                          onClick={() => setFormData((p) => ({ ...p, dateMode: 'single', endDate: '' }))}
+                        />
+                        <ChoiceCard
+                          active={formData.dateMode === 'multi'}
+                          title="Plusieurs jours"
+                          onClick={() => setFormData((p) => ({ ...p, dateMode: 'multi' }))}
+                        />
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
                         <Input
                           type="date"
-                          value={formData.endDate || ''}
-                          onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))}
+                          value={formData.startDate}
+                          onChange={(e) => setFormData((p) => ({ ...p, startDate: e.target.value }))}
                         />
-                      ) : null}
+                        {formData.dateMode === 'multi' ? (
+                          <Input
+                            type="date"
+                            value={formData.endDate || ''}
+                            onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))}
+                          />
+                        ) : (
+                          <div />
+                        )}
+                      </div>
                     </div>
-                  </SoftCard>
-                </div>
+                  </div>
+                </SectionBlock>
               </Reveal>
-            )}
+            ) : null}
 
-            {/* STEP 2 */}
-            {step === 2 && (
+            {step === 2 ? (
               <Reveal>
-                <div className="space-y-10">
-                  <h2 className="text-3xl font-serif text-stone-900">Le service recherché</h2>
-
-                  <SoftCard title="Rythme de service">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {[
-                        { val: 'breakfast', label: 'Petit-déjeuner' },
-                        { val: 'lunch', label: 'Déjeuner' },
-                        { val: 'dinner', label: 'Dîner' },
-                        { val: 'breakfast_lunch', label: 'Petit-déjeuner + déjeuner' },
-                        { val: 'lunch_dinner', label: 'Déjeuner + dîner' },
-                        { val: 'full_time', label: 'Full time' },
-                      ].map((opt) => (
-                        <button
-                          key={opt.val}
-                          type="button"
-                          onClick={() =>
-                            setFormData((p) => ({
-                              ...p,
-                              mealPlan: opt.val as UnifiedRequestFormState['mealPlan'],
-                            }))
-                          }
-                          className={`h-14 text-left px-5 rounded-lg border transition-colors ${
-                            formData.mealPlan === opt.val
-                              ? 'bg-stone-900 text-white border-stone-900'
-                              : 'bg-white/70 text-stone-700 border-stone-200 hover:border-stone-900'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </SoftCard>
-
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <SoftCard title="Nombre de convives">
-                      <Input
-                        type="number"
-                        min={1}
-                        value={formData.guestCount ?? 0}
-                        onChange={(e) => {
-                          const n = parseNumberOrNull(e.target.value);
-                          setFormData((p) => ({
-                            ...p,
-                            guestCount: n ? Math.max(1, Math.floor(n)) : 0,
-                          }));
-                        }}
-                      />
-                    </SoftCard>
-
-                    <SoftCard title="Remplacement">
-                      <div className="flex gap-3 flex-wrap">
+                <SectionBlock
+                  title="Le service recherché"
+                  subtitle="Précisez le rythme, le volume et les préférences."
+                >
+                  <div className="grid gap-6">
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Rythme de service</label>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {[
-                          { val: 'no', label: 'Non' },
-                          { val: 'yes', label: 'Oui' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.val}
-                            type="button"
+                          ['breakfast', 'Petit-déjeuner'],
+                          ['lunch', 'Déjeuner'],
+                          ['dinner', 'Dîner'],
+                          ['breakfast_lunch', 'Petit-déjeuner + déjeuner'],
+                          ['lunch_dinner', 'Déjeuner + dîner'],
+                          ['full_time', 'Full time'],
+                        ].map(([val, label]) => (
+                          <ChoiceCard
+                            key={val}
+                            active={formData.mealPlan === val}
+                            title={label}
                             onClick={() =>
                               setFormData((p) => ({
                                 ...p,
-                                replacementNeeded: opt.val as 'yes' | 'no',
+                                mealPlan: val as UnifiedRequestFormState['mealPlan'],
                               }))
                             }
-                            className={`px-5 py-3 text-sm rounded-lg border transition-colors ${
-                              formData.replacementNeeded === opt.val
-                                ? 'border-stone-900 bg-stone-900 text-white'
-                                : 'border-stone-200 bg-white/70 text-stone-700 hover:border-stone-900'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
+                          />
                         ))}
                       </div>
-                    </SoftCard>
-                  </div>
+                    </div>
 
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <SoftCard title="Langues">
-                      <Input
-                        value={formData.preferredLanguage}
-                        onChange={(e) => setFormData((p) => ({ ...p, preferredLanguage: e.target.value }))}
-                        placeholder="FR, EN..."
-                      />
-                    </SoftCard>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Nombre de convives</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={formData.guestCount ?? 0}
+                          onChange={(e) => {
+                            const n = parseNumberOrNull(e.target.value);
+                            setFormData((p) => ({
+                              ...p,
+                              guestCount: n ? Math.max(1, Math.floor(n)) : 0,
+                            }));
+                          }}
+                        />
+                      </div>
 
-                    <SoftCard title="Budget indicatif">
-                      <div className="grid grid-cols-[1fr_auto] gap-3">
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Remplacement</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <ChoiceCard
+                            active={formData.replacementNeeded === 'no'}
+                            title="Non"
+                            onClick={() => setFormData((p) => ({ ...p, replacementNeeded: 'no' }))}
+                          />
+                          <ChoiceCard
+                            active={formData.replacementNeeded === 'yes'}
+                            title="Oui"
+                            onClick={() => setFormData((p) => ({ ...p, replacementNeeded: 'yes' }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Langues</label>
+                        <Input
+                          value={formData.preferredLanguage}
+                          onChange={(e) => setFormData((p) => ({ ...p, preferredLanguage: e.target.value }))}
+                          placeholder="FR, EN..."
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Budget indicatif</label>
+                      <div className="grid grid-cols-[1fr_130px] gap-3">
                         <Input
                           type="number"
                           min={0}
@@ -589,7 +582,6 @@ export default function RequestPage() {
                             }));
                           }}
                         />
-
                         <select
                           value={formData.budgetUnit}
                           onChange={(e) =>
@@ -598,70 +590,70 @@ export default function RequestPage() {
                               budgetUnit: e.target.value as 'total' | 'per_day',
                             }))
                           }
-                          className="h-14 rounded-lg bg-white/70 border border-stone-200 text-stone-800 px-4 focus:outline-none focus:border-stone-900"
+                          className="h-14 rounded-xl border border-stone-200 bg-white px-4 text-stone-800 focus:outline-none focus:border-stone-900"
                         >
                           <option value="total">Total</option>
                           <option value="per_day">/ jour</option>
                         </select>
                       </div>
-
-                      <p className="text-xs text-stone-500 italic mt-2">
-                        Sert à orienter la sélection de chefs. Stocké dans la demande.
+                      <p className="mt-2 text-xs text-stone-500">
+                        Cette information nous aide à proposer des profils cohérents.
                       </p>
-                    </SoftCard>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Style culinaire</label>
+                      <Textarea
+                        value={formData.cuisinePreferences}
+                        onChange={(e) => setFormData((p) => ({ ...p, cuisinePreferences: e.target.value }))}
+                        className="min-h-[120px]"
+                        placeholder="Cuisine méditerranéenne, italienne, healthy, festive..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Restrictions / allergies</label>
+                      <Input
+                        value={formData.dietaryRestrictions}
+                        onChange={(e) => setFormData((p) => ({ ...p, dietaryRestrictions: e.target.value }))}
+                        placeholder="Sans gluten, allergies, végétarien..."
+                      />
+                    </div>
                   </div>
-
-                  <SoftCard title="Style culinaire">
-                    <Textarea
-                      value={formData.cuisinePreferences}
-                      onChange={(e) => setFormData((p) => ({ ...p, cuisinePreferences: e.target.value }))}
-                      className="min-h-[110px]"
-                      placeholder="Cuisine méditerranéenne, healthy, italienne, festive..."
-                    />
-                  </SoftCard>
-
-                  <SoftCard title="Restrictions / allergies">
-                    <Input
-                      value={formData.dietaryRestrictions}
-                      onChange={(e) => setFormData((p) => ({ ...p, dietaryRestrictions: e.target.value }))}
-                      placeholder="Sans gluten, allergies, végétarien..."
-                    />
-                  </SoftCard>
-                </div>
+                </SectionBlock>
               </Reveal>
-            )}
+            ) : null}
 
-            {/* STEP 3 */}
-            {step === 3 && (
+            {step === 3 ? (
               <Reveal>
-                <div className="space-y-10">
-                  <h2 className="text-3xl font-serif text-stone-900">Vos coordonnées</h2>
-
-                  <SoftCard title="Notes complémentaires">
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-                      className="min-h-[140px]"
-                      placeholder="Décrivez ici tout contexte utile : style attendu, contraintes, résidence, timing précis, environnement, niveau d’autonomie, etc."
-                    />
-                  </SoftCard>
-
-                  <SoftCard title="Contact principal">
-                    <div className="space-y-5">
+                <SectionBlock
+                  title="Vos coordonnées"
+                  subtitle="Dernière étape pour nous permettre de vous recontacter."
+                >
+                  <div className="grid gap-6">
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Nom complet</label>
                       <Input
                         value={formData.fullName}
                         onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))}
                         placeholder="Nom complet"
                         autoFocus
                       />
+                    </div>
 
-                      <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Email</label>
                         <Input
                           type="email"
                           value={formData.email}
                           onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
                           placeholder="Email"
                         />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm text-stone-600">Téléphone</label>
                         <Input
                           type="tel"
                           value={formData.phone}
@@ -670,77 +662,88 @@ export default function RequestPage() {
                         />
                       </div>
                     </div>
-                  </SoftCard>
 
-                  <SoftCard title="Vérification">
-                    <div className="space-y-2 text-sm text-stone-700">
-                      <div>
-                        <span className="text-stone-500">Type :</span> {humanMissionCategory(formData.missionCategory)}
-                      </div>
-                      <div>
-                        <span className="text-stone-500">Service :</span> {humanMealPlan(formData.mealPlan)}
-                      </div>
-                      <div>
-                        <span className="text-stone-500">Lieu :</span> {formData.location || '—'}
-                      </div>
-                      <div>
-                        <span className="text-stone-500">Dates :</span> {formData.startDate || '—'}
-                        {formData.dateMode === 'multi' ? ` → ${formData.endDate || '—'}` : ''}
-                      </div>
-                      <div>
-                        <span className="text-stone-500">Convives :</span> {formData.guestCount ?? '—'}
-                      </div>
-                      <div>
-                        <span className="text-stone-500">Budget :</span> {buildBudgetRange(formData) || '—'}
-                      </div>
+                    <div>
+                      <label className="mb-2 block text-sm text-stone-600">Notes complémentaires</label>
+                      <Textarea
+                        value={formData.notes}
+                        onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+                        className="min-h-[140px]"
+                        placeholder="Timing précis, contexte, niveau d’autonomie attendu, environnement, préférences particulières..."
+                      />
                     </div>
-                  </SoftCard>
-                </div>
+                  </div>
+                </SectionBlock>
               </Reveal>
-            )}
-          </div>
-
-          {/* NAV */}
-          <div className="pt-14 mt-10 flex items-center justify-end gap-6 border-t border-stone-200/60">
-            {step > 1 ? (
-              <Button
-                type="button"
-                variant="link"
-                onClick={prevStep}
-                className="text-stone-600 hover:text-stone-900"
-              >
-                Revenir
-              </Button>
             ) : null}
 
-            {step < totalSteps ? (
-              <Button type="button" onClick={nextStep} className="w-40">
-                Continuer
-              </Button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting || !requiredState.ok}
-                className={`w-64 h-14 rounded-xl text-white transition ${
-                  isSubmitting || !requiredState.ok
-                    ? 'bg-stone-400 cursor-not-allowed'
-                    : 'bg-stone-900 hover:bg-black'
-                }`}
-                title={!requiredState.ok ? `Champs requis: ${requiredState.errors.join(', ')}` : undefined}
-              >
-                {isSubmitting ? 'Envoi...' : 'Soumettre la demande'}
-              </button>
-            )}
-          </div>
+            <div className="flex items-center justify-between gap-4 pt-2">
+              <div>
+                {step > 1 ? (
+                  <Button type="button" variant="link" onClick={prevStep} className="text-stone-600 hover:text-stone-900">
+                    Revenir
+                  </Button>
+                ) : null}
+              </div>
 
-          {!requiredState.ok && step === totalSteps ? (
-            <div className="text-right mt-3">
-              <p className="text-[11px] text-stone-500">
+              <div>
+                {step < totalSteps ? (
+                  <Button type="button" onClick={nextStep}>
+                    Continuer
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !requiredState.ok}
+                    className={`h-12 rounded-xl px-6 text-white transition ${
+                      isSubmitting || !requiredState.ok
+                        ? 'bg-stone-400 cursor-not-allowed'
+                        : 'bg-stone-900 hover:bg-black'
+                    }`}
+                    title={!requiredState.ok ? `Champs requis: ${requiredState.errors.join(', ')}` : undefined}
+                  >
+                    {isSubmitting ? 'Envoi...' : 'Soumettre la demande'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {!requiredState.ok ? (
+              <p className="text-right text-[11px] text-stone-500">
                 Champs requis manquants : {requiredState.errors.join(', ')}
               </p>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
+
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <Surface className="p-6">
+              <div className="mb-4">
+                <div className="text-[10px] uppercase tracking-[0.2em] text-stone-500">
+                  Résumé de la demande
+                </div>
+                <div className="mt-2 text-lg font-serif text-stone-900">
+                  {humanMissionCategory(formData.missionCategory)}
+                </div>
+              </div>
+
+              <div className="divide-y divide-stone-100">
+                <SummaryItem label="Type de client" value={formData.clientType === 'concierge' ? 'Conciergerie' : 'Client privé'} />
+                <SummaryItem label="Lieu" value={formData.location || '—'} />
+                <SummaryItem
+                  label="Dates"
+                  value={`${formData.startDate || '—'}${formData.dateMode === 'multi' ? ` → ${formData.endDate || '—'}` : ''}`}
+                />
+                <SummaryItem label="Service" value={humanMealPlan(formData.mealPlan)} />
+                <SummaryItem label="Convives" value={String(formData.guestCount ?? '—')} />
+                <SummaryItem label="Budget" value={summaryBudget || '—'} />
+              </div>
+
+              <div className="mt-6 rounded-xl bg-stone-50 p-4 text-sm text-stone-600">
+                Une fois envoyée, votre demande sera transmise à notre équipe et reliée à notre système de matching.
+              </div>
+            </Surface>
+          </div>
         </div>
       </div>
     </div>
