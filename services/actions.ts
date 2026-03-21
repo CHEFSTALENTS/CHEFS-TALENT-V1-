@@ -44,9 +44,15 @@ const toBudgetRangeText = (data: RequestForm): string | null => {
     return `${nNum} € / pers (hors frais de service)`;
   }
 
-  // concierge
-  const s = (data as any).budgetRange;
-  return toNullIfEmpty(s);
+  const explicitBudgetRange = (data as any).budgetRange;
+  if (explicitBudgetRange) return toNullIfEmpty(explicitBudgetRange);
+
+  const budgetAmount = toNumberOrNull((data as any).budgetAmount);
+  const budgetUnit = String((data as any).budgetUnit ?? '').trim();
+
+  if (budgetAmount === null) return null;
+  if (budgetUnit === 'per_day') return `${budgetAmount} € / jour`;
+  return `${budgetAmount} € total`;
 };
 
 // --------------------
@@ -54,11 +60,10 @@ const toBudgetRangeText = (data: RequestForm): string | null => {
 // --------------------
 
 export const submitRequest = async (data: RequestForm): Promise<FastMatchResult> => {
-  // 1) firstName depuis fullName
   const fullName = (data.fullName || '').trim();
   const firstName = fullName ? fullName.split(' ')[0] : undefined;
 
-  // 2) message lisible (brief)
+  // 1) message lisible (brief humain)
   const message =
     data.mode === 'fast'
       ? [
@@ -80,23 +85,29 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
           `Start: ${data.startDate}`,
           `End: ${(data as any).endDate || ''}`,
           `Assignation: ${(data as any).assignmentType || ''}`,
+          `Service: ${(data as any).serviceExpectations || ''}`,
+          `Rythme: ${(data as any).serviceRhythm || ''}`,
+          `Type de besoin: ${(data as any).missionCategory || ''}`,
+          `Meal plan: ${(data as any).mealPlan || ''}`,
+          `Remplacement: ${(data as any).replacementNeeded || ''}`,
           `Convives: ${data.guestCount}`,
-          `Budget: ${(data as any).budgetRange || ''}`,
+          `Budget: ${toBudgetRangeText(data) || ''}`,
           `Notes: ${(data as any).notes || ''}`,
           `Téléphone: ${data.phone || ''}`,
-        `Langues: ${(data as any).preferredLanguage ?? ''}`,
-`Restrictions: ${(data as any).dietaryRestrictions ?? ''}`,
-`Cuisine: ${(data as any).cuisinePreferences ?? ''}`,
+          `Langues: ${(data as any).preferredLanguage ?? ''}`,
+          `Restrictions: ${(data as any).dietaryRestrictions ?? ''}`,
+          `Cuisine: ${(data as any).cuisinePreferences ?? ''}`,
         ]
           .filter(Boolean)
           .join('\n');
 
-  // 3) payload structuré (⚠️ dates safe)
-    const payload = {
+  // 2) payload structuré
+  const payload = {
     email: toNullIfEmpty(data.email),
+    fullName: toNullIfEmpty(fullName),
     firstName: toNullIfEmpty(firstName),
 
-    matchType: data.mode,
+    matchType: toNullIfEmpty(data.mode),
     message: toNullIfEmpty(message),
 
     phone: toNullIfEmpty((data as any).phone),
@@ -108,33 +119,39 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
 
     startDate: toISODateOrNull((data as any).startDate),
     endDate: toISODateOrNull((data as any).endDate),
+    dateMode: toNullIfEmpty((data as any).dateMode),
 
     guestCount: toNumberOrNull((data as any).guestCount),
 
     budgetRange: toBudgetRangeText(data),
+    budgetAmount: toNumberOrNull((data as any).budgetAmount),
+    budgetUnit: toNullIfEmpty((data as any).budgetUnit),
 
     assignmentType: toNullIfEmpty((data as any).assignmentType),
+    serviceExpectations: toNullIfEmpty((data as any).serviceExpectations),
+    serviceRhythm: toNullIfEmpty((data as any).serviceRhythm),
 
-    // ✅ AJOUTS : CE SONT EUX QUI REMPLISSENT TES COLONNES
-    // On supporte string OU array (ton backend joinIfArray gère les deux)
+    missionCategory: toNullIfEmpty((data as any).missionCategory),
+    mealPlan: toNullIfEmpty((data as any).mealPlan),
+    replacementNeeded: toNullIfEmpty((data as any).replacementNeeded),
+
     preferredLanguage:
       data.mode === 'concierge'
-        ? ((data as any).preferredLanguage ?? (data as any).languages ?? (data as any).language)
+        ? ((data as any).preferredLanguage ?? (data as any).languages ?? (data as any).language ?? null)
         : null,
 
     dietaryRestrictions:
       data.mode === 'concierge'
-        ? ((data as any).dietaryRestrictions ?? (data as any).restrictions ?? (data as any).allergies)
+        ? ((data as any).dietaryRestrictions ?? (data as any).restrictions ?? (data as any).allergies ?? null)
         : null,
 
     cuisinePreferences:
       data.mode === 'concierge'
-        ? ((data as any).cuisinePreferences ?? (data as any).cuisineStyle ?? (data as any).cuisines)
+        ? ((data as any).cuisinePreferences ?? (data as any).cuisineStyle ?? (data as any).cuisines ?? null)
         : null,
-  };
 
-  // (optionnel) garde-fou: si fast => endDate null ok, si startDate null => laisse passer mais tu verras "—"
-  // if (data.mode === 'fast' && !payload.startDate) throw new Error('Start date required');
+    notes: toNullIfEmpty((data as any).notes),
+  };
 
   const r = await fetch('/api/request', {
     method: 'POST',
@@ -150,7 +167,6 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
 
   const json = (await r.json().catch(() => ({}))) as { ok?: boolean; requestId?: string };
 
-  // 4) retour UI
   if (data.mode === 'fast') {
     return {
       success: true,
@@ -207,7 +223,6 @@ export const submitChefApplication = async (data: ChefApplicationForm) => {
 // --------------------
 
 export const boListRequests = async (): Promise<any[]> => {
-  // si encore utilisé: renvoie direct ce que retourne l'API storage
   return (await api.getRequests()) ?? [];
 };
 
