@@ -20,7 +20,7 @@ const toStr = (x: any) => {
 const joinIfArray = (v: any): string | null => {
   if (v === null || v === undefined) return null;
   if (Array.isArray(v)) {
-    const cleaned = v.map(toStr).map(s => s.trim()).filter(Boolean);
+    const cleaned = v.map(toStr).map((s) => s.trim()).filter(Boolean);
     return cleaned.length ? cleaned.join(', ') : null;
   }
   const s = toStr(v).trim();
@@ -29,7 +29,13 @@ const joinIfArray = (v: any): string | null => {
 
 const intOrNull = (v: any): number | null => {
   if (v === null || v === undefined || v === '') return null;
-  const n = Number(String(v).replace(/[^\d]/g, ''));
+  const n = Number(String(v).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+};
+
+const numberOrNull = (v: any): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
 
@@ -49,11 +55,13 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // champs normalisés (existants)
     const email = strOrNull(body.email);
     const firstName = strOrNull(body.firstName);
-    const matchType = strOrNull(body.matchType); // 'fast' | 'concierge'
+    const fullName = strOrNull(body.fullName);
+
+    const matchType = strOrNull(body.matchType ?? body.mode);
     const message = strOrNull(body.message);
+    const notes = strOrNull(body.notes);
 
     const phone = strOrNull(body.phone);
     const clientType = strOrNull(body.clientType);
@@ -62,23 +70,22 @@ export async function POST(req: Request) {
 
     const start_date = dateOrNull(body.startDate);
     const end_date = dateOrNull(body.endDate);
+    const date_mode = strOrNull(body.dateMode);
 
     const guest_count = intOrNull(body.guestCount);
+
     const budget_range = strOrNull(body.budgetRange);
+    const budget_amount = numberOrNull(body.budgetAmount);
+    const budget_unit = strOrNull(body.budgetUnit);
+
     const assignment_type = strOrNull(body.assignmentType);
+    const service_expectations = strOrNull(body.serviceExpectations);
+    const service_rhythm = strOrNull(body.serviceRhythm);
 
-    if (!email) {
-      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
-    }
-    if (matchType !== 'fast' && matchType !== 'concierge') {
-      return NextResponse.json({ error: 'Invalid matchType' }, { status: 400 });
-    }
+    const mission_category = strOrNull(body.missionCategory);
+    const meal_plan = strOrNull(body.mealPlan);
+    const replacement_needed = strOrNull(body.replacementNeeded);
 
-    // ✅ NOUVEAUX champs (tolérant sur la forme du payload)
-    // On accepte:
-    // - camelCase: preferredLanguage, dietaryRestrictions, cuisinePreferences
-    // - snake_case: preferred_language, dietary_restrictions, cuisine_preferences
-    // - nested: preferences.languages / preferences.allergies / preferences.cuisine
     const preferred_language = joinIfArray(
       body.preferredLanguage ??
         body.preferred_language ??
@@ -113,33 +120,56 @@ export async function POST(req: Request) {
         body.preferences?.cuisines
     );
 
-    // 1) Insert (✅ une seule fois chaque champ)
+    if (!email) {
+      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+    }
+
+    if (matchType !== 'fast' && matchType !== 'concierge') {
+      return NextResponse.json({ error: 'Invalid matchType' }, { status: 400 });
+    }
+
+    const insertRow = {
+      email,
+      first_name: firstName,
+      full_name: fullName,
+
+      match_type: matchType,
+      status: 'new',
+
+      message,
+      notes,
+
+      phone,
+      client_type: clientType,
+      company_name: companyName,
+      location,
+
+      start_date,
+      end_date,
+      date_mode,
+
+      guest_count,
+
+      budget_range,
+      budget_amount,
+      budget_unit,
+
+      assignment_type,
+      service_expectations,
+      service_rhythm,
+
+      mission_category,
+      meal_plan,
+      replacement_needed,
+
+      preferred_language,
+      dietary_restrictions,
+      cuisine_preferences,
+    };
+
     const { data, error } = await supabase
       .from('client_requests')
-      .insert({
-        email,
-        first_name: firstName,
-        match_type: matchType,
-        message,
-        status: 'new',
-
-        client_type: clientType,
-        company_name: companyName,
-        location,
-
-        start_date,
-        end_date,
-
-        guest_count,
-        budget_range,
-        assignment_type,
-        phone,
-
-        // ✅ champs concierge (peuvent être null, ok)
-        preferred_language,
-        dietary_restrictions,
-        cuisine_preferences,
-      })
+      .insert(insertRow)
       .select('id')
       .single();
 
@@ -149,13 +179,14 @@ export async function POST(req: Request) {
         details: (error as any).details,
         hint: (error as any).hint,
         code: (error as any).code,
+        insertRow,
       });
+
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     const requestId = data.id as string;
 
-    // 2) Emails (non bloquants)
     let clientEmailOk = false;
     let internalEmailOk = false;
 
@@ -176,7 +207,7 @@ export async function POST(req: Request) {
         matchType: matchType as any,
         email,
         firstName: firstName ?? undefined,
-        message: message ?? undefined,
+        message: message ?? notes ?? undefined,
         createdAtISO: new Date().toISOString(),
       });
       internalEmailOk = true;
@@ -184,7 +215,6 @@ export async function POST(req: Request) {
       console.error('[sendInternalNewRequest error]', e);
     }
 
-    // 3) Update logs
     const patch: Record<string, any> = {};
     if (clientEmailOk) patch.email_sent_at = new Date().toISOString();
     if (internalEmailOk) patch.internal_email_sent_at = new Date().toISOString();
