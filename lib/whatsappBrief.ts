@@ -4,7 +4,6 @@ import type { RequestEntity } from '@/types';
 const nl = '\n';
 
 type BriefOptions = {
-  /** SAFE par défaut: pas d’emoji */
   emojis?: boolean;
 };
 
@@ -32,9 +31,26 @@ function formatDates(r: RequestEntity) {
   return null;
 }
 
+function humanMissionType(v?: string | null) {
+  if (!v) return null;
+  if (v === 'daily') return 'Présence quotidienne';
+  if (v === 'event') return 'Événement';
+  if (v === 'residence') return 'Résidence';
+  if (v === 'yacht') return 'Yacht';
+  if (v === 'dinner') return 'Dîner privé';
+  return v;
+}
+
+function humanServiceLevel(v?: string | null) {
+  if (!v) return null;
+  if (v === 'chef_only') return 'Chef uniquement';
+  if (v === 'full_team') return 'Full time';
+  return v;
+}
+
 /**
- * Supprime du texte les infos sensibles (tél/email/contacts).
- * -> On retire les lignes qui contiennent des mots-clés ou des patterns.
+ * Extrait uniquement les vraies notes utiles au chef,
+ * en supprimant les lignes techniques / doublons / contacts.
  */
 function sanitizeBriefText(input?: string | null) {
   const raw = clean(input);
@@ -42,75 +58,94 @@ function sanitizeBriefText(input?: string | null) {
 
   const lines = raw.split(/\r?\n/);
 
-  const looksLikePhone = (s: string) =>
-    /(\+?\d[\d\s().-]{7,}\d)/.test(s); // pattern simple
-
+  const looksLikePhone = (s: string) => /(\+?\d[\d\s().-]{7,}\d)/.test(s);
   const looksLikeEmail = (s: string) =>
     /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(s);
 
-  const hasSensitiveKeyword = (s: string) =>
-    /tél|tel|téléphone|phone|whatsapp|email|mail|conciergerie|contact|client|société|company/i.test(s);
+  const blockedPrefixes = [
+    'mode:',
+    'clienttype:',
+    'client type:',
+    'société:',
+    'societe:',
+    'company:',
+    'contact:',
+    'email:',
+    'mail:',
+    'téléphone:',
+    'telephone:',
+    'phone:',
+    'whatsapp:',
+    'lieu:',
+    'start:',
+    'end:',
+    'dates:',
+    'assignation:',
+    'mission:',
+    'service:',
+    'rythme:',
+    'meal plan:',
+    'replacement:',
+    'convives:',
+    'budget:',
+    'langues:',
+    'restrictions:',
+    'cuisine:',
+  ];
 
   const filtered = lines.filter((l) => {
     const s = l.trim();
-    if (!s) return true;
+    if (!s) return false;
+    const lower = s.toLowerCase();
+
     if (looksLikeEmail(s)) return false;
     if (looksLikePhone(s)) return false;
-    if (hasSensitiveKeyword(s)) return false;
+    if (blockedPrefixes.some((prefix) => lower.startsWith(prefix))) return false;
+
     return true;
   });
 
-  // Nettoyage: enlever les multiples lignes vides
-  const compact: string[] = [];
-  for (const l of filtered) {
-    const t = l.trimEnd();
-    if (!t && compact.length && !compact[compact.length - 1]) continue;
-    compact.push(t);
-  }
-
-  const out = compact.join(nl).trim();
+  const out = filtered.join(nl).trim();
   return out || null;
 }
 
-/**
- * ✅ Message envoyé au Chef (aucun contact, emojis OFF par défaut, notes nettoyées)
- */
-export function buildWhatsappBriefForChef(r: RequestEntity, opts: BriefOptions = {}) {
-  const emojis = opts.emojis === true; // default false (SAFE)
+export function buildWhatsappBriefForChef(
+  r: RequestEntity,
+  opts: BriefOptions = {}
+) {
+  const emojis = opts.emojis === true;
 
   const E = {
-    header: emojis ? 'DEMANDE CHEF PRIVÉ — CHEF TALENTS' : 'DEMANDE CHEF PRIVÉ — CHEF TALENTS',
+    header: emojis ? '👨‍🍳 DEMANDE CHEF PRIVÉ — CHEF TALENTS' : 'DEMANDE CHEF PRIVÉ — CHEF TALENTS',
+    mission: emojis ? 'Mission :' : 'Mission :',
     loc: emojis ? 'Lieu :' : 'Lieu :',
     dates: emojis ? 'Dates :' : 'Dates :',
     pax: emojis ? 'Convives :' : 'Convives :',
-    mission: emojis ? 'Mission :' : 'Mission :',
     service: emojis ? 'Service :' : 'Service :',
     budget: emojis ? 'Budget :' : 'Budget :',
-    cuisine: emojis ? 'Style culinaire :' : 'Style culinaire :',
-    allergies: emojis ? 'Restrictions / allergies :' : 'Restrictions / allergies :',
-    languages: emojis ? 'Langues souhaitées :' : 'Langues souhaitées :',
-    brief: emojis ? 'Brief :' : 'Brief :',
+    cuisine: emojis ? 'Cuisine :' : 'Cuisine :',
+    allergies: emojis ? 'Restrictions :' : 'Restrictions :',
+    languages: emojis ? 'Langues :' : 'Langues :',
+    notes: emojis ? 'Notes :' : 'Notes :',
   };
 
-  const top = joinLines([
+  const summaryBlock = joinLines([
+    line(E.mission, humanMissionType(r.missionType)),
     line(E.loc, r.location),
     line(E.dates, formatDates(r)),
     line(E.pax, r.guestCount ? `${r.guestCount} pers` : null),
-    line(E.mission, r.missionType || null),
-    line(E.service, r.serviceLevel || null),
+    line(E.service, humanServiceLevel(r.serviceLevel)),
     line(E.budget, r.budgetRange || null),
   ]);
 
   const prefsBlock = joinLines([
-    clean(r.preferences?.cuisine) ? `${E.cuisine}${nl}${r.preferences?.cuisine}` : null,
-    clean(r.preferences?.allergies) ? `${E.allergies}${nl}${r.preferences?.allergies}` : null,
-    clean(r.preferences?.languages) ? `${E.languages}${nl}${r.preferences?.languages}` : null,
+    line(E.cuisine, r.preferences?.cuisine || null),
+    line(E.allergies, r.preferences?.allergies || null),
+    line(E.languages, r.preferences?.languages || null),
   ]);
 
-  // ✅ notes nettoyées (enlève téléphone/email/conciergerie/etc)
   const safeNotes = sanitizeBriefText(r.notes);
-
-  const notesBlock = safeNotes ? `${E.brief}${nl}${safeNotes}` : null;
+  const notesBlock = safeNotes ? `${E.notes}${nl}${safeNotes}` : null;
 
   const footer = joinLines([
     `Votre profil a retenu toute notre attention pour cette demande.`,
@@ -127,7 +162,7 @@ export function buildWhatsappBriefForChef(r: RequestEntity, opts: BriefOptions =
   return joinLines([
     E.header,
     '—',
-    top,
+    summaryBlock,
     prefsBlock ? `—${nl}${prefsBlock}` : null,
     notesBlock ? `—${nl}${notesBlock}` : null,
     '—',
@@ -135,10 +170,6 @@ export function buildWhatsappBriefForChef(r: RequestEntity, opts: BriefOptions =
   ]);
 }
 
-/**
- * Ouvre WhatsApp Business si possible, sinon fallback.
- * (Sur desktop, business:// ne marche pas => fallback wa.me)
- */
 export function openWhatsappWithText(text: string, phoneE164?: string | null) {
   const encoded = encodeURIComponent(text);
   const digits = phoneE164 ? phoneE164.replace(/\D/g, '') : null;
