@@ -144,7 +144,7 @@ function getServiceRhythm(formData: UnifiedRequestFormState) {
   if (formData.mealPlan === 'lunch') return 'daily';
   if (formData.mealPlan === 'dinner') return 'daily';
   return 'daily';
-}
+
 }
 
 function getServiceExpectations(formData: UnifiedRequestFormState) {
