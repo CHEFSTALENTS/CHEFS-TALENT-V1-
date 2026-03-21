@@ -292,27 +292,58 @@ export default function RequestPage() {
   }, [formData, step]);
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
+  setIsSubmitting(true);
 
-    try {
-      const payload: any = {
-        ...formData,
-        mode: 'concierge',
-        assignmentType: getAssignmentType(formData),
-        serviceRhythm: getServiceRhythm(formData),
-        budgetRange: buildBudgetRange(formData),
-        notes: buildStructuredNotes(formData),
-        serviceExpectations: formData.serviceExpectations || 'chef_only',
-      };
+  try {
+    const payload: any = {
+      ...formData,
 
-      const response = await submitRequest(payload);
-      if (response?.success) setResult(response);
-    } catch (error) {
-      console.error('Error submitting request', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      // logique unique
+      mode: 'concierge',
+
+      // champs structurés utiles à l’admin + matching
+      assignmentType: getAssignmentType(formData),
+      serviceRhythm: getServiceRhythm(formData),
+      serviceExpectations:
+        formData.mealPlan === 'full_time' ? 'full_team' : 'chef_only',
+
+      budgetRange: buildBudgetRange(formData),
+
+      // important : garder les champs natifs bien remplis
+      location: formData.location,
+      startDate: formData.startDate,
+      endDate: formData.dateMode === 'multi' ? formData.endDate : '',
+      dateMode: formData.dateMode,
+      guestCount: Number(formData.guestCount || 0),
+
+      cuisinePreferences: formData.cuisinePreferences || '',
+      dietaryRestrictions: formData.dietaryRestrictions || '',
+      preferredLanguage: formData.preferredLanguage || '',
+
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      companyName: formData.companyName || '',
+
+      // nouveaux champs métier
+      missionCategory: formData.missionCategory,
+      mealPlan: formData.mealPlan,
+      replacementNeeded: formData.replacementNeeded,
+      budgetAmount: formData.budgetAmount,
+      budgetUnit: formData.budgetUnit,
+
+      // résumé humain lisible
+      notes: buildStructuredNotes(formData),
+    };
+
+    const response = await submitRequest(payload);
+    if (response?.success) setResult(response);
+  } catch (error) {
+    console.error('Error submitting request', error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (result) {
     return (
