@@ -12,7 +12,8 @@ type ChefPoint = {
   email: string;
   avatarUrl?: string | null;
   baseCity: string;
- 
+  lat: number;
+  lng: number;
 };
 
 function spreadOverlappingPoints(items: ChefPoint[]) {
