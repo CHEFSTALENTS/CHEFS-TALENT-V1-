@@ -127,8 +127,10 @@ export async function GET() {
     });
 
     // uniquement actifs
-    const rows = allRows.filter((r) => r.status === 'active' && !!r.query);
-
+const rows = allRows.filter((r) => {
+  const s = String(r.status || '').toLowerCase();
+  return (s === 'active' || s === 'approved') && !!r.query;
+});
     const queries = Array.from(new Set(rows.map((r) => r.query)));
 
     const { data: cached } = await supabase
