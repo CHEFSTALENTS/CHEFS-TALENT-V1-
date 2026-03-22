@@ -2,10 +2,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import ChefProfileClient from './ui';
-import { useParams } from 'next/navigation';
-
-const params = useParams();
-const chefId = params.id;
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -44,12 +40,7 @@ async function getChefByProfileId(profileId: string) {
   return data as null | { email: string | null; profile: any };
 }
 
-/**
- * Missions: on essaye plusieurs schémas courants.
- * Ajuste ensuite la requête quand tu me confirmes le nom exact de ta table/colonnes.
- */
 async function getChefMissions(profileId: string, chefEmail?: string | null) {
-  // 1) table missions (chef_id)
   {
     const { data, error } = await supabase
       .from('missions')
@@ -60,7 +51,6 @@ async function getChefMissions(profileId: string, chefEmail?: string | null) {
     if (!error && data) return data as MissionRow[];
   }
 
-  // 2) table proposals (chef_id)
   {
     const { data, error } = await supabase
       .from('proposals')
@@ -71,7 +61,6 @@ async function getChefMissions(profileId: string, chefEmail?: string | null) {
     if (!error && data) return data as MissionRow[];
   }
 
-  // fallback
   return [] as MissionRow[];
 }
 
