@@ -12,9 +12,43 @@ type ChefPoint = {
   email: string;
   avatarUrl?: string | null;
   baseCity: string;
-  lat: number;
-  lng: number;
+ 
 };
+
+function spreadOverlappingPoints(items: ChefPoint[]) {
+  const groups = new Map<string, ChefPoint[]>();
+
+  for (const item of items) {
+    const key = `${item.lat.toFixed(6)}_${item.lng.toFixed(6)}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(item);
+  }
+
+  const result: ChefPoint[] = [];
+
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+
+    const radius = 0.00018;
+
+    group.forEach((item, index) => {
+      const angle = (Math.PI * 2 * index) / group.length;
+      const latOffset = Math.sin(angle) * radius;
+      const lngOffset = Math.cos(angle) * radius;
+
+      result.push({
+        ...item,
+        lat: item.lat + latOffset,
+        lng: item.lng + lngOffset,
+      });
+    });
+  }
+
+  return result;
+}
 
 export default function AdminMapPage() {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
