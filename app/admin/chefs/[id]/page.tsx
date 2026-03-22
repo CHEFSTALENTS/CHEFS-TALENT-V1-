@@ -2,6 +2,10 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import ChefProfileClient from './ui';
+import { useParams } from 'next/navigation';
+
+const params = useParams();
+const chefId = params.id;
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
