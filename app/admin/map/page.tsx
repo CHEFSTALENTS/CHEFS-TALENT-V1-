@@ -16,39 +16,41 @@ type ChefPoint = {
   lng: number;
 };
 
-function spreadOverlappingPoints(items: ChefPoint[]) {
-  const groups = new Map<string, ChefPoint[]>();
+type GroupedPoint = {
+  key: string;
+  lat: number;
+  lng: number;
+  chefs: ChefPoint[];
+};
+
+function groupChefsByCoords(items: ChefPoint[]): GroupedPoint[] {
+  const groups = new Map<string, GroupedPoint>();
 
   for (const item of items) {
-    const key = `${item.lat.toFixed(6)}_${item.lng.toFixed(6)}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(item);
-  }
-
-  const result: ChefPoint[] = [];
-
-  for (const group of groups.values()) {
-    if (group.length === 1) {
-      result.push(group[0]);
+    if (
+      typeof item.lat !== 'number' ||
+      typeof item.lng !== 'number' ||
+      Number.isNaN(item.lat) ||
+      Number.isNaN(item.lng)
+    ) {
       continue;
     }
 
-    const radius = 0.00018;
+    const key = `${item.lat.toFixed(6)}_${item.lng.toFixed(6)}`;
 
-    group.forEach((item, index) => {
-      const angle = (Math.PI * 2 * index) / group.length;
-      const latOffset = Math.sin(angle) * radius;
-      const lngOffset = Math.cos(angle) * radius;
-
-      result.push({
-        ...item,
-        lat: item.lat + latOffset,
-        lng: item.lng + lngOffset,
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        lat: item.lat,
+        lng: item.lng,
+        chefs: [],
       });
-    });
+    }
+
+    groups.get(key)!.chefs.push(item);
   }
 
-  return result;
+  return Array.from(groups.values());
 }
 
 export default function AdminMapPage() {
@@ -58,11 +60,9 @@ export default function AdminMapPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ChefPoint[]>([]);
 
-  // ✅ token public côté client
   (mapboxgl as any).accessToken =
     process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_PUBLIC_TOKEN || '';
 
-  // fetch points
   useEffect(() => {
     let cancelled = false;
 
@@ -88,7 +88,6 @@ export default function AdminMapPage() {
     };
   }, []);
 
-  // init map once
   useEffect(() => {
     if (!mapDivRef.current) return;
     if (mapRef.current) return;
@@ -96,7 +95,7 @@ export default function AdminMapPage() {
     const map = new mapboxgl.Map({
       container: mapDivRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [2.35, 48.86], // Paris
+      center: [2.35, 48.86],
       zoom: 4,
     });
 
@@ -109,96 +108,136 @@ export default function AdminMapPage() {
     };
   }, []);
 
-  function openChef(chefId: string) {
-    // ✅ si tu as une page détail:
-    window.location.href = `/admin/chefs/${encodeURIComponent(chefId)}`;
+  function createGroupedMarkerEl(group: GroupedPoint) {
+    const count = group.chefs.length;
+    const firstChef = group.chefs[0];
 
-    // 🔁 fallback si pas de page détail:
-    // window.location.href = `/admin/chefs?chefId=${encodeURIComponent(chefId)}`;
-  }
-
-  function createChefMarkerEl(chef: ChefPoint) {
     const el = document.createElement('div');
-    el.style.width = '34px';
-    el.style.height = '34px';
+    el.style.width = count > 1 ? '42px' : '34px';
+    el.style.height = count > 1 ? '42px' : '34px';
     el.style.borderRadius = '999px';
-    el.style.border = '2px solid rgba(255,255,255,0.85)';
+    el.style.border = '2px solid rgba(255,255,255,0.9)';
     el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
     el.style.cursor = 'pointer';
+    el.style.position = 'relative';
+    el.style.overflow = 'hidden';
 
-    el.style.background = chef.avatarUrl
-      ? `url(${chef.avatarUrl}) center/cover no-repeat`
+    el.style.background = firstChef?.avatarUrl
+      ? `url(${firstChef.avatarUrl}) center/cover no-repeat`
       : 'rgba(255,255,255,0.12)';
 
-    // ✅ clic => ouvrir fiche
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openChef(chef.id);
-    });
+    if (count > 1) {
+      const badge = document.createElement('div');
+      badge.innerText = String(count);
+      badge.style.position = 'absolute';
+      badge.style.right = '-2px';
+      badge.style.bottom = '-2px';
+      badge.style.minWidth = '20px';
+      badge.style.height = '20px';
+      badge.style.padding = '0 5px';
+      badge.style.borderRadius = '999px';
+      badge.style.background = '#ffffff';
+      badge.style.color = '#000000';
+      badge.style.fontSize = '11px';
+      badge.style.fontWeight = '700';
+      badge.style.display = 'flex';
+      badge.style.alignItems = 'center';
+      badge.style.justifyContent = 'center';
+      badge.style.border = '1px solid rgba(0,0,0,0.1)';
+      el.appendChild(badge);
+    }
 
     return el;
   }
 
-  // render markers when items change
+  function buildPopupHtml(group: GroupedPoint) {
+    const title =
+      group.chefs.length > 1
+        ? `${group.chefs.length} chefs — ${escapeHtml(group.chefs[0]?.baseCity || 'Lieu')}`
+        : `${escapeHtml(group.chefs[0]?.name || 'Chef')}`;
+
+    const rows = group.chefs
+      .map((chef) => {
+        const avatar = chef.avatarUrl
+          ? `<img src="${escapeHtmlAttr(chef.avatarUrl)}" style="width:34px;height:34px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,0.08);" />`
+          : `<div style="width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.08);"></div>`;
+
+        return `
+          <a
+            href="/admin/chefs/${encodeURIComponent(chef.id)}"
+            style="
+              display:flex;
+              align-items:center;
+              gap:10px;
+              padding:10px 0;
+              text-decoration:none;
+              color:inherit;
+              border-top:1px solid rgba(255,255,255,0.08);
+            "
+          >
+            ${avatar}
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:600;line-height:1.2;color:#fff;">
+                ${escapeHtml(chef.name)}
+              </div>
+              <div style="font-size:11px;opacity:.7;line-height:1.2;margin-top:3px;color:#cfcfcf;">
+                ${escapeHtml(chef.email || '')}
+              </div>
+            </div>
+          </a>
+        `;
+      })
+      .join('');
+
+    return `
+      <div style="min-width:260px;max-width:320px;font-family:Inter,system-ui,sans-serif;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#fff;">
+          ${title}
+        </div>
+        ${
+          group.chefs.length > 1
+            ? `<div style="font-size:11px;opacity:.7;margin-bottom:8px;color:#cfcfcf;">Cliquez sur un profil</div>`
+            : `<div style="font-size:11px;opacity:.7;margin-bottom:8px;color:#cfcfcf;">${escapeHtml(group.chefs[0]?.baseCity || '')}</div>`
+        }
+        <div>
+          ${rows}
+        </div>
+      </div>
+    `;
+  }
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // cleanup previous markers
     for (const m of markersRef.current) m.remove();
     markersRef.current = [];
 
     if (!items.length) return;
 
+    const grouped = groupChefsByCoords(items);
+    if (!grouped.length) return;
+
     const bounds = new mapboxgl.LngLatBounds();
 
-    for (const chef of items) {
-      if (
-        typeof chef.lat !== 'number' ||
-        typeof chef.lng !== 'number' ||
-        Number.isNaN(chef.lat) ||
-        Number.isNaN(chef.lng)
-      ) {
-        continue;
-      }
+    for (const group of grouped) {
+      bounds.extend([group.lng, group.lat]);
 
-      bounds.extend([chef.lng, chef.lat]);
-
-      const el = createChefMarkerEl(chef);
-
-      // ✅ popup optionnel (tu peux enlever si tu veux “full click”)
-      const popup = new mapboxgl.Popup({ offset: 16 }).setHTML(`
-        <div style="min-width:220px; font-size:12px">
-          <div style="font-weight:600; margin-bottom:4px">${escapeHtml(chef.name)}</div>
-          <div style="opacity:.75">${escapeHtml(chef.baseCity)}</div>
-          ${chef.email ? `<div style="opacity:.6;margin-top:6px">${escapeHtml(chef.email)}</div>` : ''}
-          <div style="margin-top:10px; opacity:.85; text-decoration:underline">
-            Ouvrir fiche →
-          </div>
-        </div>
-      `);
+      const el = createGroupedMarkerEl(group);
+      const popup = new mapboxgl.Popup({ offset: 16 }).setHTML(buildPopupHtml(group));
 
       const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([chef.lng, chef.lat])
+        .setLngLat([group.lng, group.lat])
         .setPopup(popup)
         .addTo(map);
-
-      // ✅ aussi possible: ouvrir la fiche si on clique la popup
-      marker.getElement().addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openChef(chef.id);
-      });
 
       markersRef.current.push(marker);
     }
 
-    // fit bounds
-    if (items.length >= 2) {
+    if (grouped.length >= 2) {
       map.fitBounds(bounds, { padding: 70, maxZoom: 7 });
     } else {
-      const c = items[0];
+      const c = grouped[0];
       map.flyTo({ center: [c.lng, c.lat], zoom: 7 });
     }
   }, [items]);
@@ -209,7 +248,7 @@ export default function AdminMapPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Carte des chefs</h1>
           <p className="text-sm text-white/50 mt-1">
-            {loading ? 'Chargement…' : `${items.length} chef(s) affiché(s)`}
+            {loading ? 'Chargement…' : `${items.length} chef(s) géolocalisé(s)`}
           </p>
         </div>
       </div>
@@ -218,7 +257,9 @@ export default function AdminMapPage() {
         <div ref={mapDivRef} style={{ height: 600, width: '100%' }} />
       </div>
 
-      <div className="text-xs text-white/40">Source: chef_profiles + geo_cache (Mapbox geocoding)</div>
+      <div className="text-xs text-white/40">
+        Source: chef_profiles + geo_cache (Mapbox geocoding)
+      </div>
     </div>
   );
 }
@@ -230,4 +271,8 @@ function escapeHtml(s: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function escapeHtmlAttr(s: string) {
+  return escapeHtml(s);
 }
