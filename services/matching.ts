@@ -5,7 +5,7 @@ export type MatchConfidence = 'high' | 'medium' | 'low';
 
 export type MatchedChefV2 = {
   chef: ChefUser;
-  fitScore: number;
+  fitScore: number; // toujours 0..100
   confidence: MatchConfidence;
   reasons: string[];
   locationPriority: number;
@@ -58,6 +58,7 @@ function getChefLocation(chef: ChefUser) {
   const loc = p.location ?? p.profile?.location ?? {};
 
   const baseCity = norm(loc.baseCity ?? p.baseCity ?? p.city ?? p.ville ?? '');
+
   const coverageZonesRaw = loc.coverageZones ?? p.coverageZones ?? [];
   const coverageZones = Array.isArray(coverageZonesRaw)
     ? coverageZonesRaw.map(norm).filter(Boolean)
@@ -83,12 +84,12 @@ function getRequestLocation(req: RequestEntity) {
 }
 
 /**
- * Priorité lieu :
- * 4 = base chef match exact/proche
+ * Priorité lieu
+ * 4 = base match
  * 3 = zone couverte
  * 2 = mobilité internationale
  * 1 = gros rayon
- * 0 = non compatible
+ * 0 = pas compatible
  */
 function getLocationPriority(req: RequestEntity, chef: ChefUser) {
   const chefLoc = getChefLocation(chef);
@@ -119,11 +120,11 @@ function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
 }
 
 /**
- * Priorité dispo :
- * 4 = disponibilité explicite confirmée
- * 3 = calendrier structuré compatible
- * 2 = string / donnée partielle mais exploitable
- * 1 = donnée légère
+ * Priorité disponibilité
+ * 4 = disponible confirmé
+ * 3 = calendrier compatible
+ * 2 = information partielle compatible
+ * 1 = à confirmer
  * 0 = inconnu
  * -1 = indisponible
  */
@@ -146,6 +147,7 @@ function getAvailabilityPriority(req: RequestEntity, chef: ChefUser) {
   }
 
   if (availability.availableNow === false) return -1;
+
   if (!reqStart || Number.isNaN(reqStart.getTime())) {
     return availability.availableNow === true ? 4 : 2;
   }
@@ -186,7 +188,10 @@ function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
 export function chefIsEligibleForRequest(req: RequestEntity, chef: ChefUser) {
   const status = String(chef.status || (chef as any)?.profile?.status || '').toLowerCase();
 
+  // seulement les chefs actifs
   if (status !== 'active') return false;
+
+  // hard filters
   if (!chefMatchesLocation(req, chef)) return false;
   if (!chefMatchesDates(req, chef)) return false;
 
@@ -197,89 +202,79 @@ export function scoreChefForRequestV2(
   req: RequestEntity,
   chef: ChefUser
 ): Omit<MatchedChefV2, 'chef'> {
-  let score = 0;
   const reasons: string[] = [];
+
+  const locationPriority = getLocationPriority(req, chef);
+  const availabilityPriority = getAvailabilityPriority(req, chef);
 
   const wantCuisines = splitPrefs(req.preferences?.cuisine ?? '');
   const wantLangs = splitPrefs(req.preferences?.languages ?? '');
-  const restrictions = String(req.preferences?.allergies ?? '').trim();
 
   const chefLangs = getChefLanguages(chef);
   const chefCuisines = getChefCuisines(chef);
   const chefLoc = getChefLocation(chef);
 
-  const locationPriority = getLocationPriority(req, chef);
-  const availabilityPriority = getAvailabilityPriority(req, chef);
+  // base score simple et capé
+  let score = 0;
 
-  let strongHits = 0;
-
-  // 1) LOCALISATION = priorité absolue
+  // 1) LIEU = critère principal
   if (locationPriority === 4) {
-    score += 100;
-    strongHits++;
+    score += 55;
     reasons.push('📍 Base chef compatible');
   } else if (locationPriority === 3) {
-    score += 80;
-    strongHits++;
+    score += 45;
     reasons.push('📍 Zone couverte compatible');
   } else if (locationPriority === 2) {
-    score += 50;
+    score += 30;
     reasons.push('🌍 Mobilité internationale');
   } else if (locationPriority === 1) {
-    score += 30;
+    score += 20;
     reasons.push(`🚗 Rayon ${chefLoc.travelRadiusKm} km`);
   }
 
-  // 2) DISPONIBILITÉ = 2e priorité absolue
+  // 2) DISPONIBILITÉ = 2e critère principal
   if (availabilityPriority === 4) {
-    score += 60;
-    strongHits++;
+    score += 35;
     reasons.push('✅ Disponible confirmé');
   } else if (availabilityPriority === 3) {
-    score += 45;
-    strongHits++;
+    score += 28;
     reasons.push('🗓️ Calendrier compatible');
   } else if (availabilityPriority === 2) {
-    score += 25;
+    score += 18;
     reasons.push('🕓 Disponibilité probable');
   }
 
-  // 3) Le reste seulement ensuite
+  // 3) Bonus très légers seulement
   if (wantCuisines.length) {
     const hits = intersectCount(wantCuisines, chefCuisines);
     if (hits > 0) {
-      score += 8;
-      reasons.push(`✅ Cuisine match (${hits})`);
-    } else {
-      reasons.push('⚠️ Cuisine à confirmer');
+      score += 5;
+      reasons.push(`✅ Cuisine match`);
     }
   }
 
   if (wantLangs.length) {
     const hits = intersectCount(wantLangs, chefLangs);
     if (hits > 0) {
-      score += 8;
-      reasons.push(`✅ Langues match (${hits})`);
-    } else {
-      reasons.push('⚠️ Langues à confirmer');
+      score += 5;
+      reasons.push(`✅ Langues match`);
     }
   }
 
   if (chef.profileCompleted) {
-    score += 4;
+    score += 3;
     reasons.push('✅ Profil complet');
-  } else {
-    reasons.push('⚠️ Profil incomplet');
   }
 
-  if (restrictions) {
-    reasons.push(`⚠️ Restrictions: ${restrictions} (à valider)`);
-  }
-
-  score = Math.max(0, Math.min(999, Math.round(score)));
+  // clamp strict
+  score = Math.max(0, Math.min(100, Math.round(score)));
 
   const confidence: MatchConfidence =
-    strongHits >= 3 ? 'high' : strongHits >= 2 ? 'medium' : 'low';
+    locationPriority >= 3 && availabilityPriority >= 3
+      ? 'high'
+      : locationPriority >= 2 && availabilityPriority >= 2
+      ? 'medium'
+      : 'low';
 
   return {
     fitScore: score,
@@ -300,7 +295,7 @@ export function matchChefsForRequestV2(
       return { chef, ...scored };
     })
     .sort((a, b) => {
-      // 1. localisation d'abord
+      // 1. lieu en priorité absolue
       if (b.locationPriority !== a.locationPriority) {
         return b.locationPriority - a.locationPriority;
       }
@@ -310,12 +305,12 @@ export function matchChefsForRequestV2(
         return b.availabilityPriority - a.availabilityPriority;
       }
 
-      // 3. puis score de pertinence secondaire
+      // 3. puis score secondaire
       if (b.fitScore !== a.fitScore) {
         return b.fitScore - a.fitScore;
       }
 
-      // 4. jamais d'ordre alphabétique par défaut visible
+      // 4. aucun tri alphabétique parasite
       return 0;
     });
 }
