@@ -90,6 +90,7 @@ const onViewChefProfile = (chef: ChefUser) => {
   router.push(`/admin/chefs/${chef.id}`);
 };
 
+
   const refresh = async () => {
     setLoading(true);
 
@@ -241,13 +242,11 @@ const onSelectChef = async (chefId: string) => {
 
     console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
 
-    // 👉 plus tard tu brancheras la vraie logique (DB / proposal / mission)
-
-    router.push(`/admin/chefs/${chefId}`);
+    router.push(`/admin/chefs/${chefId}?requestId=${id}`);
   } finally {
     setActionChefId(null);
   }
-};
+}
 
   if (loading) {
     return <div className="p-6 text-sm text-white/60">Chargement…</div>;
