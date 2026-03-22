@@ -14,43 +14,62 @@ function clean(v: any) {
   return s || null;
 }
 
-function getChefStatus(row: any) {
-  return String(row?.status ?? row?.profile?.status ?? '').toLowerCase();
-}
-
-function getChefName(profile: any) {
-  const full = clean(profile?.name);
-  if (full) return full;
-
-  const first = clean(profile?.firstName) || '';
-  const last = clean(profile?.lastName) || '';
-  return `${first} ${last}`.trim() || 'Chef';
-}
-
-function getChefBaseCity(profile: any) {
-  return (
-    clean(profile?.location?.baseCity) ||
-    clean(profile?.baseCity) ||
-    clean(profile?.location?.city) ||
-    clean(profile?.city) ||
-    clean(profile?.ville) ||
-    null
-  );
-}
-
-function getChefCountry(profile: any) {
-  return (
-    clean(profile?.location?.country) ||
-    clean(profile?.country) ||
-    null
-  );
-}
-
 function normalizeQuery(city?: string | null, country?: string | null) {
   const c = clean(city);
   const co = clean(country);
   if (!c) return null;
   return co ? `${c}, ${co}` : c;
+}
+
+function getRowStatus(row: any) {
+  return String(
+    row?.status ??
+      row?.profile?.status ??
+      ''
+  ).toLowerCase();
+}
+
+function getRowName(row: any) {
+  return (
+    clean(row?.profile?.name) ||
+    clean(
+      `${row?.profile?.firstName || row?.first_name || ''} ${row?.profile?.lastName || row?.last_name || ''}`
+    ) ||
+    'Chef'
+  );
+}
+
+function getRowEmail(row: any) {
+  return clean(row?.email) || clean(row?.profile?.email) || '';
+}
+
+function getRowAvatar(row: any) {
+  return (
+    clean(row?.profile?.avatarUrl) ||
+    clean(row?.profile?.photoUrl) ||
+    null
+  );
+}
+
+function getRowBaseCity(row: any) {
+  return (
+    clean(row?.profile?.location?.baseCity) ||
+    clean(row?.profile?.baseCity) ||
+    clean(row?.profile?.location?.city) ||
+    clean(row?.profile?.city) ||
+    clean(row?.profile?.ville) ||
+    clean(row?.city) ||
+    null
+  );
+}
+
+function getRowCountry(row: any) {
+  return (
+    clean(row?.profile?.location?.country) ||
+    clean(row?.profile?.country) ||
+    clean(row?.country) ||
+    null
+  );
 }
 
 async function geocodeMapbox(q: string) {
@@ -85,42 +104,30 @@ export async function GET() {
   try {
     const { data: chefs, error } = await supabase
       .from('chef_profiles')
-      .select('id, email, profile');
+      .select('id, email, status, city, country, first_name, last_name, profile');
 
     if (error) throw error;
 
-    const rows = (chefs || [])
-      .map((row: any) => {
-        const profile = row?.profile ?? {};
-        const status = getChefStatus(row);
+    const allRows = (chefs || []).map((row: any) => {
+      const status = getRowStatus(row);
+      const baseCity = getRowBaseCity(row);
+      const country = getRowCountry(row);
+      const query = normalizeQuery(baseCity, country);
 
-        if (status !== 'active') return null;
+      return {
+        id: row?.profile?.id || row.id,
+        name: getRowName(row),
+        email: getRowEmail(row),
+        avatarUrl: getRowAvatar(row),
+        baseCity: baseCity || '',
+        country: country || '',
+        status,
+        query,
+      };
+    });
 
-        const baseCity = getChefBaseCity(profile);
-        const country = getChefCountry(profile);
-        const query = normalizeQuery(baseCity, country);
-
-        if (!query) return null;
-
-        return {
-          id: profile?.id || row.id,
-          name: getChefName(profile),
-          email: row?.email || profile?.email || '',
-          avatarUrl: profile?.avatarUrl || profile?.photoUrl || null,
-          baseCity: baseCity || '',
-          country: country || '',
-          query,
-        };
-      })
-      .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        email: string;
-        avatarUrl: string | null;
-        baseCity: string;
-        country: string;
-        query: string;
-      }>;
+    // uniquement actifs
+    const rows = allRows.filter((r) => r.status === 'active' && !!r.query);
 
     const queries = Array.from(new Set(rows.map((r) => r.query)));
 
@@ -178,7 +185,16 @@ export async function GET() {
       })
       .filter(Boolean);
 
-    return NextResponse.json({ items: points });
+    return NextResponse.json({
+      items: points,
+      debug: {
+        total: allRows.length,
+        active: allRows.filter((r) => r.status === 'active').length,
+        withQuery: allRows.filter((r) => !!r.query).length,
+        activeWithQuery: rows.length,
+        geolocated: points.length,
+      },
+    });
   } catch (e: any) {
     console.error('GET /api/admin/chefs/map error', e);
     return NextResponse.json({ error: e?.message || 'error' }, { status: 500 });
