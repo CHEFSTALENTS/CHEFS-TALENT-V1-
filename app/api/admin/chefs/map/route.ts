@@ -15,33 +15,52 @@ function clean(v: any) {
 }
 
 function getChefStatus(row: any) {
-  return String(row?.status ?? row?.profile?.status ?? '').toLowerCase();
+  return String(
+    row?.status ??
+      row?.profile?.status ??
+      ''
+  ).toLowerCase();
 }
 
-function getChefName(profile: any) {
+function getChefName(row: any) {
+  const profile = row?.profile ?? {};
+
   const full = clean(profile?.name);
   if (full) return full;
 
-  const first = clean(profile?.firstName) || '';
-  const last = clean(profile?.lastName) || '';
+  const first =
+    clean(profile?.firstName) ||
+    clean(row?.first_name) ||
+    '';
+  const last =
+    clean(profile?.lastName) ||
+    clean(row?.last_name) ||
+    '';
+
   return `${first} ${last}`.trim() || 'Chef';
 }
 
-function getChefBaseCity(profile: any) {
+function getChefBaseCity(row: any) {
+  const profile = row?.profile ?? {};
+
   return (
     clean(profile?.location?.baseCity) ||
     clean(profile?.baseCity) ||
     clean(profile?.location?.city) ||
     clean(profile?.city) ||
     clean(profile?.ville) ||
+    clean(row?.city) ||
     null
   );
 }
 
-function getChefCountry(profile: any) {
+function getChefCountry(row: any) {
+  const profile = row?.profile ?? {};
+
   return (
     clean(profile?.location?.country) ||
     clean(profile?.country) ||
+    clean(row?.country) ||
     null
   );
 }
@@ -69,6 +88,7 @@ async function geocodeMapbox(q: string) {
   if (!feat?.center?.length) return null;
 
   const [lng, lat] = feat.center;
+
   if (
     typeof lat !== 'number' ||
     typeof lng !== 'number' ||
@@ -85,42 +105,31 @@ export async function GET() {
   try {
     const { data: chefs, error } = await supabase
       .from('chef_profiles')
-      .select('id, email, profile');
+      .select('id, email, status, city, country, first_name, last_name, profile');
 
     if (error) throw error;
 
-    const rows = (chefs || [])
-      .map((row: any) => {
-        const profile = row?.profile ?? {};
-        const status = getChefStatus(row);
+    const allRows = (chefs || []).map((row: any) => {
+      const status = getChefStatus(row);
+      const baseCity = getChefBaseCity(row);
+      const country = getChefCountry(row);
+      const query = normalizeQuery(baseCity, country);
 
-        if (status !== 'active') return null;
+      return {
+        id: row?.profile?.id || row.id,
+        name: getChefName(row),
+        email: row?.email || row?.profile?.email || '',
+        avatarUrl: row?.profile?.avatarUrl || row?.profile?.photoUrl || null,
+        baseCity: baseCity || '',
+        country: country || '',
+        status,
+        query,
+      };
+    });
 
-        const baseCity = getChefBaseCity(profile);
-        const country = getChefCountry(profile);
-        const query = normalizeQuery(baseCity, country);
-
-        if (!query) return null;
-
-        return {
-          id: profile?.id || row.id,
-          name: getChefName(profile),
-          email: row?.email || profile?.email || '',
-          avatarUrl: profile?.avatarUrl || profile?.photoUrl || null,
-          baseCity: baseCity || '',
-          country: country || '',
-          query,
-        };
-      })
-      .filter(Boolean) as Array<{
-        id: string;
-        name: string;
-        email: string;
-        avatarUrl: string | null;
-        baseCity: string;
-        country: string;
-        query: string;
-      }>;
+    // ✅ TEMPORAIREMENT: on ne filtre PAS par statut
+    // pour remettre la map en route et voir les points
+    const rows = allRows.filter((r) => !!r.query);
 
     const queries = Array.from(new Set(rows.map((r) => r.query)));
 
@@ -178,7 +187,15 @@ export async function GET() {
       })
       .filter(Boolean);
 
-    return NextResponse.json({ items: points });
+    return NextResponse.json({
+      items: points,
+      debug: {
+        total: allRows.length,
+        withQuery: rows.length,
+        geolocated: points.length,
+        sample: allRows.slice(0, 10),
+      },
+    });
   } catch (e: any) {
     console.error('GET /api/admin/chefs/map error', e);
     return NextResponse.json({ error: e?.message || 'error' }, { status: 500 });
