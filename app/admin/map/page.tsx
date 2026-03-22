@@ -16,15 +16,15 @@ type ChefPoint = {
   lng: number;
 };
 
-type GroupedPoint = {
+type SamePointGroup = {
   key: string;
   lat: number;
   lng: number;
   chefs: ChefPoint[];
 };
 
-function groupChefsByCoords(items: ChefPoint[]): GroupedPoint[] {
-  const groups = new Map<string, GroupedPoint>();
+function groupOnlyExactSamePoints(items: ChefPoint[]): SamePointGroup[] {
+  const map = new Map<string, SamePointGroup>();
 
   for (const item of items) {
     if (
@@ -36,10 +36,10 @@ function groupChefsByCoords(items: ChefPoint[]): GroupedPoint[] {
       continue;
     }
 
-    const key = `${item.lat.toFixed(6)}_${item.lng.toFixed(6)}`;
+    const key = `${item.lat}_${item.lng}`;
 
-    if (!groups.has(key)) {
-      groups.set(key, {
+    if (!map.has(key)) {
+      map.set(key, {
         key,
         lat: item.lat,
         lng: item.lng,
@@ -47,10 +47,10 @@ function groupChefsByCoords(items: ChefPoint[]): GroupedPoint[] {
       });
     }
 
-    groups.get(key)!.chefs.push(item);
+    map.get(key)!.chefs.push(item);
   }
 
-  return Array.from(groups.values());
+  return Array.from(map.values());
 }
 
 export default function AdminMapPage() {
@@ -108,58 +108,15 @@ export default function AdminMapPage() {
     };
   }, []);
 
-  function createGroupedMarkerEl(group: GroupedPoint) {
-    const count = group.chefs.length;
-    const firstChef = group.chefs[0];
+  function buildPopupHtml(group: SamePointGroup) {
+    const chefs = group.chefs;
 
-    const el = document.createElement('div');
-    el.style.width = count > 1 ? '42px' : '34px';
-    el.style.height = count > 1 ? '42px' : '34px';
-    el.style.borderRadius = '999px';
-    el.style.border = '2px solid rgba(255,255,255,0.9)';
-    el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
-    el.style.cursor = 'pointer';
-    el.style.position = 'relative';
-    el.style.overflow = 'hidden';
-
-    el.style.background = firstChef?.avatarUrl
-      ? `url(${firstChef.avatarUrl}) center/cover no-repeat`
-      : 'rgba(255,255,255,0.12)';
-
-    if (count > 1) {
-      const badge = document.createElement('div');
-      badge.innerText = String(count);
-      badge.style.position = 'absolute';
-      badge.style.right = '-2px';
-      badge.style.bottom = '-2px';
-      badge.style.minWidth = '20px';
-      badge.style.height = '20px';
-      badge.style.padding = '0 5px';
-      badge.style.borderRadius = '999px';
-      badge.style.background = '#ffffff';
-      badge.style.color = '#000000';
-      badge.style.fontSize = '11px';
-      badge.style.fontWeight = '700';
-      badge.style.display = 'flex';
-      badge.style.alignItems = 'center';
-      badge.style.justifyContent = 'center';
-      badge.style.border = '1px solid rgba(0,0,0,0.1)';
-      el.appendChild(badge);
-    }
-
-    return el;
-  }
-
-  function buildPopupHtml(group: GroupedPoint) {
-    const title =
-      group.chefs.length > 1
-        ? `${group.chefs.length} chefs — ${escapeHtml(group.chefs[0]?.baseCity || 'Lieu')}`
-        : `${escapeHtml(group.chefs[0]?.name || 'Chef')}`;
-
-    const rows = group.chefs
+    const rows = chefs
       .map((chef) => {
         const avatar = chef.avatarUrl
-          ? `<img src="${escapeHtmlAttr(chef.avatarUrl)}" style="width:34px;height:34px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,0.08);" />`
+          ? `<img src="${escapeHtmlAttr(
+              chef.avatarUrl
+            )}" style="width:34px;height:34px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,0.08);" />`
           : `<div style="width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.08);"></div>`;
 
         return `
@@ -181,8 +138,15 @@ export default function AdminMapPage() {
                 ${escapeHtml(chef.name)}
               </div>
               <div style="font-size:11px;opacity:.7;line-height:1.2;margin-top:3px;color:#cfcfcf;">
-                ${escapeHtml(chef.email || '')}
+                ${escapeHtml(chef.baseCity || '')}
               </div>
+              ${
+                chef.email
+                  ? `<div style="font-size:11px;opacity:.55;line-height:1.2;margin-top:3px;color:#cfcfcf;">
+                       ${escapeHtml(chef.email)}
+                     </div>`
+                  : ''
+              }
             </div>
           </a>
         `;
@@ -192,13 +156,11 @@ export default function AdminMapPage() {
     return `
       <div style="min-width:260px;max-width:320px;font-family:Inter,system-ui,sans-serif;">
         <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#fff;">
-          ${title}
+          ${chefs.length > 1 ? `${chefs.length} chefs à ce point` : escapeHtml(chefs[0]?.name || 'Chef')}
         </div>
-        ${
-          group.chefs.length > 1
-            ? `<div style="font-size:11px;opacity:.7;margin-bottom:8px;color:#cfcfcf;">Cliquez sur un profil</div>`
-            : `<div style="font-size:11px;opacity:.7;margin-bottom:8px;color:#cfcfcf;">${escapeHtml(group.chefs[0]?.baseCity || '')}</div>`
-        }
+        <div style="font-size:11px;opacity:.7;margin-bottom:8px;color:#cfcfcf;">
+          ${escapeHtml(chefs[0]?.baseCity || '')}
+        </div>
         <div>
           ${rows}
         </div>
@@ -206,27 +168,76 @@ export default function AdminMapPage() {
     `;
   }
 
+  function createMarkerEl(group: SamePointGroup) {
+    const firstChef = group.chefs[0];
+    const count = group.chefs.length;
+
+    const el = document.createElement('div');
+    el.style.width = '36px';
+    el.style.height = '36px';
+    el.style.borderRadius = '999px';
+    el.style.border = '2px solid rgba(255,255,255,0.9)';
+    el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+    el.style.cursor = 'pointer';
+    el.style.position = 'relative';
+    el.style.overflow = 'hidden';
+
+    el.style.background = firstChef?.avatarUrl
+      ? `url(${firstChef.avatarUrl}) center/cover no-repeat`
+      : 'rgba(255,255,255,0.12)';
+
+    if (count > 1) {
+      const badge = document.createElement('div');
+      badge.innerText = String(count);
+      badge.style.position = 'absolute';
+      badge.style.right = '-2px';
+      badge.style.bottom = '-2px';
+      badge.style.minWidth = '18px';
+      badge.style.height = '18px';
+      badge.style.padding = '0 4px';
+      badge.style.borderRadius = '999px';
+      badge.style.background = '#ffffff';
+      badge.style.color = '#000000';
+      badge.style.fontSize = '10px';
+      badge.style.fontWeight = '700';
+      badge.style.display = 'flex';
+      badge.style.alignItems = 'center';
+      badge.style.justifyContent = 'center';
+      badge.style.border = '1px solid rgba(0,0,0,0.1)';
+      el.appendChild(badge);
+    }
+
+    return el;
+  }
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    for (const m of markersRef.current) m.remove();
+    for (const marker of markersRef.current) marker.remove();
     markersRef.current = [];
 
-    if (!items.length) return;
+    const validItems = items.filter(
+      (chef) =>
+        typeof chef.lat === 'number' &&
+        typeof chef.lng === 'number' &&
+        !Number.isNaN(chef.lat) &&
+        !Number.isNaN(chef.lng)
+    );
 
-    const grouped = groupChefsByCoords(items);
-    if (!grouped.length) return;
+    if (!validItems.length) return;
 
+    const groups = groupOnlyExactSamePoints(validItems);
     const bounds = new mapboxgl.LngLatBounds();
 
-    for (const group of grouped) {
+    for (const group of groups) {
       bounds.extend([group.lng, group.lat]);
 
-      const el = createGroupedMarkerEl(group);
       const popup = new mapboxgl.Popup({ offset: 16 }).setHTML(buildPopupHtml(group));
 
-      const marker = new mapboxgl.Marker({ element: el })
+      const marker = new mapboxgl.Marker({
+        element: createMarkerEl(group),
+      })
         .setLngLat([group.lng, group.lat])
         .setPopup(popup)
         .addTo(map);
@@ -234,11 +245,11 @@ export default function AdminMapPage() {
       markersRef.current.push(marker);
     }
 
-    if (grouped.length >= 2) {
+    if (groups.length >= 2) {
       map.fitBounds(bounds, { padding: 70, maxZoom: 7 });
     } else {
-      const c = grouped[0];
-      map.flyTo({ center: [c.lng, c.lat], zoom: 7 });
+      const only = groups[0];
+      map.flyTo({ center: [only.lng, only.lat], zoom: 7 });
     }
   }, [items]);
 
