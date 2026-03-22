@@ -87,7 +87,8 @@ export default function AdminRequestDetailPage() {
   const [showAll, setShowAll] = useState(false);
 
 const onViewChefProfile = (chef: ChefUser) => {
-  router.push(`/admin/chefs/${chef.id}`);
+  const profileId = (chef as any)?.profile?.id || chef.id;
+  router.push(`/admin/chefs/${profileId}`);
 };
 
 
@@ -236,17 +237,22 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     if (!whatsappBrief) return;
     openWhatsappWithText(whatsappBrief);
   };
-const onSelectChef = async (chefId: string) => {
+const onSelectChef = async (chef: ChefUser) => {
   try {
-    setActionChefId(chefId);
+    const profileId = (chef as any)?.profile?.id || chef.id;
+    setActionChefId(profileId);
 
-    console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
+    console.log('SELECT_CHEF_FOR_REQUEST', {
+      requestId: id,
+      chefId: chef.id,
+      profileId,
+    });
 
-    router.push(`/admin/chefs/${chefId}?requestId=${id}`);
+    router.push(`/admin/chefs/${profileId}?requestId=${id}`);
   } finally {
     setActionChefId(null);
   }
-}
+};
 
   if (loading) {
     return <div className="p-6 text-sm text-white/60">Chargement…</div>;
@@ -391,10 +397,10 @@ const onSelectChef = async (chefId: string) => {
                     contactLabel={contactLabel}
                     availability={availability}
                     profileState={profileState}
-                    loading={actionChefId === x.chef.id}
+loading={actionChefId === ((x.chef as any)?.profile?.id || x.chef.id)}
                     onViewProfile={() => onViewChefProfile(x.chef)}
-                    onSelect={() => onSelectChef(x.chef.id)}
-                  />
+onSelect={() => onSelectChef(x.chef)}
+                    />
                 );
               })}
 
