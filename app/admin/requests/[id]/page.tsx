@@ -86,7 +86,7 @@ export default function AdminRequestDetailPage() {
   const [actionChefId, setActionChefId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
- const onViewChefProfile = (chef: ChefUser) => {
+const onViewChefProfile = (chef: ChefUser) => {
   router.push(`/admin/chefs/${chef.id}`);
 };
 
@@ -235,14 +235,13 @@ const matchedAll: MatchedChef[] = useMemo(() => {
     if (!whatsappBrief) return;
     openWhatsappWithText(whatsappBrief);
   };
-
 const onSelectChef = async (chefId: string) => {
   try {
     setActionChefId(chefId);
+
     console.log('SELECT_CHEF_FOR_REQUEST', { requestId: id, chefId });
 
-    // ici plus tard tu mettras ton call API de sélection
-    // await selectChefForRequest(id, chefId);
+    // 👉 plus tard tu brancheras la vraie logique (DB / proposal / mission)
 
     router.push(`/admin/chefs/${chefId}`);
   } finally {
