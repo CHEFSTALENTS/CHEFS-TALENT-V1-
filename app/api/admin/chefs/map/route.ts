@@ -9,140 +9,178 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-type ChefRow = {
-  email: string | null;
-  profile: any; // JSONB
-};
-
-function getCity(profile: any): string | null {
-  const city = profile?.baseCity || profile?.location?.baseCity || null;
-  return typeof city === 'string' ? city.trim() || null : null;
+function clean(v: any) {
+  const s = String(v ?? '').trim();
+  return s || null;
 }
 
-function getName(profile: any): string {
-  if (profile?.name) return String(profile.name);
-  const fn = profile?.firstName ? String(profile.firstName) : '';
-  const ln = profile?.lastName ? String(profile.lastName) : '';
-  const full = `${fn} ${ln}`.trim();
-  return full || 'Chef';
+function getChefStatus(row: any) {
+  return String(row?.status ?? row?.profile?.status ?? '').toLowerCase();
 }
 
-function getAvatar(profile: any): string | null {
-  return profile?.avatarUrl || profile?.photoUrl || null;
+function getChefName(profile: any) {
+  const full = clean(profile?.name);
+  if (full) return full;
+
+  const first = clean(profile?.firstName) || '';
+  const last = clean(profile?.lastName) || '';
+  return `${first} ${last}`.trim() || 'Chef';
 }
 
-async function geocode(query: string) {
-  const token = process.env.MAPBOX_SECRET_TOKEN; // ✅ important : côté server
-  if (!token) throw new Error('Missing MAPBOX_SECRET_TOKEN');
+function getChefBaseCity(profile: any) {
+  return (
+    clean(profile?.location?.baseCity) ||
+    clean(profile?.baseCity) ||
+    clean(profile?.location?.city) ||
+    clean(profile?.city) ||
+    clean(profile?.ville) ||
+    null
+  );
+}
 
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-    query
-  )}.json?limit=1&types=place,locality&access_token=${token}`;
+function getChefCountry(profile: any) {
+  return (
+    clean(profile?.location?.country) ||
+    clean(profile?.country) ||
+    null
+  );
+}
+
+function normalizeQuery(city?: string | null, country?: string | null) {
+  const c = clean(city);
+  const co = clean(country);
+  if (!c) return null;
+  return co ? `${c}, ${co}` : c;
+}
+
+async function geocodeMapbox(q: string) {
+  const token = process.env.MAPBOX_SECRET_TOKEN || process.env.MAPBOX_TOKEN;
+  if (!token) throw new Error('Missing MAPBOX token');
+
+  const url =
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+    `${encodeURIComponent(q)}.json?access_token=${token}&limit=1&types=place,locality,region,address`;
 
   const r = await fetch(url, { cache: 'no-store' });
-  if (!r.ok) return null;
+  if (!r.ok) throw new Error(`Mapbox geocoding failed ${r.status}`);
 
-  const j = await r.json();
-  const f = j?.features?.[0];
-  if (!f?.center) return null;
+  const json = await r.json();
+  const feat = json?.features?.[0];
+  if (!feat?.center?.length) return null;
 
-  return { lng: f.center[0], lat: f.center[1] };
+  const [lng, lat] = feat.center;
+  if (
+    typeof lat !== 'number' ||
+    typeof lng !== 'number' ||
+    Number.isNaN(lat) ||
+    Number.isNaN(lng)
+  ) {
+    return null;
+  }
+
+  return { lat, lng };
 }
 
 export async function GET() {
   try {
-    // 1) Load chefs (email + profile JSONB)
-    const { data, error } = await supabase
+    const { data: chefs, error } = await supabase
       .from('chef_profiles')
-      .select('email,profile')
-      .limit(3000);
+      .select('id, email, profile');
 
     if (error) throw error;
 
-    const rows = (data || []) as ChefRow[];
+    const rows = (chefs || [])
+      .map((row: any) => {
+        const profile = row?.profile ?? {};
+        const status = getChefStatus(row);
 
-    // 2) Normalize (id vient du JSON profile.id)
-    const prepared = rows
-      .map((c) => {
-        const profile = c.profile || {};
-        const chefId = profile?.id; // ✅ UUID stocké dans le JSON
-        const city = getCity(profile);
-        if (!chefId || !city) return null;
+        if (status !== 'active') return null;
+
+        const baseCity = getChefBaseCity(profile);
+        const country = getChefCountry(profile);
+        const query = normalizeQuery(baseCity, country);
+
+        if (!query) return null;
 
         return {
-          id: String(chefId),
-          email: c.email ? String(c.email) : '',
-          name: getName(profile),
-          avatarUrl: getAvatar(profile),
-          baseCity: city,
-          query: city, // (ex: "Marseille")
+          id: profile?.id || row.id,
+          name: getChefName(profile),
+          email: row?.email || profile?.email || '',
+          avatarUrl: profile?.avatarUrl || profile?.photoUrl || null,
+          baseCity: baseCity || '',
+          country: country || '',
+          query,
         };
       })
       .filter(Boolean) as Array<{
         id: string;
-        email: string;
         name: string;
+        email: string;
         avatarUrl: string | null;
         baseCity: string;
+        country: string;
         query: string;
       }>;
 
-    const queries = Array.from(new Set(prepared.map((x) => x.query)));
+    const queries = Array.from(new Set(rows.map((r) => r.query)));
 
-    if (queries.length === 0) {
-      return NextResponse.json({ items: [] });
-    }
-
-    // 3) Load geo cache
-    const { data: cached, error: cacheErr } = await supabase
+    const { data: cached } = await supabase
       .from('geo_cache')
-      .select('query,lat,lng')
+      .select('query, lat, lng')
       .in('query', queries);
 
-    if (cacheErr) throw cacheErr;
-
-    const cache = new Map<string, { lat: number; lng: number }>();
-    (cached || []).forEach((c: any) => {
-      if (c?.query && typeof c.lat === 'number' && typeof c.lng === 'number') {
-        cache.set(String(c.query), { lat: c.lat, lng: c.lng });
+    const cacheMap = new Map<string, { lat: number; lng: number }>();
+    (cached || []).forEach((x: any) => {
+      if (
+        typeof x?.lat === 'number' &&
+        typeof x?.lng === 'number' &&
+        !Number.isNaN(x.lat) &&
+        !Number.isNaN(x.lng)
+      ) {
+        cacheMap.set(x.query, { lat: x.lat, lng: x.lng });
       }
     });
 
-    // 4) Geocode missing + upsert
-    for (const q of queries) {
-      if (cache.has(q)) continue;
+    const missing = queries.filter((q) => !cacheMap.has(q));
 
-      const coords = await geocode(q);
-      if (!coords) continue;
+    for (const q of missing) {
+      try {
+        const coords = await geocodeMapbox(q);
+        if (!coords) continue;
 
-      cache.set(q, coords);
+        cacheMap.set(q, coords);
 
-      await supabase
-        .from('geo_cache')
-        .upsert({ query: q, lat: coords.lat, lng: coords.lng }, { onConflict: 'query' });
+        await supabase
+          .from('geo_cache')
+          .upsert(
+            { query: q, lat: coords.lat, lng: coords.lng },
+            { onConflict: 'query' }
+          );
+      } catch (e) {
+        console.error('Mapbox geocode error for query:', q, e);
+      }
     }
 
-    // 5) Final payload
-    const items = prepared
-      .map((c) => {
-        const geo = cache.get(c.query);
-        if (!geo) return null;
+    const points = rows
+      .map((r) => {
+        const coords = cacheMap.get(r.query);
+        if (!coords) return null;
 
         return {
-          id: c.id,
-          name: c.name,
-          email: c.email,
-          avatarUrl: c.avatarUrl,
-          baseCity: c.baseCity,
-          lat: geo.lat,
-          lng: geo.lng,
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          avatarUrl: r.avatarUrl,
+          baseCity: r.baseCity,
+          lat: coords.lat,
+          lng: coords.lng,
         };
       })
       .filter(Boolean);
 
-    return NextResponse.json({ items });
+    return NextResponse.json({ items: points });
   } catch (e: any) {
-    console.error('admin/chefs/map error', e);
-    return NextResponse.json({ error: e.message || 'Unknown error' }, { status: 500 });
+    console.error('GET /api/admin/chefs/map error', e);
+    return NextResponse.json({ error: e?.message || 'error' }, { status: 500 });
   }
 }
