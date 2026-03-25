@@ -104,11 +104,11 @@ export function ChefTalentsHome() {
 
           <div className="md:col-span-5">
             <div className="relative aspect-[4/5] overflow-hidden rounded-[30px] bg-[#d9d3ca]">
-              <img
-                src="/images/editorial/hero-chef-talents.jpg"
-                alt="Chef privé en résidence"
-                className="h-full w-full object-cover"
-              />
+           <img
+  src="/images/editorial/hero-chef-talents.jpg"
+  alt="Chef privé en résidence"
+  className="h-full w-full object-cover"
+/>
               <div className="absolute inset-0 bg-black/18" />
             </div>
           </div>
