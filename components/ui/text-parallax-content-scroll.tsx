@@ -91,7 +91,7 @@ export default function ChefTalentsHome() {
                   alt="Chef Talents"
                   className="h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/12" />
+                <div className="absolute inset-0 bg-black/10" />
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function ChefTalentsHome() {
       </section>
 
       {/* POSITIONING */}
-      <section className="px-6 py-8 md:px-10 lg:px-16">
+      <section className="px-6 py-10 md:px-10 lg:px-16">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
           <div className="lg:col-span-3">
             <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">
@@ -128,7 +128,7 @@ export default function ChefTalentsHome() {
           </div>
 
           <div className="lg:col-span-9">
-            <h2 className="max-w-4xl text-4xl font-serif leading-tight md:text-6xl text-[#161616]">
+            <h2 className="max-w-4xl text-4xl font-serif leading-tight text-[#161616] md:text-6xl">
               Plus qu’une réservation.
               <br />
               Une mise en relation maîtrisée.
@@ -147,63 +147,42 @@ export default function ChefTalentsHome() {
         </div>
       </section>
 
-      {/* IMMERSIVE IMAGE */}
+      {/* WHY US - no image */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[32px]">
-          <div className="relative h-[62vh] md:h-[78vh]">
-            <img
-              src="/images/editorial/private-dining-room.jpg"
-              alt="Private dining"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/34" />
-            <div className="absolute inset-0 flex items-end">
-              <div className="max-w-4xl px-8 pb-10 md:px-12 md:pb-14">
-                <p className="text-[11px] uppercase tracking-[0.26em] text-white/70">
-                  Exigence
-                </p>
-                <h2 className="mt-3 text-4xl font-serif leading-tight text-white md:text-6xl">
-                  Une sélection pensée pour les environnements premium.
-                </h2>
-                <p className="mt-5 max-w-3xl text-lg font-light leading-relaxed text-white/78 md:text-xl">
-                  Nos chefs sont sélectionnés selon leur expérience, leur mobilité, leur capacité
-                  d’adaptation et leur exigence opérationnelle dans des contextes privés haut de gamme.
-                </p>
+        <div className="mx-auto max-w-7xl rounded-[32px] border border-[#d8d1c7] bg-white px-8 py-12 md:px-12 md:py-14">
+          <div className="grid gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">
+                Exigence
+              </p>
+              <h2 className="text-4xl font-serif leading-tight text-[#161616] md:text-5xl">
+                Une sélection pensée pour les environnements premium.
+              </h2>
+            </div>
+
+            <div className="lg:col-span-8">
+              <p className="max-w-3xl text-lg font-light leading-relaxed text-[#59544d] md:text-xl">
+                Nos chefs sont sélectionnés selon leur expérience, leur mobilité, leur capacité
+                d’adaptation et leur exigence opérationnelle dans des contextes privés haut de gamme.
+              </p>
+
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
+                <ValueCard text="Des chefs sélectionnés" />
+                <ValueCard text="Une couverture européenne avec expertise locale" />
+                <ValueCard text="Gestion de la continuité et des remplacements" />
+                <ValueCard text="Chefs multilingues, habitués aux standards UHNW" />
+                <ValueCard text="Un interlocuteur unique pour les missions complexes" />
+                <ValueCard text="Une relation discrète, structurée et maîtrisée" />
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* WHY US */}
-      <section className="px-6 pb-24 md:px-10 lg:px-16">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">
-              Pourquoi nous
-            </p>
-            <h2 className="text-4xl font-serif leading-tight text-[#161616] md:text-5xl">
-              Une structure pensée pour les missions à forts enjeux.
-            </h2>
-          </div>
-
-          <div className="lg:col-span-8">
-            <div className="grid gap-5 md:grid-cols-2">
-              <ValueCard text="Des chefs sélectionnés" />
-              <ValueCard text="Une couverture européenne avec expertise locale" />
-              <ValueCard text="Gestion de la continuité et des remplacements" />
-              <ValueCard text="Chefs multilingues, habitués aux standards UHNW" />
-              <ValueCard text="Un interlocuteur unique pour les missions complexes" />
-              <ValueCard text="Une relation discrète, structurée et maîtrisée" />
-            </div>
-
-            <div className="mt-10">
-              <Link
-                href="/conciergeries"
-                className="inline-flex items-center justify-center rounded-full bg-[#161616] px-7 py-4 text-sm font-medium text-white transition hover:bg-black"
-              >
-                Je suis une conciergerie <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+              <div className="mt-10">
+                <Link
+                  href="/conciergeries"
+                  className="inline-flex items-center justify-center rounded-full bg-[#161616] px-7 py-4 text-sm font-medium text-white transition hover:bg-black"
+                >
+                  Je suis une conciergerie <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -224,12 +203,12 @@ export default function ChefTalentsHome() {
           </div>
 
           <div className="lg:col-span-8">
-            <p className="max-w-3xl text-lg font-light leading-relaxed text-white/76 md:text-2xl">
+            <p className="max-w-3xl text-lg font-light leading-relaxed text-white/82 md:text-2xl">
               Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à
               travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics.
             </p>
 
-            <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/55 md:text-xl">
+            <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/64 md:text-xl">
               Les références sont partagées de manière sélective. La confidentialité fait partie
               intégrante de notre manière de travailler.
             </p>
@@ -240,6 +219,36 @@ export default function ChefTalentsHome() {
             >
               Nous écrire
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* IMAGE BREAK - fixed contrast */}
+      <section className="px-6 py-24 md:px-10 lg:px-16">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-[32px]">
+          <div className="relative h-[58vh] md:h-[72vh]">
+            <img
+              src="/images/editorial/chalet-cuisine.png"
+              alt="Environnement privé"
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/18" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+
+            <div className="absolute inset-0 flex items-end">
+              <div className="max-w-3xl px-8 pb-10 md:px-12 md:pb-14">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/80">
+                  Exécution
+                </p>
+                <h3 className="mt-3 text-3xl font-serif leading-tight text-white md:text-5xl">
+                  Une présence discrète, une exécution constante, un niveau de service tenu.
+                </h3>
+                <p className="mt-4 max-w-2xl text-base font-light leading-relaxed text-white/88 md:text-lg">
+                  Des interventions calibrées pour répondre à des standards élevés, sans friction
+                  et avec une vraie continuité opérationnelle.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -432,7 +441,7 @@ function MiniTrust({ title, text }: { title: string; text: string }) {
 
 function ValueCard({ text }: { text: string }) {
   return (
-    <div className="rounded-[24px] border border-[#d8d1c7] bg-white px-6 py-6">
+    <div className="rounded-[24px] border border-[#d8d1c7] bg-[#fcfbf9] px-6 py-6">
       <p className="text-base font-light leading-relaxed text-[#3f3a34]">{text}</p>
     </div>
   );
