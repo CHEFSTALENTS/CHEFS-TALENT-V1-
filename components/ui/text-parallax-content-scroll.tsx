@@ -22,9 +22,10 @@ export default function ChefTalentsHome() {
 
   return (
     <div className="bg-[#f4efe8] text-[#161616]">
-      {/* HERO */}
-      <section className="px-6 pt-24 pb-18 md:px-10 lg:px-16 lg:pt-36 lg:pb-24">
+           {/* HERO */}
+      <section className="px-6 pt-24 pb-20 md:px-10 lg:px-16 lg:pt-36 lg:pb-24">
         <div className="mx-auto max-w-7xl">
+          <div className="grid items-end gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <div className="mb-8 h-12 w-px bg-[#161616]/70" />
 
@@ -86,7 +87,7 @@ export default function ChefTalentsHome() {
             <div className="lg:col-span-5">
               <div className="relative aspect-[4/5] overflow-hidden rounded-[32px] bg-[#d8d0c4]">
                 <img
-src="/images/editorial/hero-chef-talents.jpg"
+                  src="/images/editorial/hero-chef-talents.jpg"
                   alt="Chefs Talents"
                   className="h-full w-full object-cover"
                 />
