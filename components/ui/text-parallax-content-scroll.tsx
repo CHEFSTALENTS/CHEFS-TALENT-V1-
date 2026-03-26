@@ -23,79 +23,67 @@ export default function ChefTalentsHome() {
   return (
     <div className="bg-[#f4efe8] text-[#161616]">
            {/* HERO */}
-      <section className="px-6 pt-24 pb-20 md:px-10 lg:px-16 lg:pt-36 lg:pb-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid items-end gap-12 lg:grid-cols-12">
-            <div className="lg:col-span-7">
+    <section className="relative h-[90vh] min-h-[680px] w-full overflow-hidden">
+  
+  {/* IMAGE BACKGROUND */}
+  <img
+    src="/images/editorial/hero-chef-talents.jpg"
+    alt="Chef privé"
+    className="absolute inset-0 h-full w-full object-cover"
+  />
 
-              <p className="mb-6 text-[11px] uppercase tracking-[0.28em] text-[#7d756a]">
-                Chefs Talents
-              </p>
+  {/* OVERLAY LUXE */}
+  <div className="absolute inset-0 bg-black/40" />
 
-              <h1 className="max-w-5xl text-[3.15rem] font-serif leading-[0.95] tracking-tight md:text-7xl lg:text-[5.5rem]">
-                Des chefs privés,
-                <br />
-                sélectionnés pour des
-                <br />
-                <span className="italic text-[#7d756a]">missions d’exception.</span>
-              </h1>
+  {/* CONTENT */}
+  <div className="relative z-10 flex h-full items-end px-6 pb-16 md:px-12 lg:px-20">
+    
+    <div className="max-w-4xl text-white">
+      
+      {/* LABEL */}
+      <p className="mb-6 text-[10px] uppercase tracking-[0.35em] text-white/60">
+        Chefs Talents
+      </p>
 
-              <p className="mt-8 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-2xl md:text-xl md:leading-relaxed">
-                Chefs Talents met en relation des chefs privés soigneusement sélectionnés
-                avec des conciergeries, résidences et clients particuliers exigeant
-                discrétion, constance et excellence opérationnelle à travers l’Europe.
-              </p>
+      {/* TITRE */}
+      <h1 className="text-[2.8rem] leading-[1.02] tracking-tight md:text-6xl lg:text-[5rem]">
+        Des chefs privés,
+        <br />
+        pour des missions
+        <br />
+        <span className="italic text-white/70">
+          d’exception.
+        </span>
+      </h1>
 
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <Link
-                  href="/request"
-                  className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-[#161616] px-8 py-4 text-sm font-medium text-white transition hover:bg-black sm:w-auto"
-                >
-                  Décrire mon besoin
-                </Link>
+      {/* TEXTE */}
+      <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-white/70 md:text-lg">
+        Un réseau de chefs sélectionnés pour des clients exigeants.
+        Villas, yachts, résidences privées.
+        Une exécution sans friction, partout en Europe.
+      </p>
 
-                <Link
-                  href="/conciergeries"
-                  className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db] sm:w-auto"
-                >
-                  Je suis une conciergerie
-                </Link>
-              </div>
+      {/* CTA */}
+      <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+        
+        <Link
+          href="/request"
+          className="inline-flex min-h-[56px] items-center justify-center rounded-full bg-white px-8 text-sm font-medium text-black transition hover:bg-white/80"
+        >
+          Décrire mon besoin
+        </Link>
 
-              <div className="mt-8 flex flex-wrap gap-5">
-                <a
-                  href={mailtoHref}
-                  className="inline-flex items-center gap-2 border-b border-[#d4cdc2] pb-1 text-sm text-[#6b655c] transition hover:border-[#161616] hover:text-[#161616]"
-                >
-                  <Mail className="h-4 w-4" />
-                  Nous écrire
-                </a>
+        <Link
+          href="/conciergeries"
+          className="inline-flex min-h-[56px] items-center justify-center rounded-full border border-white/30 px-8 text-sm font-medium text-white transition hover:bg-white/10"
+        >
+          Je suis une conciergerie
+        </Link>
 
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 border-b border-[#d4cdc2] pb-1 text-sm text-[#6b655c] transition hover:border-[#161616] hover:text-[#161616]"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp
-                </a>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[32px] bg-[#d8d0c4]">
-                <img
-                  src="/images/editorial/hero-chef-talents.jpg"
-                  alt="Chefs Talents"
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/10" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* TRUST STRIP */}
       <section className="px-6 pb-20 md:px-10 lg:px-16">
