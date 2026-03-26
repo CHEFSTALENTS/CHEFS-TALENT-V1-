@@ -27,7 +27,6 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl">
           <div className="grid items-end gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <div className="mb-8 h-12 w-px bg-[#161616]/70" />
 
               <p className="mb-6 text-[11px] uppercase tracking-[0.28em] text-[#7d756a]">
                 Chefs Talents
