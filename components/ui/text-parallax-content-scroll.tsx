@@ -25,12 +25,11 @@ export default function ChefTalentsHome() {
       {/* HERO */}
       <section className="px-6 pt-24 pb-18 md:px-10 lg:px-16 lg:pt-36 lg:pb-24">
         <div className="mx-auto max-w-7xl">
-          <div className="grid items-end gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <div className="mb-8 h-12 w-px bg-[#161616]/70" />
 
               <p className="mb-6 text-[11px] uppercase tracking-[0.28em] text-[#7d756a]">
-                Chef Talents
+                Chefs Talents
               </p>
 
               <h1 className="max-w-5xl text-[3.15rem] font-serif leading-[0.95] tracking-tight md:text-7xl lg:text-[5.5rem]">
