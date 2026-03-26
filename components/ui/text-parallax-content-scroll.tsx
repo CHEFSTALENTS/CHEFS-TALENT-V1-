@@ -23,7 +23,7 @@ export default function ChefTalentsHome() {
   return (
     <div className="bg-[#f4efe8] text-[#161616]">
       {/* HERO */}
-      <section className="px-6 pt-28 pb-20 md:px-10 lg:px-16 lg:pt-36 lg:pb-24">
+      <section className="px-6 pt-24 pb-18 md:px-10 lg:px-16 lg:pt-36 lg:pb-24">
         <div className="mx-auto max-w-7xl">
           <div className="grid items-end gap-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
@@ -33,7 +33,7 @@ export default function ChefTalentsHome() {
                 Chef Talents
               </p>
 
-              <h1 className="max-w-5xl text-5xl font-serif leading-[0.94] tracking-tight md:text-7xl lg:text-[5.5rem]">
+              <h1 className="max-w-5xl text-[3.15rem] font-serif leading-[0.95] tracking-tight md:text-7xl lg:text-[5.5rem]">
                 Des chefs privés,
                 <br />
                 sélectionnés pour des
@@ -41,7 +41,7 @@ export default function ChefTalentsHome() {
                 <span className="italic text-[#7d756a]">missions d’exception.</span>
               </h1>
 
-              <p className="mt-8 max-w-2xl text-lg font-light leading-relaxed text-[#59544d] md:text-xl">
+              <p className="mt-8 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-2xl md:text-xl md:leading-relaxed">
                 Chef Talents met en relation des chefs privés soigneusement sélectionnés
                 avec des conciergeries, résidences et clients particuliers exigeant
                 discrétion, constance et excellence opérationnelle à travers l’Europe.
@@ -50,14 +50,14 @@ export default function ChefTalentsHome() {
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/request"
-                  className="inline-flex items-center justify-center rounded-full bg-[#161616] px-8 py-4 text-sm font-medium text-white transition hover:bg-black"
+                  className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-[#161616] px-8 py-4 text-sm font-medium text-white transition hover:bg-black sm:w-auto"
                 >
                   Décrire mon besoin
                 </Link>
 
                 <Link
                   href="/conciergeries"
-                  className="inline-flex items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db]"
+                  className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db] sm:w-auto"
                 >
                   Je suis une conciergerie
                 </Link>
@@ -128,18 +128,18 @@ export default function ChefTalentsHome() {
           </div>
 
           <div className="lg:col-span-9">
-            <h2 className="max-w-4xl text-4xl font-serif leading-tight text-[#161616] md:text-6xl">
+            <h2 className="max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
               Plus qu’une réservation.
               <br />
               Une mise en relation maîtrisée.
             </h2>
 
-            <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-[#59544d] md:text-2xl">
+            <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-2xl md:leading-relaxed">
               Chef Talents a été pensé pour les situations où la qualité, la continuité et la confiance
               priment sur la rapidité.
             </p>
 
-            <p className="mt-5 max-w-3xl text-lg font-light leading-relaxed text-[#59544d] md:text-xl">
+            <p className="mt-5 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-xl md:leading-relaxed">
               Nous ne proposons pas un simple annuaire. Chaque demande est qualifiée, cadrée et traitée
               avec précision afin d’identifier le bon profil, au bon endroit, au bon moment.
             </p>
@@ -147,21 +147,21 @@ export default function ChefTalentsHome() {
         </div>
       </section>
 
-      {/* WHY US - no image */}
+      {/* WHY US */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-7xl rounded-[32px] border border-[#d8d1c7] bg-white px-8 py-12 md:px-12 md:py-14">
+        <div className="mx-auto max-w-7xl rounded-[32px] border border-[#d8d1c7] bg-white px-8 py-10 md:px-12 md:py-14">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
               <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">
                 Exigence
               </p>
-              <h2 className="text-4xl font-serif leading-tight text-[#161616] md:text-5xl">
+              <h2 className="text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
                 Une sélection pensée pour les environnements premium.
               </h2>
             </div>
 
             <div className="lg:col-span-8">
-              <p className="max-w-3xl text-lg font-light leading-relaxed text-[#59544d] md:text-xl">
+              <p className="max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-xl md:leading-relaxed">
                 Nos chefs sont sélectionnés selon leur expérience, leur mobilité, leur capacité
                 d’adaptation et leur exigence opérationnelle dans des contextes privés haut de gamme.
               </p>
@@ -178,7 +178,7 @@ export default function ChefTalentsHome() {
               <div className="mt-10">
                 <Link
                   href="/conciergeries"
-                  className="inline-flex items-center justify-center rounded-full bg-[#161616] px-7 py-4 text-sm font-medium text-white transition hover:bg-black"
+                  className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-[#161616] px-7 py-4 text-sm font-medium text-white transition hover:bg-black sm:w-auto"
                 >
                   Je suis une conciergerie <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -189,42 +189,42 @@ export default function ChefTalentsHome() {
       </section>
 
       {/* CONFIDENTIALITE */}
-     <section className="bg-[#161616] px-6 py-24 text-white md:px-10 lg:px-16">
-  <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
-    <div className="lg:col-span-4">
-      <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">
-        Confidentialité
-      </p>
+      <section className="bg-[#161616] px-6 py-24 text-white md:px-10 lg:px-16">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">
+              Confidentialité
+            </p>
 
-      <h2 className="mt-4 text-4xl font-serif leading-tight text-white md:text-6xl">
-        La discrétion
-        <br />
-        n’est pas une option.
-      </h2>
-    </div>
+            <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
+              La discrétion
+              <br />
+              n’est pas une option.
+            </h2>
+          </div>
 
-    <div className="lg:col-span-8">
-      <p className="max-w-3xl text-lg font-light leading-relaxed text-white/88 md:text-2xl">
-        Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à
-        travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics.
-      </p>
+          <div className="lg:col-span-8">
+            <p className="max-w-[24rem] text-[18px] font-light leading-8 text-white/88 md:max-w-3xl md:text-2xl md:leading-relaxed">
+              Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à
+              travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics.
+            </p>
 
-      <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/78 md:text-xl">
-        Les références sont partagées de manière sélective. La confidentialité fait partie
-        intégrante de notre manière de travailler.
-      </p>
+            <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-white/78 md:max-w-3xl md:text-xl md:leading-relaxed">
+              Les références sont partagées de manière sélective. La confidentialité fait partie
+              intégrante de notre manière de travailler.
+            </p>
 
-      <a
-        href={mailtoHref}
-        className="mt-10 inline-flex items-center justify-center rounded-full border border-white/28 px-7 py-4 text-sm font-medium text-white transition hover:bg-white/6"
-      >
-        Nous écrire
-      </a>
-    </div>
-  </div>
-</section>
+            <a
+              href={mailtoHref}
+              className="mt-10 inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-white/28 px-7 py-4 text-sm font-medium text-white transition hover:bg-white/6 sm:w-auto"
+            >
+              Nous écrire
+            </a>
+          </div>
+        </div>
+      </section>
 
-      {/* IMAGE BREAK - fixed contrast */}
+      {/* IMAGE BREAK */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[32px]">
           <div className="relative h-[58vh] md:h-[72vh]">
@@ -241,10 +241,10 @@ export default function ChefTalentsHome() {
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/80">
                   Exécution
                 </p>
-                <h3 className="mt-3 text-3xl font-serif leading-tight text-white md:text-5xl">
+                <h3 className="mt-3 text-[2.2rem] font-serif leading-[1.06] text-white md:text-5xl">
                   Une présence discrète, une exécution constante, un niveau de service tenu.
                 </h3>
-                <p className="mt-4 max-w-2xl text-base font-light leading-relaxed text-white/88 md:text-lg">
+                <p className="mt-4 max-w-[23rem] text-[17px] font-light leading-8 text-white/88 md:max-w-2xl md:text-lg md:leading-relaxed">
                   Des interventions calibrées pour répondre à des standards élevés, sans friction
                   et avec une vraie continuité opérationnelle.
                 </p>
@@ -261,7 +261,7 @@ export default function ChefTalentsHome() {
             Méthode
           </p>
 
-          <h2 className="mt-4 max-w-3xl text-4xl font-serif leading-tight text-[#161616] md:text-6xl">
+          <h2 className="mt-4 max-w-3xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
             Une demande simple.
             <br />
             Un traitement structuré.
@@ -294,13 +294,13 @@ export default function ChefTalentsHome() {
             Sélection
           </p>
 
-          <h2 className="mt-4 max-w-3xl text-4xl font-serif leading-tight text-[#161616] md:text-6xl">
+          <h2 className="mt-4 max-w-3xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
             Deux niveaux de sélection,
             <br />
             selon vos exigences.
           </h2>
 
-          <p className="mt-6 max-w-2xl text-lg font-light leading-relaxed text-[#59544d]">
+          <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-2xl md:text-lg md:leading-relaxed">
             Tous les chefs de Chef Talents ne sont pas éligibles à la Sélection Select.
           </p>
 
@@ -323,19 +323,19 @@ export default function ChefTalentsHome() {
 
       {/* CTA */}
       <section className="bg-[#ebe4d9] px-6 py-24 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-12 text-white md:px-14 md:py-16">
-<p className="text-[11px] uppercase tracking-[0.24em] text-white/72">
-  Demande unique
+        <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-10 text-white md:px-14 md:py-16">
+          <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">
+            Demande unique
           </p>
 
-<h2 className="mt-4 max-w-4xl text-4xl font-serif leading-tight text-white md:text-6xl">
-  Une seule demande.
+          <h2 className="mt-4 max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
+            Une seule demande.
             <br />
             La bonne réponse.
           </h2>
 
-<p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/86 md:text-xl">
-  Dîner privé, séjour, résidence longue, yacht ou demande plus complexe :
+          <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-white/86 md:max-w-3xl md:text-xl md:leading-relaxed">
+            Dîner privé, séjour, résidence longue, yacht ou demande plus complexe :
             vous remplissez une seule demande, notre équipe qualifie ensuite le besoin
             et construit la meilleure réponse.
           </p>
@@ -343,14 +343,14 @@ export default function ChefTalentsHome() {
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link
               href="/request"
-              className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-medium text-[#161616] transition hover:bg-[#ece6dc]"
+              className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-medium text-[#161616] transition hover:bg-[#ece6dc] sm:w-auto"
             >
               Décrire mon besoin <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
 
             <Link
               href="/conciergeries"
-              className="inline-flex items-center justify-center rounded-full border border-white/20 px-8 py-4 text-sm font-medium text-white transition hover:bg-white/5"
+              className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-white/24 px-8 py-4 text-sm font-medium text-white transition hover:bg-white/5 sm:w-auto"
             >
               Je suis une conciergerie
             </Link>
@@ -365,11 +365,11 @@ export default function ChefTalentsHome() {
             FAQ
           </p>
 
-          <h2 className="mt-4 text-4xl font-serif leading-tight text-[#161616] md:text-6xl">
+          <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
             Questions fréquentes
           </h2>
 
-          <p className="mt-6 text-lg font-light leading-relaxed text-[#59544d]">
+          <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-none md:text-lg md:leading-relaxed">
             L’essentiel, avant de nous transmettre votre brief.
           </p>
 
@@ -404,14 +404,14 @@ export default function ChefTalentsHome() {
           <div className="mt-12 flex flex-col gap-4 sm:flex-row">
             <Link
               href="/request"
-              className="inline-flex items-center justify-center rounded-full bg-[#161616] px-8 py-4 text-sm font-medium text-white transition hover:bg-black"
+              className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-[#161616] px-8 py-4 text-sm font-medium text-white transition hover:bg-black sm:w-auto"
             >
               Décrire mon besoin
             </Link>
 
             <a
               href={mailtoHref}
-              className="inline-flex items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db]"
+              className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db] sm:w-auto"
             >
               Nous écrire
             </a>
@@ -420,7 +420,7 @@ export default function ChefTalentsHome() {
               href={whatsappHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db]"
+              className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-[#d4cdc2] px-8 py-4 text-sm font-medium text-[#3f3a34] transition hover:bg-[#ebe5db] sm:w-auto"
             >
               WhatsApp
             </a>
@@ -435,15 +435,17 @@ function MiniTrust({ title, text }: { title: string; text: string }) {
   return (
     <div>
       <h3 className="text-base font-medium text-[#161616]">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-[#59544d]">{text}</p>
+      <p className="mt-2 max-w-[22rem] text-[15px] leading-7 text-[#59544d] md:max-w-none">
+        {text}
+      </p>
     </div>
   );
 }
 
 function ValueCard({ text }: { text: string }) {
   return (
-    <div className="rounded-[24px] border border-[#d8d1c7] bg-[#fcfbf9] px-6 py-6">
-      <p className="text-base font-light leading-relaxed text-[#3f3a34]">{text}</p>
+    <div className="rounded-[24px] border border-[#d8d1c7] bg-[#fcfbf9] px-6 py-7">
+      <p className="text-[17px] font-light leading-8 text-[#3f3a34]">{text}</p>
     </div>
   );
 }
@@ -460,8 +462,8 @@ function StepCard({
   return (
     <div className="rounded-[28px] border border-[#d8d1c7] bg-white px-6 py-8">
       <p className="text-[11px] uppercase tracking-[0.24em] text-[#8a7f73]">{number}</p>
-      <h3 className="mt-4 text-2xl font-serif text-[#161616]">{title}</h3>
-      <p className="mt-4 text-base font-light leading-relaxed text-[#59544d]">{text}</p>
+      <h3 className="mt-4 text-[2rem] font-serif leading-tight text-[#161616]">{title}</h3>
+      <p className="mt-4 text-[17px] font-light leading-8 text-[#59544d]">{text}</p>
     </div>
   );
 }
@@ -479,7 +481,7 @@ function SelectionCard({
 }) {
   return (
     <div
-      className={`rounded-[30px] border p-8 md:p-10 ${
+      className={`rounded-[30px] border px-8 py-10 md:p-10 ${
         dark
           ? 'border-transparent bg-[#161616] text-white'
           : 'border-[#d8d1c7] bg-white text-[#161616]'
@@ -496,7 +498,7 @@ function SelectionCard({
       ) : null}
 
       <h3
-        className={`text-3xl font-serif leading-tight ${
+        className={`text-[2.25rem] font-serif leading-[1.02] ${
           dark ? 'text-white' : 'text-[#161616]'
         }`}
       >
@@ -504,7 +506,7 @@ function SelectionCard({
       </h3>
 
       <p
-        className={`mt-5 text-lg font-light leading-relaxed ${
+        className={`mt-5 text-[18px] font-light leading-8 ${
           dark ? 'text-white/84' : 'text-[#59544d]'
         }`}
       >
@@ -531,7 +533,9 @@ function FaqItem({
         onClick={() => setIsOpen(!isOpen)}
         className="flex w-full items-center justify-between py-7 text-left"
       >
-        <span className="pr-6 text-xl font-serif text-[#161616] md:text-2xl">{title}</span>
+        <span className="pr-6 text-[1.55rem] font-serif leading-tight text-[#161616] md:text-2xl">
+          {title}
+        </span>
         <span className={`text-2xl text-[#8a7f73] transition-transform ${isOpen ? 'rotate-45' : ''}`}>
           +
         </span>
@@ -546,7 +550,7 @@ function FaqItem({
             transition={{ duration: 0.35 }}
             className="overflow-hidden"
           >
-            <div className="pb-7 pr-8 text-lg font-light leading-relaxed text-[#59544d]">
+            <div className="max-w-[24rem] pb-7 pr-2 text-[18px] font-light leading-8 text-[#59544d] md:max-w-none md:pr-8 md:text-lg md:leading-relaxed">
               {content}
             </div>
           </motion.div>
