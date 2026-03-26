@@ -87,7 +87,7 @@ export default function ChefTalentsHome() {
             <div className="lg:col-span-5">
               <div className="relative aspect-[4/5] overflow-hidden rounded-[32px] bg-[#d8d0c4]">
                 <img
-                  src="/images/editorial/chef-dining-01.jpg.png"
+src="/images/editorial/hero-chef-talents.jpg"
                   alt="Chefs Talents"
                   className="h-full w-full object-cover"
                 />
@@ -229,7 +229,7 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[32px]">
           <div className="relative h-[58vh] md:h-[72vh]">
             <img
-              src="/images/editorial/chalet-cuisine.png"
+src="/images/editorial/villa-service.jpg"
               alt="Environnement privé"
               className="h-full w-full object-cover"
             />
