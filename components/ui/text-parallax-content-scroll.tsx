@@ -8,12 +8,12 @@ import { ArrowRight, Mail, MessageCircle } from 'lucide-react';
 const SUPPORT_EMAIL = 'contact@chefstalents.com';
 const WHATSAPP_NUMBER_E164 = '33756827612';
 const WHATSAPP_PREFILL = encodeURIComponent(
-  "Bonjour,\n\nJ’ai une demande Chefs Talents.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci."
+  "Bonjour,\n\nJ’ai une demande Chef Talents.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci."
 );
 
 export default function ChefTalentsHome() {
   const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-    'Demande Chefs Talents'
+    'Demande Chef Talents'
   )}&body=${encodeURIComponent(
     "Bonjour,\n\nJe souhaite faire une demande.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci,\n"
   )}`;
