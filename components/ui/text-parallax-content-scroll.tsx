@@ -8,12 +8,12 @@ import { ArrowRight, Mail, MessageCircle } from 'lucide-react';
 const SUPPORT_EMAIL = 'contact@chefstalents.com';
 const WHATSAPP_NUMBER_E164 = '33756827612';
 const WHATSAPP_PREFILL = encodeURIComponent(
-  "Bonjour,\n\nJ’ai une demande Chef Talents.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci."
+  "Bonjour,\n\nJ’ai une demande Chefs Talents.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci."
 );
 
 export default function ChefTalentsHome() {
   const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-    'Demande Chef Talents'
+    'Demande Chefs Talents'
   )}&body=${encodeURIComponent(
     "Bonjour,\n\nJe souhaite faire une demande.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci,\n"
   )}`;
@@ -42,7 +42,7 @@ export default function ChefTalentsHome() {
               </h1>
 
               <p className="mt-8 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-2xl md:text-xl md:leading-relaxed">
-                Chef Talents met en relation des chefs privés soigneusement sélectionnés
+                Chefs Talents met en relation des chefs privés soigneusement sélectionnés
                 avec des conciergeries, résidences et clients particuliers exigeant
                 discrétion, constance et excellence opérationnelle à travers l’Europe.
               </p>
@@ -88,7 +88,7 @@ export default function ChefTalentsHome() {
               <div className="relative aspect-[4/5] overflow-hidden rounded-[32px] bg-[#d8d0c4]">
                 <img
                   src="/images/editorial/chef-dining-01.jpg.png"
-                  alt="Chef Talents"
+                  alt="Chefs Talents"
                   className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/10" />
@@ -135,7 +135,7 @@ export default function ChefTalentsHome() {
             </h2>
 
             <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-2xl md:leading-relaxed">
-              Chef Talents a été pensé pour les situations où la qualité, la continuité et la confiance
+              Chefs Talents a été pensé pour les situations où la qualité, la continuité et la confiance
               priment sur la rapidité.
             </p>
 
@@ -301,7 +301,7 @@ export default function ChefTalentsHome() {
           </h2>
 
           <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-2xl md:text-lg md:leading-relaxed">
-            Tous les chefs de Chef Talents ne sont pas éligibles à la Sélection Select.
+            Tous les chefs de Chefs Talents ne sont pas éligibles à la Sélection Select.
           </p>
 
           <div className="mt-14 grid gap-8 lg:grid-cols-2">
@@ -381,7 +381,7 @@ export default function ChefTalentsHome() {
             />
             <FaqItem
               title="Est-ce que je choisis le chef ?"
-              content="Oui. Chef Talents fonctionne comme un intermédiaire curateur : nous présélectionnons des profils adaptés, et vous choisissez celui qui correspond le mieux à votre style, vos contraintes et votre niveau d’exigence."
+              content="Oui. Chefs Talents fonctionne comme un intermédiaire curateur : nous présélectionnons des profils adaptés, et vous choisissez celui qui correspond le mieux à votre style, vos contraintes et votre niveau d’exigence."
             />
             <FaqItem
               title="Quand le paiement est-il effectué ?"
@@ -397,7 +397,7 @@ export default function ChefTalentsHome() {
             />
             <FaqItem
               title="La prestation est-elle confidentielle ?"
-              content="Absolument. La discrétion est un principe fondamental de Chef Talents."
+              content="Absolument. La discrétion est un principe fondamental de Chefs Talents."
             />
           </div>
 
