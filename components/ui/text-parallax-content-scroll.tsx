@@ -487,15 +487,26 @@ function SelectionCard({
       {subtitle ? (
         <p
           className={`mb-4 text-[11px] uppercase tracking-[0.24em] ${
-            dark ? 'text-white/45' : 'text-[#7d756a]'
+            dark ? 'text-white/70' : 'text-[#7d756a]'
           }`}
         >
           {subtitle}
         </p>
       ) : null}
 
-      <h3 className="text-3xl font-serif leading-tight">{title}</h3>
-      <p className={`mt-5 text-lg font-light leading-relaxed ${dark ? 'text-white/70' : 'text-[#59544d]'}`}>
+      <h3
+        className={`text-3xl font-serif leading-tight ${
+          dark ? 'text-white' : 'text-[#161616]'
+        }`}
+      >
+        {title}
+      </h3>
+
+      <p
+        className={`mt-5 text-lg font-light leading-relaxed ${
+          dark ? 'text-white/82' : 'text-[#59544d]'
+        }`}
+      >
         {description}
       </p>
     </div>
