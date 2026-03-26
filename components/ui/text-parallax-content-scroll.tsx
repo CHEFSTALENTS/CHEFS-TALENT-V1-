@@ -189,39 +189,40 @@ export default function ChefTalentsHome() {
       </section>
 
       {/* CONFIDENTIALITE */}
-      <section className="bg-[#161616] px-6 py-24 text-white md:px-10 lg:px-16">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">
-              Confidentialité
-            </p>
-            <h2 className="mt-4 text-4xl font-serif leading-tight md:text-6xl">
-              La discrétion
-              <br />
-              n’est pas une option.
-            </h2>
-          </div>
+     <section className="bg-[#161616] px-6 py-24 text-white md:px-10 lg:px-16">
+  <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
+    <div className="lg:col-span-4">
+      <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">
+        Confidentialité
+      </p>
 
-          <div className="lg:col-span-8">
-            <p className="max-w-3xl text-lg font-light leading-relaxed text-white/82 md:text-2xl">
-              Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à
-              travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics.
-            </p>
+      <h2 className="mt-4 text-4xl font-serif leading-tight text-white md:text-6xl">
+        La discrétion
+        <br />
+        n’est pas une option.
+      </h2>
+    </div>
 
-            <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/64 md:text-xl">
-              Les références sont partagées de manière sélective. La confidentialité fait partie
-              intégrante de notre manière de travailler.
-            </p>
+    <div className="lg:col-span-8">
+      <p className="max-w-3xl text-lg font-light leading-relaxed text-white/88 md:text-2xl">
+        Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à
+        travers l’Europe. Les lieux, les clients et les missions ne sont jamais rendus publics.
+      </p>
 
-            <a
-              href={mailtoHref}
-              className="mt-10 inline-flex items-center justify-center rounded-full border border-white/20 px-7 py-4 text-sm font-medium text-white transition hover:bg-white/5"
-            >
-              Nous écrire
-            </a>
-          </div>
-        </div>
-      </section>
+      <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/78 md:text-xl">
+        Les références sont partagées de manière sélective. La confidentialité fait partie
+        intégrante de notre manière de travailler.
+      </p>
+
+      <a
+        href={mailtoHref}
+        className="mt-10 inline-flex items-center justify-center rounded-full border border-white/28 px-7 py-4 text-sm font-medium text-white transition hover:bg-white/6"
+      >
+        Nous écrire
+      </a>
+    </div>
+  </div>
+</section>
 
       {/* IMAGE BREAK - fixed contrast */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
@@ -323,18 +324,18 @@ export default function ChefTalentsHome() {
       {/* CTA */}
       <section className="bg-[#ebe4d9] px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-12 text-white md:px-14 md:py-16">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">
-            Demande unique
+<p className="text-[11px] uppercase tracking-[0.24em] text-white/72">
+  Demande unique
           </p>
 
-          <h2 className="mt-4 max-w-4xl text-4xl font-serif leading-tight md:text-6xl">
-            Une seule demande.
+<h2 className="mt-4 max-w-4xl text-4xl font-serif leading-tight text-white md:text-6xl">
+  Une seule demande.
             <br />
             La bonne réponse.
           </h2>
 
-          <p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/72 md:text-xl">
-            Dîner privé, séjour, résidence longue, yacht ou demande plus complexe :
+<p className="mt-6 max-w-3xl text-lg font-light leading-relaxed text-white/86 md:text-xl">
+  Dîner privé, séjour, résidence longue, yacht ou demande plus complexe :
             vous remplissez une seule demande, notre équipe qualifie ensuite le besoin
             et construit la meilleure réponse.
           </p>
@@ -487,7 +488,7 @@ function SelectionCard({
       {subtitle ? (
         <p
           className={`mb-4 text-[11px] uppercase tracking-[0.24em] ${
-            dark ? 'text-white/70' : 'text-[#7d756a]'
+            dark ? 'text-white/72' : 'text-[#7d756a]'
           }`}
         >
           {subtitle}
@@ -504,7 +505,7 @@ function SelectionCard({
 
       <p
         className={`mt-5 text-lg font-light leading-relaxed ${
-          dark ? 'text-white/82' : 'text-[#59544d]'
+          dark ? 'text-white/84' : 'text-[#59544d]'
         }`}
       >
         {description}
