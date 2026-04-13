@@ -287,4 +287,117 @@ export const articles: Article[] = [
       }
     ]
   }
+  
+,{
+    id: '6',
+    slug: 'chef-prive-cote-azur-ete-2026',
+    title: "Chef privé Côte d'Azur : guide complet été 2026",
+    subtitle: "Comment trouver et sécuriser un chef privé pour votre villa sur la Côte d'Azur pour la saison estivale.",
+    date: "Avril 2026",
+    category: "Côte d'Azur",
+    image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/request?type=private",
+    relatedLinkText: "Soumettre une demande",
+    blocks: [
+      { type: 'paragraph', content: "La saison estivale sur la Côte d'Azur représente la période la plus dense de l'année pour les chefs privés en Europe. Villas de Saint-Tropez, résidences de Cap Ferrat, propriétés de Mougins — la demande explose entre juin et septembre, et les meilleurs profils se réservent plusieurs mois à l'avance." },
+      { type: 'h2', content: "Pourquoi la Côte d'Azur est un marché à part" },
+      { type: 'paragraph', content: "La Côte d'Azur concentre une densité exceptionnelle de résidences privées haut de gamme. Un chef qui excelle en résidence parisienne n'est pas nécessairement adapté à une villa avec piscine à Ramatuelle où il devra gérer un marché provençal à 7h du matin, cuisiner pour 12 personnes le midi et dresser un dîner gastronomique le soir." },
+      { type: 'h2', content: "Les zones les plus demandées" },
+      { type: 'h3', content: "Saint-Tropez et le Var" },
+      { type: 'paragraph', content: "Saint-Tropez reste le point de concentration le plus fort. Les villas du golfe imposent des standards élevés — produits locaux, cuisine méditerranéenne maîtrisée, capacité à gérer des groupes festifs sans perdre en qualité." },
+      { type: 'h3', content: "Antibes, Cap d'Antibes" },
+      { type: 'paragraph', content: "Le Cap d'Antibes accueille des résidences plus discrètes, souvent occupées sur des durées plus longues. La régularité prime sur le spectaculaire." },
+      { type: 'h2', content: "Tarifs 2026" },
+      { type: 'list', content: ["Mission ponctuelle (1–3 jours) : 500€ à 1 200€ par jour hors matières premières.", "Mission semaine : 2 500€ à 6 000€ selon l'intensité du service.", "Mission saisonnière (1–3 mois) : 6 000€ à 15 000€ par mois."] },
+      { type: 'h2', content: "Comment sécuriser un bon chef" },
+      { type: 'quote', content: "Les meilleurs chefs sont réservés dès février–mars pour la saison estivale. En avril, les profils les plus demandés ont déjà plusieurs semaines bloquées." }
+    ]
+  },
+  {
+    id: '7',
+    slug: 'private-chef-french-riviera-guide',
+    title: "Private chef French Riviera : the complete guide 2026",
+    subtitle: "Everything you need to know about hiring a private chef for your villa on the French Riviera.",
+    date: "April 2026",
+    category: "French Riviera",
+    image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/request?type=private",
+    relatedLinkText: "Submit a request",
+    blocks: [
+      { type: 'paragraph', content: "The French Riviera is one of the most competitive markets in Europe for private chefs. Demand peaks between June and September, and the best profiles are booked months in advance. Here is everything you need to know to secure the right chef for your villa or yacht." },
+      { type: 'h2', content: "Why hiring a private chef on the Riviera is different" },
+      { type: 'paragraph', content: "Short but intense stays, large rotating groups, outdoor dining in summer heat, fresh market logistics, and clients with extremely high standards. A chef who performs brilliantly in a Paris apartment may struggle with a 12-person villa dinner in Ramatuelle." },
+      { type: 'h2', content: "Key areas" },
+      { type: 'h3', content: "Saint-Tropez and the Var" },
+      { type: 'paragraph', content: "The most in-demand area. Villas in the Gulf of Saint-Tropez command the highest rates and the most experienced chefs. Expect Mediterranean cuisine at its finest and strong local sourcing." },
+      { type: 'h3', content: "Antibes, Cap d'Antibes, Cannes" },
+      { type: 'paragraph', content: "Longer stays, more residential. Clients here often want a chef who integrates into family life while maintaining a consistently high level." },
+      { type: 'h2', content: "Rates 2026" },
+      { type: 'list', content: ["Short mission (1–3 days): €600 to €1,400 per day excluding ingredients.", "Weekly mission: €3,000 to €7,000 depending on service intensity.", "Seasonal placement (1–3 months): €7,000 to €16,000 per month."] },
+      { type: 'quote', content: "The best chefs are fully booked by March for the summer season. Submit your brief now with full details — location, exact dates, group size and budget." }
+    ]
+  },
+  {
+    id: '8',
+    slug: 'chef-prive-ibiza-2026',
+    title: "Chef privé Ibiza 2026 : trouver le bon profil pour votre villa",
+    subtitle: "Guide complet pour engager un chef privé à Ibiza : saisonnalité, profils et logistique.",
+    date: "Avril 2026",
+    category: "Ibiza",
+    image: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/request?type=private",
+    relatedLinkText: "Soumettre une demande",
+    blocks: [
+      { type: 'paragraph', content: "Ibiza s'est imposée comme l'une des destinations les plus demandées d'Europe pour les villas privées haut de gamme. De juin à septembre, l'île concentre une clientèle internationale exigeante et une logistique culinaire complexe." },
+      { type: 'h2', content: "Une saison courte, une demande intense" },
+      { type: 'paragraph', content: "La saison active à Ibiza dure environ quatre mois. Les villas les plus importantes font venir leurs chefs depuis la France, l'Espagne ou l'Italie, souvent pour la saison entière." },
+      { type: 'h2', content: "Spécificités culinaires d'Ibiza" },
+      { type: 'paragraph', content: "La clientèle est souvent internationale et cosmopolite. Les attentes reflètent cette diversité : cuisine méditerranéenne légère, végétarienne et végane fréquemment demandées, maîtrise des régimes alimentaires variés." },
+      { type: 'h2', content: "Tarifs 2026" },
+      { type: 'list', content: ["Mission semaine : 3 500€ à 7 000€ selon le profil.", "Saison complète (juin–septembre) : 12 000€ à 20 000€ par mois pour un chef senior."] },
+      { type: 'quote', content: "Les réservations pour Ibiza se font idéalement en janvier–février. En avril, il reste des disponibilités mais les profils les plus demandés sont déjà pris." }
+    ]
+  },
+  {
+    id: '9',
+    slug: 'combien-coute-chef-prive',
+    title: "Combien coûte un chef privé à domicile ? Tarifs 2026",
+    subtitle: "Grille tarifaire complète d'un chef privé selon la mission, le niveau, la durée et la localisation.",
+    date: "Avril 2026",
+    category: "Guide pratique",
+    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/request?type=private",
+    relatedLinkText: "Soumettre une demande",
+    blocks: [
+      { type: 'paragraph', content: "Le coût d'un chef privé varie considérablement selon le profil, la durée, la localisation et le niveau de service attendu. Voici une grille tarifaire réaliste pour 2026, basée sur le marché européen." },
+      { type: 'h2', content: "Ce que comprend le tarif" },
+      { type: 'paragraph', content: "Le tarif journalier couvre le temps et les compétences du chef — pas les ingrédients. La plupart des missions fonctionnent avec un budget matières premières séparé, refacturé au coût réel." },
+      { type: 'h2', content: "Grille tarifaire 2026" },
+      { type: 'list', content: ["Dîner privé ponctuel : 300€ à 800€ selon le niveau et le nombre de convives.", "Mission courte (2–5 jours) : 400€ à 1 200€ par jour.", "Mission semaine : 2 500€ à 6 000€.", "Mission mensuelle : 5 000€ à 15 000€ par mois.", "Chef résident annuel : 6 000€ à 18 000€ brut par mois."] },
+      { type: 'h2', content: "Les facteurs qui font varier le tarif" },
+      { type: 'list', content: ["Le profil : expérience étoilée, formation internationale.", "La localisation : Côte d'Azur, Ibiza, Monaco en saison — majoration de 20 à 40%.", "Les langues : chef multilingue plus rare et plus cher.", "La discrétion : une compétence à part entière dans les environnements UHNW."] },
+      { type: 'quote', content: "Pour une semaine dans une villa à Saint-Tropez pour 8 personnes avec un chef senior : tarif chef 4 500€, matières premières 4 000€, déplacement 300€. Budget total : environ 8 800€." }
+    ]
+  },
+  {
+    id: '10',
+    slug: 'chef-prive-saint-tropez',
+    title: "Chef privé Saint-Tropez : standards, profils et tarifs",
+    subtitle: "Saint-Tropez impose des standards culinaires particuliers. Comment trouver un chef privé à la hauteur.",
+    date: "Avril 2026",
+    category: "Côte d'Azur",
+    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/request?type=private",
+    relatedLinkText: "Soumettre une demande",
+    blocks: [
+      { type: 'paragraph', content: "Saint-Tropez est l'un des marchés les plus exigeants d'Europe pour les chefs privés. La concentration de villas haut de gamme, de yachts et de clients internationaux crée une demande soutenue pour des profils d'exception — et une pénurie chronique des meilleurs chefs en haute saison." },
+      { type: 'h2', content: "Le contexte culinaire de Saint-Tropez" },
+      { type: 'paragraph', content: "Les villas du golfe de Saint-Tropez accueillent une clientèle habituée aux meilleures tables du monde. Le chef privé doit délivrer un niveau gastronomique constant, avec une maîtrise parfaite des produits méditerranéens locaux." },
+      { type: 'h2', content: "Les profils les plus demandés" },
+      { type: 'list', content: ["Chef gastronomique mobile : formation haute cuisine, idéal pour séjours courts avec dîners d'exception.", "Chef résident saisonnier : s'installe pour toute la saison. Profil rare, très recherché.", "Chef yacht : pour les propriétaires qui alternent entre villa et bateau."] },
+      { type: 'h2', content: "Tarifs à Saint-Tropez en 2026" },
+      { type: 'list', content: ["Mission courte (3–7 jours) : 600€ à 1 400€ par jour.", "Saison complète (juillet–août) : 8 000€ à 16 000€ par mois."] },
+      { type: 'quote', content: "Juillet et août sont complets pour les meilleurs chefs dès le mois de mars. Si votre séjour est prévu en été, soumettez votre demande maintenant." }
+    ]
+  }
 ];
