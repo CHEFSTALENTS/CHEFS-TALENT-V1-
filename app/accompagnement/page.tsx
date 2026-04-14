@@ -406,12 +406,13 @@ export default function AccompagnementPage() {
       <section style={{ padding: 'clamp(80px, 10vw, 120px) clamp(24px, 8vw, 120px)' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
-            <div style={{ background: '#141410', aspectRatio: '3/4', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #2a2820' }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: '13px', color: '#605a4a', textAlign: 'center', padding: '40px' }}>
-                [Votre photo ici]<br />
-                <span style={{ fontSize: '11px', letterSpacing: '0.1em' }}>Uploadez votre photo dans le dossier public/images/</span>
-              </p>
-            </div>
+            <div style={{ aspectRatio: '3/4', overflow: 'hidden', border: '1px solid #2a2820' }}>
+  <img
+    src="/images/thomas-delcroix.jpg"
+    alt="Thomas Delcroix — Fondateur Chefs Talents"
+    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', filter: 'grayscale(20%)' }}
+  />
+</div>
             <div>
               <p className="section-label" style={{ marginBottom: '16px' }}>Thomas Delcroix</p>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 300, lineHeight: 1.1, marginBottom: '24px' }}>
