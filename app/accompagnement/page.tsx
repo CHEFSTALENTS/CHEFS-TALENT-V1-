@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
+
 function CountUp({ end, duration = 2000, prefix = "", suffix = "" }: {
   end: number; duration?: number; prefix?: string; suffix?: string;
 }) {
