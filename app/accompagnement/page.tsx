@@ -432,7 +432,7 @@ overflowX: ‘hidden’
           {
             name: 'Starter',
             duration: '1 mois',
-            price: '1 800€',
+            price: 'Prix sur demande',
             sub: 'Pour démarrer sur les bonnes bases',
             features: ['2 sessions mentorat/semaine', 'Support WhatsApp quotidien', 'Repositionnement + pricing', 'Stratégie réseaux sociaux', 'Accès réseau fin de programme'],
             featured: false,
@@ -440,7 +440,7 @@ overflowX: ‘hidden’
           {
             name: 'Accélération',
             duration: '2 mois',
-            price: '1 800€/mois',
+            price: 'Prix sur demande',
             sub: 'Pour ceux qui veulent aller vite',
             features: ['Tout le Starter inclus', 'Système acquisition complet', 'Stratégie multi-réseaux', 'Mise en relation prioritaire dès le mois 2', "Suivi jusqu'aux premières missions"],
             featured: true,
@@ -448,7 +448,7 @@ overflowX: ‘hidden’
           {
             name: 'Transformation',
             duration: '3 mois',
-            price: '1 800€/mois',
+            price: 'Prix sur demande',
             sub: 'Pour faire de cet été votre meilleur',
             features: ["Tout l'Accélération inclus", 'Accès réseau prioritaire dès le mois 1', 'Placement missions été 2026', 'Missions signées avant fin de programme', 'Accompagnement personnalisé total'],
             featured: false,
