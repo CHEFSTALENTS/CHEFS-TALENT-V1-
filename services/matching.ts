@@ -181,6 +181,60 @@ function getAvailabilityPriority(req: RequestEntity, chef: ChefUser) {
   return 3;
 }
 
+function getChefEnvironments(chef: ChefUser) {
+  const p: any = chef.profile ?? {};
+  const arr = p.environments ?? p.profile?.environments ?? [];
+  if (Array.isArray(arr)) return arr.map(norm).filter(Boolean);
+  return splitPrefs(arr);
+}
+
+const MISSION_ENV_KEYWORDS: Record<string, string[]> = {
+  yacht:     ['yacht', 'sailing', 'boat'],
+  residence: ['residence', 'long_stay', 'long stay', 'household', 'uhnw', 'famille', 'family'],
+  event:     ['event', 'evenement', 'wedding', 'mariage', 'palace', 'private_event'],
+  dinner:    ['dinner', 'diner', 'private_dinner', 'tasting'],
+  daily:     ['daily', 'residence', 'household', 'long_stay'],
+};
+
+function getMissionTypeMatch(req: RequestEntity, chef: ChefUser): boolean {
+  const missionType = norm((req as any).missionType);
+  if (!missionType) return false;
+
+  const p: any = chef.profile ?? {};
+  const chefProfileType = norm(p.profileType ?? p.profile?.profileType);
+  const chefEnvs = getChefEnvironments(chef);
+
+  if (chefProfileType && (chefProfileType === missionType || missionType.includes(chefProfileType))) {
+    return true;
+  }
+
+  const keywords = MISSION_ENV_KEYWORDS[missionType] ?? [missionType];
+  return chefEnvs.some((env) => keywords.some((kw) => env.includes(kw) || kw.includes(env)));
+}
+
+const SERVICE_LEVEL_MAP: Record<string, string> = {
+  chef_only:    'solo',
+  chef_service: 'assistants',
+  full_team:    'brigade',
+};
+
+function getServiceLevelMatch(req: RequestEntity, chef: ChefUser): boolean {
+  const wantTeam = SERVICE_LEVEL_MAP[String((req as any).serviceLevel ?? '')];
+  if (!wantTeam) return false;
+  const chefTeam = norm((chef.profile as any)?.teamAcceptance);
+  return chefTeam === wantTeam;
+}
+
+function getMissionDurationDays(req: RequestEntity): number {
+  const start = req?.dates?.start ? new Date(String(req.dates.start)) : null;
+  const end = req?.dates?.end ? new Date(String(req.dates.end)) : null;
+  if (!start || Number.isNaN(start.getTime())) return 0;
+  if (!end || Number.isNaN(end.getTime())) return 1;
+  const ms = end.getTime() - start.getTime();
+  if (ms <= 0) return 1;
+  return Math.ceil(ms / (1000 * 60 * 60 * 24)) + 1;
+}
+
 function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
   return getAvailabilityPriority(req, chef) >= 2;
 }
@@ -258,6 +312,35 @@ export function scoreChefForRequestV2(
     if (hits > 0) {
       score += 5;
       reasons.push(`✅ Langues match`);
+    }
+  }
+
+  // 6) Type de mission (yacht, résidence, event, dinner, daily)
+  if (getMissionTypeMatch(req, chef)) {
+    score += 8;
+    reasons.push('🎯 Type de mission');
+  }
+
+  // 7) Niveau de service (solo / assistants / brigade)
+  if (getServiceLevelMatch(req, chef)) {
+    score += 4;
+    reasons.push('👥 Niveau de service');
+  }
+
+  // 8) Bonus longue durée (≥ 7j) si expérience résidence/long_stay
+  const durationDays = getMissionDurationDays(req);
+  if (durationDays >= 7) {
+    const chefEnvs = getChefEnvironments(chef);
+    const hasLongStayExp = chefEnvs.some(
+      (e) =>
+        e.includes('residence') ||
+        e.includes('long_stay') ||
+        e.includes('long stay') ||
+        e.includes('household'),
+    );
+    if (hasLongStayExp) {
+      score += 3;
+      reasons.push('🏡 Expérience longue durée');
     }
   }
 

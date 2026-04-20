@@ -10,3 +10,11 @@ export const metadata: Metadata = {
     url: 'https://chefstalents.com/private-clients',
   },
 };
+
+export default function PrivateClientsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}

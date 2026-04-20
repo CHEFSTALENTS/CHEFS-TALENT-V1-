@@ -10,3 +10,11 @@ export const metadata: Metadata = {
     url: 'https://chefstalents.com/conciergeries',
   },
 };
+
+export default function ConciergeriesLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}

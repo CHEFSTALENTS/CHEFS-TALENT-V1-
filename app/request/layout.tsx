@@ -10,3 +10,11 @@ export const metadata: Metadata = {
     url: 'https://chefstalents.com/request',
   },
 };
+
+export default function RequestLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}

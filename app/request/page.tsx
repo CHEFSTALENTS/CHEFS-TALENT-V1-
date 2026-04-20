@@ -1,7 +1,7 @@
 'use client';
 import React, { Suspense, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Clock } from 'lucide-react';
 import { Button, Input, Textarea, Reveal, Marker } from '../../components/ui';
 import { submitRequest } from '../../services/actions';
 import type { RequestForm } from '../../types';
@@ -551,6 +551,13 @@ function RequestFormContent() {
             Un seul formulaire pour toutes les situations : remplacement ponctuel, dîner privé,
             déjeuner, séjour, résidence ou mission plus longue.
           </p>
+
+          {/* Indicateur de durée — aligne la promesse du CTA home */}
+          <p className="mt-4 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-stone-500">
+            <Clock className="w-3 h-3" aria-hidden="true" />
+            Environ 2 minutes · 3 étapes
+          </p>
+
           {/* FIX : barre de progression visuelle */}
           <div className="mt-8 max-w-xs">
             <ProgressBar current={step} labels={stepLabels} />
