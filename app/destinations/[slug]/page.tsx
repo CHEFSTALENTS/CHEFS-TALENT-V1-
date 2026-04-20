@@ -1,112 +1,273 @@
-
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { destinations } from "@/lib/destinations";
+import { destinations, getDestinationBySlug, getAllDestinationSlugs } from "@/lib/destinations";
 
-export const metadata: Metadata = {
-  title: "Nos Destinations | Chef Privé en Europe — Chefs Talents",
-  description: "Trouvez un chef privé dans toutes les destinations premium d'Europe. Côte d'Azur, Ibiza, Mykonos, Courchevel, Monaco, Sardaigne et bien plus.",
-  alternates: { canonical: "https://chefstalents.com/destinations" },
-};
+export async function generateStaticParams() {
+  return getAllDestinationSlugs().map((slug) => ({ slug }));
+}
 
-export default function DestinationsPage() {
-  const france = destinations.filter((d) => d.country === "France");
-  const europe = destinations.filter((d) => d.country !== "France");
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const dest = getDestinationBySlug(params.slug);
+  if (!dest) return {};
+  return {
+    title: dest.metaTitle,
+    description: dest.metaDescription,
+    alternates: { canonical: `https://chefstalents.com/destinations/${dest.slug}` },
+    openGraph: {
+      title: dest.metaTitle,
+      description: dest.metaDescription,
+      url: `https://chefstalents.com/destinations/${dest.slug}`,
+      images: [{ url: dest.image, width: 1200, height: 630, alt: dest.heroTitle }],
+    },
+  };
+}
+
+export default function DestinationPage({ params }: { params: { slug: string } }) {
+  const dest = getDestinationBySlug(params.slug);
+  if (!dest) notFound();
+
+  const related = destinations
+    .filter((d) => d.slug !== dest.slug && d.country === dest.country)
+    .slice(0, 3);
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: dest.heroTitle,
+    description: dest.description,
+    url: `https://chefstalents.com/destinations/${dest.slug}`,
+    provider: {
+      "@type": "Organization",
+      name: "Chefs Talents",
+      url: "https://chefstalents.com",
+    },
+    areaServed: {
+      "@type": "Place",
+      name: dest.name,
+    },
+  };
 
   return (
-    <main style={{ fontFamily: "'DM Sans', sans-serif", background: "#0c0c0c", color: "#f0ede8", minHeight: "100vh" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap');
-        * { box-sizing: border-box; }
-        .dest-card { background: #161616; border: 1px solid #222; border-radius: 16px; overflow: hidden; text-decoration: none; color: #f0ede8; transition: border-color 0.2s; display: block; }
-        .dest-card:hover { border-color: rgba(232,132,42,0.4); }
-        .badge { display: inline-block; background: rgba(232,132,42,0.15); color: #e8842a; padding: 5px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
-        @media (max-width: 768px) { .grid { grid-template-columns: 1fr !important; } }
-      `}</style>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
 
-      {/* NAV */}
-      <nav style={{ padding: "20px clamp(20px, 6vw, 80px)", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a1a1a" }}>
-        <Link href="/" style={{ color: "#f0ede8", textDecoration: "none", fontWeight: 700, fontSize: "15px" }}>CHEFS TALENTS</Link>
-        <a href="/request" style={{ background: "#e8842a", color: "#fff", padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontSize: "14px", fontWeight: 700 }}>
-          Soumettre une demande
-        </a>
-      </nav>
+      <div className="bg-paper min-h-screen">
 
-      {/* HERO */}
-      <section style={{ padding: "clamp(80px, 10vw, 120px) clamp(20px, 6vw, 80px)", position: "relative" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 30% 50%, rgba(232,132,42,0.07) 0%, transparent 55%)", pointerEvents: "none" }} />
-        <div style={{ position: "relative", maxWidth: "700px" }}>
-          <span className="badge" style={{ marginBottom: "24px", display: "inline-block" }}>15 destinations</span>
-          <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "clamp(40px, 6vw, 68px)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", lineHeight: 1.05, marginBottom: "20px" }}>
-            NOS DESTINATIONS<br />
-            <span style={{ fontFamily: "'DM Serif Display', serif", textTransform: "none", fontWeight: 400, color: "#e8842a", fontStyle: "italic" }}>
-              en Europe.
-            </span>
-          </h1>
-          <p style={{ fontSize: "18px", color: "#888", lineHeight: 1.7, fontWeight: 300 }}>
-            Chefs Talents couvre les destinations les plus prisées d'Europe. Trouvez un chef privé pour votre villa, yacht ou chalet — où que vous soyez.
-          </p>
-        </div>
-      </section>
+        {/* HERO */}
+        <section className="relative bg-stone-900 text-white min-h-[75vh] flex flex-col justify-end px-6 md:px-12 pt-32 pb-20 overflow-hidden">
+          <div className="absolute inset-0 opacity-30 pointer-events-none">
+            <img
+              src={dest.image}
+              alt={dest.heroTitle}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/60 to-transparent" />
 
-      {/* FRANCE */}
-      <section style={{ padding: "0 clamp(20px, 6vw, 80px) clamp(60px, 8vw, 80px)" }}>
-        <p style={{ fontSize: "12px", color: "#e8842a", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "24px" }}>France</p>
-        <div className="grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-          {france.map((d) => (
-            <Link key={d.slug} href={`/destinations/${d.slug}`} className="dest-card">
-              <div style={{ height: "160px", overflow: "hidden" }}>
-                <img src={d.image} alt={d.name} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.5)", transition: "transform 0.4s" }} />
-              </div>
-              <div style={{ padding: "20px" }}>
-                <p style={{ fontSize: "11px", color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>{d.region}</p>
-                <h2 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "6px" }}>{d.name}</h2>
-                <p style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>{d.season}</p>
-                <p style={{ fontSize: "14px", fontWeight: 700, color: "#e8842a" }}>{d.rateRange} / sem.</p>
-              </div>
+          <div className="relative z-10 max-w-4xl">
+            <div className="flex items-center gap-3 mb-6">
+              <Link
+                href="/destinations"
+                className="text-xs uppercase tracking-[0.2em] text-stone-400 hover:text-white transition-colors"
+              >
+                Destinations
+              </Link>
+              <span className="text-stone-600">/</span>
+              <span className="text-xs uppercase tracking-[0.2em] text-stone-300">
+                {dest.name}
+              </span>
+            </div>
+
+            <p className="text-xs uppercase tracking-[0.25em] text-stone-400 mb-4">
+              {dest.country} · {dest.region}
+            </p>
+
+            <h1 className="text-5xl md:text-7xl font-serif font-normal leading-[1.0] text-white mb-6">
+              {dest.heroTitle}
+            </h1>
+
+            <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-2xl mb-10">
+              {dest.heroSubtitle}
+            </p>
+
+            <Link
+              href="/request"
+              className="inline-block bg-white text-stone-900 px-8 py-4 text-sm uppercase tracking-[0.15em] font-medium hover:bg-stone-100 transition-colors"
+            >
+              Soumettre une demande
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* EUROPE */}
-      <section style={{ padding: "0 clamp(20px, 6vw, 80px) clamp(80px, 10vw, 120px)" }}>
-        <p style={{ fontSize: "12px", color: "#e8842a", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "24px" }}>Europe</p>
-        <div className="grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-          {europe.map((d) => (
-            <Link key={d.slug} href={`/destinations/${d.slug}`} className="dest-card">
-              <div style={{ height: "160px", overflow: "hidden" }}>
-                <img src={d.image} alt={d.name} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.5)" }} />
+        {/* INFOS CLÉS */}
+        <section className="bg-stone-100 border-b border-stone-200">
+          <div className="max-w-5xl mx-auto px-6 md:px-12 py-10">
+            <div className="grid md:grid-cols-3 gap-8">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-2">Saison</p>
+                <p className="text-stone-900 font-medium">{dest.season}</p>
               </div>
-              <div style={{ padding: "20px" }}>
-                <p style={{ fontSize: "11px", color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>{d.country}</p>
-                <h2 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "6px" }}>{d.name}</h2>
-                <p style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>{d.season}</p>
-                <p style={{ fontSize: "14px", fontWeight: 700, color: "#e8842a" }}>{d.rateRange} / sem.</p>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-2">Tarifs indicatifs</p>
+                <p className="text-stone-900 font-medium">{dest.rateRange}</p>
+                <p className="text-stone-500 text-sm font-light mt-1">{dest.rateDetail}</p>
               </div>
+              <div className="bg-white border border-stone-200 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-2">Anticipation</p>
+                <p className="text-stone-700 font-light text-sm leading-relaxed">{dest.bookingDelay}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* DESCRIPTION + HIGHLIGHTS */}
+        <section className="bg-paper py-24 px-6 md:px-12">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-12 gap-16">
+              <div className="md:col-span-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Le contexte</p>
+                <h2 className="text-4xl md:text-5xl font-serif font-normal text-stone-900 leading-tight mb-8">
+                  Chef privé à {dest.name}.
+                </h2>
+                <p className="text-stone-600 font-light text-lg leading-relaxed mb-10">
+                  {dest.description}
+                </p>
+                <Link
+                  href="/request"
+                  className="inline-block border border-stone-900 text-stone-900 px-8 py-4 text-sm uppercase tracking-[0.15em] hover:bg-stone-900 hover:text-white transition-colors"
+                >
+                  Décrire mon besoin
+                </Link>
+              </div>
+
+              <div className="md:col-span-7">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Notre sélection</p>
+                <div className="space-y-4">
+                  {dest.highlights.map((h, i) => (
+                    <div key={i} className="flex items-start gap-4 border-b border-stone-200 pb-4">
+                      <div className="mt-2 w-1 h-1 bg-stone-400 rounded-full shrink-0" />
+                      <p className="text-stone-700 font-light text-lg">{h}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* IMAGE */}
+        <div className="w-full h-[50vh] overflow-hidden bg-stone-200">
+          <img
+            src={dest.image}
+            alt={dest.heroTitle}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* TYPES DE MISSIONS */}
+        <section className="bg-stone-100 py-24 px-6 md:px-12">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-12 gap-16 items-start">
+              <div className="md:col-span-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Missions disponibles</p>
+                <h2 className="text-4xl font-serif font-normal text-stone-900 leading-tight">
+                  Ce que nous coordonnons à {dest.name}.
+                </h2>
+              </div>
+              <div className="md:col-span-8">
+                <div className="grid grid-cols-2 gap-px bg-stone-300 border border-stone-300">
+                  {dest.missionTypes.map((m, i) => (
+                    <div key={i} className="bg-paper p-8 hover:bg-white transition-colors">
+                      <p className="text-stone-700 font-light text-lg">{m}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="bg-stone-900 text-white py-32 px-6 md:px-12">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <p className="text-xs uppercase tracking-[0.25em] text-stone-400">
+              Prêt à démarrer ?
+            </p>
+            <h2 className="text-4xl md:text-5xl font-serif font-normal">
+              Une seule demande.<br />Le bon chef.
+            </h2>
+            <p className="text-stone-400 font-light text-lg max-w-xl mx-auto leading-relaxed">
+              Lieu, dates, nombre de convives, budget indicatif. Notre équipe identifie le bon profil pour {dest.name} et coordonne l'ensemble de la mission.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Link
+                href="/request"
+                className="bg-white text-stone-900 px-10 py-4 text-sm uppercase tracking-[0.15em] font-medium hover:bg-stone-100 transition-colors"
+              >
+                Soumettre une demande
+              </Link>
+              <Link
+                href="/conciergeries"
+                className="border border-stone-600 text-stone-300 px-10 py-4 text-sm uppercase tracking-[0.15em] hover:border-stone-400 transition-colors"
+              >
+                Je suis une conciergerie
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* DESTINATIONS LIÉES */}
+        {related.length > 0 && (
+          <section className="bg-paper py-24 px-6 md:px-12">
+            <div className="max-w-5xl mx-auto">
+              <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-12">
+                Destinations proches — {dest.country}
+              </p>
+              <div className="grid md:grid-cols-3 gap-8">
+                {related.map((d) => (
+                  <Link
+                    key={d.slug}
+                    href={`/destinations/${d.slug}`}
+                    className="group block"
+                  >
+                    <div className="aspect-[4/3] overflow-hidden bg-stone-200 mb-6">
+                      <img
+                        src={d.image}
+                        alt={d.name}
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-[1.5s]"
+                      />
+                    </div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-2">{d.country}</p>
+                    <h3 className="text-2xl font-serif text-stone-900 mb-2">{d.name}</h3>
+                    <p className="text-stone-500 font-light text-sm">{d.rateRange} / semaine</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* FOOTER MINI */}
+        <section className="bg-stone-100 border-t border-stone-200 py-8 px-6 md:px-12">
+          <div className="max-w-5xl mx-auto flex items-center justify-between">
+            <Link href="/destinations" className="text-xs uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors">
+              ← Toutes les destinations
             </Link>
-          ))}
-        </div>
-      </section>
+            <Link href="/insights" className="text-xs uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors">
+              Journal →
+            </Link>
+          </div>
+        </section>
 
-      {/* CTA */}
-      <section style={{ padding: "clamp(60px, 8vw, 100px) clamp(20px, 6vw, 80px)", textAlign: "center", borderTop: "1px solid #1a1a1a" }}>
-        <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "clamp(32px, 4vw, 52px)", marginBottom: "16px" }}>
-          Votre destination <em style={{ color: "#e8842a" }}>n'est pas listée ?</em>
-        </h2>
-        <p style={{ fontSize: "17px", color: "#666", marginBottom: "40px" }}>
-          On couvre toute l'Europe. Soumettez votre demande — on trouve le bon profil.
-        </p>
-        <a href="/request" style={{ display: "inline-block", background: "#e8842a", color: "#fff", padding: "18px 40px", borderRadius: "12px", textDecoration: "none", fontSize: "16px", fontWeight: 700 }}>
-          Soumettre une demande →
-        </a>
-      </section>
-
-      {/* FOOTER */}
-      <footer style={{ padding: "32px clamp(20px, 6vw, 80px)", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-        <p style={{ fontSize: "13px", color: "#333" }}>2026 Chefs Talents</p>
-        <Link href="/" style={{ fontSize: "13px", color: "#444", textDecoration: "none" }}>chefstalents.com</Link>
-      </footer>
-    </main>
+      </div>
+    </>
   );
 }
