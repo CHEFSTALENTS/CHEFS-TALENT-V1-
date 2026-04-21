@@ -422,7 +422,6 @@ export default function ChefTalentsHome() {
                 <li><Link href="/conciergeries" className="hover:text-white transition">Conciergeries</Link></li>
                 <li><Link href="/private-clients" className="hover:text-white transition">Clients Privés</Link></li>
                 <li><Link href="/destinations" className="hover:text-white transition">Destinations</Link></li>
-                <li><Link href="/accompagnement" className="hover:text-white transition">Accompagnement Chefs</Link></li>
                 <li><Link href="/chefs" className="hover:text-white transition">Espace chef</Link></li>
               </ul>
             </div>
