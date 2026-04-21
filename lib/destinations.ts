@@ -300,11 +300,7 @@ export const destinations: Destination[] = [
   },
 
   // ── EUROPE ─────────────────────────────────────────────────
-  {// ─────────────────────────────────────────────────────────────
-// AJOUTEZ cette entrée dans lib/destinations.ts
-// dans le tableau destinations[], après l'entrée "chef-prive-ibiza"
-// ─────────────────────────────────────────────────────────────
-
+  
   {
     slug: "private-chef-ibiza",
     name: "Ibiza",
