@@ -17,6 +17,11 @@ export interface Destination {
   metaDescription: string;
   image: string;
   featured?: boolean;
+  // ── Champs enrichis (optionnels) ──────────────────────────
+  longDescription?: string;
+  zones?: Array<{ name: string; description: string }>;
+  faqs?: Array<{ question: string; answer: string }>;
+  seoKeywords?: string[];
 }
 
 export const destinations: Destination[] = [
@@ -84,7 +89,7 @@ export const destinations: Destination[] = [
     description: "Cannes concentre une demande exceptionnelle en chefs privés, amplifiée par le Festival et les événements internationaux. Les villas des hauteurs, les yachts du Vieux-Port et les résidences du Cap d'Antibes créent un marché dense et exigeant toute l'année.",
     season: "Toute l'année (pic mai Festival + juin–août)",
     rateRange: "3 500€ — 10 000€",
-    rateDetail: "par semaine selon le profil et l'intensité du service ",
+    rateDetail: "par semaine selon le profil et l'intensité du service",
     highlights: [
       "Chefs privé expérimentés",
       "Couverture Festival de Cannes en mai",
@@ -93,7 +98,7 @@ export const destinations: Destination[] = [
       "Disponibilités limitées en période Festival",
     ],
     missionTypes: ["Villa Cannes", "Yacht Vieux-Port", "Événement Festival", "Résidence Croisette", "Cap d'Antibes"],
-    bookingDelay: "Festival de Cannes (mai) : réservez  à l'avance",
+    bookingDelay: "Festival de Cannes (mai) : réservez à l'avance",
     metaTitle: "Chef Privé Cannes | Festival & Villas — Chefs Talents",
     metaDescription: "Chef privé à Cannes pour votre villa, yacht ou événement pendant le Festival. Profils sélectionnés, disponibles toute l'année sur la Côte d'Azur.",
     image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?q=80&w=1200",
@@ -111,7 +116,7 @@ export const destinations: Destination[] = [
     rateRange: "2 500€ — 10 000€",
     rateDetail: "par semaine selon la durée et le niveau de service",
     highlights: [
-      "Marché provençal d'Antibes  parmi les meilleurs",
+      "Marché provençal d'Antibes parmi les meilleurs",
       "Profils longue durée disponibles",
       "Accès facile depuis Nice et Cannes",
       "Cuisine de résidence quotidienne maîtrisée",
@@ -163,7 +168,7 @@ export const destinations: Destination[] = [
     rateDetail: "par semaine selon le profil et l'intensité du service",
     highlights: [
       "Hub logistique pour toute la Côte d'Azur",
-      "Marché du Cours Saleya  produits exceptionnels",
+      "Marché du Cours Saleya produits exceptionnels",
       "Profils disponibles toute l'année",
       "Mont Boron, Cimiez, arrière-pays niçois",
     ],
@@ -241,7 +246,7 @@ export const destinations: Destination[] = [
       "Double saison ski + été disponible",
     ],
     missionTypes: ["Chalet Megève", "Résidence ski", "Mission été", "Famille longue durée", "Événement privé"],
-    bookingDelay: "Saison ski : réservez plusieurs mois à l'avance pour avoir accés aux meilleurs profils ",
+    bookingDelay: "Saison ski : réservez plusieurs mois à l'avance pour avoir accès aux meilleurs profils",
     metaTitle: "Chef Privé Megève | Chalets & Art de Vivre Alpin | Chefs Talents",
     metaDescription: "Chef privé à Megève pour votre chalet. Cuisine savoyarde et gastronomique, tea-times, dîners après le ski. La station la plus élégante des Alpes.",
     image: "https://images.unsplash.com/photo-1516571589254-46487e38c92a?q=80&w=1200",
@@ -295,11 +300,6 @@ export const destinations: Destination[] = [
   },
 
   // ── EUROPE ─────────────────────────────────────────────────
-  // ─────────────────────────────────────────────────────────────
-// REMPLACEZ l'entrée "chef-prive-ibiza" dans lib/destinations.ts
-// par ce bloc complet
-// ─────────────────────────────────────────────────────────────
-
   {
     slug: "chef-prive-ibiza",
     name: "Ibiza",
@@ -335,17 +335,11 @@ export const destinations: Destination[] = [
     metaDescription: "Chef privé à Ibiza pour votre villa ou yacht de luxe. Plus de 50 chefs sélectionnés dans notre réseau. Cuisine sur-mesure, profils multilingues, disponibles de mai à septembre. Réponse en 6h.",
     image: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1200",
     featured: true,
-
-    // ── CHAMPS SUPPLÉMENTAIRES pour la page SEO enrichie ──────
-    // Ces champs sont utilisés par app/destinations/[slug]/page.tsx
-    // pour générer le contenu long-form
-
     longDescription: `Ibiza n'est plus seulement une île de fête. Depuis plusieurs années, elle s'est imposée comme l'une des destinations privées les plus exigeantes de Méditerranée. Les villas de luxe d'Es Cubells, les fincas de Santa Gertrudis, les propriétés avec vue de Sant Josep — autant d'environnements où l'expérience culinaire est devenue aussi importante que le cadre.
 
 Chefs Talents dispose de plus de 50 chefs actifs dans son réseau sur l'île. Des profils qui connaissent Ibiza — ses marchés, ses producteurs, ses rythmes — et qui savent s'adapter aux exigences d'une clientèle internationale habituée aux meilleures tables du monde.
 
 La saison active dure de mai à septembre, avec un pic en juillet et août. La demande est extrêmement concentrée sur cette période. Les meilleurs profils sont réservés dès janvier par des clients réguliers. Si vous prévoyez une villa ou un yacht cet été, contactez-nous maintenant.`,
-
     zones: [
       { name: "Es Cubells & Sant Josep", description: "Villas avec vue mer, clientèle ultra-discrète" },
       { name: "Santa Gertrudis", description: "Fincas et résidences intérieures, séjours longue durée" },
@@ -354,7 +348,6 @@ La saison active dure de mai à septembre, avec un pic en juillet et août. La d
       { name: "Formentera", description: "Villas et transferts inter-îles, accessible depuis Ibiza" },
       { name: "Yachts & ports", description: "Marina Botafoch, Puerto Deportivo, mouillages privés" },
     ],
-
     faqs: [
       {
         question: "Combien coûte un chef privé à Ibiza ?",
@@ -381,7 +374,6 @@ La saison active dure de mai à septembre, avec un pic en juillet et août. La d
         answer: "Oui. Plusieurs chefs de notre réseau interviennent régulièrement à Formentera. Le déplacement depuis Ibiza est intégré dans la coordination. Contactez-nous pour votre demande spécifique.",
       },
     ],
-
     seoKeywords: [
       "chef privé Ibiza",
       "private chef Ibiza",
@@ -389,7 +381,6 @@ La saison active dure de mai à septembre, avec un pic en juillet et août. La d
       "chef yacht Ibiza",
       "cuisinier privé Ibiza",
       "chef à domicile Ibiza",
-      "chef para villa Ibiza",
       "hire private chef Ibiza",
       "chef Formentera",
       "chef privé Baléares",
