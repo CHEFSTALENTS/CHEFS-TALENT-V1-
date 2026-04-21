@@ -17,7 +17,6 @@ export interface Destination {
   metaDescription: string;
   image: string;
   featured?: boolean;
-  // ── Champs enrichis (optionnels) ──────────────────────────
   longDescription?: string;
   zones?: Array<{ name: string; description: string }>;
   faqs?: Array<{ question: string; answer: string }>;
@@ -300,8 +299,7 @@ export const destinations: Destination[] = [
   },
 
   // ── EUROPE ─────────────────────────────────────────────────
-  
-  {{
+  {
     slug: "private-chef-ibiza",
     name: "Ibiza",
     region: "Balearic Islands",
@@ -388,6 +386,7 @@ The active season runs from May to September, peaking in July and August. Demand
       "private chef balearic islands",
     ],
   },
+  {
     slug: "chef-prive-ibiza",
     name: "Ibiza",
     region: "Îles Baléares",
