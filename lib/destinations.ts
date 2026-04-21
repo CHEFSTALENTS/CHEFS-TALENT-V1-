@@ -300,7 +300,98 @@ export const destinations: Destination[] = [
   },
 
   // ── EUROPE ─────────────────────────────────────────────────
+  {// ─────────────────────────────────────────────────────────────
+// AJOUTEZ cette entrée dans lib/destinations.ts
+// dans le tableau destinations[], après l'entrée "chef-prive-ibiza"
+// ─────────────────────────────────────────────────────────────
+
   {
+    slug: "private-chef-ibiza",
+    name: "Ibiza",
+    region: "Balearic Islands",
+    country: "Spain",
+    lang: "en",
+    heroTitle: "Private Chef Ibiza",
+    heroSubtitle: "50+ vetted chefs for villas, yachts and private residences in Ibiza",
+    description: "Ibiza has become one of the most in-demand destinations in the Mediterranean for private chef hire. With 50+ active chefs in our network across the island, Chefs Talents is the premium French-curated service for luxury villas, yachts and private residences in Ibiza. Season runs May to September — the best profiles book out from January.",
+    season: "May — September (peak June–August)",
+    rateRange: "€3,500 — €7,000",
+    rateDetail: "per week depending on profile, number of guests, duration and service level",
+    highlights: [
+      "50+ active chefs in our vetted network on the island",
+      "Mediterranean, plant-based, Japanese and international cuisine",
+      "Multilingual chefs: EN/ES/FR/IT available",
+      "Villa, yacht and superyacht experience",
+      "Coverage across Ibiza Town, Sant Antoni, Santa Gertrudis, Es Cubells, Formentera",
+      "Fresh sourcing from Ibiza Vila market and local producers",
+      "Chefs experienced with UHNW standards",
+    ],
+    missionTypes: [
+      "Ibiza villa",
+      "Yacht & superyacht",
+      "Full season",
+      "Weekly stay",
+      "Formentera",
+      "Private event",
+      "Long-term residence",
+    ],
+    bookingDelay: "Full season: book from January — very limited availability in July–August",
+    metaTitle: "Private Chef Ibiza | 50+ Vetted Chefs | Villas & Yachts — Chefs Talents",
+    metaDescription: "Hire a private chef in Ibiza for your luxury villa or yacht. 50+ vetted chefs in our network. Tailored menus, multilingual profiles, available May to September. Response within 6 hours.",
+    image: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1200",
+    featured: true,
+    longDescription: `Ibiza is no longer just a party island. Over the past few years, it has established itself as one of the most demanding private destinations in the Mediterranean. The luxury villas of Es Cubells, the fincas of Santa Gertrudis, the hilltop properties of Sant Josep  environments where the culinary experience has become just as important as the setting itself.
+
+Chefs Talents has 50+ active chefs in its network across the island. Profiles who know Ibiza  its markets, its producers, its rhythms  and who know how to meet the expectations of an international clientele accustomed to the world's finest tables.
+
+The active season runs from May to September, peaking in July and August. Demand is extremely concentrated during this window. The best profiles are booked from January by returning clients. If you're planning a villa or yacht this summer, reach out now.`,
+    zones: [
+      { name: "Es Cubells & Sant Josep", description: "Sea-view villas, ultra-discreet clientele" },
+      { name: "Santa Gertrudis", description: "Interior fincas and residences, long-stay missions" },
+      { name: "Ibiza Town & Talamanca", description: "Villas near the port, cosmopolitan clientele" },
+      { name: "Sant Antoni", description: "Coastal villas, Café del Mar sunset dinners" },
+      { name: "Formentera", description: "Villa service and inter-island transfers from Ibiza" },
+      { name: "Yachts & marinas", description: "Marina Botafoch, Puerto Deportivo, private anchorages" },
+    ],
+    faqs: [
+      {
+        question: "How much does a private chef cost in Ibiza?",
+        answer: "A private chef in Ibiza typically costs between €3,500 and €7,000 per week depending on the profile, number of guests, service level and duration. For a one-off dinner, prices start from €600 for 6 guests. For full daily service (breakfast, lunch, dinner), senior profiles range from €800 to €1,500 per day all-inclusive groceries, preparation, service and clean-up included.",
+      },
+      {
+        question: "What's the difference between Chefs Talents and Take a Chef in Ibiza?",
+        answer: "Take a Chef is an open marketplace with 467 profiles starting from €60 per person. Chefs Talents is a curated selection of 50+ personally vetted chefs, with human coordination and a response guarantee within 6 hours. We work with clients where quality, continuity and discretion come first — high-end villas, yachts, long-term missions.",
+      },
+      {
+        question: "Can I hire a private chef on a yacht in Ibiza?",
+        answer: "Yes. Several profiles in our Ibiza network have validated yachting experience — marina provisioning, cooking in confined spaces, service at sea. We cover yachts berthed at Marina Botafoch, Puerto Deportivo, and anchorages in Ibiza Bay or around Formentera.",
+      },
+      {
+        question: "How far in advance do I need to book a private chef for summer in Ibiza?",
+        answer: "The best profiles book out from January for peak season (July–August). For June or September, availability remains accessible until April–May. Last-minute requests are possible but availability is severely limited in high summer. We always do our best to find a solution.",
+      },
+      {
+        question: "Do your chefs in Ibiza speak English?",
+        answer: "Yes. The majority of profiles in our Ibiza network are multilingual. Depending on the mission, we match chefs who communicate in English, Spanish, French and sometimes Italian. The client's language is always factored into our matching process.",
+      },
+      {
+        question: "Does Chefs Talents cover Formentera?",
+        answer: "Yes. Several chefs in our network work regularly in Formentera. The transfer from Ibiza is factored into the coordination. Contact us with your specific request.",
+      },
+    ],
+    seoKeywords: [
+      "private chef Ibiza",
+      "hire private chef Ibiza",
+      "private chef ibiza villa",
+      "private chef ibiza yacht",
+      "personal chef ibiza",
+      "chef hire ibiza",
+      "private chef formentera",
+      "luxury chef ibiza",
+      "ibiza villa chef",
+      "private chef balearic islands",
+    ],
+  },
     slug: "chef-prive-ibiza",
     name: "Ibiza",
     region: "Îles Baléares",
