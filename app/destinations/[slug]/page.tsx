@@ -318,8 +318,8 @@ export default function DestinationPage({ params }: { params: { slug: string } }
         <section className="bg-[#161616] px-6 py-10 md:px-12">
           <div className="mx-auto max-w-5xl grid grid-cols-2 gap-6 md:grid-cols-4 text-center">
             <div>
-              <p className="font-serif text-3xl text-white">50+</p>
-              <p className="text-xs text-white/50 mt-1">{lang === 'en' ? 'Active chefs on the island' : lang === 'es' ? 'Chefs activos en la isla' : "Chefs actifs sur l'île"}</p>
+              <p className="font-serif text-3xl text-white">400+</p>
+              <p className="text-xs text-white/50 mt-1">{lang === 'en' ? 'Chefs in our network' : lang === 'es' ? 'Chefs en nuestra red' : 'Chefs dans notre réseau'}</p>
             </div>
             <div>
               <p className="font-serif text-3xl text-white">&lt; 6h</p>
