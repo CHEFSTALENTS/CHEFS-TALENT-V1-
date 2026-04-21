@@ -758,11 +758,21 @@ function WizardContent() {
 const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, data.budgetLevel ?? "premium", data.mealPlan);
   // Filtrage villes
   const filteredCities = citySearch.length >= 1
-    ? DESTINATIONS.filter(d =>
-        d.name.toLowerCase().includes(citySearch.toLowerCase()) ||
-        d.country.toLowerCase().includes(citySearch.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  ? (() => {
+      const q = citySearch.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // retire les accents
+      return DESTINATIONS.filter(d => {
+        const name = d.name.toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const country = d.country.toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        // Recherche avec tolérance aux fautes légères
+        return name.includes(q) || 
+               country.includes(q) ||
+               name.replace(/[^a-z]/g, "").includes(q.replace(/[^a-z]/g, ""));
+      }).slice(0, 10);
+    })()
+  : [];
 
   const canContinue = () => {
     switch (step) {
