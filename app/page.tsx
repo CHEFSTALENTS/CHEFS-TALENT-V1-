@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
@@ -25,6 +26,36 @@ const DESTINATIONS_FEATURED = [
   { name: 'Verbier', country: 'Suisse', emoji: '🇨🇭' },
   { name: 'Positano', country: 'Italie', emoji: '🇮🇹' },
 ];
+
+// ── Switcher de langue ────────────────────────────────────────
+function LangSwitcher() {
+  const router = useRouter();
+  const langs = [
+    { code: 'fr', label: 'FR', href: '/' },
+    { code: 'en', label: 'EN', href: '/en' },
+    { code: 'es', label: 'ES', href: '/es' },
+  ];
+
+  return (
+    <div className="inline-flex items-center rounded-full border border-white/30 overflow-hidden">
+      {langs.map((l, i) => (
+        <Link
+          key={l.code}
+          href={l.href}
+          className={[
+            'px-4 py-1.5 text-xs font-medium tracking-wide transition',
+            i > 0 ? 'border-l border-white/20' : '',
+            l.code === 'fr'
+              ? 'bg-white text-[#161616] cursor-default'
+              : 'text-white/70 hover:text-white hover:bg-white/10',
+          ].join(' ')}
+        >
+          {l.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export default function ChefTalentsHome() {
   const mailtoHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
@@ -55,6 +86,12 @@ export default function ChefTalentsHome() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/28 to-black/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/42 via-transparent to-black/10" />
+
+        {/* ── Switcher langue en haut à droite ── */}
+        <div className="absolute top-6 right-6 z-20 md:top-8 md:right-10 lg:right-20">
+          <LangSwitcher />
+        </div>
+
         <div className="relative z-10 flex h-full items-end px-6 pb-14 md:px-12 md:pb-16 lg:px-20 lg:pb-20">
           <motion.div
             className="max-w-[880px] text-white"
@@ -265,7 +302,7 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl">
           <div className="rounded-[32px] bg-[#161616] px-8 py-12 md:px-14 md:py-16 lg:grid lg:grid-cols-12 lg:gap-10 lg:items-center">
             <div className="lg:col-span-5 mb-8 lg:mb-0">
-              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-white/60">Sélection</p>
+              <p className="mb-4 text-[11px] uppercase tracking-[0.2em] text-white/60">Sélection</p>
               <h2 className="text-[2.4rem] font-serif leading-[1.04] text-white md:text-5xl">
                 Un seul réseau.<br />Deux entrées.
               </h2>
@@ -297,8 +334,6 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl">
           <div className="rounded-[32px] border border-[#d8d1c7] bg-white overflow-hidden">
             <div className="grid lg:grid-cols-12">
-
-              {/* Photo */}
               <div className="lg:col-span-4 relative h-72 lg:h-auto min-h-[320px]">
                 <img
                   src="images/editorial/IMG_8782.JPG"
@@ -307,13 +342,9 @@ export default function ChefTalentsHome() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-black/5" />
               </div>
-
-              {/* Texte */}
               <div className="lg:col-span-8 px-8 py-10 md:px-12 md:py-14 flex flex-col justify-center">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Fondateur</p>
-                <h2 className="text-[2.2rem] font-serif leading-[1.04] text-[#161616] md:text-4xl mb-6">
-                  Thomas Delcroix
-                </h2>
+                <h2 className="text-[2.2rem] font-serif leading-[1.04] text-[#161616] md:text-4xl mb-6">Thomas Delcroix</h2>
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-4 max-w-2xl">
                   Chef privé depuis 2020, passionné par le monde du luxe et de la gastronomie privée. J'ai exercé dans des tables étoilées en France, navigué plusieurs mois en yachting privé en Méditerranée, et réalisé plus de 200 missions dans des villas, chalets et résidences à travers l'Europe.
                 </p>
@@ -321,24 +352,15 @@ export default function ChefTalentsHome() {
                   J'ai fondé Chefs Talents en 2023 pour mettre ce réseau : des chefs rencontrés dans des cuisines étoilées et à bord de superyachts : au service de clients qui exigent l'excellence.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Link
-                    href="/about"
-                    className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[#d4cdc2] px-7 text-sm font-medium text-[#3f3a34] transition hover:bg-[#f4efe8] sm:w-auto"
-                  >
+                  <Link href="/about" className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[#d4cdc2] px-7 text-sm font-medium text-[#3f3a34] transition hover:bg-[#f4efe8] sm:w-auto">
                     En savoir plus
                   </Link>
-                  <a
-                    href={`https://wa.me/${WHATSAPP_NUMBER_E164}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#161616] px-7 text-sm font-medium text-white transition hover:bg-black sm:w-auto"
-                  >
+                  <a href={`https://wa.me/${WHATSAPP_NUMBER_E164}`} target="_blank" rel="noreferrer" className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#161616] px-7 text-sm font-medium text-white transition hover:bg-black sm:w-auto">
                     Me contacter
                     <span className="text-xs text-white/55">— Thomas</span>
                   </a>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -397,8 +419,6 @@ export default function ChefTalentsHome() {
       <footer className="mt-auto bg-stone-900 text-stone-400 py-20 border-t border-stone-800">
         <div className="max-w-7xl mx-auto px-6 md:px-10 lg:px-16">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-
-            {/* Marque */}
             <div className="space-y-5">
               <span className="font-serif text-2xl text-white">CHEFS TALENTS</span>
               <p className="text-sm leading-relaxed font-light text-stone-500 max-w-xs">
@@ -413,8 +433,6 @@ export default function ChefTalentsHome() {
                 </a>
               </div>
             </div>
-
-            {/* Plateforme */}
             <div>
               <h4 className="text-stone-300 font-medium mb-6 uppercase text-[10px] tracking-[0.2em]">Plateforme</h4>
               <ul className="space-y-3 text-sm font-light">
@@ -425,8 +443,6 @@ export default function ChefTalentsHome() {
                 <li><Link href="/chefs" className="hover:text-white transition">Espace chef</Link></li>
               </ul>
             </div>
-
-            {/* Destinations */}
             <div>
               <h4 className="text-stone-300 font-medium mb-6 uppercase text-[10px] tracking-[0.2em]">Destinations</h4>
               <ul className="space-y-3 text-sm font-light">
@@ -438,8 +454,6 @@ export default function ChefTalentsHome() {
                 <li><Link href="/destinations" className="hover:text-white transition text-stone-500">Voir toutes →</Link></li>
               </ul>
             </div>
-
-            {/* À propos & Légal */}
             <div>
               <h4 className="text-stone-300 font-medium mb-6 uppercase text-[10px] tracking-[0.2em]">À propos</h4>
               <ul className="space-y-3 text-sm font-light mb-8">
@@ -452,10 +466,7 @@ export default function ChefTalentsHome() {
                 <li><Link href="/legal" className="hover:text-white transition">Mentions Légales</Link></li>
               </ul>
             </div>
-
           </div>
-
-          {/* Bas du footer */}
           <div className="border-t border-stone-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-stone-600">
             <span>© {new Date().getFullYear()} Chefs Talents — Thomas Delcroix. Tous droits réservés.</span>
             <span className="text-stone-700">Bordeaux, France</span>
@@ -468,7 +479,6 @@ export default function ChefTalentsHome() {
 }
 
 /* ── Composants ── */
-
 function MiniTrust({ title, text }: { title: string; text: string }) {
   return (
     <div>
