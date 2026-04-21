@@ -301,7 +301,7 @@ export default function ChefTalentsHome() {
               {/* Photo */}
               <div className="lg:col-span-4 relative h-72 lg:h-auto min-h-[320px]">
                 <img
-                  src="/images/thomas-delcroix.jpg"
+                  src="/images/editorial/thomas-delcroix.jpg"
                   alt="Thomas Delcroix — Fondateur Chefs Talents"
                   className="absolute inset-0 w-full h-full object-cover object-top"
                 />
