@@ -44,7 +44,7 @@ export default function AboutPage() {
           <div className="lg:col-span-4">
             <div className="rounded-[28px] overflow-hidden aspect-[3/4]">
               <img
-                src="/images/editorial/thomas-delcroix.jpg"
+                src="images/editorial/IMG_8782.JPG"
                 alt="Thomas Delcroix — Fondateur Chefs Talents"
                 className="w-full h-full object-cover object-top"
               />
