@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDestinationBySlug, getAllDestinationSlugs } from '@/lib/destinations';
 import { FaqItem } from '@/app/destinations/_components/FaqItem';
+import { LangSwitcher } from '@/app/destinations/_components/LangSwitcher';
 
 export async function generateStaticParams() {
   return getAllDestinationSlugs().map((slug) => ({ slug }));
@@ -34,6 +35,13 @@ export default function DestinationPage({
 }) {
   const dest = getDestinationBySlug(params.slug) as any;
   if (!dest) notFound();
+
+  // Table FR ↔ EN
+  const LANG_PAIRS: Record<string, { fr: string; en: string }> = {
+    'chef-prive-ibiza':   { fr: 'chef-prive-ibiza',  en: 'private-chef-ibiza' },
+    'private-chef-ibiza': { fr: 'chef-prive-ibiza',  en: 'private-chef-ibiza' },
+  };
+  const langPair = LANG_PAIRS[dest.slug] ?? null;
 
   const hasFaqs    = Array.isArray(dest.faqs) && dest.faqs.length > 0;
   const hasZones   = Array.isArray(dest.zones) && dest.zones.length > 0;
@@ -95,9 +103,18 @@ export default function DestinationPage({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
           <div className="relative z-10 flex h-full items-end px-6 pb-14 md:px-12 lg:px-20">
             <div className="max-w-3xl text-white">
-              <p className="mb-4 text-[10px] uppercase tracking-[0.35em] text-white/70">
-                {dest.country} — {dest.region}
-              </p>
+              <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
+                <p className="text-[10px] uppercase tracking-[0.35em] text-white/70">
+                  {dest.country} — {dest.region}
+                </p>
+                {langPair && (
+                  <LangSwitcher
+                    currentLang={dest.lang as 'fr' | 'en'}
+                    frSlug={langPair.fr}
+                    enSlug={langPair.en}
+                  />
+                )}
+              </div>
               <h1 className="text-[2.8rem] font-serif leading-[1.0] text-white md:text-6xl lg:text-7xl">
                 {dest.heroTitle}
               </h1>
