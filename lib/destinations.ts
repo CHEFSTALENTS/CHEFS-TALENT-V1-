@@ -308,10 +308,10 @@ export const destinations: Destination[] = [
     lang: "fr",
     heroTitle: "Chef privé Ibiza",
     heroSubtitle: "Plus de 50 chefs sélectionnés pour villas, yachts et résidences aux Baléares",
-    description: "Ibiza s'est imposée comme l'une des destinations les plus demandées de Méditerranée pour les chefs privés. Avec plus de 50 chefs actifs dans notre réseau sur l'île, Chefs Talents est la référence française pour les villas de luxe, yachts et résidences privées à Ibiza. Saison concentrée de mai à septembre — les meilleurs profils se réservent dès janvier.",
+    description: "Ibiza s'est imposée comme l'une des destinations les plus demandées de Méditerranée pour les chefs privés. Avec plus de 50 chefs actifs dans notre réseau sur l'île, Chefs Talents est la référence française pour les villas de luxe, yachts et résidences privées à Ibiza. Saison concentrée de mai à septembre : les meilleurs profils se réservent dès janvier.",
     season: "Mai — Septembre (pic juin–août)",
-    rateRange: "3 500€ — 12 000€",
-    rateDetail: "par semaine selon le profil, la durée et l'intensité du service",
+    rateRange: "3 500€ — 7 000€",
+    rateDetail: "par semaine selon le profil, le nombre de personne, la durée et l'intensité du service",
     highlights: [
       "50+ chefs actifs dans notre réseau sur l'île",
       "Cuisine méditerranéenne, végane, internationale, japonaise",
@@ -330,14 +330,14 @@ export const destinations: Destination[] = [
       "Événement privé",
       "Résidence longue durée",
     ],
-    bookingDelay: "Saison complète : réservez dès janvier — profils limités en juillet–août",
+    bookingDelay: "Saison complète : réservez dès janvier : profils limités en juillet–août",
     metaTitle: "Chef Privé Ibiza | 50+ Chefs Sélectionnés | Villas & Yachts — Chefs Talents",
     metaDescription: "Chef privé à Ibiza pour votre villa ou yacht de luxe. Plus de 50 chefs sélectionnés dans notre réseau. Cuisine sur-mesure, profils multilingues, disponibles de mai à septembre. Réponse en 6h.",
     image: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?q=80&w=1200",
     featured: true,
-    longDescription: `Ibiza n'est plus seulement une île de fête. Depuis plusieurs années, elle s'est imposée comme l'une des destinations privées les plus exigeantes de Méditerranée. Les villas de luxe d'Es Cubells, les fincas de Santa Gertrudis, les propriétés avec vue de Sant Josep — autant d'environnements où l'expérience culinaire est devenue aussi importante que le cadre.
+    longDescription: `Ibiza n'est plus seulement une île de fête. Depuis plusieurs années, elle s'est imposée comme l'une des destinations privées les plus exigeantes de Méditerranée. Les villas de luxe d'Es Cubells, les fincas de Santa Gertrudis, les propriétés avec vue de Sant Josep  autant d'environnements où l'expérience culinaire est devenue aussi importante que le cadre.
 
-Chefs Talents dispose de plus de 50 chefs actifs dans son réseau sur l'île. Des profils qui connaissent Ibiza — ses marchés, ses producteurs, ses rythmes — et qui savent s'adapter aux exigences d'une clientèle internationale habituée aux meilleures tables du monde.
+Chefs Talents dispose de plus de 50 chefs actifs dans son réseau sur l'île. Des profils qui connaissent Ibiza : ses marchés, ses producteurs, ses rythmes  et qui savent s'adapter aux exigences d'une clientèle internationale habituée aux meilleures tables du monde.
 
 La saison active dure de mai à septembre, avec un pic en juillet et août. La demande est extrêmement concentrée sur cette période. Les meilleurs profils sont réservés dès janvier par des clients réguliers. Si vous prévoyez une villa ou un yacht cet été, contactez-nous maintenant.`,
     zones: [
@@ -351,15 +351,15 @@ La saison active dure de mai à septembre, avec un pic en juillet et août. La d
     faqs: [
       {
         question: "Combien coûte un chef privé à Ibiza ?",
-        answer: "Le tarif d'un chef privé à Ibiza varie entre 3 500€ et 12 000€ par semaine selon le profil, le niveau de service et la durée de la mission. Pour un dîner ponctuel, comptez à partir de 600€. Pour une présence quotidienne (petit-déjeuner, déjeuner, dîner), les profils seniors se situent entre 800€ et 1 500€ par jour tout compris. Ces tarifs incluent les courses, la préparation, le service et le nettoyage.",
+        answer: "Le tarif d'un chef privé à Ibiza varie entre 3 500€ et 7 000€ par semaine selon le profil, le nombre de convives, le niveau de service et la durée de la mission. Pour un dîner ponctuel, comptez à partir de 600€ pour 6 personnes. Pour une présence quotidienne (petit-déjeuner, déjeuner, dîner), les profils seniors se situent entre 700€ et 1 500€ par jour tout compris. Ces tarifs incluent les courses, la préparation, le service et le nettoyage.",
       },
       {
         question: "Quelle est la différence entre Chefs Talents et Take a Chef à Ibiza ?",
-        answer: "Take a Chef est une marketplace ouverte à tous les profils à partir de 60€ par personne. Chefs Talents est une sélection de 50+ chefs vérifiés, avec une coordination humaine et une réponse garantie en moins de 6 heures. Nous intervenons pour des missions où la qualité, la continuité et la discrétion priment — villas haut de gamme, yachts, missions longue durée.",
+        answer: "Take a Chef est une marketplace ouverte à tous les profils à partir de 60€ par personne. Chefs Talents est une sélection de 50+ chefs vérifiés, avec une coordination humaine et une réponse garantie en moins de 6 heures. Nous intervenons pour des missions où la qualité, la continuité et la discrétion priment  villas haut de gamme, yachts, missions longue durée.",
       },
       {
         question: "Peut-on avoir un chef privé sur un yacht à Ibiza ?",
-        answer: "Oui. Plusieurs profils de notre réseau ibicenco ont une expérience yachting validée — approvisionnement en port, cuisine en espace contraint, service à la mer. Nous couvrons les yachts à quai à Marina Botafoch, Puerto Deportivo, et les mouillages dans la baie d'Ibiza ou autour de Formentera.",
+        answer: "Oui. Plusieurs profils de notre réseau ibicenco ont une expérience yachting validée approvisionnement en port, cuisine en espace contraint, service à la mer. Nous couvrons les yachts à quai à Marina Botafoch, Puerto Deportivo, et les mouillages dans la baie d'Ibiza ou autour de Formentera.",
       },
       {
         question: "Jusqu'à quand peut-on réserver un chef privé pour l'été à Ibiza ?",
