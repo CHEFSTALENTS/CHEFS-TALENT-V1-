@@ -301,7 +301,7 @@ export const destinations: Destination[] = [
 
   // ── EUROPE ─────────────────────────────────────────────────
   
-  {
+  {{
     slug: "private-chef-ibiza",
     name: "Ibiza",
     region: "Balearic Islands",
