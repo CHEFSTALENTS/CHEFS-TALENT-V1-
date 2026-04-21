@@ -301,7 +301,7 @@ export default function ChefTalentsHome() {
               {/* Photo */}
               <div className="lg:col-span-4 relative h-72 lg:h-auto min-h-[320px]">
                 <img
-                  src="/images/editorial/thomas-delcroix.jpg"
+                  src="images/editorial/IMG_8782.JPG"
                   alt="Thomas Delcroix — Fondateur Chefs Talents"
                   className="absolute inset-0 w-full h-full object-cover object-top"
                 />
@@ -318,7 +318,7 @@ export default function ChefTalentsHome() {
                   Chef privé depuis 2020, passionné par le monde du luxe et de la gastronomie privée. J'ai exercé dans des tables étoilées en France, navigué plusieurs mois en yachting privé en Méditerranée, et réalisé plus de 200 missions dans des villas, chalets et résidences à travers l'Europe.
                 </p>
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-8 max-w-2xl">
-                  J'ai fondé Chefs Talents en 2023 pour mettre ce réseau — des chefs rencontrés dans des cuisines étoilées et à bord de superyachts — au service de clients qui exigent l'excellence.
+                  J'ai fondé Chefs Talents en 2023 pour mettre ce réseau : des chefs rencontrés dans des cuisines étoilées et à bord de superyachts : au service de clients qui exigent l'excellence.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
