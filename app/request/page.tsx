@@ -329,13 +329,40 @@ function detectLang(): Lang {
 }
 
 // Calcul estimation budget
-function calcEstimate(dest: typeof DESTINATIONS[0] | undefined, days: number, guests: number, level: string) {
+function calcEstimate(
+  dest: typeof DESTINATIONS[0] | undefined,
+  days: number,
+  guests: number,
+  level: string,
+  mealPlan?: string
+) {
   if (!dest || days <= 0 || guests <= 0) return null;
-  const multiplier = level === "exclusive" ? 1.4 : level === "premium" ? 1.0 : 0.7;
-  const base = dest.baseDay * multiplier * days;
-  const min = Math.round(base * 0.85 / 100) * 100;
-  const max = Math.round(base * 1.15 / 100) * 100;
-  return { min, max };
+
+  const hoursPerMealPlan: Record<string, number> = {
+    breakfast: 3,
+    lunch: 5,
+    dinner: 6,
+    breakfast_lunch: 8,
+    lunch_dinner: 10,
+    full_time: 12,
+  };
+
+  const hours = hoursPerMealPlan[mealPlan ?? "dinner"] ?? 6;
+  const dayRatio = hours / 12;
+
+  const chefDayRates: Record<string, { min: number; max: number }> = {
+    essential: { min: 350, max: 450 },
+    premium:   { min: 450, max: 580 },
+    exclusive: { min: 600, max: 850 },
+  };
+
+  const serviceFeePct = 1.12;
+  const rate = chefDayRates[level] ?? chefDayRates.premium;
+
+  const min = Math.round(rate.min * dayRatio * days * serviceFeePct / 100) * 100;
+  const max = Math.round(rate.max * dayRatio * days * serviceFeePct / 100) * 100;
+
+  return { min, max, hours, hoursPerDay: hours };
 }
 
 // ─────────────────────────────────────────────
@@ -586,8 +613,7 @@ function WizardContent() {
   const totalGuests = (data.adults ?? 0) + (data.children ?? 0);
 
   // Estimation budget
-  const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, data.budgetLevel ?? "premium");
-
+const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, data.budgetLevel ?? "premium", data.mealPlan);
   // Filtrage villes
   const filteredCities = citySearch.length >= 1
     ? DESTINATIONS.filter(d =>
@@ -922,8 +948,8 @@ function WizardContent() {
                   ["premium", "✦✦", t.s7premium, t.s7premiumsub] as const,
                   ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub] as const,
                 ]).map(([val, stars, title, sub]) => {
-                  const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val);
-                  return (
+const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, data.mealPlan);
+              return (
                     <button key={val} type="button" onClick={() => set({ budgetLevel: val })}
                       className={`relative w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
                         data.budgetLevel === val ? "border-stone-900 bg-stone-900 text-white shadow-xl scale-[1.02]" : "border-stone-200 bg-white hover:border-stone-400 hover:shadow-md"
