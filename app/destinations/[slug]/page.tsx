@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDestinationBySlug, getAllDestinationSlugs } from '@/lib/destinations';
+import { FaqItem } from '@/app/destinations/_components/FaqItem';
 
 export async function generateStaticParams() {
   return getAllDestinationSlugs().map((slug) => ({ slug }));
@@ -34,11 +35,10 @@ export default function DestinationPage({
   const dest = getDestinationBySlug(params.slug) as any;
   if (!dest) notFound();
 
-  const hasFaqs   = Array.isArray(dest.faqs) && dest.faqs.length > 0;
-  const hasZones  = Array.isArray(dest.zones) && dest.zones.length > 0;
+  const hasFaqs    = Array.isArray(dest.faqs) && dest.faqs.length > 0;
+  const hasZones   = Array.isArray(dest.zones) && dest.zones.length > 0;
   const hasLongDesc = Boolean(dest.longDescription);
 
-  // Schema.org
   const faqSchema = hasFaqs
     ? {
         '@context': 'https://schema.org',
@@ -169,7 +169,6 @@ export default function DestinationPage({
             </div>
 
             <div className="lg:col-span-5 space-y-4">
-              {/* Tarifs */}
               <div className="rounded-2xl border border-[#d8d1c7] bg-white p-6">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-3">Tarifs indicatifs</p>
                 <p className="font-serif text-3xl text-[#161616]">{dest.rateRange}</p>
@@ -183,8 +182,6 @@ export default function DestinationPage({
                   <p>{dest.bookingDelay}</p>
                 </div>
               </div>
-
-              {/* CTA */}
               <Link
                 href="/request"
                 className="flex items-center justify-center min-h-[52px] rounded-2xl bg-[#161616] text-white text-sm font-medium hover:bg-black transition"
@@ -295,7 +292,7 @@ export default function DestinationPage({
               <h2 className="font-serif text-[2.2rem] leading-[1.04] text-[#161616] mb-10 md:text-4xl">
                 Questions fréquentes — {dest.name}
               </h2>
-              <div className="space-y-0 border-t border-[#e8e2db]">
+              <div className="border-t border-[#e8e2db]">
                 {dest.faqs.map((faq: any, i: number) => (
                   <FaqItem key={i} question={faq.question} answer={faq.answer} />
                 ))}
@@ -314,13 +311,13 @@ export default function DestinationPage({
                 { name: 'Monaco', slug: 'chef-prive-monaco' },
                 { name: 'Mykonos', slug: 'chef-prive-mykonos' },
                 { name: 'Sardaigne', slug: 'chef-prive-sardaigne' },
-                { name: 'Côte d\'Azur', slug: 'chef-prive-cote-azur' },
+                { name: "Côte d'Azur", slug: 'chef-prive-cote-azur' },
                 { name: 'Courchevel', slug: 'chef-prive-courchevel' },
                 { name: 'Cannes', slug: 'chef-prive-cannes' },
                 { name: 'Portugal', slug: 'chef-prive-portugal' },
               ]
-                .filter(d => d.slug !== dest.slug)
-                .map(d => (
+                .filter((d) => d.slug !== dest.slug)
+                .map((d) => (
                   <Link
                     key={d.slug}
                     href={`/destinations/${d.slug}`}
@@ -341,29 +338,5 @@ export default function DestinationPage({
 
       </main>
     </>
-  );
-}
-
-// ── FAQ accordion côté client ──────────────────────────────
-'use client';
-import { useState } from 'react';
-
-function FaqItem({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-[#e8e2db]">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-6 text-left"
-      >
-        <span className="pr-6 font-serif text-[1.2rem] leading-snug text-[#161616]">{question}</span>
-        <span className={`text-xl text-[#8a7f73] transition-transform shrink-0 ${open ? 'rotate-45' : ''}`}>+</span>
-      </button>
-      {open && (
-        <div className="pb-6 pr-8 text-[16px] font-light leading-8 text-[#59544d]">
-          {answer}
-        </div>
-      )}
-    </div>
   );
 }
