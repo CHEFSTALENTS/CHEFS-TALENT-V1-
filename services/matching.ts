@@ -1,5 +1,10 @@
 // services/matching.ts
 import type { ChefUser, RequestEntity } from '@/types';
+import {
+  normalizeCity,
+  extractAllCities,
+  geoProximityScore,
+} from '@/lib/normalizeLocation';
 
 export type MatchConfidence = 'high' | 'medium' | 'low';
 
@@ -57,12 +62,21 @@ function getChefLocation(chef: ChefUser) {
   const p: any = chef.profile ?? {};
   const loc = p.location ?? p.profile?.location ?? {};
 
-  const baseCity = norm(loc.baseCity ?? p.baseCity ?? p.city ?? p.ville ?? '');
+  // ── NORMALISATION via normalizeCity ──────────────────────
+  // Gère : SAINT TROPEZ / St.Tropez / Aix en Provence / multi-villes etc.
+  const rawBaseCity = loc.baseCity ?? p.baseCity ?? p.city ?? p.ville ?? '';
+  const baseCity = norm(normalizeCity(rawBaseCity) ?? rawBaseCity);
+
+  // Toutes les villes couvertes (multi-villes dans baseCity + coverageZones)
+  const allCitiesFromBase = extractAllCities(rawBaseCity).map(norm);
 
   const coverageZonesRaw = loc.coverageZones ?? p.coverageZones ?? [];
-  const coverageZones = Array.isArray(coverageZonesRaw)
-    ? coverageZonesRaw.map(norm).filter(Boolean)
-    : splitPrefs(coverageZonesRaw);
+  const coverageZones = [
+    ...(Array.isArray(coverageZonesRaw)
+      ? coverageZonesRaw.map(norm).filter(Boolean)
+      : splitPrefs(coverageZonesRaw)),
+    ...allCitiesFromBase.filter((c) => c !== baseCity),
+  ];
 
   const travelRadiusKm = Number(loc.travelRadiusKm ?? p.travelRadiusKm ?? 0) || 0;
   const internationalMobility = Boolean(
@@ -71,6 +85,7 @@ function getChefLocation(chef: ChefUser) {
 
   return {
     baseCity,
+    rawBaseCity,
     coverageZones,
     travelRadiusKm,
     internationalMobility,
@@ -78,42 +93,59 @@ function getChefLocation(chef: ChefUser) {
 }
 
 function getRequestLocation(req: RequestEntity) {
+  const raw = String((req as any).location ?? '');
   return {
-    raw: norm((req as any).location ?? ''),
+    raw: norm(raw),
+    normalized: norm(normalizeCity(raw) ?? raw),
   };
 }
 
 /**
  * Priorité lieu
- * 4 = base match
- * 3 = zone couverte
+ * 4 = base match exact
+ * 3 = zone couverte ou région proche
  * 2 = mobilité internationale
- * 1 = gros rayon
+ * 1 = grand rayon de déplacement
  * 0 = pas compatible
  */
-function getLocationPriority(req: RequestEntity, chef: ChefUser) {
+function getLocationPriority(req: RequestEntity, chef: ChefUser): number {
   const chefLoc = getChefLocation(chef);
   const reqLoc = getRequestLocation(req);
 
-  if (!reqLoc.raw) return 0;
+  if (!reqLoc.raw) return 2; // pas de filtre géo → on inclut
 
+  const reqNorm = reqLoc.normalized;
+
+  // Match exact sur la ville principale normalisée
   const baseMatch =
-    (chefLoc.baseCity && chefLoc.baseCity.includes(reqLoc.raw)) ||
-    (chefLoc.baseCity && reqLoc.raw.includes(chefLoc.baseCity));
-
-  const zoneMatch = chefLoc.coverageZones.some(
-    (z) => z.includes(reqLoc.raw) || reqLoc.raw.includes(z)
-  );
+    (chefLoc.baseCity && chefLoc.baseCity === reqNorm) ||
+    (chefLoc.baseCity && chefLoc.baseCity.includes(reqNorm)) ||
+    (chefLoc.baseCity && reqNorm.includes(chefLoc.baseCity));
 
   if (baseMatch) return 4;
+
+  // Match sur les zones couvertes (multi-villes dans le profil)
+  const zoneMatch = chefLoc.coverageZones.some(
+    (z) => z === reqNorm || z.includes(reqNorm) || reqNorm.includes(z)
+  );
+
   if (zoneMatch) return 3;
+
+  // Score géographique via normalizeLocation (régions, pays)
+  const geoScore = geoProximityScore(
+    chefLoc.rawBaseCity,
+    chefLoc.internationalMobility,
+    (req as any).location
+  );
+
+  if (geoScore >= 80) return 3; // même région
   if (chefLoc.internationalMobility) return 2;
   if (chefLoc.travelRadiusKm >= 150) return 1;
 
   return 0;
 }
 
-function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
+function chefMatchesLocation(req: RequestEntity, chef: ChefUser): boolean {
   const reqLoc = getRequestLocation(req);
   if (!reqLoc.raw) return true;
   return getLocationPriority(req, chef) > 0;
@@ -128,7 +160,7 @@ function chefMatchesLocation(req: RequestEntity, chef: ChefUser) {
  * 0 = inconnu
  * -1 = indisponible
  */
-function getAvailabilityPriority(req: RequestEntity, chef: ChefUser) {
+function getAvailabilityPriority(req: RequestEntity, chef: ChefUser): number {
   const p: any = chef.profile ?? {};
   const availability =
     p.availability ?? p.availableDates ?? p.calendar ?? p.profile?.availability ?? null;
@@ -138,13 +170,8 @@ function getAvailabilityPriority(req: RequestEntity, chef: ChefUser) {
 
   if (!availability) return 0;
 
-  if (typeof availability === 'string') {
-    return 2;
-  }
-
-  if (typeof availability !== 'object') {
-    return 0;
-  }
+  if (typeof availability === 'string') return 2;
+  if (typeof availability !== 'object') return 0;
 
   if (availability.availableNow === false) return -1;
 
@@ -181,17 +208,17 @@ function getAvailabilityPriority(req: RequestEntity, chef: ChefUser) {
   return 3;
 }
 
-function chefMatchesDates(req: RequestEntity, chef: ChefUser) {
+function chefMatchesDates(req: RequestEntity, chef: ChefUser): boolean {
   return getAvailabilityPriority(req, chef) >= 2;
 }
 
-export function chefIsEligibleForRequest(req: RequestEntity, chef: ChefUser) {
+export function chefIsEligibleForRequest(req: RequestEntity, chef: ChefUser): boolean {
   const status = String(chef.status || (chef as any)?.profile?.status || '').toLowerCase();
 
-  // seulement les chefs actifs
+  // Seulement les chefs actifs
   if (status !== 'active') return false;
 
-  // hard filters
+  // Filtres hard
   if (!chefMatchesLocation(req, chef)) return false;
   if (!chefMatchesDates(req, chef)) return false;
 
@@ -214,16 +241,21 @@ export function scoreChefForRequestV2(
   const chefCuisines = getChefCuisines(chef);
   const chefLoc = getChefLocation(chef);
 
-  // base score simple et capé
+  // ── Score lieu ────────────────────────────────────────────
   let score = 0;
 
-  // 1) LIEU = critère principal
   if (locationPriority === 4) {
     score += 55;
-    reasons.push('📍 Base chef compatible');
+    const cityDisplay = normalizeCity(chefLoc.rawBaseCity) ?? chefLoc.rawBaseCity;
+    reasons.push(`📍 Basé à ${cityDisplay || 'destination'}`);
   } else if (locationPriority === 3) {
     score += 45;
-    reasons.push('📍 Zone couverte compatible');
+    // Vérifier si c'est une zone couverte ou une région proche
+    const reqNorm = norm(normalizeCity((req as any).location) ?? (req as any).location ?? '');
+    const isZone = chefLoc.coverageZones.some(
+      (z) => z === reqNorm || z.includes(reqNorm) || reqNorm.includes(z)
+    );
+    reasons.push(isZone ? '📍 Zone couverte' : '📍 Même région');
   } else if (locationPriority === 2) {
     score += 30;
     reasons.push('🌍 Mobilité internationale');
@@ -232,7 +264,7 @@ export function scoreChefForRequestV2(
     reasons.push(`🚗 Rayon ${chefLoc.travelRadiusKm} km`);
   }
 
-  // 2) DISPONIBILITÉ = 2e critère principal
+  // ── Score disponibilité ───────────────────────────────────
   if (availabilityPriority === 4) {
     score += 35;
     reasons.push('✅ Disponible confirmé');
@@ -244,29 +276,31 @@ export function scoreChefForRequestV2(
     reasons.push('🕓 Disponibilité probable');
   }
 
-  // 3) Bonus très légers seulement
+  // ── Bonus cuisine ─────────────────────────────────────────
   if (wantCuisines.length) {
     const hits = intersectCount(wantCuisines, chefCuisines);
     if (hits > 0) {
       score += 5;
-      reasons.push(`✅ Cuisine match`);
+      reasons.push('✅ Cuisine match');
     }
   }
 
+  // ── Bonus langues ─────────────────────────────────────────
   if (wantLangs.length) {
     const hits = intersectCount(wantLangs, chefLangs);
     if (hits > 0) {
       score += 5;
-      reasons.push(`✅ Langues match`);
+      reasons.push('✅ Langues match');
     }
   }
 
+  // ── Bonus profil complet ──────────────────────────────────
   if (chef.profileCompleted) {
     score += 3;
     reasons.push('✅ Profil complet');
   }
 
-  // clamp strict
+  // Clamp strict 0-100
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   const confidence: MatchConfidence =
@@ -295,22 +329,18 @@ export function matchChefsForRequestV2(
       return { chef, ...scored };
     })
     .sort((a, b) => {
-      // 1. lieu en priorité absolue
+      // 1. Lieu en priorité absolue
       if (b.locationPriority !== a.locationPriority) {
         return b.locationPriority - a.locationPriority;
       }
-
-      // 2. disponibilité ensuite
+      // 2. Disponibilité ensuite
       if (b.availabilityPriority !== a.availabilityPriority) {
         return b.availabilityPriority - a.availabilityPriority;
       }
-
-      // 3. puis score secondaire
+      // 3. Score secondaire
       if (b.fitScore !== a.fitScore) {
         return b.fitScore - a.fitScore;
       }
-
-      // 4. aucun tri alphabétique parasite
       return 0;
     });
 }
