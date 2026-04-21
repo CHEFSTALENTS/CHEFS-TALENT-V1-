@@ -140,7 +140,8 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        await sendChefReminder({ email, firstName, missingFields });
+        const chefLanguages = p.languages ?? null;
+        await sendChefReminder({ email, firstName, missingFields, chefLanguages });
         results.push({ email, name: firstName, status, missingFields, sent: true, skipped: false });
         await new Promise(r => setTimeout(r, 120));
       } catch (err: any) {
