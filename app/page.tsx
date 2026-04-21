@@ -186,7 +186,7 @@ export default function ChefTalentsHome() {
                 vous êtes.
               </h2>
               <p className="mt-6 text-[17px] font-light leading-8 text-[#59544d]">
-                De la Côte d'Azur aux Alpes, d'Ibiza à Mykonos — nos chefs opèrent dans plus de 50 destinations premium à travers l'Europe et au-delà.
+                De la Côte d'Azur aux Alpes, d'Ibiza à Mykonos : nos chefs opèrent dans plus de 50 destinations premium à travers l'Europe et au-delà.
               </p>
               <Link
                 href="/destinations"
@@ -374,7 +374,7 @@ export default function ChefTalentsHome() {
                 <p className="text-[11px] uppercase tracking-[0.2em] text-white/50 mb-3">Clients privés</p>
                 <h3 className="text-xl font-serif text-white mb-3">Accès direct</h3>
                 <p className="text-[15px] font-light leading-7 text-white/70">
-                  Villas, yachts, chalets — décrivez votre mission, notre équipe sélectionne le bon profil en moins de 6h.
+                  Villas, yachts, chalets : décrivez votre mission, notre équipe sélectionne le bon profil en moins de 6h.
                 </p>
                 <Link
                   href="/request"
