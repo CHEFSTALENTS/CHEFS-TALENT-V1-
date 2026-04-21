@@ -1,21 +1,51 @@
-// app/api/admin/remind-chefs/route.ts
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendChefReminder, type MissingField } from '@/lib/sendChefReminder';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const ADMIN_EMAIL = 'thomas@chef-talents.com';
+const TABLE = 'chef_profiles';
 
-// Vérifie si un chef a un profil incomplet et retourne les champs manquants
-function detectMissingFields(chef: any): MissingField[] {
-  const p = chef.profile ?? {};
-  const loc = typeof p.location === 'object' ? p.location : {};
+// ── Copié exactement de /api/admin/chefs/route.ts ─────────────
+function safeObj(v: any) {
+  if (!v) return {};
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch { return {}; } }
+  if (typeof v === 'object') return v;
+  return {};
+}
+
+function normalizeProfile(raw: any) {
+  const p = safeObj(raw);
+  return safeObj(p.profile || p.data || p.user || p);
+}
+
+const ALLOWED_STATUS = new Set(['pending_validation', 'approved', 'active', 'paused']);
+
+function normalizeStatus(s: any) {
+  const v = String(s || '').trim().toLowerCase();
+  if (v === 'pending') return 'pending_validation';
+  return ALLOWED_STATUS.has(v) ? v : '';
+}
+
+function pickStatus(p: any) {
+  const s = normalizeStatus(p.status || p.chefStatus || p.state || '');
+  return s || 'pending_validation';
+}
+
+function pickName(p: any) {
+  const firstName = p.firstName || p.firstname || p.first_name || p.prenom || p.name?.first || '';
+  const lastName = p.lastName || p.lastname || p.last_name || p.nom || p.name?.last || '';
+  return { firstName: String(firstName || ''), lastName: String(lastName || '') };
+}
+// ─────────────────────────────────────────────────────────────
+
+function detectMissingFields(p: any): MissingField[] {
   const missing: MissingField[] = [];
 
   // Ville de base
-  const baseCity = loc.baseCity || p.baseCity || p.city || p.ville || '';
+  const loc = typeof p.location === 'object' ? (p.location ?? {}) : {};
+  const baseCity = loc.baseCity || p.baseCity || p.city || p.ville || loc.city || '';
   if (!String(baseCity).trim()) missing.push('baseCity');
 
   // Bio
@@ -24,12 +54,12 @@ function detectMissingFields(chef: any): MissingField[] {
 
   // Langues
   const langs = p.languages ?? [];
-  const hasLangs = Array.isArray(langs) ? langs.length > 0 : !!langs;
+  const hasLangs = Array.isArray(langs) ? langs.length > 0 : !!String(langs).trim();
   if (!hasLangs) missing.push('languages');
 
   // Spécialités
   const specs = p.specialties ?? p.cuisines ?? [];
-  const hasSpecs = Array.isArray(specs) ? specs.length > 0 : !!specs;
+  const hasSpecs = Array.isArray(specs) ? specs.length > 0 : !!String(specs).trim();
   if (!hasSpecs) missing.push('specialties');
 
   // Téléphone
@@ -37,32 +67,38 @@ function detectMissingFields(chef: any): MissingField[] {
   if (!String(phone).trim()) missing.push('phone');
 
   // Photo
-  const photo = p.photoUrl || p.avatar || p.photo || p.profilePicture || chef.avatar_url || '';
+  const photo = p.avatarUrl || p.photoUrl || p.avatar || p.photo || p.profilePicture || '';
   if (!String(photo).trim()) missing.push('photo');
 
   return missing;
 }
 
 export async function POST(req: NextRequest) {
-  // Vérification admin basique
   const adminEmail = req.headers.get('x-admin-email');
-  if (adminEmail !== 'thomas@chef-talents.com') {
+  if (adminEmail?.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    return NextResponse.json({ error: 'Missing Supabase env vars' }, { status: 500 });
+  }
+
+  const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
+
   try {
     const body = await req.json().catch(() => ({}));
-    const dryRun = body?.dryRun === true; // mode test sans envoi réel
-    const onlyStatus = body?.onlyStatus as string | undefined; // filtrer par statut
+    const dryRun = body?.dryRun === true;
+    const onlyStatus = body?.onlyStatus as string | undefined;
 
-    // Récupère tous les chefs depuis Supabase
-    const { data: profiles, error } = await supabase
-      .from('chef_profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Récupère tous les profils — même select que /api/admin/chefs
+    const { data: rows, error } = await supabase
+      .from(TABLE)
+      .select('user_id,email,profile,created_at,updated_at')
+      .order('email', { ascending: true });
 
     if (error) {
-      console.error('Supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -76,27 +112,29 @@ export async function POST(req: NextRequest) {
       error?: string;
     }[] = [];
 
-    for (const chef of profiles ?? []) {
-      const status = String(chef.status || '').toLowerCase();
-      const email = chef.email || chef.contact_email || '';
+    for (const row of rows ?? []) {
+      const email = String(row.email || '').trim().toLowerCase();
+      if (!email) continue;
 
-      // Filtrer : seulement active ou pending_validation
+      // Normalise le profile exactement comme /api/admin/chefs
+      const p = normalizeProfile(row.profile);
+      const status = pickStatus(p);
+      const { firstName } = pickName(p);
+
+      // Filtre par statut éligible
       const eligibleStatuses = ['active', 'pending_validation', 'approved'];
       if (!eligibleStatuses.includes(status)) continue;
       if (onlyStatus && status !== onlyStatus) continue;
-      if (!email) continue;
 
-      const firstName = chef.first_name || chef.firstName || chef.full_name?.split(' ')[0] || '';
-      const missingFields = detectMissingFields(chef);
+      const missingFields = detectMissingFields(p);
 
-      // Si profil complet → on skip
+      // Profil complet → on skip
       if (missingFields.length === 0) {
         results.push({ email, name: firstName, status, missingFields: [], sent: false, skipped: true });
         continue;
       }
 
       if (dryRun) {
-        // Mode test — on log sans envoyer
         results.push({ email, name: firstName, status, missingFields, sent: false, skipped: false });
         continue;
       }
@@ -104,38 +142,29 @@ export async function POST(req: NextRequest) {
       try {
         await sendChefReminder({ email, firstName, missingFields });
         results.push({ email, name: firstName, status, missingFields, sent: true, skipped: false });
-        // Petite pause pour éviter le rate limit Resend
         await new Promise(r => setTimeout(r, 120));
       } catch (err: any) {
         results.push({ email, name: firstName, status, missingFields, sent: false, skipped: false, error: err?.message });
       }
     }
 
-    const sent = results.filter(r => r.sent).length;
+    const sent    = results.filter(r => r.sent).length;
     const skipped = results.filter(r => r.skipped).length;
-    const errors = results.filter(r => r.error).length;
-    const toSend = results.filter(r => !r.skipped).length;
+    const errors  = results.filter(r => r.error).length;
+    const toSend  = results.filter(r => !r.skipped).length;
 
     return NextResponse.json({
       dryRun,
-      total: profiles?.length ?? 0,
+      total: rows?.length ?? 0,
       eligible: results.length,
       toSend,
       sent,
       skipped,
       errors,
-      results: dryRun ? results : results.map(r => ({
-        email: r.email,
-        name: r.name,
-        missingCount: r.missingFields.length,
-        sent: r.sent,
-        skipped: r.skipped,
-        error: r.error,
-      })),
+      results,
     });
 
   } catch (err: any) {
-    console.error('remind-chefs error:', err);
     return NextResponse.json({ error: err?.message ?? 'Unknown error' }, { status: 500 });
   }
 }
