@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { destinations, getDestinationBySlug, getAllDestinationSlugs } from "@/lib/destinations";
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getDestinationBySlug, getAllDestinationSlugs } from '@/lib/destinations';
 
 export async function generateStaticParams() {
   return getAllDestinationSlugs().map((slug) => ({ slug }));
@@ -21,336 +21,349 @@ export async function generateMetadata({
     openGraph: {
       title: dest.metaTitle,
       description: dest.metaDescription,
-      url: `https://chefstalents.com/destinations/${dest.slug}`,
-      images: [{ url: dest.image, width: 1200, height: 630, alt: dest.heroTitle }],
+      images: [{ url: dest.image }],
     },
   };
 }
 
-export default function DestinationPage({ params }: { params: { slug: string } }) {
-  const dest = getDestinationBySlug(params.slug);
+export default function DestinationPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const dest = getDestinationBySlug(params.slug) as any;
   if (!dest) notFound();
 
-  const related = destinations
-    .filter((d) => d.slug !== dest.slug && d.country === dest.country)
-    .slice(0, 3);
+  const hasFaqs   = Array.isArray(dest.faqs) && dest.faqs.length > 0;
+  const hasZones  = Array.isArray(dest.zones) && dest.zones.length > 0;
+  const hasLongDesc = Boolean(dest.longDescription);
 
-  const allOtherDestinations = destinations
-    .filter((d) => d.slug !== dest.slug)
-    .slice(0, 12);
+  // Schema.org
+  const faqSchema = hasFaqs
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: dest.faqs.map((f: any) => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: { '@type': 'Answer', text: f.answer },
+        })),
+      }
+    : null;
 
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "Service",
+  const serviceSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
     name: dest.heroTitle,
-    description: dest.description,
-    url: `https://chefstalents.com/destinations/${dest.slug}`,
-    provider: { "@type": "Organization", name: "Chefs Talents", url: "https://chefstalents.com" },
-    areaServed: { "@type": "Place", name: dest.name },
-    offers: {
-      "@type": "Offer",
-      priceSpecification: { "@type": "PriceSpecification", priceCurrency: "EUR", description: dest.rateRange },
+    description: dest.metaDescription,
+    provider: {
+      '@type': 'Organization',
+      name: 'Chefs Talents',
+      url: 'https://chefstalents.com',
     },
-  };
-
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: `Combien coûte un chef privé à ${dest.name} ?`,
-        acceptedAnswer: { "@type": "Answer", text: `Le tarif d'un chef privé à ${dest.name} varie entre ${dest.rateRange} selon le profil, la durée et l'intensité du service. ${dest.rateDetail}.` },
-      },
-      {
-        "@type": "Question",
-        name: `Quand réserver un chef privé à ${dest.name} ?`,
-        acceptedAnswer: { "@type": "Answer", text: dest.bookingDelay },
-      },
-      {
-        "@type": "Question",
-        name: `Quels types de missions sont disponibles à ${dest.name} ?`,
-        acceptedAnswer: { "@type": "Answer", text: `À ${dest.name}, Chefs Talents coordonne les types de missions suivants : ${dest.missionTypes.join(", ")}.` },
-      },
-      {
-        "@type": "Question",
-        name: `La prestation est-elle confidentielle à ${dest.name} ?`,
-        acceptedAnswer: { "@type": "Answer", text: "La confidentialité est au cœur de notre fonctionnement. Les lieux, clients et détails des missions ne sont jamais rendus publics. Les chefs signent des accords de confidentialité selon les exigences du client." },
-      },
-    ],
+    areaServed: { '@type': 'Place', name: dest.name },
+    offers: {
+      '@type': 'Offer',
+      description: dest.rateDetail,
+      priceCurrency: 'EUR',
+    },
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+      />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
 
-      <div className="bg-paper min-h-screen">
+      <main className="bg-[#f4efe8] text-[#161616]">
 
-        {/* HERO */}
-        <section className="relative bg-stone-900 text-white min-h-[80vh] flex flex-col justify-end px-6 md:px-12 pt-32 pb-20 overflow-hidden">
-          <div className="absolute inset-0">
-            <img src={dest.image} alt={dest.heroTitle} className="w-full h-full object-cover" style={{ filter: "brightness(0.35)" }} />
-          </div>
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(28,25,23,0.95) 0%, rgba(28,25,23,0.4) 60%, transparent 100%)" }} />
-
-          <div className="relative z-10 max-w-5xl">
-            <nav className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-stone-500 mb-8">
-              <Link href="/" className="hover:text-stone-300 transition-colors">Chefs Talents</Link>
-              <span>/</span>
-              <Link href="/destinations" className="hover:text-stone-300 transition-colors">Destinations</Link>
-              <span>/</span>
-              <span className="text-stone-300">{dest.name}</span>
-            </nav>
-
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-xs uppercase tracking-[0.2em] text-stone-400 border border-stone-700 px-3 py-1">{dest.country}</span>
-              <span className="text-xs uppercase tracking-[0.2em] text-stone-400 border border-stone-700 px-3 py-1">{dest.season}</span>
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-serif font-normal leading-[1.0] text-white mb-6">
-              {dest.heroTitle}
-            </h1>
-            <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-2xl mb-10">
-              {dest.heroSubtitle}
-            </p>
-            <Link href="/request" className="inline-block bg-white text-stone-900 px-8 py-4 text-sm uppercase tracking-[0.15em] font-medium hover:bg-stone-100 transition-colors">
-              Soumettre une demande
-            </Link>
-          </div>
-        </section>
-
-        {/* CHIFFRES CLÉS */}
-        <section className="bg-stone-900 border-b border-stone-800">
-          <div className="max-w-5xl mx-auto px-6 md:px-12 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { label: "Tarifs", value: dest.rateRange, sub: "/ semaine" },
-              { label: "Saison", value: dest.season, sub: "" },
-              { label: "Types de missions", value: String(dest.missionTypes.length), sub: "formats disponibles" },
-              { label: "Couverture", value: "Europe", sub: "chefs mobiles" },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <p className="text-xs uppercase tracking-[0.2em] text-stone-500 mb-2">{stat.label}</p>
-                <p className="text-white font-medium text-lg">{stat.value}</p>
-                {stat.sub && <p className="text-stone-500 text-xs mt-1">{stat.sub}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* DESCRIPTION */}
-        <section className="bg-paper py-24 px-6 md:px-12">
-          <div className="max-w-5xl mx-auto grid md:grid-cols-12 gap-16">
-            <div className="md:col-span-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Contexte</p>
-              <h2 className="text-4xl md:text-5xl font-serif font-normal text-stone-900 leading-tight mb-8">
-                Chef privé à {dest.name}.<br />
-                Ce qu'il faut savoir.
-              </h2>
-              <Link href="/request" className="inline-block border border-stone-900 text-stone-900 px-8 py-4 text-sm uppercase tracking-[0.15em] hover:bg-stone-900 hover:text-white transition-colors">
-                Décrire mon besoin
-              </Link>
-            </div>
-            <div className="md:col-span-7">
-              <p className="text-stone-600 font-light text-lg leading-relaxed mb-8">{dest.description}</p>
-              <div className="space-y-4">
-                {dest.highlights.map((h, i) => (
-                  <div key={i} className="flex items-start gap-4 py-4 border-b border-stone-200">
-                    <div className="mt-2 w-1 h-1 bg-stone-400 rounded-full shrink-0" />
-                    <p className="text-stone-700 font-light text-lg">{h}</p>
-                  </div>
-                ))}
+        {/* ── HERO ── */}
+        <section className="relative h-[70vh] min-h-[560px] overflow-hidden">
+          <img
+            src={dest.image}
+            alt={dest.heroTitle}
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+          <div className="relative z-10 flex h-full items-end px-6 pb-14 md:px-12 lg:px-20">
+            <div className="max-w-3xl text-white">
+              <p className="mb-4 text-[10px] uppercase tracking-[0.35em] text-white/70">
+                {dest.country} — {dest.region}
+              </p>
+              <h1 className="text-[2.8rem] font-serif leading-[1.0] text-white md:text-6xl lg:text-7xl">
+                {dest.heroTitle}
+              </h1>
+              <p className="mt-4 text-[17px] font-light leading-8 text-white/85 md:text-lg max-w-2xl">
+                {dest.heroSubtitle}
+              </p>
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+                <Link
+                  href="/request"
+                  className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-white px-8 text-sm font-medium text-black hover:bg-white/85 transition"
+                >
+                  Décrire mon besoin
+                </Link>
+                <a
+                  href="https://wa.me/33756827612"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-white/40 px-8 text-sm font-medium text-white hover:bg-white/10 transition"
+                >
+                  WhatsApp — réponse en 6h
+                </a>
               </div>
             </div>
           </div>
         </section>
 
-        {/* IMAGE PLEINE LARGEUR */}
-        <div className="w-full overflow-hidden bg-stone-200" style={{ height: "50vh" }}>
-          <img src={dest.image} alt={`Chef privé ${dest.name}`} className="w-full h-full object-cover" />
-        </div>
+        {/* ── STATS RAPIDES ── */}
+        <section className="bg-[#161616] px-6 py-10 md:px-12">
+          <div className="mx-auto max-w-5xl grid grid-cols-2 gap-6 md:grid-cols-4 text-center">
+            <div>
+              <p className="font-serif text-3xl text-white">50+</p>
+              <p className="text-xs text-white/50 mt-1">Chefs actifs sur l'île</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl text-white">&lt; 6h</p>
+              <p className="text-xs text-white/50 mt-1">Délai de réponse</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl text-white">{dest.rateRange.split('—')[0].trim()}</p>
+              <p className="text-xs text-white/50 mt-1">À partir de / semaine</p>
+            </div>
+            <div>
+              <p className="font-serif text-3xl text-white">{dest.season.split('(')[0].trim()}</p>
+              <p className="text-xs text-white/50 mt-1">Saison active</p>
+            </div>
+          </div>
+        </section>
 
-        {/* TYPES DE MISSIONS */}
-        <section className="bg-stone-100 py-24 px-6 md:px-12">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-12 gap-16 items-start">
-              <div className="md:col-span-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Ce que nous coordonnons</p>
-                <h2 className="text-3xl md:text-4xl font-serif font-normal text-stone-900 leading-tight mb-6">
-                  Missions disponibles à {dest.name}.
-                </h2>
-                <p className="text-stone-500 font-light leading-relaxed">
-                  Chaque mission est qualifiée et coordonnée par notre équipe. Un seul interlocuteur du brief à l'exécution.
-                </p>
-              </div>
-              <div className="md:col-span-8">
-                <div className="grid grid-cols-2 gap-px bg-stone-300 border border-stone-300 mb-8">
-                  {dest.missionTypes.map((m, i) => (
-                    <div key={i} className="bg-paper p-8 hover:bg-white transition-colors">
-                      <p className="text-stone-700 font-light text-lg">{m}</p>
-                    </div>
+        {/* ── DESCRIPTION ── */}
+        <section className="px-6 py-20 md:px-12 lg:px-20">
+          <div className="mx-auto max-w-6xl grid lg:grid-cols-12 gap-12">
+            <div className="lg:col-span-7">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">
+                Pourquoi Chefs Talents à {dest.name}
+              </p>
+              {hasLongDesc ? (
+                <div className="space-y-5">
+                  {dest.longDescription.split('\n\n').map((para: string, i: number) => (
+                    <p key={i} className="text-[18px] font-light leading-8 text-[#3f3a34]">
+                      {para}
+                    </p>
                   ))}
                 </div>
-                <div className="bg-white border border-stone-200 p-8">
-                  <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-4">Délai recommandé</p>
-                  <p className="text-stone-700 font-light text-lg leading-relaxed">{dest.bookingDelay}</p>
+              ) : (
+                <p className="text-[18px] font-light leading-8 text-[#3f3a34]">
+                  {dest.description}
+                </p>
+              )}
+            </div>
+
+            <div className="lg:col-span-5 space-y-4">
+              {/* Tarifs */}
+              <div className="rounded-2xl border border-[#d8d1c7] bg-white p-6">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-3">Tarifs indicatifs</p>
+                <p className="font-serif text-3xl text-[#161616]">{dest.rateRange}</p>
+                <p className="text-sm text-[#7d756a] mt-1">{dest.rateDetail}</p>
+                <div className="mt-4 pt-4 border-t border-[#e8e2db] text-sm text-[#59544d]">
+                  <p className="font-medium text-[#161616] mb-2">Saison</p>
+                  <p>{dest.season}</p>
+                </div>
+                <div className="mt-4 pt-4 border-t border-[#e8e2db] text-sm text-[#59544d]">
+                  <p className="font-medium text-[#161616] mb-2">Réservation</p>
+                  <p>{dest.bookingDelay}</p>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
 
-        {/* TARIFS */}
-        <section className="bg-paper py-24 px-6 md:px-12">
-          <div className="max-w-5xl mx-auto">
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Tarification</p>
-            <h2 className="text-3xl md:text-4xl font-serif font-normal text-stone-900 mb-12 max-w-xl">
-              Combien coûte un chef privé à {dest.name} ?
-            </h2>
-            <div className="grid md:grid-cols-3 gap-px bg-stone-200 border border-stone-200 mb-12">
-              {[
-                { label: "Mission courte", duration: "1 à 3 jours", rate: "500€ — 1 400€ / jour", note: "Hors matières premières" },
-                { label: "Mission semaine", duration: "5 à 7 jours", rate: dest.rateRange, note: dest.rateDetail },
-                { label: "Mission longue durée", duration: "1 mois et plus", rate: "6 000€ — 18 000€ / mois", note: "Chef résident saisonnier" },
-              ].map((tier, i) => (
-                <div key={i} className="bg-paper p-8">
-                  <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-3">{tier.label}</p>
-                  <p className="text-stone-500 font-light text-sm mb-4">{tier.duration}</p>
-                  <p className="text-2xl font-serif text-stone-900 mb-3">{tier.rate}</p>
-                  <p className="text-stone-400 text-sm font-light">{tier.note}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-stone-500 font-light text-base leading-relaxed max-w-3xl">
-              Ces tarifs couvrent le temps et les compétences du chef — pas les matières premières. Un budget ingrédients séparé est généralement prévu (50€ à 150€ par convive et par jour selon le niveau de cuisine attendu). Les déplacements et l'hébergement pour les chefs non résidents sur place s'ajoutent selon les missions.
-            </p>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="bg-stone-100 py-24 px-6 md:px-12">
-          <div className="max-w-5xl mx-auto">
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-6">Questions fréquentes</p>
-            <h2 className="text-3xl md:text-4xl font-serif font-normal text-stone-900 mb-12">
-              Chef privé à {dest.name} —<br />ce que vous voulez savoir.
-            </h2>
-            <div className="space-y-0 border-t border-stone-200">
-              {[
-                {
-                  q: `Combien coûte un chef privé à ${dest.name} ?`,
-                  a: `Le tarif varie entre ${dest.rateRange} selon le profil, la durée et l'intensité du service. ${dest.rateDetail}. Pour une mission ponctuelle de 1 à 3 jours, comptez 500€ à 1 400€ par jour selon le niveau du chef. Pour un chef résident saisonnier, les tarifs vont de 6 000€ à 18 000€ par mois.`,
-                },
-                {
-                  q: `Comment fonctionne la mise en relation à ${dest.name} ?`,
-                  a: `Vous soumettez votre demande en 2 minutes : lieu exact, dates, nombre de convives, type de service souhaité et budget indicatif. Notre équipe analyse votre brief et vous présente une sélection de profils adaptés à votre contexte. Vous validez le profil, nous coordonnons l'ensemble de la mission.`,
-                },
-                {
-                  q: `Quand réserver un chef privé à ${dest.name} ?`,
-                  a: dest.bookingDelay + ` En général, plus vous anticipez, plus le choix de profils disponibles est large. Les meilleurs chefs reçoivent plusieurs demandes simultanées et ne peuvent pas maintenir leur disponibilité indéfiniment.`,
-                },
-                {
-                  q: `Qu'est-ce qui est inclus dans la prestation ?`,
-                  a: `Le tarif du chef couvre son temps et ses compétences. Les matières premières sont généralement facturées en supplément au coût réel sur justificatifs. Les déplacements et l'hébergement pour les chefs non locaux s'ajoutent selon les missions.`,
-                },
-                {
-                  q: `La prestation est-elle confidentielle ?`,
-                  a: `La confidentialité est au cœur de notre fonctionnement. Les lieux, clients et détails des missions ne sont jamais rendus publics. Les chefs signent des accords de confidentialité selon les exigences du client. Les références sont partagées de manière sélective auprès de partenaires qualifiés.`,
-                },
-                {
-                  q: `Pouvez-vous couvrir ${dest.name} toute l'année ?`,
-                  a: `Oui. Notre réseau de chefs mobiles permet d'intervenir à ${dest.name} tout au long de l'année, avec une couverture renforcée pendant la période ${dest.season}. En dehors de la haute saison, les disponibilités sont généralement meilleures et les tarifs plus accessibles.`,
-                },
-              ].map((faq, i) => (
-                <details key={i} className="group border-b border-stone-200">
-                  <summary className="flex items-center justify-between py-6 cursor-pointer list-none">
-                    <h3 className="text-lg font-serif text-stone-900 pr-8">{faq.q}</h3>
-                    <span className="text-stone-400 font-light text-2xl group-open:rotate-45 transition-transform shrink-0">+</span>
-                  </summary>
-                  <p className="text-stone-600 font-light leading-relaxed pb-6 max-w-3xl">{faq.a}</p>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA PRINCIPAL */}
-        <section className="bg-stone-900 text-white py-32 px-6 md:px-12">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <p className="text-xs uppercase tracking-[0.25em] text-stone-400">Prêt à démarrer ?</p>
-            <h2 className="text-4xl md:text-5xl font-serif font-normal">
-              Une seule demande.<br />Le bon chef à {dest.name}.
-            </h2>
-            <p className="text-stone-400 font-light text-lg max-w-xl mx-auto leading-relaxed">
-              Lieu, dates, nombre de convives, budget indicatif. Notre équipe identifie le bon profil et coordonne l'ensemble de la mission.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Link href="/request" className="bg-white text-stone-900 px-10 py-4 text-sm uppercase tracking-[0.15em] font-medium hover:bg-stone-100 transition-colors">
-                Soumettre une demande
-              </Link>
-              <Link href="/conciergeries" className="border border-stone-600 text-stone-300 px-10 py-4 text-sm uppercase tracking-[0.15em] hover:border-stone-400 transition-colors">
-                Je suis une conciergerie
+              {/* CTA */}
+              <Link
+                href="/request"
+                className="flex items-center justify-center min-h-[52px] rounded-2xl bg-[#161616] text-white text-sm font-medium hover:bg-black transition"
+              >
+                Soumettre une demande →
               </Link>
             </div>
           </div>
         </section>
 
-        {/* DESTINATIONS PROCHES */}
-        {related.length > 0 && (
-          <section className="bg-paper py-24 px-6 md:px-12">
-            <div className="max-w-5xl mx-auto">
-              <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-12">
-                Destinations proches — {dest.country}
-              </p>
-              <div className="grid md:grid-cols-3 gap-8 mb-16">
-                {related.map((d) => (
-                  <Link key={d.slug} href={`/destinations/${d.slug}`} className="group block">
-                    <div className="aspect-[4/3] overflow-hidden bg-stone-200 mb-6">
-                      <img src={d.image} alt={d.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-[1.5s]" />
-                    </div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-2">{d.region}</p>
-                    <h3 className="text-2xl font-serif text-stone-900 mb-2 group-hover:text-stone-600 transition-colors">{d.name}</h3>
-                    <p className="text-stone-500 font-light text-sm">{d.rateRange} / semaine</p>
-                  </Link>
+        {/* ── ZONES COUVERTES ── */}
+        {hasZones && (
+          <section className="bg-white px-6 py-20 md:px-12 lg:px-20">
+            <div className="mx-auto max-w-6xl">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Zones couvertes</p>
+              <h2 className="font-serif text-[2.2rem] leading-[1.04] text-[#161616] mb-10 md:text-4xl">
+                Partout à {dest.name}
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                {dest.zones.map((zone: any) => (
+                  <div key={zone.name} className="rounded-2xl border border-[#e8e2db] bg-[#faf9f7] px-6 py-5">
+                    <p className="font-medium text-[#161616] mb-1">{zone.name}</p>
+                    <p className="text-sm font-light text-[#7d756a] leading-6">{zone.description}</p>
+                  </div>
                 ))}
               </div>
             </div>
           </section>
         )}
 
-        {/* MAILLAGE INTERNE — Toutes les destinations */}
-        <section className="bg-stone-100 py-16 px-6 md:px-12 border-t border-stone-200">
-          <div className="max-w-5xl mx-auto">
-            <p className="text-xs uppercase tracking-[0.2em] text-stone-400 mb-8">Chef privé en Europe — toutes nos destinations</p>
-            <div className="flex flex-wrap gap-3">
-              {allOtherDestinations.map((d) => (
-                <Link
-                  key={d.slug}
-                  href={`/destinations/${d.slug}`}
-                  className="text-sm text-stone-600 hover:text-stone-900 font-light border border-stone-300 px-4 py-2 hover:border-stone-500 transition-colors"
-                >
-                  Chef privé {d.name}
-                </Link>
+        {/* ── HIGHLIGHTS ── */}
+        <section className="px-6 py-20 md:px-12 lg:px-20">
+          <div className="mx-auto max-w-6xl grid lg:grid-cols-2 gap-12 items-start">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Notre sélection</p>
+              <h2 className="font-serif text-[2.2rem] leading-[1.04] text-[#161616] mb-8 md:text-4xl">
+                Ce qui distingue nos chefs à {dest.name}
+              </h2>
+              <ul className="space-y-3">
+                {dest.highlights.map((h: string) => (
+                  <li key={h} className="flex items-start gap-3 text-[16px] font-light leading-7 text-[#3f3a34]">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#B08D57]" />
+                    {h}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Types de missions</p>
+              <h2 className="font-serif text-[2.2rem] leading-[1.04] text-[#161616] mb-8 md:text-4xl">
+                Pour chaque contexte
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                {dest.missionTypes.map((m: string) => (
+                  <span key={m} className="px-4 py-2 rounded-full border border-[#d8d1c7] text-sm font-light text-[#3f3a34]">
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── COMMENT ÇA MARCHE ── */}
+        <section className="bg-[#161616] px-6 py-20 md:px-12 lg:px-20 text-white">
+          <div className="mx-auto max-w-6xl">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/50 mb-4">Méthode</p>
+            <h2 className="font-serif text-[2.2rem] leading-[1.04] text-white mb-12 md:text-4xl">
+              Comment ça fonctionne
+            </h2>
+            <div className="grid gap-8 md:grid-cols-3">
+              {[
+                { n: '01', title: 'Vous décrivez votre mission', text: `Lieu, dates, nombre de convives, niveau de service souhaité, budget indicatif.` },
+                { n: '02', title: 'Nous sélectionnons les profils', text: `Parmi nos 50+ chefs actifs à ${dest.name}, nous identifions ceux qui correspondent à votre demande.` },
+                { n: '03', title: 'Réponse en moins de 6h', text: `Vous recevez une sélection de profils adaptés. Vous choisissez, nous coordonnons.` },
+              ].map((step) => (
+                <div key={step.n}>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/40 mb-3">{step.n}</p>
+                  <h3 className="font-serif text-xl text-white mb-3">{step.title}</h3>
+                  <p className="text-sm font-light leading-7 text-white/65">{step.text}</p>
+                </div>
               ))}
-              <Link href="/destinations" className="text-sm text-stone-400 hover:text-stone-600 font-light border border-stone-200 px-4 py-2 hover:border-stone-400 transition-colors">
-                Voir toutes →
+            </div>
+            <div className="mt-12 flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/request"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-white px-8 text-sm font-medium text-[#161616] hover:bg-white/85 transition"
+              >
+                Décrire mon besoin
+              </Link>
+              <a
+                href="https://wa.me/33756827612"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-white/30 px-8 text-sm font-medium text-white hover:bg-white/10 transition"
+              >
+                WhatsApp direct
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        {hasFaqs && (
+          <section className="px-6 py-20 md:px-12 lg:px-20">
+            <div className="mx-auto max-w-4xl">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">FAQ</p>
+              <h2 className="font-serif text-[2.2rem] leading-[1.04] text-[#161616] mb-10 md:text-4xl">
+                Questions fréquentes — {dest.name}
+              </h2>
+              <div className="space-y-0 border-t border-[#e8e2db]">
+                {dest.faqs.map((faq: any, i: number) => (
+                  <FaqItem key={i} question={faq.question} answer={faq.answer} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── MAILLAGE INTERNE ── */}
+        <section className="bg-white px-6 py-16 md:px-12 lg:px-20">
+          <div className="mx-auto max-w-6xl">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-8">Autres destinations</p>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { name: 'Saint-Tropez', slug: 'chef-prive-saint-tropez' },
+                { name: 'Monaco', slug: 'chef-prive-monaco' },
+                { name: 'Mykonos', slug: 'chef-prive-mykonos' },
+                { name: 'Sardaigne', slug: 'chef-prive-sardaigne' },
+                { name: 'Côte d\'Azur', slug: 'chef-prive-cote-azur' },
+                { name: 'Courchevel', slug: 'chef-prive-courchevel' },
+                { name: 'Cannes', slug: 'chef-prive-cannes' },
+                { name: 'Portugal', slug: 'chef-prive-portugal' },
+              ]
+                .filter(d => d.slug !== dest.slug)
+                .map(d => (
+                  <Link
+                    key={d.slug}
+                    href={`/destinations/${d.slug}`}
+                    className="px-4 py-2 rounded-full border border-[#d8d1c7] text-sm font-light text-[#3f3a34] hover:border-[#a09890] transition"
+                  >
+                    Chef privé {d.name}
+                  </Link>
+                ))}
+              <Link
+                href="/destinations"
+                className="px-4 py-2 rounded-full border border-[#161616] text-sm font-medium text-[#161616] hover:bg-[#161616] hover:text-white transition"
+              >
+                Toutes les destinations →
               </Link>
             </div>
           </div>
         </section>
 
-        {/* FOOTER NAV */}
-        <section className="bg-paper border-t border-stone-200 py-8 px-6 md:px-12">
-          <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-4">
-            <Link href="/destinations" className="text-xs uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors">
-              ← Toutes les destinations
-            </Link>
-            <Link href="/insights" className="text-xs uppercase tracking-[0.2em] text-stone-400 hover:text-stone-900 transition-colors">
-              Journal →
-            </Link>
-          </div>
-        </section>
-
-      </div>
+      </main>
     </>
+  );
+}
+
+// ── FAQ accordion côté client ──────────────────────────────
+'use client';
+import { useState } from 'react';
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-[#e8e2db]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between py-6 text-left"
+      >
+        <span className="pr-6 font-serif text-[1.2rem] leading-snug text-[#161616]">{question}</span>
+        <span className={`text-xl text-[#8a7f73] transition-transform shrink-0 ${open ? 'rotate-45' : ''}`}>+</span>
+      </button>
+      {open && (
+        <div className="pb-6 pr-8 text-[16px] font-light leading-8 text-[#59544d]">
+          {answer}
+        </div>
+      )}
+    </div>
   );
 }
