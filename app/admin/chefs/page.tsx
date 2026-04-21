@@ -25,10 +25,7 @@ type ApiChef = ChefUser & {
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(path, {
     ...init,
-    headers: {
-      ...(init.headers || {}),
-      'x-admin-email': ADMIN_EMAIL,
-    },
+    headers: { ...(init.headers || {}), 'x-admin-email': ADMIN_EMAIL },
   });
   const text = await res.text().catch(() => '');
   if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
@@ -200,9 +197,6 @@ function toChefProfileForScore(raw: any): ChefProfile {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// TYPE RÉSULTAT RELANCE
-// ─────────────────────────────────────────────────────────────
 type RemindResult = {
   dryRun?: boolean;
   total?: number;
@@ -230,12 +224,8 @@ export default function AdminChefsPage() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [source, setSource] = useState<'db' | 'localStorage'>('db');
-
-  // État relance email
   const [reminding, setReminding] = useState(false);
   const [remindResult, setRemindResult] = useState<RemindResult | null>(null);
-
-  // Drawer
   const [selected, setSelected] = useState<ApiChef | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -284,7 +274,6 @@ export default function AdminChefsPage() {
     }
   };
 
-  // ── Relance email ──────────────────────────────────────────
   const handleRemindIncomplete = async (dryRun = false) => {
     setReminding(true);
     setRemindResult(null);
@@ -389,7 +378,6 @@ export default function AdminChefsPage() {
           <div className="flex flex-wrap gap-2">
             <GhostButton onClick={refresh}>Rafraîchir</GhostButton>
             <GhostButton href="/admin">Dashboard</GhostButton>
-            {/* ── Bouton simulation relance ── */}
             <button
               onClick={() => handleRemindIncomplete(true)}
               disabled={reminding}
@@ -397,7 +385,6 @@ export default function AdminChefsPage() {
             >
               {reminding ? 'Analyse…' : '🔍 Simuler relances'}
             </button>
-            {/* ── Bouton envoi réel ── */}
             <button
               onClick={() => handleRemindIncomplete(false)}
               disabled={reminding}
@@ -409,20 +396,13 @@ export default function AdminChefsPage() {
         }
       />
 
-      {/* ── Résultat relance ── */}
       {remindResult && (
-        <div className={`rounded-2xl border p-4 text-sm ${
-          remindResult.error
-            ? 'border-red-500/20 bg-red-500/10 text-red-200'
-            : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-100'
-        }`}>
+        <div className={`rounded-2xl border p-4 text-sm ${remindResult.error ? 'border-red-500/20 bg-red-500/10 text-red-200' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-100'}`}>
           {remindResult.error ? (
             <p>Erreur : {remindResult.error}</p>
           ) : (
             <div className="space-y-2">
-              <p className="font-semibold">
-                {remindResult.dryRun ? '🔍 Simulation — aucun email envoyé' : '✅ Relances effectuées'}
-              </p>
+              <p className="font-semibold">{remindResult.dryRun ? '🔍 Simulation — aucun email envoyé' : '✅ Relances effectuées'}</p>
               <p className="text-white/60 text-xs">
                 Total chefs : <strong className="text-white">{remindResult.total}</strong> ·
                 Éligibles : <strong className="text-white">{remindResult.eligible}</strong> ·
@@ -431,7 +411,6 @@ export default function AdminChefsPage() {
                 Profils complets (ignorés) : <strong className="text-white">{remindResult.skipped}</strong> ·
                 Erreurs : <strong className={remindResult.errors ? 'text-red-300' : 'text-white'}>{remindResult.errors}</strong>
               </p>
-              {/* Liste des chefs à relancer (simulation) */}
               {remindResult.dryRun && (remindResult.results?.filter(r => !r.skipped).length ?? 0) > 0 && (
                 <details className="mt-2">
                   <summary className="text-xs text-white/50 cursor-pointer hover:text-white/80 transition">
@@ -449,10 +428,7 @@ export default function AdminChefsPage() {
                   </div>
                 </details>
               )}
-              {/* Bouton fermer */}
-              <button onClick={() => setRemindResult(null)} className="text-xs text-white/40 hover:text-white/70 transition mt-1">
-                Fermer ×
-              </button>
+              <button onClick={() => setRemindResult(null)} className="text-xs text-white/40 hover:text-white/70 transition mt-1">Fermer ×</button>
             </div>
           )}
         </div>
@@ -461,13 +437,8 @@ export default function AdminChefsPage() {
       <Card className="p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="text-xs text-white/60">
-            Source :{' '}
-            <span className="text-white/85 font-medium">
-              {source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}
-            </span>
-            {source === 'localStorage' && (
-              <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>
-            )}
+            Source : <span className="text-white/85 font-medium">{source === 'db' ? 'DB (API admin)' : 'localStorage (fallback)'}</span>
+            {source === 'localStorage' && <span className="ml-2 text-amber-200/80">⚠️ (les nouveaux chefs DB peuvent ne pas apparaître)</span>}
           </div>
           {err && <div className="text-xs text-red-200">{err}</div>}
         </div>
@@ -577,6 +548,8 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
   selected: ApiChef; detail: any | null; loading: boolean; onClose: () => void;
   onApprove: () => Promise<void>; onActivate: () => Promise<void>; onDelete: () => Promise<void>;
 }) {
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+
   const raw = (detail?.profile ?? detail ?? selected.profile ?? selected ?? {}) as any;
   const profile = normalizeProfile(raw);
   const score = computeChefScore(toChefProfileForScore(raw)).score ?? 0;
@@ -628,10 +601,36 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
   };
   const checklistOk = Object.values(checklist).filter(Boolean).length;
 
+  // ── Génération portfolio PDF ───────────────────────────────
+  const openPortfolio = async () => {
+    if (!email) return;
+    setPortfolioLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/chefs/${encodeURIComponent(email)}/portfolio`,
+        { headers: { 'x-admin-email': ADMIN_EMAIL } }
+      );
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      // Libère l'URL après ouverture
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      if (!win) alert('Autorisez les popups pour ouvrir le portfolio.');
+    } catch (e: any) {
+      alert('Impossible de générer le portfolio : ' + (e?.message ?? 'erreur inconnue'));
+    } finally {
+      setPortfolioLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-neutral-950 border-l border-white/10 p-5 overflow-auto">
+
+        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-white text-lg font-semibold">{fullName}</div>
@@ -640,16 +639,41 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
           </div>
           <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10" onClick={onClose}>Fermer</button>
         </div>
+
+        {/* Score + statut */}
         <div className="mt-4 flex items-center gap-2">
           <ScorePill score={score} />
           <div className="ml-2"><ChefStatusBadge status={status} /></div>
           <div className="ml-auto text-xs text-white/50">Dossier : <span className="text-white/70 font-medium">{checklistOk}/{Object.keys(checklist).length}</span></div>
         </div>
-        <div className="mt-4 flex gap-2">
-          {status === 'pending_validation' && <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onApprove}>Approuver →</button>}
-          {status === 'approved' && <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15" onClick={onActivate}>Activer →</button>}
-          <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10" onClick={onDelete}>Supprimer</button>
+
+        {/* Actions */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {status === 'pending_validation' && (
+            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15 text-sm" onClick={onApprove}>
+              Approuver →
+            </button>
+          )}
+          {status === 'approved' && (
+            <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/15 text-sm" onClick={onActivate}>
+              Activer →
+            </button>
+          )}
+          <button className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-red-200 hover:bg-white/10 text-sm" onClick={onDelete}>
+            Supprimer
+          </button>
+
+          {/* ── BOUTON PORTFOLIO PDF ── */}
+          <button
+            onClick={openPortfolio}
+            disabled={portfolioLoading || !email}
+            className="px-3 py-2 rounded-xl border border-amber-500/20 bg-amber-500/10 text-sm text-amber-200 hover:bg-amber-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+          >
+            {portfolioLoading ? '⏳ Génération…' : '📄 Portfolio PDF'}
+          </button>
         </div>
+
+        {/* Sections */}
         <div className="mt-6 space-y-4">
           <Section title="Identité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -661,6 +685,7 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
               <InfoRow label="Inscription" value={formatDate(createdIso) || '—'} />
             </div>
           </Section>
+
           <Section title="Profil">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Type de profil" value={humanizeProfileType(profileType)} />
@@ -674,6 +699,7 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
               <div className="text-sm text-white/85 mt-1 whitespace-pre-wrap">{toDisplay(bio)}</div>
             </div>
           </Section>
+
           <Section title="Prix, certifs & disponibilité">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Tarif" value={pricing} />
@@ -685,6 +711,7 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
               <InfoRow label="Photos" value={hasPhotos ? '✅ Oui' : '❌ Non'} />
             </div>
           </Section>
+
           <Section title="Vérifications (avant approbation)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InfoRow label="Identité" value={checklist.identité ? '✅ OK' : '❌ Incomplète'} />
@@ -701,6 +728,7 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
               {loading && <span className="ml-2 text-white/40">(chargement…)</span>}
             </div>
           </Section>
+
           <details className="rounded-xl border border-white/10 bg-white/5">
             <summary className="cursor-pointer select-none px-3 py-2 text-sm text-white/80">Voir JSON (debug)</summary>
             <pre className="text-xs text-white/70 p-3 overflow-auto">{JSON.stringify(profile, null, 2)}</pre>
