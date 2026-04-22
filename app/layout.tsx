@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://chefstalents.com'),
   title: {
     default: 'Chef Privé à Domicile | Villas, Yachts, Résidences — Chefs Talents',
-    template: '%s — Chefs Talents',
+    template: '%s ',
   },
-  description: "Chefs Talents met en relation des chefs privés sélectionnés avec des clients exigeants en Europe. Villas, yachts, chalets, résidences UHNW. Une seule demande, la bonne réponse.",
+  description: "Chefs Talents met en relation des chefs privés sélectionnés avec des clients exigeants en Europe. Villas, yachts, chalets, résidences UHNW. Une seule demande : un concierge dédié.",
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 } },
   openGraph: {
     type: 'website', locale: 'fr_FR', url: 'https://chefstalents.com', siteName: 'Chefs Talents',
