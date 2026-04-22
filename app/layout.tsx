@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://chefstalents.com'),
   title: {
     default: 'Chef Privé à Domicile | Villas, Yachts, Résidences — Chefs Talents',
-    template: '%s ',
+    template: '%s',
   },
-  description: "Chefs Talents met en relation des chefs privés sélectionnés avec des clients exigeants en Europe. Villas, yachts, chalets, résidences UHNW. Une seule demande : un concierge dédié.",
+  description: "Chefs Talents met en relation des chefs privés sélectionnés avec des clients exigeants en Europe. Villas, yachts, chalets, résidences UHNW. Une seule demande, la bonne réponse.",
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 } },
   openGraph: {
     type: 'website', locale: 'fr_FR', url: 'https://chefstalents.com', siteName: 'Chefs Talents',
@@ -43,6 +43,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
+
+        {/* Google Ads */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18111694917"
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-18111694917');
+          `}
+        </Script>
 
         {/* Meta Pixel */}
         <Script id="meta-pixel" strategy="afterInteractive">
