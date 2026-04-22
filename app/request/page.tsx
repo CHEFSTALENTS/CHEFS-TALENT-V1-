@@ -800,14 +800,26 @@ const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, da
     setIsSubmitting(true);
     try {
       const response = await submitRequest(buildPayload(data) as any);
+
 if (response?.success) {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
-    (window as any).fbq('track', 'Lead', {
-      content_name: data.missionCategory ?? 'request',
-      content_category: data.budgetLevel ?? 'unknown',
-      value: data.budgetLevel === 'exclusive' ? 8000 : data.budgetLevel === 'premium' ? 5000 : 2500,
-      currency: 'EUR',
-    });
+  if (typeof window !== 'undefined') {
+    // Meta Pixel
+    if ((window as any).fbq) {
+      (window as any).fbq('track', 'Lead', {
+        content_name: data.missionCategory ?? 'request',
+        content_category: data.budgetLevel ?? 'unknown',
+        value: data.budgetLevel === 'exclusive' ? 8000 : data.budgetLevel === 'premium' ? 5000 : 2500,
+        currency: 'EUR',
+      });
+    }
+    // Google Ads conversion
+    if ((window as any).gtag) {
+      (window as any).gtag('event', 'conversion', {
+        send_to: 'AW-18111694917/3qwtCLrz1qAcEMWQqrxD',
+        value: data.budgetLevel === 'exclusive' ? 8000 : data.budgetLevel === 'premium' ? 5000 : 2500,
+        currency: 'EUR',
+      });
+    }
   }
   setResult(response);
 }
