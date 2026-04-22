@@ -800,7 +800,17 @@ const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, da
     setIsSubmitting(true);
     try {
       const response = await submitRequest(buildPayload(data) as any);
-      if (response?.success) setResult(response);
+if (response?.success) {
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    (window as any).fbq('track', 'Lead', {
+      content_name: data.missionCategory ?? 'request',
+      content_category: data.budgetLevel ?? 'unknown',
+      value: data.budgetLevel === 'exclusive' ? 8000 : data.budgetLevel === 'premium' ? 5000 : 2500,
+      currency: 'EUR',
+    });
+  }
+  setResult(response);
+}
     } catch (e) { console.error(e); setError("Une erreur est survenue."); }
     finally { setIsSubmitting(false); }
   };
