@@ -118,7 +118,11 @@ export default function ChefSignupPage() {
               Villas, résidences et yachts. Matching selon vos disponibilités, demandes qualifiées.
             </p>
 
-           
+            <div className="mt-8 space-y-3 text-sm text-stone-100/80 inline-block text-left">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-stone-200/80" />
+                <span>Accès aux missions au cas par cas</span>
+              </div>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-stone-200/80" />
                 <span>Profil non public • données protégées</span>
@@ -218,7 +222,7 @@ export default function ChefSignupPage() {
           </form>
 
           <div className="text-[11px] text-stone-400 leading-relaxed">
-            En créant un compte, vous confirmez que ce lien vous a été partagé par Chefs Talents.
+            En créant un compte, vous confirmez que ce lien vous a été partagé par Chef Talents.
           </div>
         </div>
       </div>
