@@ -1,18 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'nodejs';
+
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendChefEnquiryConfirmation } from '@/lib/sendChefEnquiryConfirmation';
+import { sendInternalChefEnquiry } from '@/lib/sendInternalChefEnquiry';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const strOrNull = (v: any): string | null => {
+  const s = String(v ?? '').trim();
+  return s ? s : null;
+};
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fullName, email, background, destinations, type, lang } = body;
 
-    if (!email || !fullName) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const email = strOrNull(body.email);
+    const fullName = strOrNull(body.fullName);
+    const firstName = fullName ? fullName.split(' ')[0] : null;
+    const background = strOrNull(body.background);
+    const destinations = strOrNull(body.destinations);
+    const type = strOrNull(body.type) ?? 'integration_programme';
+    const lang = strOrNull(body.lang) ?? 'en';
+
+    if (!email) {
+      return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
 
     // 1. Stocker dans Supabase
@@ -20,90 +36,73 @@ export async function POST(req: NextRequest) {
       .from('chef_enquiries')
       .insert({
         full_name: fullName,
+        first_name: firstName,
         email,
-        background: background || null,
-        destinations: destinations || null,
-        type: type || 'integration_programme',
-        lang: lang || 'en',
+        background,
+        destinations,
+        type,
+        lang,
+        status: 'new',
         created_at: new Date().toISOString(),
       })
       .select('id')
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
-      // On continue quand même pour envoyer l'email
+      console.error('[chef_enquiries insert error]', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const enquiryId = data.id as string;
+
+    let clientEmailOk = false;
+    let internalEmailOk = false;
+
     // 2. Email de confirmation au chef
-    const firstName = fullName.split(' ')[0] || fullName;
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Thomas — Chefs Talents <thomas@chefstalents.com>',
-        to: email,
-        subject: 'Your application — Chefs Talents Private Chef Network',
-        html: `
-          <div style="font-family: Georgia, serif; max-width: 580px; margin: 0 auto; padding: 48px 32px; background: #f4efe8; color: #161616;">
-            <p style="font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #8a7f73; margin-bottom: 32px;">CHEFS TALENTS</p>
-            <h1 style="font-size: 32px; font-weight: normal; margin-bottom: 24px; line-height: 1.2;">Hi ${firstName},</h1>
-            <p style="font-size: 16px; line-height: 1.8; color: #59544d; margin-bottom: 16px;">
-              Thank you for reaching out about our integration programme.
-            </p>
-            <p style="font-size: 16px; line-height: 1.8; color: #59544d; margin-bottom: 16px;">
-              We've received your details and will come back to you within 24 hours.
-            </p>
-            <div style="background: #161616; border-radius: 16px; padding: 28px; margin: 32px 0;">
-              <p style="color: #8a7f73; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 16px;">What to expect</p>
-              <p style="color: #ffffff; font-size: 15px; line-height: 1.8; margin: 0;">
-                → A short exchange to learn more about your background<br/>
-                → Details on our integration programme<br/>
-                → If it's a fit, access to our active roster for summer 2026
-              </p>
-            </div>
-            <p style="font-size: 16px; line-height: 1.8; color: #59544d; margin-bottom: 32px;">
-              We currently have active demand in Ibiza, Saint-Tropez and Mykonos — so timing is good.
-            </p>
-            <p style="font-size: 16px; color: #59544d;">Speak soon,</p>
-            <p style="font-size: 16px; color: #161616; font-weight: bold; margin-top: 8px;">Thomas Delcroix<br/><span style="font-weight: normal; color: #8a7f73; font-size: 14px;">Chefs Talents · +33 7 56 82 76 12</span></p>
-          </div>
-        `,
-      }),
-    });
+    try {
+      await sendChefEnquiryConfirmation({
+        email,
+        firstName: firstName ?? undefined,
+        lang,
+      });
+      clientEmailOk = true;
+    } catch (e) {
+      console.error('[sendChefEnquiryConfirmation error]', e);
+    }
 
-    // 3. Notification interne à Thomas
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Chefs Talents <noreply@chefstalents.com>',
-        to: 'contact@chefstalents.com',
-        subject: `Nouvelle candidature programme — ${fullName}`,
-        html: `
-          <div style="font-family: monospace; padding: 24px;">
-            <h2>Nouvelle candidature — Programme d'intégration</h2>
-            <p><strong>Nom :</strong> ${fullName}</p>
-            <p><strong>Email :</strong> ${email}</p>
-            <p><strong>Parcours :</strong> ${background || '—'}</p>
-            <p><strong>Destinations :</strong> ${destinations || '—'}</p>
-            <p><strong>Langue :</strong> ${lang || 'en'}</p>
-            <p><strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}</p>
-          </div>
-        `,
-      }),
-    });
+    // 3. Notification interne
+    try {
+      await sendInternalChefEnquiry({
+        enquiryId,
+        email,
+        fullName: fullName ?? undefined,
+        background: background ?? undefined,
+        destinations: destinations ?? undefined,
+        lang,
+        createdAtISO: new Date().toISOString(),
+      });
+      internalEmailOk = true;
+    } catch (e) {
+      console.error('[sendInternalChefEnquiry error]', e);
+    }
 
-    return NextResponse.json({ ok: true, id: data?.id });
+    // 4. Mettre à jour les timestamps d'envoi
+    const patch: Record<string, any> = {};
+    if (clientEmailOk) patch.email_sent_at = new Date().toISOString();
+    if (internalEmailOk) patch.internal_email_sent_at = new Date().toISOString();
+    if (Object.keys(patch).length) {
+      await supabase.from('chef_enquiries').update(patch).eq('id', enquiryId);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      enquiryId,
+      emailClientSent: clientEmailOk,
+      emailInternalSent: internalEmailOk,
+    });
 
   } catch (err) {
-    console.error('chef-enquiry error:', err);
+    console.error('[api/chef-enquiry] server error', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
