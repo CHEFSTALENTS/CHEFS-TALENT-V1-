@@ -56,7 +56,28 @@ function mapRowToRequestEntity(x: any): RequestEntity {
     } as any,
   } as RequestEntity;
 }
+import AssignMissionModal from '@/components/AssignMissionModal';
 
+// Dans le composant, ajoutez :
+const [showAssign, setShowAssign] = useState(false);
+
+// Dans le JSX :
+<button onClick={() => setShowAssign(true)}
+  className="px-4 py-2 bg-white text-[#161616] rounded-xl text-sm font-semibold">
+  Assign a chef →
+</button>
+
+{showAssign && (
+  <AssignMissionModal
+    requestId={request.id}
+    requestLocation={request.location}
+    requestStartDate={request.dates?.start}
+    requestEndDate={request.dates?.end}
+    requestGuestCount={request.guestCount}
+    onClose={() => setShowAssign(false)}
+    onSuccess={(id) => { setShowAssign(false); alert(`Mission created: ${id}`); }}
+  />
+)}
 // ─────────────────────────────────────────────────────────────
 // COMPOSANT TARIF + BRIEFS
 // ─────────────────────────────────────────────────────────────
