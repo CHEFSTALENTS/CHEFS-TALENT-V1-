@@ -86,6 +86,9 @@ const T = {
     s10summary: "Votre demande",
     s10privacy: "En soumettant, vous acceptez notre politique de confidentialité. Aucun engagement.",
     s10privacy2: "politique de confidentialité",
+    s10ncc: "J'accepte que les profils de chefs présentés sont strictement confidentiels et réservés à mon usage exclusif. Je m'engage à ne pas les contacter directement en dehors du cadre de Chefs Talents.",
+s10nccLink: "En savoir plus sur notre NDA",
+s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
     missionLabels: { single_service: "Prestation ponctuelle", single_replacement: "Remplacement", residence: "Séjour / résidence", yacht: "Mission yacht" },
     budgetLabels: { essential: "Essentiel", premium: "Premium", exclusive: "Exclusif" },
     successTitle: "Votre dossier est entre de bonnes mains.",
@@ -168,6 +171,9 @@ const T = {
     s10summary: "Your request",
     s10privacy: "By submitting, you accept our privacy policy. No commitment.",
     s10privacy2: "privacy policy",
+    s10ncc: "I acknowledge that the chef profiles presented to me are strictly confidential and for my exclusive use. I commit not to contact them directly outside the Chefs Talents framework.",
+s10nccLink: "Learn more about our NDA",
+s10nccRequired: "Please accept the confidentiality terms to continue.",
     missionLabels: { single_service: "One-time service", single_replacement: "Replacement", residence: "Stay / residence", yacht: "Yacht mission" },
     budgetLabels: { essential: "Essential", premium: "Premium", exclusive: "Exclusive" },
     successTitle: "Your file is in good hands.",
@@ -250,6 +256,9 @@ const T = {
     s10summary: "Su solicitud",
     s10privacy: "Al enviar, acepta nuestra política de privacidad. Sin compromiso.",
     s10privacy2: "política de privacidad",
+    s10ncc: "Reconozco que los perfiles de chefs presentados son estrictamente confidenciales y de uso exclusivo. Me comprometo a no contactarlos directamente fuera del marco de Chefs Talents.",
+s10nccLink: "Más información sobre nuestro NDA",
+s10nccRequired: "Por favor acepte los términos de confidencialidad.",
     missionLabels: { single_service: "Servicio puntual", single_replacement: "Sustitución", residence: "Estancia / residencia", yacht: "Misión yate" },
     budgetLabels: { essential: "Esencial", premium: "Premium", exclusive: "Exclusivo" },
     successTitle: "Su expediente está en buenas manos.",
@@ -523,6 +532,7 @@ type WizardState = RequestForm & {
   budgetUnit?: "per_person" | "per_day" | "total";
   replacementNeeded?: "yes" | "no";
   selectedDestination?: typeof DESTINATIONS[0];
+  nccAccepted?: boolean;
 };
 
 function deriveDateMode(cat?: WizardState["missionCategory"]): "single" | "multi" {
@@ -539,7 +549,7 @@ function makeEmpty(): WizardState {
     crewSize: 0, budgetAmount: null, budgetUnit: "total", missionCategory: undefined,
     mealPlan: undefined, replacementNeeded: "no", adults: 2, children: 0,
     hasDietaryRestrictions: false, budgetLevel: undefined, selectedLanguages: [],
-    selectedDestination: undefined,
+    selectedDestination: undefined, nccAccepted: false,
   };
 }
 
@@ -785,7 +795,7 @@ const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, da
       case 7: return !!data.budgetLevel;
       case 8: return data.hasDietaryRestrictions !== undefined;
       case 9: return true;
-      case 10: return !!data.fullName?.trim() && !!data.email?.includes("@") && (data.phone?.trim().length ?? 0) >= 6;
+case 10: return !!data.fullName?.trim() && !!data.email?.includes("@") && (data.phone?.trim().length ?? 0) >= 6 && data.nccAccepted === true;
       default: return true;
     }
   };
@@ -1226,7 +1236,31 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
                     )}
                   </div>
                 </div>
-              </div>
+              </div>{/* Case confidentialité NCC */}
+<div
+  onClick={() => set({ nccAccepted: !data.nccAccepted })}
+  className={`flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all max-w-md mx-auto mt-3 ${
+    data.nccAccepted ? 'border-stone-900 bg-stone-50' : 'border-stone-200 bg-white hover:border-stone-400'
+  }`}
+>
+  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+    data.nccAccepted ? 'bg-stone-900 border-stone-900' : 'border-stone-300'
+  }`}>
+    {data.nccAccepted && (
+      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    )}
+  </div>
+  <div>
+    <p className="text-xs text-stone-700 leading-relaxed">{t.s10ncc}</p>
+    <a href="/privacy" target="_blank" rel="noopener noreferrer"
+      onClick={e => e.stopPropagation()}
+      className="text-xs text-stone-400 hover:text-stone-600 underline mt-1 inline-block">
+      {t.s10nccLink}
+    </a>
+  </div>
+</div>
               <p className="text-center text-xs text-stone-400 mt-4 max-w-xs mx-auto">
                 {t.s10privacy.split(t.s10privacy2).map((part, i) =>
                   i === 0 ? part : <React.Fragment key={i}><Link href="/privacy" className="underline hover:text-stone-600">{t.s10privacy2}</Link>{part}</React.Fragment>
