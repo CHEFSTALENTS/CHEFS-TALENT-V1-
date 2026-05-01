@@ -7,6 +7,7 @@ import { api } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForRequestV2, chefIsEligibleForRequest } from '@/services/matching';
 import { buildWhatsappBriefForChef, buildInternalBrief, openWhatsappWithText, calcTarif } from '@/lib/whatsappBrief';
+import AssignMissionModal from '@/components/AssignMissionModal';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
 
@@ -56,28 +57,7 @@ function mapRowToRequestEntity(x: any): RequestEntity {
     } as any,
   } as RequestEntity;
 }
-import AssignMissionModal from '@/components/AssignMissionModal';
 
-// Dans le composant, ajoutez :
-const [showAssign, setShowAssign] = useState(false);
-
-// Dans le JSX :
-<button onClick={() => setShowAssign(true)}
-  className="px-4 py-2 bg-white text-[#161616] rounded-xl text-sm font-semibold">
-  Assign a chef →
-</button>
-
-{showAssign && (
-  <AssignMissionModal
-    requestId={request.id}
-    requestLocation={request.location}
-    requestStartDate={request.dates?.start}
-    requestEndDate={request.dates?.end}
-    requestGuestCount={request.guestCount}
-    onClose={() => setShowAssign(false)}
-    onSuccess={(id) => { setShowAssign(false); alert(`Mission created: ${id}`); }}
-  />
-)}
 // ─────────────────────────────────────────────────────────────
 // COMPOSANT TARIF + BRIEFS
 // ─────────────────────────────────────────────────────────────
@@ -92,11 +72,7 @@ function BriefSection({ req }: { req: RequestEntity }) {
   const internalBrief = useMemo(() => buildInternalBrief(req), [req]);
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0,
-    }).format(n);
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 
   const copyChef = async () => {
     await navigator.clipboard.writeText(chefBrief).catch(() => {});
@@ -112,13 +88,8 @@ function BriefSection({ req }: { req: RequestEntity }) {
 
   return (
     <div className="mt-4 space-y-3">
-
-      {/* ── DÉCOMPOSITION TARIFAIRE ── */}
       <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
-        <div className="text-xs font-semibold text-white/70 uppercase tracking-wide">
-          Décomposition tarifaire
-        </div>
-
+        <div className="text-xs font-semibold text-white/70 uppercase tracking-wide">Décomposition tarifaire</div>
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center">
             <div className="text-white/40 mb-1">Profil</div>
@@ -133,109 +104,69 @@ function BriefSection({ req }: { req: RequestEntity }) {
             <div className="text-white font-semibold">{tarif.days}j</div>
           </div>
         </div>
-
-        {/* Tableau financier */}
         <div className="border border-white/10 rounded-xl overflow-hidden text-xs">
           <div className="flex justify-between px-3 py-2.5 bg-emerald-500/5 border-b border-white/10">
             <span className="text-white/55">TJ chef net / jour</span>
-            <span className="text-emerald-300 font-semibold">
-              {fmt(tarif.chefTJMin)} — {fmt(tarif.chefTJMax)}
-            </span>
+            <span className="text-emerald-300 font-semibold">{fmt(tarif.chefTJMin)} — {fmt(tarif.chefTJMax)}</span>
           </div>
           <div className="flex justify-between px-3 py-2.5 bg-emerald-500/5 border-b border-white/10">
             <span className="text-white/55">Total chef net ({tarif.days}j)</span>
-            <span className="text-emerald-300 font-bold">
-              {fmt(tarif.chefTotalMin)} — {fmt(tarif.chefTotalMax)}
-            </span>
+            <span className="text-emerald-300 font-bold">{fmt(tarif.chefTotalMin)} — {fmt(tarif.chefTotalMax)}</span>
           </div>
           <div className="flex justify-between px-3 py-2.5 border-b border-white/10">
             <span className="text-white/55">Frais CT ({tarif.ctFeePct}%)</span>
-            <span className="text-amber-300 font-semibold">
-              + {fmt(tarif.ctFeesMin)} — {fmt(tarif.ctFeesMax)}
-            </span>
+            <span className="text-amber-300 font-semibold">+ {fmt(tarif.ctFeesMin)} — {fmt(tarif.ctFeesMax)}</span>
           </div>
           <div className="flex justify-between px-3 py-2.5 bg-white/10">
             <span className="text-white font-semibold">TOTAL CLIENT</span>
-            <span className="text-white font-bold">
-              {fmt(tarif.clientTotalMin)} — {fmt(tarif.clientTotalMax)}
-            </span>
+            <span className="text-white font-bold">{fmt(tarif.clientTotalMin)} — {fmt(tarif.clientTotalMax)}</span>
           </div>
         </div>
-
         <div className="text-[10px] text-white/30 text-center">
           Hors matières premières · Base {tarif.hoursPerDay}h/12h ref · Ratio {Math.round(tarif.dayRatio * 100)}%
         </div>
       </div>
 
-      {/* ── BRIEF CHEF — TJ net uniquement, jamais frais CT ── */}
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-xs font-semibold text-emerald-300 uppercase tracking-wide">
-              Brief chef
-            </div>
-            <div className="text-[10px] text-white/30 mt-0.5">
-              TJ net uniquement — frais CT non visibles
-            </div>
+            <div className="text-xs font-semibold text-emerald-300 uppercase tracking-wide">Brief chef</div>
+            <div className="text-[10px] text-white/30 mt-0.5">TJ net uniquement — frais CT non visibles</div>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowChefBrief(v => !v)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 transition"
-            >
+            <button onClick={() => setShowChefBrief(v => !v)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 transition">
               {showChefBrief ? 'Masquer' : 'Aperçu'}
             </button>
-            <button
-              onClick={copyChef}
-              className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition"
-            >
+            <button onClick={copyChef} className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition">
               {copiedChef ? '✓ Copié' : 'Copier'}
             </button>
-            <button
-              onClick={() => openWhatsappWithText(chefBrief)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 transition"
-            >
+            <button onClick={() => openWhatsappWithText(chefBrief)} className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 transition">
               WhatsApp →
             </button>
           </div>
         </div>
         {showChefBrief && (
-          <pre className="text-xs text-white/65 whitespace-pre-wrap font-mono leading-relaxed max-h-72 overflow-y-auto bg-black/20 rounded-xl p-3 mt-2">
-            {chefBrief}
-          </pre>
+          <pre className="text-xs text-white/65 whitespace-pre-wrap font-mono leading-relaxed max-h-72 overflow-y-auto bg-black/20 rounded-xl p-3 mt-2">{chefBrief}</pre>
         )}
       </div>
 
-      {/* ── BRIEF INTERNE — décomposition complète ── */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <div className="text-xs font-semibold text-white/60 uppercase tracking-wide">
-              Brief interne
-            </div>
-            <div className="text-[10px] text-white/30 mt-0.5">
-              Usage admin uniquement — contient les frais CT
-            </div>
+            <div className="text-xs font-semibold text-white/60 uppercase tracking-wide">Brief interne</div>
+            <div className="text-[10px] text-white/30 mt-0.5">Usage admin uniquement — contient les frais CT</div>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowInternal(v => !v)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 transition"
-            >
+            <button onClick={() => setShowInternal(v => !v)} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 transition">
               {showInternal ? 'Masquer' : 'Afficher'}
             </button>
-            <button
-              onClick={copyInternal}
-              className="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 transition"
-            >
+            <button onClick={copyInternal} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 transition">
               {copiedInternal ? '✓ Copié' : 'Copier'}
             </button>
           </div>
         </div>
         {showInternal && (
-          <pre className="text-xs text-white/55 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto bg-black/20 rounded-xl p-3 mt-2">
-            {internalBrief}
-          </pre>
+          <pre className="text-xs text-white/55 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto bg-black/20 rounded-xl p-3 mt-2">{internalBrief}</pre>
         )}
       </div>
     </div>
@@ -257,6 +188,7 @@ export default function AdminRequestDetailPage() {
   const [q, setQ] = useState('');
   const [actionChefId, setActionChefId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
 
   const onViewChefProfile = (chef: ChefUser) => {
     const profileId = (chef as any)?.profile?.id || chef.id;
@@ -370,6 +302,23 @@ export default function AdminRequestDetailPage() {
   return (
     <div className="space-y-4 p-6">
 
+      {/* MODAL ASSIGN — dans le composant, utilise req */}
+      {showAssign && (
+        <AssignMissionModal
+          requestId={req.id}
+          requestLocation={req.location}
+          requestStartDate={req.dates?.start ?? undefined}
+          requestEndDate={req.dates?.end ?? undefined}
+          requestGuestCount={req.guestCount ?? undefined}
+          requestNotes={(req as any).notes ?? undefined}
+          onClose={() => setShowAssign(false)}
+          onSuccess={(_missionId) => {
+            setShowAssign(false);
+            refresh();
+          }}
+        />
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
@@ -397,7 +346,6 @@ export default function AdminRequestDetailPage() {
           >
             Rafraîchir
           </button>
-          {/* Bouton copie rapide brief chef depuis le header */}
           <button
             onClick={async () => {
               await navigator.clipboard.writeText(buildWhatsappBriefForChef(req)).catch(() => {});
@@ -412,20 +360,23 @@ export default function AdminRequestDetailPage() {
           >
             WhatsApp →
           </button>
+          <button
+            onClick={() => setShowAssign(true)}
+            className="px-3 py-2 rounded-xl border border-white/20 bg-white text-[#161616] text-sm font-semibold hover:bg-white/90 transition"
+          >
+            Assign a chef →
+          </button>
         </div>
       </div>
 
       {/* GRILLE PRINCIPALE */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-
-        {/* COLONNE GAUCHE — Fiche + Tarifs + Briefs */}
         <Panel
           title="Fiche demande"
           subtitle="Résumé client + décomposition tarifaire"
           className="xl:col-span-1"
           right={<StatusBadge status={String(req.status || '')} />}
         >
-          {/* Infos mission */}
           <div className="space-y-2 text-sm">
             <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
             <Row label="Lieu" value={req.location || '—'} />
@@ -438,12 +389,9 @@ export default function AdminRequestDetailPage() {
             <Row label="Restrictions" value={String(req.preferences?.allergies || '—')} />
             <Row label="Langues" value={String(req.preferences?.languages || '—')} />
           </div>
-
-          {/* SECTION TARIF + BRIEFS */}
           <BriefSection req={req} />
         </Panel>
 
-        {/* COLONNE DROITE — Chefs matchables */}
         <div className="xl:col-span-2 space-y-4">
           <Panel
             title="Chefs matchables"
@@ -473,7 +421,6 @@ export default function AdminRequestDetailPage() {
               <span className="text-white/20">•</span>
               <span>Triés par compatibilité</span>
             </div>
-
             <div className="space-y-3">
               {matched.map((x) => (
                 <ChefMatchCard
@@ -498,7 +445,6 @@ export default function AdminRequestDetailPage() {
                 </div>
               )}
             </div>
-
             <div className="mt-4 text-xs text-white/45">
               "Sélectionner" = création d'une proposal ou mission + update statut request.
             </div>
@@ -595,8 +541,6 @@ function ChefMatchCard({
   const [copiedWA, setCopiedWA] = useState(false);
   const fullName = `${chef.firstName || ''} ${chef.lastName || ''}`.trim() || 'Chef';
   const initials = getChefInitials(chef);
-
-  // Brief personnalisé pour ce chef — TJ net uniquement
   const chefBrief = useMemo(() => buildWhatsappBriefForChef(req), [req]);
   const chefPhone = (chef as any)?.profile?.phone || (chef as any)?.profile?.phoneNumber || null;
 
@@ -620,48 +564,34 @@ function ChefMatchCard({
             <div className="text-xs text-white/40 mt-1">{profileState}</div>
           </div>
         </div>
-
         <div className="flex items-center gap-3 xl:gap-4">
           <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-center min-w-[96px]">
             <div className="text-white text-2xl font-semibold leading-none">{fitScore}</div>
             <div className="text-xs text-white/45 mt-1">/100</div>
             <div className="mt-2"><ConfidenceBadge confidence={confidence} /></div>
           </div>
-
           <div className="flex flex-col gap-2 min-w-[140px]">
-            <button
-              onClick={onViewProfile}
-              className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition"
-            >
+            <button onClick={onViewProfile} className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/80 hover:bg-white/10 transition">
               Voir profil
             </button>
-            <button
-              onClick={copyAndWA}
-              className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-100 hover:bg-emerald-500/20 transition"
-            >
+            <button onClick={copyAndWA} className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-100 hover:bg-emerald-500/20 transition">
               {copiedWA ? '✓ Copié' : '📲 Contacter'}
             </button>
             <button
               onClick={onSelect}
               disabled={loading}
-              className={[
-                'inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm transition',
-                'border-white/10 bg-white text-black hover:opacity-90',
-                loading ? 'opacity-60 cursor-not-allowed' : '',
-              ].join(' ')}
+              className={['inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border text-sm transition', 'border-white/10 bg-white text-black hover:opacity-90', loading ? 'opacity-60 cursor-not-allowed' : ''].join(' ')}
             >
               Sélectionner →
             </button>
           </div>
         </div>
       </div>
-
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <InfoLine label="Base" value={baseLabel} />
         <InfoLine label="Disponibilité" value={<SmallBadge tone={availability.tone}>{availability.label}</SmallBadge>} />
         <InfoLine label="Contact" value={contactLabel} />
       </div>
-
       <div className="mt-4 flex flex-wrap gap-2">
         {reasons?.length ? (
           reasons.slice(0, 3).map((r) => (
