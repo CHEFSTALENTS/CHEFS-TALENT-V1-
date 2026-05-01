@@ -1,44 +1,50 @@
 import { MetadataRoute } from 'next';
-import { getAllDestinationSlugs } from '@/lib/destinations';
+
+const BASE_URL = 'https://chefstalents.com';
+
+// Destinations principales — même liste que lib/destinations.ts
+const DESTINATION_SLUGS = [
+  // FR
+  'chef-prive-ibiza', 'chef-prive-saint-tropez', 'chef-prive-monaco',
+  'chef-prive-mykonos', 'chef-prive-courchevel', 'chef-prive-cap-ferret',
+  'chef-prive-biarritz', 'chef-prive-marbella', 'chef-prive-portofino',
+  'chef-prive-sardaigne', 'chef-prive-corse', 'chef-prive-megeve',
+  'chef-prive-cannes', 'chef-prive-cap-ferrat',
+  // EN
+  'private-chef-ibiza', 'private-chef-saint-tropez', 'private-chef-monaco',
+  'private-chef-mykonos', 'private-chef-courchevel', 'private-chef-cap-ferret',
+  'private-chef-biarritz', 'private-chef-marbella', 'private-chef-portofino',
+  'private-chef-sardinia', 'private-chef-corsica', 'private-chef-megeve',
+  'private-chef-cannes', 'private-chef-cap-ferrat',
+  // ES
+  'chef-privado-ibiza', 'chef-privado-saint-tropez', 'chef-privado-monaco',
+  'chef-privado-mykonos', 'chef-privado-courchevel', 'chef-privado-cap-ferret',
+  'chef-privado-marbella', 'chef-privado-portofino',
+  'chef-privado-cerdena', 'chef-privado-cannes',
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://chefstalents.com';
-  const now = new Date().toISOString();
+  const now = new Date();
 
+  // Pages statiques principales
   const staticPages: MetadataRoute.Sitemap = [
-    { url: base, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
-    { url: `${base}/conciergeries`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${base}/private-clients`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${base}/request`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/insights`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${base}/destinations`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${base}/accompagnement`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: BASE_URL, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${BASE_URL}/en`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${BASE_URL}/es`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${BASE_URL}/request`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${BASE_URL}/chef`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE_URL}/conciergeries`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE_URL}/legal`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ];
 
-  const articlePages: MetadataRoute.Sitemap = [
-    'chef-prive-cote-azur-ete-2026', 'private-chef-french-riviera-guide',
-    'chef-prive-ibiza-2026', 'combien-coute-chef-prive', 'chef-prive-saint-tropez',
-    'chef-prive-cannes', 'chef-prive-monaco', 'chef-prive-mykonos', 'chef-prive-santorin',
-    'chef-prive-sardaigne', 'chef-prive-porto-cervo', 'chef-prive-marbella',
-    'chef-prive-portugal-algarve', 'chef-prive-courchevel', 'chef-prive-megeve',
-    'chef-prive-val-disere', 'chef-prive-cap-ferrat', 'chef-prive-biarritz',
-    'chef-prive-marrakech', 'chef-prive-corfou', 'chef-prive-amalfi-capri',
-    'chef-prive-portofino', 'chef-prive-dubai', 'chef-prive-antibes', 'chef-prive-nice',
-    'chef-prive-yacht', 'chef-prive-villa', 'chef-prive-chalet-montagne',
-    'chef-prive-famille-uhnw', 'chef-prive-sejour-longue-duree',
-  ].map((slug) => ({
-    url: `${base}/insights/${slug}`,
+  // Pages destinations
+  const destinationPages: MetadataRoute.Sitemap = DESTINATION_SLUGS.map(slug => ({
+    url: `${BASE_URL}/destinations/${slug}`,
     lastModified: now,
     changeFrequency: 'monthly' as const,
-    priority: 0.7,
+    priority: slug.startsWith('private-chef-') ? 0.85 :
+              slug.startsWith('chef-prive-') ? 0.85 : 0.80,
   }));
 
-  const destinationPages: MetadataRoute.Sitemap = getAllDestinationSlugs().map((slug) => ({
-    url: `${base}/destinations/${slug}`,
-    lastModified: now,
-    changeFrequency: 'monthly' as const,
-    priority: 0.8,
-  }));
-
-  return [...staticPages, ...articlePages, ...destinationPages];
+  return [...staticPages, ...destinationPages];
 }
