@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /chef/dashboard/
+Disallow: /chef/settings/
+Disallow: /chef/missions/
+Disallow: /chef/login/
+Disallow: /chef/signup/
+
+Sitemap: https://chefstalents.com/sitemap.xml
