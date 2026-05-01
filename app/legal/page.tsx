@@ -18,7 +18,7 @@ export default function LegalPage() {
               Mentions légales & Confidentialité
             </h1>
             <p className="text-stone-500 font-light">
-              Dernière mise à jour : <strong>janvier 2026</strong>
+              Dernière mise à jour : <strong>Mai 2026</strong>
             </p>
           </div>
 
