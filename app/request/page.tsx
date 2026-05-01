@@ -1254,7 +1254,7 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
   </div>
   <div>
     <p className="text-xs text-stone-700 leading-relaxed">{t.s10ncc}</p>
-    <a href="/privacy" target="_blank" rel="noopener noreferrer"
+    <a href="/legal" target="_blank" rel="noopener noreferrer"
       onClick={e => e.stopPropagation()}
       className="text-xs text-stone-400 hover:text-stone-600 underline mt-1 inline-block">
       {t.s10nccLink}
