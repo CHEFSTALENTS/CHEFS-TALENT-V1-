@@ -9,14 +9,46 @@ export async function generateStaticParams() {
   return getAllDestinationSlugs().map((slug) => ({ slug }));
 }
 
+
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const dest = getDestinationBySlug(params.slug);
   if (!dest) return {};
+ 
+  const BASE = 'https://chefstalents.com';
+  const canonical = `${BASE}/destinations/${dest.slug}`;
+ 
+  // Récupérer les paires de langues depuis LANG_PAIRS
+  const pair = LANG_PAIRS[dest.slug] ?? null;
+ 
+  // Construire les alternates hreflang
+  const languages: Record<string, string> = {};
+  if (pair) {
+    languages['fr']        = `${BASE}/destinations/${pair.fr}`;
+    languages['en']        = `${BASE}/destinations/${pair.en}`;
+    if (pair.es) {
+      languages['es']      = `${BASE}/destinations/${pair.es}`;
+    }
+    languages['x-default'] = `${BASE}/destinations/${pair.en}`;
+  }
+ 
   return {
     title: dest.metaTitle,
     description: dest.metaDescription,
-    alternates: { canonical: `https://chefstalents.com/destinations/${dest.slug}` },
-    openGraph: { title: dest.metaTitle, description: dest.metaDescription, images: [{ url: dest.image }] },
+    alternates: {
+      canonical,
+      ...(pair ? { languages } : {}),
+    },
+    openGraph: {
+      title: dest.metaTitle,
+      description: dest.metaDescription,
+      url: canonical,
+      siteName: 'Chefs Talents',
+      images: [{ url: dest.image }],
+      locale: dest.slug.startsWith('private-chef-') ? 'en_GB'
+             : dest.slug.startsWith('chef-privado-') ? 'es_ES'
+             : 'fr_FR',
+      type: 'website',
+    },
   };
 }
 
