@@ -371,22 +371,152 @@ export const articles: Article[] = [
     id: '9',
     slug: 'combien-coute-chef-prive',
     title: "Combien coûte un chef privé à domicile ? Tarifs 2026",
-    subtitle: "Grille tarifaire complète d'un chef privé selon la mission, le niveau, la durée et la localisation.",
-    date: "Avril 2026",
-    publishedAt: "2026-04-01",
+    subtitle: "Grille tarifaire complète d'un chef privé en 2026 : du dîner ponctuel à la résidence saisonnière. Fourchettes détaillées, frais inclus et écarts entre profils.",
+    date: "Mai 2026",
+    publishedAt: "2026-05-01",
     category: "Guide pratique",
     image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=2070&auto=format&fit=crop",
     relatedLink: "/request?type=private",
     relatedLinkText: "Soumettre une demande",
     blocks: [
-      { type: 'paragraph', content: "Le coût d'un chef privé varie considérablement selon le profil, la durée, la localisation et le niveau de service attendu. Voici une grille tarifaire réaliste pour 2026, basée sur le marché européen." },
-      { type: 'h2', content: "Ce que comprend le tarif" },
-      { type: 'paragraph', content: "Le tarif journalier couvre le temps et les compétences du chef — pas les ingrédients. La plupart des missions fonctionnent avec un budget matières premières séparé, refacturé au coût réel." },
-      { type: 'h2', content: "Grille tarifaire 2026" },
-      { type: 'list', content: ["Dîner privé ponctuel : 300€ à 800€ selon le niveau et le nombre de convives.", "Mission courte (2–5 jours) : 400€ à 1 200€ par jour.", "Mission semaine : 2 500€ à 6 000€.", "Mission mensuelle : 5 000€ à 15 000€ par mois.", "Chef résident annuel : 6 000€ à 18 000€ brut par mois."] },
-      { type: 'h2', content: "Les facteurs qui font varier le tarif" },
-      { type: 'list', content: ["Le profil : expérience étoilée, formation internationale.", "La localisation : Côte d'Azur, Ibiza, Monaco en saison — majoration de 20 à 40%.", "Les langues : chef multilingue plus rare et plus cher.", "La discrétion : une compétence à part entière dans les environnements UHNW."] },
-      { type: 'quote', content: "Pour une semaine dans une villa à Saint-Tropez pour 8 personnes avec un chef senior : tarif chef 4 500€, matières premières 4 000€, déplacement 300€. Budget total : environ 8 800€." }
+      {
+        type: 'paragraph',
+        content: "« Combien coûte un chef privé ? » Question évidente, réponse moins évidente qu'il n'y paraît. Le tarif d'un chef privé ne dépend pas d'un service standardisé — il dépend du format de mission, de la durée, du contexte de service, du niveau du profil. Une même journée de cuisine peut se facturer 500 € ou 1 400 € selon ces variables. Ce guide pose les fourchettes réelles que nous pratiquons en 2026, format par format, pour vous donner une grille de lecture honnête avant de soumettre une demande."
+      },
+      {
+        type: 'h2',
+        content: "Quatre formats de mission, quatre logiques tarifaires"
+      },
+      {
+        type: 'paragraph',
+        content: "Le marché du chef privé n'est pas un marché unique. Il se segmente en quatre grands formats, dont chacun obéit à une logique tarifaire différente. Confondre ces formats est la première cause d'écart entre les attentes et les budgets — du côté client comme du côté chef."
+      },
+      {
+        type: 'paragraph',
+        content: "Le dîner ou déjeuner ponctuel d'abord. Le chef intervient une seule fois, pour un service donné, généralement assis. C'est le format le plus haut en valeur unitaire : la journée complète mobilisée pour quelques heures de service à table. Ensuite vient le séjour court en villa, sur une semaine à deux semaines, où la mission devient une présence quasi quotidienne, avec un effet d'échelle qui justifie un barème dégressif. Le séjour longue durée ou résidence saisonnière s'étale sur plusieurs mois et bascule vers une logique salariale forfaitaire mensuelle. Enfin, les missions yacht ou charter suivent leur propre cadrage, plus exigeant, avec des contraintes d'espace, de certifications et de logistique embarquée."
+      },
+      {
+        type: 'paragraph',
+        content: "Cette segmentation n'est pas un détail administratif : elle conditionne le profil de chef pertinent, la grille horaire, la nature des frais à anticiper, et même les compétences techniques attendues. Avant de comparer des devis, vérifiez que vous parlez bien du même format."
+      },
+      {
+        type: 'h2',
+        content: "Mission ponctuelle (1 à 3 jours) : 500 à 1 400 € par jour"
+      },
+      {
+        type: 'paragraph',
+        content: "La mission ponctuelle reste le format d'entrée. Elle couvre un dîner, un déjeuner, un week-end de réception, un anniversaire ou un événement intime. Sa fourchette tarifaire en 2026 s'établit entre 500 € et 1 400 € par jour, par chef."
+      },
+      {
+        type: 'paragraph',
+        content: "Le bas de la fourchette correspond à un chef confirmé travaillant en autonomie sur un service simple — un dîner pour 6 à 8 convives, sans assistance en cuisine. Le haut de la fourchette concerne un chef expérimenté avec un parcours significatif (ancien Michelin, ancien palace, ancien yacht UHNW), accompagné d'un second pour des formats plus exigeants : dîner formel pour 12 à 16 convives, table de dégustation, événement avec service en salle dédié."
+      },
+      {
+        type: 'list',
+        content: [
+          "Service simple, 6 à 8 convives, chef seul : 500 à 800 € par jour.",
+          "Service confirmé, 8 à 12 convives, sans second : 800 à 1 100 € par jour.",
+          "Service exigeant, 12 à 16 convives, avec second : 1 100 à 1 400 € par jour.",
+          "Au-delà de 16 convives, le format bascule vers une équipe et une grille spécifique."
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: "Ces tarifs couvrent la prestation chef pure — temps de préparation, temps de service, dressage, nettoyage. Les courses, les boissons, le matériel additionnel, les déplacements au-delà de 50 km et l'éventuel second sont facturés séparément, soit au coût réel, soit en forfait, selon le mode de facturation choisi en amont."
+      },
+      {
+        type: 'h2',
+        content: "Séjour villa (1 à 2 semaines) : barème dégressif"
+      },
+      {
+        type: 'paragraph',
+        content: "Lorsque la mission s'étire sur plusieurs jours consécutifs en villa privée, le tarif journalier baisse mécaniquement. Une semaine complète de sept jours pleins se négocie typiquement entre 4 200 € et 7 500 € (soit 600 à 1 070 € par jour), et deux semaines descendent vers une moyenne de 550 à 950 € par jour. Cette dégressivité n'est pas commerciale — elle reflète la réalité opérationnelle : le chef installe ses fournisseurs, ses repères, son organisation, et amortit le temps de mise en place sur la durée."
+      },
+      {
+        type: 'paragraph',
+        content: "Le contenu d'une journée type en séjour villa varie selon le brief. Certaines familles attendent uniquement le service du soir avec une grande table, d'autres demandent une présence du petit-déjeuner au dîner, en passant par un déjeuner léger autour de la piscine. Plus la couverture horaire est large, plus l'amplitude tarifaire glisse vers le haut de la fourchette, voire vers la nécessité d'un second en cuisine."
+      },
+      {
+        type: 'paragraph',
+        content: "Ce format suppose aussi de cadrer en amont des éléments souvent oubliés : l'hébergement du chef (sur place ou en pension), les jours de repos hebdomadaires (généralement un sur sept), la prise en charge des courses et leur règlement, et le niveau de service en salle (chef seul vs chef accompagné d'un serveur)."
+      },
+      {
+        type: 'h2',
+        content: "Résidence saisonnière (3 à 6 mois) : 6 000 à 18 000 € par mois"
+      },
+      {
+        type: 'paragraph',
+        content: "Pour les familles UHNW qui s'installent dans une résidence pour une saison entière — typiquement juin à septembre en Méditerranée, décembre à mars dans les Alpes — la logique bascule vers une logique salariale forfaitaire. Le chef devient un membre du personnel de maison, avec un contrat dédié, un hébergement fourni, et une fourchette mensuelle de 6 000 à 18 000 €."
+      },
+      {
+        type: 'paragraph',
+        content: "Le bas de la fourchette correspond à un profil intermédiaire confirmé sur un format famille avec services classiques (trois repas par jour, six à dix personnes en moyenne, jours d'invités occasionnels). Le haut de la fourchette concerne des profils seniors, ex-Michelin ou ex-palace, capables de tenir un standard gastronomique avec brigade en renfort lors des grandes tablées et flexibilité totale sur les régimes spécifiques."
+      },
+      {
+        type: 'list',
+        content: [
+          "Chef confirmé, famille de 4 à 6 personnes, services standards : 6 000 à 9 000 € / mois.",
+          "Chef senior, famille avec invités fréquents : 9 000 à 13 000 € / mois.",
+          "Chef étoilé, brigade saisonnière, exigences UHNW : 13 000 à 18 000 € / mois."
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: "À ce forfait s'ajoutent les charges sociales selon le statut choisi (salarié, portage salarial, prestataire indépendant), un budget courses séparé (généralement 50 à 150 € par convive et par jour), et le défraiement éventuel des déplacements pour rentrer ponctuellement chez soi."
+      },
+      {
+        type: 'h2',
+        content: "Ce que le tarif inclut (et ce qu'il n'inclut pas)"
+      },
+      {
+        type: 'paragraph',
+        content: "L'erreur la plus fréquente lors de la comparaison de devis est de raisonner uniquement en montant journalier. Or, deux propositions à 900 € par jour peuvent recouvrir des prestations très différentes selon ce qu'elles incluent."
+      },
+      {
+        type: 'paragraph',
+        content: "Le tarif chef couvre invariablement le temps du chef : préparation, exécution, service, nettoyage de poste. Selon l'agence ou le chef, il peut également inclure le sourcing des produits (passage chez les producteurs, marchés, fournisseurs spécialisés), la coordination de l'équipe en cuisine, l'accord mets-vins et même la mise en scène en salle."
+      },
+      {
+        type: 'list',
+        content: [
+          "Toujours inclus : temps de cuisine, service, dressage, nettoyage du poste cuisine.",
+          "Souvent inclus : conception du menu, sourcing produits, coordination de la cuisine.",
+          "Parfois inclus : accord mets-vins, second de cuisine, équipement spécifique du chef.",
+          "Jamais inclus : matières premières (courses), boissons, location de matériel additionnel, déplacements au-delà de 50 km, hébergement du chef si non fourni par le client."
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: "Pour les missions longues en villa et les résidences saisonnières, un budget courses séparé est systématiquement prévu. Il varie de 50 € par convive et par jour pour une cuisine décontractée à 150 € par convive et par jour pour une cuisine gastronomique avec produits d'exception (truffe fraîche, caviar, poissons sauvages, viandes maturées)."
+      },
+      {
+        type: 'h2',
+        content: "Pourquoi les écarts de prix entre profils ?"
+      },
+      {
+        type: 'paragraph',
+        content: "À format de mission identique, les tarifs entre deux chefs peuvent varier du simple au triple. Cet écart traduit cinq dimensions qu'il vaut la peine de comprendre avant de comparer."
+      },
+      {
+        type: 'paragraph',
+        content: "L'ancienneté d'abord. Un chef avec quinze ans de cuisine privée a internalisé tous les codes de la mission en maison — discrétion, autonomie, gestion d'imprévus, posture en présence des hôtes — et facture cette expérience. Le parcours ensuite : un passage par une étoile Michelin, un palace cinq étoiles, un yacht UHNW signale un standard technique et une rigueur opérationnelle qui se paient. La mobilité également : un chef qui se déplace régulièrement entre Côte d'Azur, Sardaigne et Mykonos a une logistique propre qui justifie une grille plus élevée que celui qui ne sort jamais d'une zone fixe."
+      },
+      {
+        type: 'paragraph',
+        content: "Plus subtilement, la rareté du profil entre en jeu : un chef parlant trois langues, formé à la cuisine kasher ou halal, ou spécialiste d'un régime émergent (anti-inflammatoire, longevity, FODMAP) peut commander une prime liée à sa rareté. Enfin, la demande sur la période : un chef demandé pour la période 14 juillet — 25 août sur la Côte d'Azur n'a aucun intérêt à brader son tarif si son agenda est saturé six mois à l'avance."
+      },
+      {
+        type: 'quote',
+        content: "Comparer un tarif chef sans comparer le contexte revient à comparer le prix d'une nuit d'hôtel sans regarder l'adresse. Ce n'est pas le tarif qui définit la valeur — c'est l'adéquation au format, au profil et au moment."
+      },
+      {
+        type: 'paragraph',
+        content: "En pratique, plutôt que de chercher le tarif le plus bas, l'exercice utile est de définir précisément votre format de mission, le profil de chef que ce format requiert, et de demander à votre interlocuteur de justifier la grille proposée. Les agences honnêtes détaillent ce qui compose le tarif. Celles qui ne le font pas masquent généralement quelque chose : un second non inclus, des courses surfacturées, ou un profil sous-qualifié pour le format demandé."
+      },
+      {
+        type: 'paragraph',
+        content: "Pour orienter votre projet, soumettez votre brief sur notre formulaire. Nous identifions le format de mission pertinent, sélectionnons trois profils alignés avec vos exigences et votre budget, et formalisons un devis transparent qui détaille chaque ligne — y compris ce qu'il n'inclut pas."
+      }
     ]
   },
   {
