@@ -12,6 +12,49 @@ const WHATSAPP_PREFILL = encodeURIComponent(
   "Bonjour,\n\nJ'ai une demande Chef Talents.\n\nContexte / lieu / dates :\nBudget indicatif :\nNombre de convives :\n\nMerci."
 );
 
+const FAQ_ITEMS = [
+  {
+    title: "Que se passe-t-il après l'envoi de ma demande ?",
+    content:
+      "Nous analysons votre brief (lieu, dates, attentes, budget), puis nous revenons vers vous avec une sélection de chefs disponibles et pertinents dans les 6 heures. Vous validez un profil, et nous coordonnons ensuite l'ensemble de la mission.",
+  },
+  {
+    title: "Est-ce que je choisis le chef ?",
+    content:
+      "Oui. Chefs Talents fonctionne comme un intermédiaire curateur : nous présélectionnons des profils adaptés, et vous choisissez celui qui correspond le mieux à votre style, vos contraintes et votre niveau d'exigence.",
+  },
+  {
+    title: "Quand le paiement est-il effectué ?",
+    content:
+      "Le paiement dépend de la nature et de la durée de la mission. Pour certaines prestations ponctuelles, le règlement intervient une fois le chef sélectionné afin de confirmer la mission. Pour les missions plus longues ou plus complexes, les modalités sont précisées en amont avec transparence.",
+  },
+  {
+    title: "Pourquoi des frais de service sont-ils demandés ?",
+    content:
+      "Les frais de service couvrent la sélection des chefs, la coordination, la sécurisation de la mission et le suivi opérationnel.",
+  },
+  {
+    title: "Que se passe-t-il si le chef annule ou ne peut pas assurer la mission ?",
+    content:
+      "En cas d'indisponibilité du chef, nous activons immédiatement une solution de remplacement avec un profil équivalent.",
+  },
+  {
+    title: "La prestation est-elle confidentielle ?",
+    content:
+      "Absolument. La discrétion est un principe fondamental de Chefs Talents. Les lieux, clients et détails des missions ne sont jamais rendus publics.",
+  },
+];
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.title,
+    acceptedAnswer: { '@type': 'Answer', text: item.content },
+  })),
+};
+
 const DESTINATIONS_FEATURED = [
   { name: 'Saint-Tropez', country: 'France', emoji: '🇫🇷' },
   { name: 'Ibiza', country: 'Espagne', emoji: '🇪🇸' },
@@ -67,6 +110,10 @@ export default function ChefTalentsHome() {
 
   return (
     <div className="bg-[#f4efe8] text-[#161616] flex flex-col min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
 
       {/* ── HERO ──────────────────────────────────────────── */}
       <section className="relative h-[90vh] min-h-[680px] w-full overflow-hidden">

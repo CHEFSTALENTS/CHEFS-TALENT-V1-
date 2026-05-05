@@ -275,6 +275,25 @@ export default function DestinationPage({ params }: { params: { slug: string } }
     offers: { '@type': 'Offer', description: dest.rateDetail, priceCurrency: 'EUR' },
   };
 
+  // Breadcrumb JSON-LD (langue-aware)
+  const homeLabel = lang === 'en' ? 'Home' : lang === 'es' ? 'Inicio' : 'Accueil';
+  const homeUrl = lang === 'en'
+    ? 'https://chefstalents.com/en'
+    : lang === 'es'
+      ? 'https://chefstalents.com/es'
+      : 'https://chefstalents.com';
+  const destinationsLabel = lang === 'es' ? 'Destinos' : 'Destinations';
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: homeLabel, item: homeUrl },
+      { '@type': 'ListItem', position: 2, name: destinationsLabel, item: 'https://chefstalents.com/destinations' },
+      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://chefstalents.com/destinations/${dest.slug}` },
+    ],
+  };
+
   // Destinations de maillage selon la langue
   const linkedDests = lang === 'en'
     ? [
@@ -308,6 +327,7 @@ export default function DestinationPage({ params }: { params: { slug: string } }
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />}
 
       <main className="bg-[#f4efe8] text-[#161616]">

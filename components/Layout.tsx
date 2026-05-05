@@ -103,6 +103,8 @@ export const Layout = ({ children }: { children?: React.ReactNode }) => {
               <li><Link href="/conciergeries" className="hover:text-paper transition-colors">Conciergeries</Link></li>
               <li><Link href="/private-clients" className="hover:text-paper transition-colors">Clients Privés</Link></li>
               <li><Link href="/destinations" className="hover:text-paper transition-colors">Destinations</Link></li>
+              <li><Link href="/insights" className="hover:text-paper transition-colors">Le Journal</Link></li>
+              <li><Link href="/accompagnement" className="hover:text-paper transition-colors">Accompagnement</Link></li>
               <li><Link href="/chefs" className="hover:text-paper transition-colors">Espace chef</Link></li>
             </ul>
           </div>
