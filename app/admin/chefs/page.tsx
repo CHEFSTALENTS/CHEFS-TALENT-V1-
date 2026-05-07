@@ -486,10 +486,28 @@ export default function AdminChefsPage() {
                 view.map((c) => {
                   const { email, fullName, createdIso, status } = getNormalizedChef(c as any, null);
                   const score = computeChefScore(toChefProfileForScore((c as any).profile ?? c)).score ?? 0;
+                  const profileForVip = ((c as any).profile ?? c) as any;
+                  const isVipActive = profileForVip?.plan === 'pro' && profileForVip?.planStatus === 'active';
+                  const isComplimentary = !!profileForVip?.complimentary;
                   return (
                     <tr key={email || fullName} className="border-t border-white/10 hover:bg-white/5 transition cursor-pointer" onClick={() => openChef(c)}>
                       <td className="p-3">
-                        <div className="text-white font-medium truncate">{fullName || 'Chef'}</div>
+                        <div className="text-white font-medium truncate flex items-center gap-2">
+                          <span className="truncate">{fullName || 'Chef'}</span>
+                          {isVipActive && (
+                            <span
+                              title={isComplimentary ? 'VIP offert' : 'VIP payant'}
+                              className={[
+                                'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border shrink-0',
+                                isComplimentary
+                                  ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30'
+                                  : 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+                              ].join(' ')}
+                            >
+                              👑 {isComplimentary ? 'VIP★' : 'VIP'}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-white/45 mt-0.5">Inscrit : {formatDate(createdIso) || '—'}</div>
                       </td>
                       <td className="p-3 text-white/85">{email || '—'}</td>

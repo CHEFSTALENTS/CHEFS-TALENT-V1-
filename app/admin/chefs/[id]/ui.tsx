@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import VipAdminControl from './_components/VipAdminControl';
 
 type MissionRow = {
   id: string;
@@ -707,6 +708,9 @@ export default function ChefProfileClient({
     // ici on ne modifie pas le profile en local pour rester simple
   }}
 />
+
+{/* VIP — offrir / révoquer */}
+<VipAdminControl chefId={chefId} initialProfile={localProfile} />
       {/* Lightbox */}
       {lightbox.open ? (
         <Lightbox
