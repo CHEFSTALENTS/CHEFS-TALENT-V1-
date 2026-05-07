@@ -15,6 +15,10 @@ import { cuisineEvenementPrive } from './_guides/cuisine-evenement-prive';
 import { contratChefPrive } from './_guides/contrat-chef-prive';
 import { dossierPresseChefPrive } from './_guides/dossier-presse-chef-prive';
 import { travaillerAvecAgentConciergerie } from './_guides/travailler-avec-agent-conciergerie';
+import { cuisineWellnessUhnw } from './_guides/cuisine-wellness-uhnw';
+import { encaisserProprement } from './_guides/encaisser-proprement';
+import { instagramChefPriveUhnw } from './_guides/instagram-chef-prive-uhnw';
+import { carriereChefPriveDixAns } from './_guides/carriere-chef-prive-dix-ans';
 
 export type {
   Guide,
@@ -36,6 +40,10 @@ const ALL_GUIDES: Guide[] = [
   contratChefPrive,
   dossierPresseChefPrive,
   travaillerAvecAgentConciergerie,
+  cuisineWellnessUhnw,
+  encaisserProprement,
+  instagramChefPriveUhnw,
+  carriereChefPriveDixAns,
 ];
 
 export const GUIDES: Record<string, Guide> = ALL_GUIDES.reduce(

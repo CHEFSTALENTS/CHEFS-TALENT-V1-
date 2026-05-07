@@ -76,7 +76,8 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
       id: 'tip-metier-4',
       pillar: 'metier',
       title: 'Cuisine wellness et régimes médicaux UHNW',
-      desc: 'À venir. Cétogène, jeûne intermittent, casher, allergies sévères : tenir le niveau dans la contrainte.',
+      desc: 'Cétogène, jeûne intermittent, FODMAP, postopératoire : tenir le niveau dans la contrainte.',
+      href: '/chef/vip/guides/cuisine-wellness-uhnw',
     },
 
     // ─── Pilier 2 : Le business ──────────────────────────────────────────────
@@ -105,7 +106,8 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
       id: 'tip-business-4',
       pillar: 'business',
       title: 'Encaisser proprement : factures, retenues, soldes impayés',
-      desc: 'À venir. Le cycle de facturation d’un chef privé saisonnier, et la procédure de relance.',
+      desc: 'Le cycle de facturation et la procédure de relance qui transforment un solde douteux en règlement effectif.',
+      href: '/chef/vip/guides/encaisser-proprement',
     },
 
     // ─── Pilier 3 : La marque ────────────────────────────────────────────────
@@ -127,7 +129,8 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
       id: 'tip-marque-3',
       pillar: 'marque',
       title: 'Instagram pour chef privé dans le segment UHNW',
-      desc: 'À venir. Ce qui marche et ce qui dessert. Cadrer un compte sans tomber dans la mode food.',
+      desc: 'Cadrer un compte sans tomber dans les codes de la mode food. Faire d’un Instagram un actif commercial discret.',
+      href: '/chef/vip/guides/instagram-chef-prive-uhnw',
     },
 
     // ─── Pilier 4 : L’humain ─────────────────────────────────────────────────
@@ -148,8 +151,9 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
     {
       id: 'tip-humain-3',
       pillar: 'humain',
-      title: 'La carrière du chef privé sur dix ans : les choix qui paient',
-      desc: 'À venir. Les bifurcations stratégiques observées sur trois générations de chefs privés.',
+      title: 'La carrière du chef privé sur dix ans, les choix qui paient',
+      desc: 'Les bifurcations stratégiques observées sur trois générations de chefs privés actifs sur le segment européen.',
+      href: '/chef/vip/guides/carriere-chef-prive-dix-ans',
     },
   ],
 };
