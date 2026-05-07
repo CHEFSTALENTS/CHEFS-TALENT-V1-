@@ -4,6 +4,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/services/supabaseClient';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import {
+  LOCALES,
+  LOCALE_LABELS,
+  LOCALE_FULL_LABELS,
+  format,
+  type Locale,
+} from '@/lib/chef-i18n';
 
 import {
   LogOut,
@@ -43,9 +51,59 @@ const PUBLIC_CHEF_ROUTES = [
   '/chef/terms',
 ];
 
+const DATE_LOCALE_MAP: Record<Locale, string> = {
+  fr: 'fr-FR',
+  en: 'en-US',
+  es: 'es-ES',
+};
+
+// ─── Locale switcher (sidebar) ────────────────────────────────────────
+function LocaleSwitcher({
+  locale,
+  setLocale,
+  ariaLabel,
+  compact = false,
+}: {
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  ariaLabel: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={`inline-flex items-center rounded-full border border-stone-700 bg-stone-800/40 overflow-hidden ${
+        compact ? 'text-[10px]' : 'text-[11px]'
+      }`}
+    >
+      {LOCALES.map((l) => {
+        const isActive = l === locale;
+        return (
+          <button
+            key={l}
+            type="button"
+            onClick={() => !isActive && setLocale(l)}
+            aria-pressed={isActive}
+            title={LOCALE_FULL_LABELS[l]}
+            className={`px-3 py-1.5 font-medium tracking-wide transition-colors ${
+              isActive
+                ? 'bg-white text-stone-900'
+                : 'text-stone-400 hover:text-white hover:bg-stone-700/40'
+            }`}
+          >
+            {LOCALE_LABELS[l]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { locale, setLocale, t } = useChefLocale();
 
   const isPublicRoute = useMemo(() => {
     const p = pathname || '';
@@ -70,7 +128,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
 
-  // ---- AUTH + LOAD PROFILE (status + terms) ----
+  // ---- AUTH + LOAD PROFILE (status + terms + preferredLocale) ----
   useEffect(() => {
     let alive = true;
 
@@ -116,6 +174,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           setTermsAccepted(Boolean(json?.termsAccepted));
           setTermsAcceptedVersion((json?.termsAcceptedVersion ?? null) as string | null);
           setTermsAcceptedAt((json?.termsAcceptedAt ?? null) as string | null);
+
+          // Hydrate locale from server profile if present (priorité serveur > localStorage)
+          const serverLocale = json?.preferredLocale;
+          if (serverLocale === 'fr' || serverLocale === 'en' || serverLocale === 'es') {
+            if (serverLocale !== locale) setLocale(serverLocale);
+          }
         } catch {
           setTermsAccepted(false);
           setTermsAcceptedVersion(null);
@@ -149,9 +213,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       sub.subscription.unsubscribe();
       if (document.head.contains(meta)) document.head.removeChild(meta);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, isPublicRoute]);
 
-  // ✅ Close drawer on route change (même si public, harmless)
+  // ✅ Close drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -219,7 +284,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         localStorage.setItem('ct_chef_terms_version', CURRENT_TERMS_VERSION);
       } catch {}
     } catch {
-      setTermsError("Impossible d’enregistrer l’acceptation. Réessaie.");
+      setTermsError(t.termsModal.error);
     } finally {
       setTermsLoading(false);
     }
@@ -234,7 +299,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   if (booting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <div className="text-sm text-stone-500">Chargement…</div>
+        <div className="text-sm text-stone-500">{t.common.loading}</div>
       </div>
     );
   }
@@ -242,20 +307,22 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
   if (!user) return null;
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/chef/dashboard' },
-    { icon: Briefcase, label: 'Missions', path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
-    { icon: Euro, label: 'Revenus', path: '/chef/earnings' },
-    { icon: Euro, label: 'Tarifs', path: '/chef/pricing' },
+    { icon: LayoutDashboard, label: t.nav.dashboard, path: '/chef/dashboard' },
+    { icon: Briefcase, label: t.nav.missions, path: '/chef/missions', badge: offeredCount > 0 ? offeredCount : null },
+    { icon: Euro, label: t.nav.earnings, path: '/chef/earnings' },
+    { icon: Euro, label: t.nav.pricing, path: '/chef/pricing' },
 
-    { icon: User, label: 'Identité', path: '/chef/identity' },
-    { icon: ChefHat, label: 'Expérience', path: '/chef/experience' },
-    { icon: Image, label: 'Portfolio', path: '/chef/portfolio' },
-    { icon: Map, label: 'Zone & Mobilité', path: '/chef/mobility' },
-    { icon: Calendar, label: 'Disponibilités', path: '/chef/availability' },
-    { icon: SlidersHorizontal, label: 'Préférences', path: '/chef/preferences' },
-    { icon: Settings, label: 'Paramètres', path: '/chef/settings' },
-    { icon: FileText, label: 'Conditions', path: '/chef/terms' },
+    { icon: User, label: t.nav.identity, path: '/chef/identity' },
+    { icon: ChefHat, label: t.nav.experience, path: '/chef/experience' },
+    { icon: Image, label: t.nav.portfolio, path: '/chef/portfolio' },
+    { icon: Map, label: t.nav.mobility, path: '/chef/mobility' },
+    { icon: Calendar, label: t.nav.availability, path: '/chef/availability' },
+    { icon: SlidersHorizontal, label: t.nav.preferences, path: '/chef/preferences' },
+    { icon: Settings, label: t.nav.settings, path: '/chef/settings' },
+    { icon: FileText, label: t.nav.terms, path: '/chef/terms' },
   ];
+
+  const dateLocale = DATE_LOCALE_MAP[locale];
 
   const SidebarContent = ({ compact = false }: { compact?: boolean }) => (
     <div className="h-full flex flex-col">
@@ -263,7 +330,15 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         <Link href="/" className="font-serif text-xl text-stone-50 tracking-tight">
           CHEF TALENTS
         </Link>
-        <span className="text-[10px] uppercase tracking-widest text-stone-500 block mt-1">Portal</span>
+        <span className="text-[10px] uppercase tracking-widest text-stone-500 block mt-1 mb-4">
+          {t.nav.portal}
+        </span>
+        <LocaleSwitcher
+          locale={locale}
+          setLocale={setLocale}
+          ariaLabel={t.switcher.ariaLabel}
+          compact={compact}
+        />
       </div>
 
       <nav className={`flex-1 overflow-y-auto ${compact ? 'p-4' : 'p-6'} space-y-1`}>
@@ -301,20 +376,20 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           {termsLoaded ? (
             termsAccepted && termsAcceptedVersion === CURRENT_TERMS_VERSION ? (
               <span>
-                Conditions : <span className="text-stone-200">acceptées</span>
+                {t.nav.termsLabel} <span className="text-stone-200">{t.nav.termsAccepted}</span>
                 {termsAcceptedAt ? (
                   <span className="block text-[11px] text-stone-600 mt-1">
-                    {new Date(termsAcceptedAt).toLocaleString('fr-FR')}
+                    {new Date(termsAcceptedAt).toLocaleString(dateLocale)}
                   </span>
                 ) : null}
               </span>
             ) : (
               <span>
-                Conditions : <span className="text-red-400">à valider</span>
+                {t.nav.termsLabel} <span className="text-red-400">{t.nav.termsToValidate}</span>
               </span>
             )
           ) : (
-            <span>Chargement…</span>
+            <span>{t.nav.loading}</span>
           )}
         </div>
 
@@ -335,7 +410,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
           onClick={handleLogout}
           className="flex items-center gap-2 text-xs text-stone-400 hover:text-stone-200 w-full px-2 py-2"
         >
-          <LogOut className="w-3 h-3" /> Déconnexion
+          <LogOut className="w-3 h-3" /> {t.nav.logout}
         </button>
       </div>
     </div>
@@ -347,7 +422,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
       <div className="md:hidden sticky top-0 z-20 bg-stone-50/95 backdrop-blur border-b border-stone-200">
         <div className="relative flex items-center px-4 py-3">
           <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-            <div className="text-xs uppercase tracking-widest text-stone-400">Chef Portal</div>
+            <div className="text-xs uppercase tracking-widest text-stone-400">{t.nav.portal}</div>
             <div className="text-sm font-medium text-stone-900 truncate max-w-[220px]">
               {user.firstName} {user.lastName}
             </div>
@@ -358,7 +433,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
               type="button"
               onClick={() => setMobileOpen(true)}
               className="inline-flex items-center justify-center w-10 h-10 border border-stone-200 bg-white"
-              aria-label="Ouvrir le menu"
+              aria-label={t.nav.openMenu}
             >
               <Menu className="w-5 h-5 text-stone-800" />
             </button>
@@ -367,7 +442,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
               type="button"
               onClick={handleLogout}
               className="inline-flex items-center justify-center w-10 h-10 border border-stone-200 bg-white"
-              aria-label="Déconnexion"
+              aria-label={t.nav.logout}
             >
               <LogOut className="w-5 h-5 text-stone-800" />
             </button>
@@ -386,7 +461,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
               type="button"
               className="absolute inset-0 bg-black/40"
               onClick={() => setMobileOpen(false)}
-              aria-label="Fermer le menu"
+              aria-label={t.nav.closeMenu}
             />
             <div className="absolute left-0 top-0 h-full w-[85%] max-w-[320px] bg-stone-900 text-stone-300 shadow-2xl">
               <div className="flex items-center justify-between p-4 border-b border-stone-800">
@@ -395,7 +470,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                   type="button"
                   className="w-10 h-10 inline-flex items-center justify-center border border-stone-800"
                   onClick={() => setMobileOpen(false)}
-                  aria-label="Fermer"
+                  aria-label={t.common.close}
                 >
                   <X className="w-5 h-5 text-stone-200" />
                 </button>
@@ -417,15 +492,15 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
             <div className="w-full max-w-lg rounded-3xl border border-stone-200 bg-white shadow-2xl overflow-hidden">
               <div className="p-8">
                 <div className="text-[10px] uppercase tracking-[0.24em] text-stone-400 mb-3">
-                  Chef Talents · Portail Chef
+                  {t.termsModal.tagline}
                 </div>
 
                 <h2 className="text-2xl md:text-3xl font-serif text-stone-900">
-                  Conditions de collaboration
+                  {t.termsModal.title}
                 </h2>
 
                 <p className="mt-3 text-sm text-stone-600 leading-relaxed">
-                  Pour accéder au portail et recevoir des missions, vous devez lire et accepter les conditions de collaboration.
+                  {t.termsModal.description}
                 </p>
 
                 {termsError ? <div className="mt-4 text-sm text-red-600">{termsError}</div> : null}
@@ -435,7 +510,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                     href={`/chef/terms?next=${encodeURIComponent(pathname || '/chef/dashboard')}`}
                     className="w-full text-center rounded-2xl border border-stone-200 bg-stone-50 py-3 text-sm font-medium text-stone-900 hover:bg-stone-100"
                   >
-                    Lire les conditions
+                    {t.termsModal.readTerms}
                   </Link>
 
                   <button
@@ -444,7 +519,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                     onClick={acceptTerms}
                     className="w-full rounded-2xl bg-stone-900 py-3 text-sm font-medium text-white hover:bg-stone-800 disabled:opacity-50"
                   >
-                    {termsLoading ? 'Enregistrement…' : 'Accepter et continuer'}
+                    {termsLoading ? t.termsModal.accepting : t.termsModal.accept}
                   </button>
 
                   <button
@@ -452,12 +527,12 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
                     onClick={handleLogout}
                     className="w-full rounded-2xl py-3 text-sm font-medium text-stone-500 hover:text-stone-900"
                   >
-                    Se déconnecter
+                    {t.nav.logout}
                   </button>
                 </div>
 
                 <div className="mt-6 text-xs text-stone-400">
-                  Version en vigueur : {CURRENT_TERMS_VERSION}
+                  {format(t.termsModal.versionInForce, { version: CURRENT_TERMS_VERSION })}
                 </div>
               </div>
             </div>

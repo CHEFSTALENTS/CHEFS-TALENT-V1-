@@ -23,5 +23,6 @@ export async function GET(req: Request) {
     termsAccepted: Boolean(profile?.termsAccepted),
     termsAcceptedAt: profile?.termsAcceptedAt ?? null,
     termsAcceptedVersion: profile?.termsAcceptedVersion ?? null,
+    preferredLocale: profile?.preferredLocale ?? null,
   });
 }

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button } from '../../../components/ui';
 import { computeChefScore } from '@/lib/chefScore';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format } from '@/lib/chef-i18n';
 import {
   CheckCircle2, Clock, ArrowRight, User, ChefHat, Image as ImageIcon,
   Map, Calendar, AlertTriangle, Crown, Sparkles, Lock, DollarSign,
@@ -15,7 +17,7 @@ import {
 type AnyProfile = Record<string, any>;
 
 const MIN_PORTFOLIO_PHOTOS = 5;
-const CALENDLY_URL = 'https://calendly.com/contact-chefstalents/30min'; 
+const CALENDLY_URL = 'https://calendly.com/contact-chefstalents/30min';
 
 function getPortfolioPhotosCount(p: any): number {
   const imgs = p?.images ?? p?.photos ?? p?.gallery ?? p?.portfolioImages ?? [];
@@ -29,6 +31,7 @@ function getMergedImages(p: any): string[] {
 
 // ─── Bannière Calendly ────────────────────────────────────────────────────────
 function CalendlyBanner({ score, status }: { score: number; status: string }) {
+  const { t } = useChefLocale();
   const show = score >= 80 && status !== 'active' && status !== 'approved';
   if (!show) return null;
 
@@ -39,10 +42,10 @@ function CalendlyBanner({ score, status }: { score: number; status: string }) {
           <Calendar className="w-5 h-5 text-white" />
         </div>
         <div>
-          <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">Prochaine étape</p>
-          <h3 className="text-white font-serif text-lg">Votre profil est prêt — planifiez votre onboarding</h3>
+          <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">{t.dashboard.calendlyLabel}</p>
+          <h3 className="text-white font-serif text-lg">{t.dashboard.calendlyTitle}</h3>
           <p className="text-stone-400 text-sm font-light mt-1">
-            Un appel de 30 minutes avec Thomas pour valider votre profil, faire un point sur votre activité et activer votre accès aux missions.
+            {t.dashboard.calendlyDescription}
           </p>
         </div>
       </div>
@@ -52,7 +55,7 @@ function CalendlyBanner({ score, status }: { score: number; status: string }) {
         rel="noopener noreferrer"
         className="shrink-0 flex items-center gap-2 bg-white text-stone-900 px-6 py-3 text-sm font-semibold hover:bg-stone-100 transition-colors"
       >
-        Réserver un créneau <ExternalLink className="w-4 h-4" />
+        {t.dashboard.calendlyCta} <ExternalLink className="w-4 h-4" />
       </a>
     </div>
   );
@@ -60,9 +63,9 @@ function CalendlyBanner({ score, status }: { score: number; status: string }) {
 
 // ─── Bannière VIP ─────────────────────────────────────────────────────────────
 function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string }) {
+  const { t } = useChefLocale();
   const isVip = plan === 'pro' && planStatus === 'active';
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleUpgrade = async () => {
     setSending(true);
@@ -81,10 +84,10 @@ function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string })
     <div className="border border-amber-200 bg-amber-50 p-6 flex items-center gap-4">
       <Crown className="w-6 h-6 text-amber-600 shrink-0" />
       <div className="flex-1">
-        <p className="font-semibold text-amber-900 text-sm">Membre Chef VIP</p>
-        <p className="text-amber-700 text-xs font-light">Profil boosté · Accès aux tips exclusifs · Priorité sur les missions</p>
+        <p className="font-semibold text-amber-900 text-sm">{t.dashboard.vipMember}</p>
+        <p className="text-amber-700 text-xs font-light">{t.dashboard.vipMemberDesc}</p>
       </div>
-      <Link href="/chef/vip" className="text-xs text-amber-700 underline">Accéder aux tips →</Link>
+      <Link href="/chef/vip" className="text-xs text-amber-700 underline">{t.dashboard.vipAccessTips}</Link>
     </div>
   );
 
@@ -95,16 +98,12 @@ function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string })
           <Crown className="w-5 h-5 text-stone-600" />
         </div>
         <div>
-          <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">Chef VIP — 49€/mois</p>
-          <h3 className="text-stone-900 font-serif text-lg">Passez en tête de liste</h3>
+          <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">{t.dashboard.vipPriceLabel}</p>
+          <h3 className="text-stone-900 font-serif text-lg">{t.dashboard.vipTitle}</h3>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-            {[
-              'Profil boosté · Priorité sur les missions',
-              'Tips exclusifs service privé',
-              'Badge VIP visible par les conciergeries',
-            ].map((t, i) => (
+            {t.dashboard.vipBenefits.map((bullet, i) => (
               <span key={i} className="text-xs text-stone-500 flex items-center gap-1">
-                <span className="text-amber-500">✦</span> {t}
+                <span className="text-amber-500">✦</span> {bullet}
               </span>
             ))}
           </div>
@@ -115,7 +114,7 @@ function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string })
         disabled={sending}
         className="shrink-0 flex items-center gap-2 bg-stone-900 text-white px-6 py-3 text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-50"
       >
-        {sending ? 'Redirection…' : <><Crown className="w-4 h-4" /> Devenir VIP</>}
+        {sending ? t.dashboard.vipRedirecting : <><Crown className="w-4 h-4" /> {t.dashboard.vipCta}</>}
       </button>
     </div>
   );
@@ -123,6 +122,7 @@ function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string })
 
 // ─── Boost de profil ──────────────────────────────────────────────────────────
 function BoostCard({ chefId, boostedUntil }: { chefId: string; boostedUntil?: string }) {
+  const { t } = useChefLocale();
   const isBoosted = boostedUntil && new Date(boostedUntil) > new Date();
   const [sending, setSending] = useState(false);
 
@@ -152,15 +152,15 @@ function BoostCard({ chefId, boostedUntil }: { chefId: string; boostedUntil?: st
           </div>
           <div>
             <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">
-              {isBoosted ? `Boost actif · ${daysLeft}j restants` : 'Boost de profil — 19€'}
+              {isBoosted
+                ? format(t.dashboard.boostActiveLabel, { days: daysLeft })
+                : t.dashboard.boostInactiveLabel}
             </p>
             <h3 className={`font-serif text-lg ${isBoosted ? 'text-amber-900' : 'text-stone-900'}`}>
-              {isBoosted ? 'Votre profil est mis en avant' : 'Soyez vu en premier'}
+              {isBoosted ? t.dashboard.boostActiveTitle : t.dashboard.boostInactiveTitle}
             </h3>
             <p className={`text-sm font-light mt-1 ${isBoosted ? 'text-amber-700' : 'text-stone-500'}`}>
-              {isBoosted
-                ? 'Vous apparaissez en priorité dans les sélections des conciergeries.'
-                : '7 jours de visibilité maximale · Badge "Disponible" · Priorité dans les sélections'}
+              {isBoosted ? t.dashboard.boostActiveDesc : t.dashboard.boostInactiveDesc}
             </p>
           </div>
         </div>
@@ -170,7 +170,7 @@ function BoostCard({ chefId, boostedUntil }: { chefId: string; boostedUntil?: st
             disabled={sending}
             className="shrink-0 flex items-center gap-2 border border-stone-900 text-stone-900 px-5 py-2.5 text-sm font-semibold hover:bg-stone-900 hover:text-white transition-colors disabled:opacity-50"
           >
-            {sending ? '…' : <><Zap className="w-4 h-4" /> Booster</>}
+            {sending ? '…' : <><Zap className="w-4 h-4" /> {t.dashboard.boostCta}</>}
           </button>
         )}
       </div>
@@ -180,6 +180,7 @@ function BoostCard({ chefId, boostedUntil }: { chefId: string; boostedUntil?: st
 
 // ─── Proposer une mission au réseau ──────────────────────────────────────────
 function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: string }) {
+  const { t } = useChefLocale();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ destination: '', dates: '', guests: '', budget: '', notes: '' });
   const [sending, setSending] = useState(false);
@@ -206,18 +207,17 @@ function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: st
           <Send className="w-5 h-5 text-stone-600" />
         </div>
         <div className="flex-1">
-          <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">Réseau Chefs Talents</p>
-          <h3 className="text-stone-900 font-serif text-lg">Vous avez une demande à transmettre ?</h3>
+          <p className="text-xs uppercase tracking-widest text-stone-400 mb-1">{t.dashboard.proposeNetwork}</p>
+          <h3 className="text-stone-900 font-serif text-lg">{t.dashboard.proposeTitle}</h3>
           <p className="text-stone-500 text-sm font-light mt-1">
-            Si vous ne pouvez pas honorer une mission, transmettez-la au réseau.
-            Si elle aboutit, vous touchez une commission de 5%.
+            {t.dashboard.proposeDesc}
           </p>
         </div>
         <button
           onClick={() => setOpen(o => !o)}
           className="shrink-0 flex items-center gap-2 border border-stone-200 text-stone-600 px-4 py-2 text-sm hover:border-stone-900 hover:text-stone-900 transition-colors"
         >
-          {open ? 'Fermer' : 'Proposer une mission'} <ChevronRight className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`} />
+          {open ? t.dashboard.proposeCtaClose : t.dashboard.proposeCtaOpen} <ChevronRight className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`} />
         </button>
       </div>
 
@@ -225,48 +225,48 @@ function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: st
         <div className="border-t border-stone-100 pt-5 space-y-3">
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">Destination *</label>
+              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">{t.dashboard.proposeFieldDestination}</label>
               <input
                 value={form.destination}
                 onChange={e => setForm(f => ({...f, destination: e.target.value}))}
-                placeholder="Ibiza, Saint-Tropez, Mykonos…"
+                placeholder={t.dashboard.proposePlaceholderDestination}
                 className="w-full px-4 py-2.5 border border-stone-200 text-sm focus:outline-none focus:border-stone-900"
               />
             </div>
             <div>
-              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">Dates *</label>
+              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">{t.dashboard.proposeFieldDates}</label>
               <input
                 value={form.dates}
                 onChange={e => setForm(f => ({...f, dates: e.target.value}))}
-                placeholder="15-22 juillet 2026"
+                placeholder={t.dashboard.proposePlaceholderDates}
                 className="w-full px-4 py-2.5 border border-stone-200 text-sm focus:outline-none focus:border-stone-900"
               />
             </div>
             <div>
-              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">Nombre de convives</label>
+              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">{t.dashboard.proposeFieldGuests}</label>
               <input
                 value={form.guests}
                 onChange={e => setForm(f => ({...f, guests: e.target.value}))}
-                placeholder="8 personnes"
+                placeholder={t.dashboard.proposePlaceholderGuests}
                 className="w-full px-4 py-2.5 border border-stone-200 text-sm focus:outline-none focus:border-stone-900"
               />
             </div>
             <div>
-              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">Budget estimé</label>
+              <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">{t.dashboard.proposeFieldBudget}</label>
               <input
                 value={form.budget}
                 onChange={e => setForm(f => ({...f, budget: e.target.value}))}
-                placeholder="3 500€ / semaine"
+                placeholder={t.dashboard.proposePlaceholderBudget}
                 className="w-full px-4 py-2.5 border border-stone-200 text-sm focus:outline-none focus:border-stone-900"
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">Notes (type de cuisine, allergies…)</label>
+            <label className="text-xs text-stone-400 uppercase tracking-widest block mb-1">{t.dashboard.proposeFieldNotes}</label>
             <textarea
               value={form.notes}
               onChange={e => setForm(f => ({...f, notes: e.target.value}))}
-              placeholder="Cuisine méditerranéenne, sans gluten, dîner en terrasse…"
+              placeholder={t.dashboard.proposePlaceholderNotes}
               rows={3}
               className="w-full px-4 py-2.5 border border-stone-200 text-sm focus:outline-none focus:border-stone-900 resize-none"
             />
@@ -277,7 +277,7 @@ function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: st
               disabled={sending || !form.destination || !form.dates}
               className="flex items-center gap-2 bg-stone-900 text-white px-6 py-2.5 text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-40"
             >
-              {sending ? 'Envoi…' : <><Send className="w-4 h-4" /> Envoyer au réseau</>}
+              {sending ? t.dashboard.proposeCtaSubmitting : <><Send className="w-4 h-4" /> {t.dashboard.proposeCtaSubmit}</>}
             </button>
           </div>
         </div>
@@ -286,7 +286,7 @@ function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: st
       {sent && (
         <div className="border-t border-stone-100 pt-5 flex items-center gap-3 text-stone-600">
           <CheckCircle2 className="w-5 h-5 text-stone-900" />
-          <p className="text-sm">Mission transmise à Thomas — il revient vers vous sous 2h.</p>
+          <p className="text-sm">{t.dashboard.proposeSuccess}</p>
         </div>
       )}
     </div>
@@ -297,6 +297,7 @@ function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: st
 export default function ChefDashboardPage() {
   const router = useRouter();
   const didRedirect = useRef(false);
+  const { t } = useChefLocale();
 
   const [booting, setBooting] = useState(true);
   const [sbUser, setSbUser] = useState<any | null>(null);
@@ -390,26 +391,31 @@ export default function ChefDashboardPage() {
     const hasPricing = !!pricing && (Number(pricing?.residence?.dailyRate ?? 0) > 0 || Number(pricing?.event?.pricePerPerson ?? 0) > 0 || Number(p.dailyRate ?? 0) > 0 || Number(p.pricePerPerson ?? 0) > 0);
     const mobilityOk = !!String(p.location?.baseCity ?? '').trim() || !!String(p.baseCity ?? '').trim() || p.location?.internationalMobility === true || (p.location?.coverageZones?.length ?? 0) > 0 || (p.coverageZones?.length ?? 0) > 0;
     const preferencesOk = (p.cuisines?.length ?? 0) >= 1 && (p.languages?.length ?? 0) >= 1;
+
+    const portfolioDesc = portfolioOk
+      ? format(t.dashboard.checks.portfolio.descOk, { count: photoCount, min: MIN_PORTFOLIO_PHOTOS })
+      : format(t.dashboard.checks.portfolio.descMissing, { count: photoCount, min: MIN_PORTFOLIO_PHOTOS });
+
     return [
-      { key: 'identity',    title: 'Identité & Coordonnées', desc: 'Nom, téléphone, ville…',                                              path: '/chef/identity',    done: identityOk,    icon: User      },
-      { key: 'experience',  title: 'Expérience',              desc: 'Bio + expérience',                                                    path: '/chef/experience',  done: experienceOk,  icon: ChefHat   },
-      { key: 'portfolio',   title: 'Portfolio',               desc: portfolioOk ? `OK (${photoCount}/${MIN_PORTFOLIO_PHOTOS})` : `Min. ${MIN_PORTFOLIO_PHOTOS} photos (${photoCount}/${MIN_PORTFOLIO_PHOTOS})`, path: '/chef/portfolio', done: portfolioOk, icon: ImageIcon },
-      { key: 'pricing',     title: 'Tarifs',                  desc: 'Prix / jour ou prix / personne',                                      path: '/chef/pricing',     done: hasPricing,    icon: DollarSign},
-      { key: 'mobility',    title: 'Zone & Mobilité',         desc: 'Zones, déplacements',                                                 path: '/chef/mobility',    done: mobilityOk,    icon: Map       },
-      { key: 'availability',title: 'Disponibilités',          desc: 'Ouverture des missions bientôt.',                                     path: '/chef/availability',done: true,          icon: Calendar  },
-      { key: 'preferences', title: 'Préférences',             desc: 'Cuisines + langues',                                                  path: '/chef/preferences', done: preferencesOk, icon: Sparkles  },
+      { key: 'identity',    title: t.dashboard.checks.identity.title,    desc: t.dashboard.checks.identity.desc,    path: '/chef/identity',    done: identityOk,    icon: User      },
+      { key: 'experience',  title: t.dashboard.checks.experience.title,  desc: t.dashboard.checks.experience.desc,  path: '/chef/experience',  done: experienceOk,  icon: ChefHat   },
+      { key: 'portfolio',   title: t.dashboard.checks.portfolio.title,   desc: portfolioDesc,                       path: '/chef/portfolio',   done: portfolioOk,   icon: ImageIcon },
+      { key: 'pricing',     title: t.dashboard.checks.pricing.title,     desc: t.dashboard.checks.pricing.desc,     path: '/chef/pricing',     done: hasPricing,    icon: DollarSign},
+      { key: 'mobility',    title: t.dashboard.checks.mobility.title,    desc: t.dashboard.checks.mobility.desc,    path: '/chef/mobility',    done: mobilityOk,    icon: Map       },
+      { key: 'availability',title: t.dashboard.checks.availability.title,desc: t.dashboard.checks.availability.desc,path: '/chef/availability',done: true,          icon: Calendar  },
+      { key: 'preferences', title: t.dashboard.checks.preferences.title, desc: t.dashboard.checks.preferences.desc, path: '/chef/preferences', done: preferencesOk, icon: Sparkles  },
     ];
-  }, [mergedProfile]);
+  }, [mergedProfile, t]);
 
   const completedCount = checks.filter(c => c.done).length;
   const progress = Math.round((completedCount / checks.length) * 100);
 
   const onboardingTier = useMemo(() => {
-    if (progress === 100) return { label: 'Profil prêt', icon: CheckCircle2 };
-    if (progress >= 70)  return { label: 'Presque prêt', icon: Sparkles };
-    if (progress >= 40)  return { label: 'En progression', icon: Clock };
-    return { label: 'À compléter', icon: Lock };
-  }, [progress]);
+    if (progress === 100) return { label: t.dashboard.onboardingTier.ready, icon: CheckCircle2 };
+    if (progress >= 70)  return { label: t.dashboard.onboardingTier.almost, icon: Sparkles };
+    if (progress >= 40)  return { label: t.dashboard.onboardingTier.progress, icon: Clock };
+    return { label: t.dashboard.onboardingTier.todo, icon: Lock };
+  }, [progress, t]);
 
   const TierIcon = onboardingTier.icon;
   const status   = String((mergedProfile as any).status || '');
@@ -417,12 +423,17 @@ export default function ChefDashboardPage() {
   const planStatus = (mergedProfile as any).planStatus;
   const chefName = String((mergedProfile as any).lastName || (mergedProfile as any).name || '');
 
-  if (booting) return <div className="p-10">Chargement…</div>;
+  if (booting) return <div className="p-10">{t.common.loading}</div>;
   if (!sbUser)  return null;
 
-  const profileTypeLabels: Record<string, string> = {
-    private: 'Chef Privé', residence: 'Chef Résidence', yacht: 'Chef Yacht', pastry: 'Chef Pâtissier',
-  };
+  const profileType = (mergedProfile as any)?.profileType as
+    | 'private' | 'residence' | 'yacht' | 'pastry' | undefined;
+  const seniorityRaw = String((mergedProfile as any)?.seniorityLevel || '');
+  const seniorityLabel =
+    seniorityRaw === 'junior'    ? t.dashboard.seniority.junior :
+    seniorityRaw === 'confirmed' ? t.dashboard.seniority.confirmed :
+    seniorityRaw === 'senior'    ? t.dashboard.seniority.senior :
+    '';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
@@ -431,10 +442,10 @@ export default function ChefDashboardPage() {
       <div className="flex items-end justify-between border-b border-stone-200 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Label className="mb-0">Tableau de bord</Label>
+            <Label className="mb-0">{t.dashboard.label}</Label>
             {plan === 'pro' && planStatus === 'active' && (
               <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest font-bold text-amber-600 border border-amber-300 px-2 py-0.5 rounded-full">
-                <Crown className="w-3 h-3" /> VIP
+                <Crown className="w-3 h-3" /> {t.dashboard.badgeVip}
               </span>
             )}
             <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-stone-600 border border-stone-200 px-2 py-0.5 rounded-full">
@@ -442,18 +453,20 @@ export default function ChefDashboardPage() {
               {onboardingTier.label}
             </span>
           </div>
-          <h1 className="text-4xl font-serif text-stone-900 mt-2">Bonjour, Chef {chefName}.</h1>
-          {(mergedProfile as any)?.profileType && (
+          <h1 className="text-4xl font-serif text-stone-900 mt-2">
+            {format(t.dashboard.greeting, { name: chefName })}
+          </h1>
+          {profileType && (
             <p className="text-stone-500 mt-2 font-light">
-              Profil : {profileTypeLabels[(mergedProfile as any).profileType] || (mergedProfile as any).profileType}
-              {(mergedProfile as any)?.seniorityLevel && (
-                <><span className="mx-2">•</span>{String((mergedProfile as any).seniorityLevel).charAt(0).toUpperCase() + String((mergedProfile as any).seniorityLevel).slice(1)}</>
+              {t.dashboard.profileLabel} {t.dashboard.profileTypes[profileType] || profileType}
+              {seniorityLabel && (
+                <><span className="mx-2">•</span>{seniorityLabel}</>
               )}
             </p>
           )}
         </div>
         <div className="text-right">
-          <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">Statut du compte</span>
+          <span className="text-xs uppercase tracking-widest text-stone-400 block mb-2">{t.dashboard.accountStatusLabel}</span>
           <StatusBadge status={status} />
         </div>
       </div>
@@ -467,25 +480,25 @@ export default function ChefDashboardPage() {
                 <Sparkles className="w-5 h-5 text-stone-600" />
               </div>
               <div>
-                <div className="text-xs uppercase tracking-widest text-stone-400">Profil complété</div>
+                <div className="text-xs uppercase tracking-widest text-stone-400">{t.dashboard.profileCompletedLabel}</div>
                 <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}%</div>
               </div>
               <span className="ml-auto text-xs text-stone-500">
-                Checklist : <span className="font-medium text-stone-900">{progress}%</span>
+                {t.dashboard.checklistLabel} <span className="font-medium text-stone-900">{progress}%</span>
               </span>
             </div>
             <div className="w-full bg-stone-100 h-1">
               <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
             </div>
             <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-              Complétez votre dossier pour être facilement proposé aux conciergeries.{' '}
-              <span className="text-stone-900 font-medium">Objectif : 80%+</span> pour débloquer l'onboarding.
+              {t.dashboard.profileCompletionBody}{' '}
+              <span className="text-stone-900 font-medium">{t.dashboard.profileCompletionGoal}</span>
             </p>
           </div>
           {completedCount < checks.length && (
             <Link href="/chef/settings">
               <Button className="bg-stone-900 hover:bg-stone-800">
-                Compléter le profil <ArrowRight className="w-4 h-4 ml-2" />
+                {t.dashboard.completeProfileCta} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
           )}
@@ -503,14 +516,16 @@ export default function ChefDashboardPage() {
               <AlertTriangle className="w-6 h-6 text-stone-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-serif text-stone-900">Complétez votre profil pour l'activation</h3>
+              <h3 className="text-xl font-serif text-stone-900">{t.dashboard.activationCardTitle}</h3>
               <p className="text-stone-500 font-light leading-relaxed max-w-2xl">
-                Atteignez 80% de complétion pour réserver votre session d'onboarding avec Thomas.
+                {t.dashboard.activationCardBody}
               </p>
               <div className="w-full bg-stone-100 h-1 mt-4 max-w-sm">
                 <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
               </div>
-              <p className="text-xs text-stone-400">{Number(score || 0)}% / 80% requis</p>
+              <p className="text-xs text-stone-400">
+                {format(t.dashboard.activationProgress, { score: Number(score || 0) })}
+              </p>
             </div>
           </div>
         </div>
@@ -543,6 +558,7 @@ export default function ChefDashboardPage() {
 }
 
 function ActionCard({ icon: Icon, title, desc, path, done }: { icon: any; title: string; desc: string; path: string; done: boolean }) {
+  const { t } = useChefLocale();
   return (
     <Link href={path} className="group block bg-white border border-stone-200 p-8 hover:border-stone-400 transition-all duration-300">
       <div className="flex justify-between items-start mb-6">
@@ -555,13 +571,14 @@ function ActionCard({ icon: Icon, title, desc, path, done }: { icon: any; title:
       <h3 className="text-lg font-serif text-stone-900 mb-2">{title}</h3>
       <p className="text-sm text-stone-500 font-light mb-6">{desc}</p>
       <div className="text-xs uppercase tracking-widest text-stone-400 group-hover:text-stone-900 flex items-center gap-2">
-        {done ? 'Modifier' : 'Compléter'} <ArrowRight className="w-3 h-3" />
+        {done ? t.dashboard.actionCardEdit : t.dashboard.actionCardComplete} <ArrowRight className="w-3 h-3" />
       </div>
     </Link>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useChefLocale();
   const styles: Record<string, string> = {
     pending_validation: 'bg-stone-100 text-stone-600',
     approved: 'bg-stone-800 text-white',
@@ -569,10 +586,14 @@ function StatusBadge({ status }: { status: string }) {
     paused: 'bg-stone-200 text-stone-400',
     draft: 'bg-stone-100 text-stone-600',
   };
-  const labels: Record<string, string> = {
-    pending_validation: 'En Attente', approved: 'Validé', active: 'Actif', paused: 'En Pause', draft: 'Brouillon',
-  };
   const s = (status || '').toLowerCase();
+  const labels: Record<string, string> = {
+    pending_validation: t.dashboard.status.pending_validation,
+    approved: t.dashboard.status.approved,
+    active: t.dashboard.status.active,
+    paused: t.dashboard.status.paused,
+    draft: t.dashboard.status.draft,
+  };
   return (
     <span className={`inline-block px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${styles[s] || styles.draft}`}>
       {labels[s] || s || '—'}
