@@ -63,14 +63,31 @@ export async function POST(req: Request) {
     }
     const user = userData.user;
 
-    // Récupère le profil pour reuse stripeCustomerId si existant
+    // Récupère le profil pour reuse stripeCustomerId si existant + check status
     const { data: existing } = await admin
       .from('chef_profiles')
       .select('profile')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    const profile = (existing?.profile as any) ?? {};
+    const status = String(profile?.status || '').toLowerCase();
+
+    // Gating : VIP et Boost réservés aux chefs validés (status === 'active')
+    if (status !== 'active') {
+      return NextResponse.json(
+        {
+          error: 'PROFILE_NOT_ACTIVE',
+          detail:
+            "Le programme VIP est réservé aux chefs dont le profil a été vérifié et validé. Complétez votre dossier puis sollicitez l'entretien de validation.",
+          currentStatus: status || 'draft',
+        },
+        { status: 403 },
+      );
+    }
+
     const stripeCustomerId =
-      ((existing?.profile as any)?.stripeCustomerId as string | undefined) || undefined;
+      (profile?.stripeCustomerId as string | undefined) || undefined;
 
     // Config plan
     const priceId = getPriceId(planKey, mode);

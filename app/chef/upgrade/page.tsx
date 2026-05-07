@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Marker, Label, Button } from '../../../components/ui';
-import { Crown, Sparkles, Zap, Loader2, CheckCircle2 } from 'lucide-react';
+import { Crown, Sparkles, Zap, Loader2, CheckCircle2, Lock } from 'lucide-react';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
 import { CHEF_PLANS, type PlanKey, type PaymentMode } from '@/lib/chef-plans';
@@ -15,6 +15,7 @@ import { CHEF_PLANS, type PlanKey, type PaymentMode } from '@/lib/chef-plans';
 type ChefProfile = {
   plan?: 'free' | 'pro';
   planStatus?: string;
+  status?: string;
   [key: string]: any;
 };
 
@@ -79,6 +80,8 @@ export default function ChefUpgradePage() {
 
   const isVipActive =
     profile?.plan === 'pro' && profile?.planStatus === 'active';
+  const profileStatus = String(profile?.status || '').toLowerCase();
+  const isProfileActive = profileStatus === 'active';
 
   const startCheckout = async (planKey: PlanKey) => {
     setError(null);
@@ -127,15 +130,71 @@ export default function ChefUpgradePage() {
     );
   }
 
+  // Gating : profil non validé
+  if (!isProfileActive && !isVipActive) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 max-w-2xl">
+        <div>
+          <Marker />
+          <Label>{t.upgrade.pageLabel}</Label>
+          <h1 className="text-3xl md:text-4xl font-serif text-stone-900">
+            {t.upgrade.pageTitle}
+          </h1>
+          <p className="text-stone-500 mt-3 italic">{t.upgrade.tagline}</p>
+        </div>
+
+        <div className="border border-stone-200 bg-white p-8 md:p-12 text-center">
+          <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-7 h-7 text-stone-500" />
+          </div>
+          <h2 className="text-2xl font-serif text-stone-900 mb-4">
+            {t.upgrade.gatingTitle}
+          </h2>
+          <p className="text-stone-600 max-w-xl mx-auto mb-8 leading-relaxed">
+            {t.upgrade.gatingBody}
+          </p>
+
+          <div className="text-left max-w-md mx-auto bg-stone-50 border border-stone-200 p-6 mb-8">
+            <p className="text-xs uppercase tracking-widest text-stone-500 mb-4">
+              {t.upgrade.conditionsHowTo}
+            </p>
+            <ol className="space-y-3 text-sm text-stone-700">
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-stone-400 shrink-0">→</span>
+                <span>{t.upgrade.gatingStep1}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-stone-400 shrink-0">→</span>
+                <span>{t.upgrade.gatingStep2}</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="font-mono text-stone-400 shrink-0">→</span>
+                <span>{t.upgrade.gatingStep3}</span>
+              </li>
+            </ol>
+          </div>
+
+          <Link href="/chef/dashboard">
+            <Button className="bg-stone-900 hover:bg-stone-800">
+              {t.upgrade.gatingCta} →
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl">
+    <div className="space-y-10 animate-in fade-in duration-500 max-w-5xl">
       <div>
         <Marker />
         <Label>{t.upgrade.pageLabel}</Label>
         <h1 className="text-3xl md:text-4xl font-serif text-stone-900">
           {t.upgrade.pageTitle}
         </h1>
-        <p className="text-stone-500 mt-3 max-w-2xl">{t.upgrade.subtitle}</p>
+        <p className="text-stone-700 mt-3 max-w-2xl text-base md:text-lg italic font-light leading-relaxed">
+          {t.upgrade.tagline}
+        </p>
       </div>
 
       {/* Already VIP banner */}
@@ -160,6 +219,52 @@ export default function ChefUpgradePage() {
           {t.upgrade.cancelledBanner}
         </div>
       )}
+
+      {/* ─── Pillars (ce que vous obtenez) ─── */}
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-2xl font-serif text-stone-900">
+            {t.upgrade.pillarsTitle}
+          </h2>
+          <div className="h-px w-12 bg-stone-300 mt-3"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="border border-stone-200 bg-white p-6 space-y-3">
+            <h3 className="text-base font-serif text-stone-900">
+              {t.upgrade.pillars.missions.title}
+            </h3>
+            <p className="text-sm text-stone-600 leading-relaxed font-light">
+              {t.upgrade.pillars.missions.body}
+            </p>
+          </div>
+          <div className="border border-stone-200 bg-white p-6 space-y-3">
+            <h3 className="text-base font-serif text-stone-900">
+              {t.upgrade.pillars.guides.title}
+            </h3>
+            <p className="text-sm text-stone-600 leading-relaxed font-light">
+              {t.upgrade.pillars.guides.body}
+            </p>
+          </div>
+          <div className="border border-stone-200 bg-white p-6 space-y-3">
+            <h3 className="text-base font-serif text-stone-900">
+              {t.upgrade.pillars.call.title}
+            </h3>
+            <p className="text-sm text-stone-600 leading-relaxed font-light">
+              {t.upgrade.pillars.call.body}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-serif text-stone-900">
+          Choisissez votre formule
+        </h2>
+        <div className="h-px w-12 bg-stone-300 mt-3"></div>
+        <p className="text-stone-500 mt-3 max-w-2xl text-sm">
+          {t.upgrade.subtitle}
+        </p>
+      </div>
 
       {/* Mode toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -282,19 +387,57 @@ export default function ChefUpgradePage() {
         </div>
       )}
 
-      {/* Benefits */}
+      {/* Conditions d'éligibilité */}
       <div className="border border-stone-200 bg-stone-50/50 p-6 md:p-8 space-y-4">
         <h3 className="text-lg font-serif text-stone-900">
-          {t.upgrade.benefitsTitle}
+          {t.upgrade.conditionsTitle}
         </h3>
-        <ul className="space-y-3">
-          {t.upgrade.benefits.map((b, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-stone-700">
-              <CheckCircle2 className="w-4 h-4 text-stone-900 shrink-0 mt-0.5" />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
+        <p className="text-sm text-stone-600 leading-relaxed max-w-3xl">
+          {t.upgrade.conditionsBody}
+        </p>
+        <div className="pt-2">
+          <p className="text-xs uppercase tracking-widest text-stone-500 mb-3">
+            {t.upgrade.conditionsHowTo}
+          </p>
+          <ul className="space-y-2 text-sm text-stone-700">
+            {t.upgrade.conditionsSteps.map((step, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="font-mono text-stone-400 shrink-0">→</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Pour qui ? */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="border border-stone-200 bg-white p-6 space-y-3">
+          <h3 className="text-base font-serif text-stone-900">
+            {t.upgrade.audienceForTitle}
+          </h3>
+          <ul className="space-y-2 text-sm text-stone-700">
+            {t.upgrade.audienceFor.map((item, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-stone-900 shrink-0 mt-0.5" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="border border-stone-200 bg-stone-50/40 p-6 space-y-3">
+          <h3 className="text-base font-serif text-stone-700">
+            {t.upgrade.audienceNotForTitle}
+          </h3>
+          <ul className="space-y-2 text-sm text-stone-500">
+            {t.upgrade.audienceNotFor.map((item, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="text-stone-400 shrink-0">×</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       {/* Boost — separate */}

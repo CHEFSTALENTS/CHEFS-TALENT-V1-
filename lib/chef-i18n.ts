@@ -507,6 +507,7 @@ export type Dictionary = {
   upgrade: {
     pageLabel: string;
     pageTitle: string;
+    tagline: string; // "L'accès au réseau. La priorité sur les missions..."
     subtitle: string;
     monthlyToggle: string;
     upfrontToggle: string;
@@ -516,6 +517,7 @@ export type Dictionary = {
     totalLabel: string; // "Total {amount}€"
     discountBadge: string; // "-{n}%"
     bestValueBadge: string;
+    annualSavingsBadge: string; // "Économisez {amount}€/an"
     plans: {
       vip_3m: { name: string; commitmentLabel: string };
       vip_6m: { name: string; commitmentLabel: string };
@@ -523,8 +525,20 @@ export type Dictionary = {
     };
     submitCta: string;
     submitLoading: string;
-    benefitsTitle: string;
-    benefits: string[];
+    pillarsTitle: string;
+    pillars: {
+      missions: { title: string; body: string };
+      guides: { title: string; body: string };
+      call: { title: string; body: string };
+    };
+    conditionsTitle: string;
+    conditionsBody: string;
+    conditionsHowTo: string; // "Pour faire valider votre profil :"
+    conditionsSteps: string[];
+    audienceForTitle: string;
+    audienceFor: string[];
+    audienceNotForTitle: string;
+    audienceNotFor: string[];
     boostSectionLabel: string;
     boostSectionTitle: string;
     boostSectionDesc: string;
@@ -534,6 +548,14 @@ export type Dictionary = {
     paidBanner: string;
     loginRequired: string;
     stripeError: string;
+
+    // Gating (status !== 'active')
+    gatingTitle: string;
+    gatingBody: string;
+    gatingStep1: string;
+    gatingStep2: string;
+    gatingStep3: string;
+    gatingCta: string;
   };
 
   vip: {
@@ -1248,10 +1270,12 @@ const fr: Dictionary = {
       'Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).',
   },
   upgrade: {
-    pageLabel: 'Devenir VIP',
-    pageTitle: 'Passez au niveau supérieur',
+    pageLabel: 'Chef VIP',
+    pageTitle: 'Chef VIP — Chefs Talents',
+    tagline:
+      'L\'accès au réseau. La priorité sur les missions. Les outils pour performer.',
     subtitle:
-      "Plus votre engagement est long, plus vous économisez. Choisissez la formule qui vous convient.",
+      'Choisissez la formule qui vous correspond. Tous les engagements donnent accès au programme complet.',
     monthlyToggle: 'Mensuel',
     upfrontToggle: 'Payer en 1 fois',
     monthlyHint: 'Facturé chaque mois pendant la durée de votre engagement.',
@@ -1260,20 +1284,52 @@ const fr: Dictionary = {
     totalLabel: 'Total {amount}€',
     discountBadge: '−{n}%',
     bestValueBadge: 'MEILLEURE OFFRE',
+    annualSavingsBadge: 'Économisez 228€/an',
     plans: {
-      vip_3m:  { name: 'VIP 3 mois',  commitmentLabel: 'Engagement 3 mois' },
+      vip_3m:  { name: 'VIP 3 mois',  commitmentLabel: 'Engagement 3 mois minimum' },
       vip_6m:  { name: 'VIP 6 mois',  commitmentLabel: 'Engagement 6 mois' },
-      vip_12m: { name: 'VIP 12 mois', commitmentLabel: 'Engagement 12 mois' },
+      vip_12m: { name: 'VIP 12 mois', commitmentLabel: 'Engagement 12 mois — call positionnement offert' },
     },
     submitCta: 'Commencer mon abonnement →',
     submitLoading: 'Redirection vers le paiement…',
-    benefitsTitle: 'Inclus dans votre abonnement VIP',
-    benefits: [
-      'Profil boosté en haut des sélections conciergerie',
-      'Accès au groupe privé "Missions Last Minute"',
-      "Tips & e-books exclusifs sur l'activité de chef privé",
-      'Statistiques privées : vues profil, taux d\'apparition matching',
-      'Call de positionnement offert (engagement 12 mois)',
+    pillarsTitle: 'Ce que vous obtenez',
+    pillars: {
+      missions: {
+        title: '🎯 Missions en priorité',
+        body:
+          'Accès au canal WhatsApp VIP — missions proposées aux membres avant le reste du réseau. Last minute, planifiées, locales, internationales. Premier répondant = priorité confirmée. Objectif : minimum une mission par saison.',
+      },
+      guides: {
+        title: '📚 4 guides par mois',
+        body:
+          'Contenu exclusif au format documentation : tarification, codes clients, gestion de mission, avitaillement, fidélisation, business. L\'équivalent d\'un accompagnement complet, au format que vous consultez quand vous voulez.',
+      },
+      call: {
+        title: '📞 Call positionnement 30 min',
+        body:
+          'Une session avec Thomas pour analyser votre profil, définir votre positionnement et identifier les destinations et missions qui vous correspondent. Réservé aux engagements 12 mois.',
+      },
+    },
+    conditionsTitle: 'Conditions d\'éligibilité',
+    conditionsBody:
+      'Le programme VIP est réservé aux chefs dont le profil a été vérifié et validé par l\'équipe Chefs Talents. Un profil non validé ne peut pas accéder au programme VIP, quelle que soit la formule choisie.',
+    conditionsHowTo: 'Pour faire valider votre profil :',
+    conditionsSteps: [
+      'Complétez votre dossier à 80%+',
+      'Rejoignez le Programme d\'Intégration',
+      'Obtenez la validation de Thomas',
+    ],
+    audienceForTitle: 'Pour qui ?',
+    audienceFor: [
+      'Profils vérifiés et validés dans le réseau',
+      'Chefs déjà actifs en service privé ou ayant complété le Programme d\'Intégration Chefs Talents',
+      'Chefs qui veulent accéder à des missions régulières sans gérer eux-mêmes l\'acquisition client',
+      'Chefs qui veulent progresser et se positionner sur des missions premium',
+    ],
+    audienceNotForTitle: 'Ce n\'est pas pour vous si :',
+    audienceNotFor: [
+      'Vous débutez en service privé — voir le Programme d\'Intégration',
+      'Votre profil n\'est pas validé — l\'accès sera refusé',
     ],
     boostSectionLabel: 'Boost ponctuel',
     boostSectionTitle: 'Boost de visibilité — 1 mois',
@@ -1286,6 +1342,14 @@ const fr: Dictionary = {
     paidBanner: 'Paiement confirmé ! Bienvenue dans le réseau VIP.',
     loginRequired: 'Vous devez être connecté pour souscrire.',
     stripeError: 'Erreur lors de la création du paiement. Réessayez ou contactez le support.',
+
+    gatingTitle: 'Accès réservé aux profils validés',
+    gatingBody:
+      'Le programme VIP est réservé aux chefs dont le profil a été vérifié et validé par l\'équipe Chefs Talents. Avant de pouvoir souscrire, votre dossier doit être complet et un entretien de validation doit avoir eu lieu.',
+    gatingStep1: 'Complétez votre dossier à 80%+',
+    gatingStep2: 'Rejoignez le Programme d\'Intégration',
+    gatingStep3: 'Obtenez la validation de Thomas',
+    gatingCta: 'Compléter mon profil',
   },
   vip: {
     pageLabel: 'Espace VIP',
@@ -1963,10 +2027,12 @@ const en: Dictionary = {
       'Note: during launch, Chef Talents reserves the right to prioritise complete and responsive profiles (fast reply).',
   },
   upgrade: {
-    pageLabel: 'Become VIP',
-    pageTitle: 'Step up your visibility',
+    pageLabel: 'VIP Chef',
+    pageTitle: 'VIP Chef — Chefs Talents',
+    tagline:
+      'Network access. Priority on missions. The tools to perform.',
     subtitle:
-      'The longer your commitment, the more you save. Choose the plan that fits.',
+      'Choose the plan that fits you. All commitments include the full programme.',
     monthlyToggle: 'Monthly',
     upfrontToggle: 'Pay in one go',
     monthlyHint: 'Billed every month for your commitment period.',
@@ -1975,20 +2041,52 @@ const en: Dictionary = {
     totalLabel: 'Total €{amount}',
     discountBadge: '−{n}%',
     bestValueBadge: 'BEST VALUE',
+    annualSavingsBadge: 'Save €228/year',
     plans: {
-      vip_3m:  { name: 'VIP 3 months',  commitmentLabel: '3-month commitment' },
+      vip_3m:  { name: 'VIP 3 months',  commitmentLabel: '3-month minimum commitment' },
       vip_6m:  { name: 'VIP 6 months',  commitmentLabel: '6-month commitment' },
-      vip_12m: { name: 'VIP 12 months', commitmentLabel: '12-month commitment' },
+      vip_12m: { name: 'VIP 12 months', commitmentLabel: '12-month commitment — positioning call included' },
     },
     submitCta: 'Start my subscription →',
     submitLoading: 'Redirecting to payment…',
-    benefitsTitle: 'Included in your VIP subscription',
-    benefits: [
-      'Boosted profile at the top of concierge selections',
-      'Access to the private "Last Minute Missions" group',
-      'Exclusive tips & e-books for private chefs',
-      'Private analytics: profile views, matching appearance rate',
-      'Free positioning call (12-month commitment)',
+    pillarsTitle: 'What you get',
+    pillars: {
+      missions: {
+        title: '🎯 Missions in priority',
+        body:
+          'Access to the VIP WhatsApp channel — missions sent to members before the rest of the network. Last minute, planned, local, international. First responder = priority confirmed. Goal: at least one mission per season.',
+      },
+      guides: {
+        title: '📚 4 guides per month',
+        body:
+          'Exclusive documentation: pricing, client codes, mission management, provisioning, retention, business. The equivalent of a full coaching package, in a format you consult on demand.',
+      },
+      call: {
+        title: '📞 Positioning call — 30 min',
+        body:
+          'A session with Thomas to analyse your profile, define your positioning and identify the destinations and missions that suit you. Reserved for the 12-month commitment.',
+      },
+    },
+    conditionsTitle: 'Eligibility conditions',
+    conditionsBody:
+      'The VIP programme is reserved for chefs whose profile has been verified and validated by the Chefs Talents team. An unvalidated profile cannot access the VIP programme regardless of the plan chosen.',
+    conditionsHowTo: 'To get your profile validated:',
+    conditionsSteps: [
+      'Complete your profile to 80%+',
+      'Join the Integration Programme',
+      'Get validation from Thomas',
+    ],
+    audienceForTitle: 'Who is it for?',
+    audienceFor: [
+      'Profiles verified and validated in the network',
+      'Chefs already active in private service or who completed the Chefs Talents Integration Programme',
+      'Chefs who want regular missions without managing client acquisition themselves',
+      'Chefs who want to grow and position themselves on premium missions',
+    ],
+    audienceNotForTitle: 'It\'s not for you if:',
+    audienceNotFor: [
+      'You\'re starting out in private service — see the Integration Programme',
+      'Your profile is not validated — access will be denied',
     ],
     boostSectionLabel: 'One-off boost',
     boostSectionTitle: 'Visibility boost — 1 month',
@@ -2000,6 +2098,14 @@ const en: Dictionary = {
     paidBanner: 'Payment confirmed! Welcome to the VIP network.',
     loginRequired: 'You must be signed in to subscribe.',
     stripeError: 'Error creating payment. Please retry or contact support.',
+
+    gatingTitle: 'Access reserved for validated profiles',
+    gatingBody:
+      'The VIP programme is reserved for chefs whose profile has been verified and validated by the Chefs Talents team. Before subscribing, your profile must be complete and a validation interview must have taken place.',
+    gatingStep1: 'Complete your profile to 80%+',
+    gatingStep2: 'Join the Integration Programme',
+    gatingStep3: 'Get validation from Thomas',
+    gatingCta: 'Complete my profile',
   },
   vip: {
     pageLabel: 'VIP space',
@@ -2679,10 +2785,12 @@ const es: Dictionary = {
       'Nota: durante el lanzamiento, Chef Talents se reserva el derecho de priorizar perfiles completos y reactivos (respuesta rápida).',
   },
   upgrade: {
-    pageLabel: 'Hacerse VIP',
-    pageTitle: 'Suba al siguiente nivel',
+    pageLabel: 'Chef VIP',
+    pageTitle: 'Chef VIP — Chefs Talents',
+    tagline:
+      'Acceso a la red. Prioridad en las misiones. Las herramientas para rendir.',
     subtitle:
-      'Cuanto más largo es su compromiso, más ahorra. Elija la fórmula que le conviene.',
+      'Elija la fórmula que le conviene. Todos los compromisos dan acceso al programa completo.',
     monthlyToggle: 'Mensual',
     upfrontToggle: 'Pagar de una vez',
     monthlyHint: 'Facturado cada mes durante la duración de su compromiso.',
@@ -2691,20 +2799,52 @@ const es: Dictionary = {
     totalLabel: 'Total {amount}€',
     discountBadge: '−{n}%',
     bestValueBadge: 'MEJOR OFERTA',
+    annualSavingsBadge: 'Ahorre 228€/año',
     plans: {
-      vip_3m:  { name: 'VIP 3 meses',  commitmentLabel: 'Compromiso 3 meses' },
+      vip_3m:  { name: 'VIP 3 meses',  commitmentLabel: 'Compromiso 3 meses mínimo' },
       vip_6m:  { name: 'VIP 6 meses',  commitmentLabel: 'Compromiso 6 meses' },
-      vip_12m: { name: 'VIP 12 meses', commitmentLabel: 'Compromiso 12 meses' },
+      vip_12m: { name: 'VIP 12 meses', commitmentLabel: 'Compromiso 12 meses — llamada de posicionamiento incluida' },
     },
     submitCta: 'Iniciar mi suscripción →',
     submitLoading: 'Redirigiendo al pago…',
-    benefitsTitle: 'Incluido en su suscripción VIP',
-    benefits: [
-      'Perfil potenciado en lo alto de las selecciones de conciergeries',
-      'Acceso al grupo privado "Misiones Last Minute"',
-      'Tips y e-books exclusivos sobre la actividad de chef privado',
-      'Estadísticas privadas: vistas de perfil, tasa de aparición en matching',
-      'Llamada de posicionamiento ofrecida (compromiso 12 meses)',
+    pillarsTitle: 'Lo que obtiene',
+    pillars: {
+      missions: {
+        title: '🎯 Misiones prioritarias',
+        body:
+          'Acceso al canal WhatsApp VIP — misiones ofrecidas a los miembros antes que al resto de la red. Last minute, planificadas, locales, internacionales. Primero en responder = prioridad confirmada. Objetivo: mínimo una misión por temporada.',
+      },
+      guides: {
+        title: '📚 4 guías al mes',
+        body:
+          'Contenido exclusivo en formato documentación: tarificación, códigos cliente, gestión de misión, aprovisionamiento, fidelización, business. El equivalente a un acompañamiento completo, en el formato que consulta cuando quiere.',
+      },
+      call: {
+        title: '📞 Llamada de posicionamiento 30 min',
+        body:
+          'Una sesión con Thomas para analizar su perfil, definir su posicionamiento e identificar los destinos y misiones que le corresponden. Reservada al compromiso 12 meses.',
+      },
+    },
+    conditionsTitle: 'Condiciones de elegibilidad',
+    conditionsBody:
+      'El programa VIP está reservado a los chefs cuyo perfil ha sido verificado y validado por el equipo de Chefs Talents. Un perfil no validado no puede acceder al programa VIP, sea cual sea la fórmula elegida.',
+    conditionsHowTo: 'Para validar su perfil:',
+    conditionsSteps: [
+      'Complete su perfil al 80%+',
+      'Únase al Programa de Integración',
+      'Obtenga la validación de Thomas',
+    ],
+    audienceForTitle: '¿Para quién?',
+    audienceFor: [
+      'Perfiles verificados y validados en la red',
+      'Chefs ya activos en servicio privado o que han completado el Programa de Integración Chefs Talents',
+      'Chefs que quieren misiones regulares sin gestionar ellos mismos la captación de clientes',
+      'Chefs que quieren progresar y posicionarse en misiones premium',
+    ],
+    audienceNotForTitle: 'No es para usted si:',
+    audienceNotFor: [
+      'Empieza en servicio privado — vea el Programa de Integración',
+      'Su perfil no está validado — el acceso será denegado',
     ],
     boostSectionLabel: 'Boost puntual',
     boostSectionTitle: 'Boost de visibilidad — 1 mes',
@@ -2716,6 +2856,14 @@ const es: Dictionary = {
     paidBanner: '¡Pago confirmado! Bienvenido a la red VIP.',
     loginRequired: 'Debe iniciar sesión para suscribirse.',
     stripeError: 'Error al crear el pago. Reintente o contacte con soporte.',
+
+    gatingTitle: 'Acceso reservado a perfiles validados',
+    gatingBody:
+      'El programa VIP está reservado a los chefs cuyo perfil ha sido verificado y validado por el equipo de Chefs Talents. Antes de poder suscribirse, su perfil debe estar completo y debe haber tenido lugar una entrevista de validación.',
+    gatingStep1: 'Complete su perfil al 80%+',
+    gatingStep2: 'Únase al Programa de Integración',
+    gatingStep3: 'Obtenga la validación de Thomas',
+    gatingCta: 'Completar mi perfil',
   },
   vip: {
     pageLabel: 'Espacio VIP',

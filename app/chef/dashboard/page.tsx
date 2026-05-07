@@ -501,14 +501,18 @@ export default function ChefDashboardPage() {
         </div>
       )}
 
-      {/* ✅ VIP Banner */}
-      <VipBanner plan={plan} planStatus={planStatus} />
+      {/* ✅ VIP Banner — uniquement si profil validé (status === 'active') */}
+      {status === 'active' && (
+        <>
+          <VipBanner plan={plan} planStatus={planStatus} />
 
-      {/* ✅ Boost */}
-      <BoostCard
-        chefId={String((mergedProfile as any).id || '')}
-        boostedUntil={(mergedProfile as any).boostedUntil}
-      />
+          {/* ✅ Boost */}
+          <BoostCard
+            chefId={String((mergedProfile as any).id || '')}
+            boostedUntil={(mergedProfile as any).boostedUntil}
+          />
+        </>
+      )}
 
       {/* Checklist */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
