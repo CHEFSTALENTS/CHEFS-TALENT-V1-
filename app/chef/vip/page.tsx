@@ -21,7 +21,13 @@ import {
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
 import { CHEF_PLANS, type PlanKey } from '@/lib/chef-plans';
-import type { VipContent } from '@/lib/vip-content';
+import type { VipContent, VipTip } from '@/lib/vip-content';
+import {
+  getGuide,
+  PILLAR_LABELS,
+  PILLAR_ORDER,
+  type Pillar,
+} from '@/lib/vip-guides';
 
 type ChefProfile = {
   plan?: 'free' | 'pro';
@@ -337,76 +343,12 @@ export default function ChefVipPage() {
         )}
       </div>
 
-      {/* Tips & e-books */}
-      <div className="border border-stone-200 bg-white p-6 md:p-8 space-y-5">
-        <div className="flex items-center gap-3">
-          <BookOpen className="w-5 h-5 text-stone-700" />
-          <Label className="mb-0">{t.vip.tipsSectionLabel}</Label>
-        </div>
-        <div>
-          <h3 className="text-xl font-serif text-stone-900">{t.vip.tipsTitle}</h3>
-          <p className="text-sm text-stone-500 mt-1">{t.vip.tipsDesc}</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {tips.map((item) => {
-            const isInternal = !!item.href && item.href.startsWith('/');
-            const inner = (
-              <div className="flex items-start gap-3 w-full">
-                <BookOpen className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-stone-900">
-                    {item.title}
-                  </div>
-                  {item.desc && (
-                    <div className="text-xs text-stone-500 mt-1">{item.desc}</div>
-                  )}
-                  {item.href && (
-                    <div className="text-xs text-stone-400 mt-1.5 inline-flex items-center gap-1 group-hover:text-stone-700 transition-colors">
-                      {isInternal ? null : <ExternalLink className="w-3 h-3" />}
-                      {isInternal
-                        ? locale === 'en'
-                          ? 'Read the guide'
-                          : 'Lire le guide'
-                        : t.common.open}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-            const baseCls =
-              'border border-stone-200 bg-stone-50/50 p-4 transition-colors';
-            if (item.href) {
-              if (isInternal) {
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={`group ${baseCls} hover:border-stone-400 hover:bg-white cursor-pointer`}
-                  >
-                    {inner}
-                  </Link>
-                );
-              }
-              return (
-                <a
-                  key={item.id}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`group ${baseCls} hover:border-stone-400 hover:bg-white cursor-pointer`}
-                >
-                  {inner}
-                </a>
-              );
-            }
-            return (
-              <div key={item.id} className={baseCls}>
-                {inner}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Bibliothèque VIP groupée en 4 piliers */}
+      <VipLibrary
+        tips={tips as VipTip[]}
+        locale={locale}
+        openLabel={t.common.open}
+      />
 
       {/* Call de positionnement (12m only) */}
       <div className="border border-stone-200 bg-white p-6 md:p-8 space-y-4">
@@ -445,4 +387,219 @@ export default function ChefVipPage() {
 
     </div>
   );
+}
+
+// ─── Bibliothèque VIP groupée en 4 piliers ──────────────────────────────────
+
+function VipLibrary({
+  tips,
+  locale,
+  openLabel,
+}: {
+  tips: VipTip[];
+  locale: 'fr' | 'en' | 'es';
+  openLabel: string;
+}) {
+  const localeKey: 'fr' | 'en' = locale === 'en' ? 'en' : 'fr';
+
+  // Calcule le pilier effectif d'un tip : champ explicite, sinon dérivé du href interne.
+  function pillarOf(tip: VipTip): Pillar | null {
+    if (tip.pillar) return tip.pillar;
+    if (tip.href && tip.href.startsWith('/chef/vip/guides/')) {
+      const slug = tip.href.replace('/chef/vip/guides/', '').split(/[?#]/)[0];
+      const guide = getGuide(slug);
+      if (guide) return guide.pillar;
+    }
+    return null;
+  }
+
+  // Groupe par pilier en respectant l'ordre canonique.
+  const grouped: Record<Pillar, VipTip[]> = {
+    metier: [],
+    business: [],
+    marque: [],
+    humain: [],
+  };
+  const orphans: VipTip[] = [];
+  for (const tip of tips) {
+    const p = pillarOf(tip);
+    if (p) grouped[p].push(tip);
+    else orphans.push(tip);
+  }
+
+  const sectionTitle =
+    localeKey === 'en' ? 'VIP library' : 'Bibliothèque VIP';
+  const sectionSubtitle =
+    localeKey === 'en'
+      ? 'Strategic guides for the private chef business, organised by pillar.'
+      : 'Guides stratégiques du métier de chef privé, classés par pilier.';
+
+  return (
+    <div className="border border-stone-200 bg-white p-6 md:p-8 space-y-8">
+      <div className="flex items-baseline justify-between gap-4 border-b border-stone-200 pb-5">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.32em] text-stone-400 mb-1">
+            {localeKey === 'en' ? 'Programme' : 'Programme'}
+          </p>
+          <h2 className="text-2xl font-serif text-stone-900">{sectionTitle}</h2>
+          <p className="text-sm text-stone-500 mt-1 max-w-2xl">
+            {sectionSubtitle}
+          </p>
+        </div>
+        <span className="text-[10px] uppercase tracking-[0.24em] text-stone-400 hidden md:block">
+          {localeKey === 'en'
+            ? `${tips.length} entries`
+            : `${tips.length} entrées`}
+        </span>
+      </div>
+
+      {PILLAR_ORDER.map((pillar) => {
+        const items = grouped[pillar];
+        if (items.length === 0) return null;
+        return (
+          <PillarSection
+            key={pillar}
+            pillar={pillar}
+            items={items}
+            locale={localeKey}
+            openLabel={openLabel}
+          />
+        );
+      })}
+
+      {orphans.length > 0 && (
+        <PillarSection
+          pillar={null}
+          items={orphans}
+          locale={localeKey}
+          openLabel={openLabel}
+        />
+      )}
+    </div>
+  );
+}
+
+function PillarSection({
+  pillar,
+  items,
+  locale,
+  openLabel,
+}: {
+  pillar: Pillar | null;
+  items: VipTip[];
+  locale: 'fr' | 'en';
+  openLabel: string;
+}) {
+  const labels = pillar
+    ? PILLAR_LABELS[pillar]
+    : { fr: 'Autres', en: 'Others' };
+  const pillarNumber = pillar
+    ? PILLAR_ORDER.indexOf(pillar) + 1
+    : null;
+
+  return (
+    <section>
+      <div className="flex items-baseline gap-3 mb-4">
+        {pillarNumber && (
+          <span className="text-[11px] font-semibold tracking-[0.18em] text-[#7f1d1d]">
+            {String(pillarNumber).padStart(2, '0')}
+          </span>
+        )}
+        <h3 className="text-base font-serif text-stone-900">
+          {labels[locale]}
+        </h3>
+        <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400">
+          {locale === 'en'
+            ? `${items.length} ${items.length === 1 ? 'guide' : 'guides'}`
+            : `${items.length} guide${items.length > 1 ? 's' : ''}`}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {items.map((item) => (
+          <TipCard
+            key={item.id}
+            item={item}
+            locale={locale}
+            openLabel={openLabel}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TipCard({
+  item,
+  locale,
+  openLabel,
+}: {
+  item: VipTip;
+  locale: 'fr' | 'en';
+  openLabel: string;
+}) {
+  const isInternal = !!item.href && item.href.startsWith('/');
+  const isComingSoon =
+    !item.href && /à venir|coming soon|to come/i.test(item.desc || '');
+
+  const inner = (
+    <div className="flex items-start gap-3 w-full">
+      <BookOpen
+        className={`w-4 h-4 shrink-0 mt-0.5 ${
+          isComingSoon ? 'text-stone-300' : 'text-stone-500'
+        }`}
+      />
+      <div className="flex-1 min-w-0">
+        <div
+          className={`text-sm font-medium ${
+            isComingSoon ? 'text-stone-500' : 'text-stone-900'
+          }`}
+        >
+          {item.title}
+        </div>
+        {item.desc && (
+          <div className="text-xs text-stone-500 mt-1 leading-relaxed">
+            {item.desc}
+          </div>
+        )}
+        {item.href && (
+          <div className="text-xs text-stone-400 mt-1.5 inline-flex items-center gap-1 group-hover:text-stone-700 transition-colors">
+            {isInternal ? null : <ExternalLink className="w-3 h-3" />}
+            {isInternal
+              ? locale === 'en'
+                ? 'Read the guide →'
+                : 'Lire le guide →'
+              : openLabel}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const baseCls =
+    'border border-stone-200 bg-stone-50/40 p-4 transition-colors';
+
+  if (item.href) {
+    if (isInternal) {
+      return (
+        <Link
+          href={item.href}
+          className={`group ${baseCls} hover:border-stone-400 hover:bg-white cursor-pointer`}
+        >
+          {inner}
+        </Link>
+      );
+    }
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`group ${baseCls} hover:border-stone-400 hover:bg-white cursor-pointer`}
+      >
+        {inner}
+      </a>
+    );
+  }
+  return <div className={baseCls}>{inner}</div>;
 }

@@ -5,7 +5,8 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { Marker, Label, Button, Input, Textarea } from '@/components/ui';
 import type { VipContent, VipTip } from '@/lib/vip-content';
-import { listGuides } from '@/lib/vip-guides';
+import { listGuides, PILLAR_LABELS, PILLAR_ORDER } from '@/lib/vip-guides';
+import type { Pillar } from '@/lib/vip-guides';
 import {
   Loader2,
   Plus,
@@ -277,6 +278,52 @@ export default function AdminVipContentPage() {
                       placeholder="Une courte description du contenu (1-2 lignes)"
                       className="min-h-[70px]"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
+                      Pilier{' '}
+                      <span className="text-stone-400 font-normal normal-case">
+                        (4 dimensions du métier)
+                      </span>
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PILLAR_ORDER.map((p) => {
+                        const active = tip.pillar === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() =>
+                              updateTip(tip.id, {
+                                pillar: active ? undefined : p,
+                              })
+                            }
+                            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                              active
+                                ? 'border-stone-900 bg-stone-900 text-white'
+                                : 'border-stone-200 text-stone-700 hover:border-stone-400'
+                            }`}
+                          >
+                            {String(PILLAR_ORDER.indexOf(p) + 1).padStart(2, '0')}
+                            &nbsp;·&nbsp;{PILLAR_LABELS[p].fr}
+                          </button>
+                        );
+                      })}
+                      {tip.pillar && (
+                        <button
+                          type="button"
+                          onClick={() => updateTip(tip.id, { pillar: undefined })}
+                          className="text-[10px] text-stone-400 hover:text-stone-700 px-2"
+                        >
+                          retirer
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-stone-400">
+                      Si vide et qu’un guide interne est lié, le pilier est
+                      déduit du guide.
+                    </p>
                   </div>
 
                   <div className="space-y-2">

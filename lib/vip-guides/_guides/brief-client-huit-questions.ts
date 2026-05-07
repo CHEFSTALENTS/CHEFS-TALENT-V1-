@@ -8,7 +8,7 @@ export const briefClientHuitQuestions: Guide = {
   slug: 'brief-client-huit-questions',
   heroImage: '/images/email/kitchen-preparation.jpg',
   readingMinutes: 7,
-  pillar: 'operations',
+  pillar: 'business',
   publishedAt: '2026-05-07',
 
   fr: {

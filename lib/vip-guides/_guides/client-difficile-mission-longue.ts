@@ -8,7 +8,7 @@ export const clientDifficileMissionLongue: Guide = {
   slug: 'gerer-client-difficile-mission-longue',
   heroImage: '/images/email/villa-service.jpg',
   readingMinutes: 6,
-  pillar: 'mindset',
+  pillar: 'humain',
   publishedAt: '2026-05-07',
 
   fr: {

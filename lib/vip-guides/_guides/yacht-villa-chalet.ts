@@ -8,7 +8,7 @@ export const yachtVillaChalet: Guide = {
   slug: 'yacht-villa-chalet',
   heroImage: '/images/email/hero-vip-welcome.jpg',
   readingMinutes: 7,
-  pillar: 'operations',
+  pillar: 'metier',
   publishedAt: '2026-05-07',
 
   fr: {

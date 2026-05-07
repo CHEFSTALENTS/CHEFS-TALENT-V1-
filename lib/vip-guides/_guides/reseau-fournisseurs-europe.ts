@@ -8,7 +8,7 @@ export const reseauFournisseursEurope: Guide = {
   slug: 'reseau-fournisseurs-europe',
   heroImage: '/images/email/kitchen-preparation.jpg',
   readingMinutes: 6,
-  pillar: 'operations',
+  pillar: 'metier',
   publishedAt: '2026-05-07',
 
   fr: {

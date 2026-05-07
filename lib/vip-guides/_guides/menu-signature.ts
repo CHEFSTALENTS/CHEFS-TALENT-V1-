@@ -8,7 +8,7 @@ export const menuSignature: Guide = {
   slug: 'menu-signature',
   heroImage: '/images/email/plating.jpg',
   readingMinutes: 6,
-  pillar: 'positioning',
+  pillar: 'marque',
   publishedAt: '2026-05-07',
 
   fr: {

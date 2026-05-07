@@ -12,8 +12,14 @@ import { menuSignature } from './_guides/menu-signature';
 import { clientDifficileMissionLongue } from './_guides/client-difficile-mission-longue';
 import { reseauFournisseursEurope } from './_guides/reseau-fournisseurs-europe';
 
-export type { Guide, GuideBlock, GuideLocale, GuideTranslation } from './types';
-export { PILLAR_LABELS } from './types';
+export type {
+  Guide,
+  GuideBlock,
+  GuideLocale,
+  GuideTranslation,
+  Pillar,
+} from './types';
+export { PILLAR_LABELS, PILLAR_ORDER } from './types';
 
 const ALL_GUIDES: Guide[] = [
   tarificationMissionSaisonniere,

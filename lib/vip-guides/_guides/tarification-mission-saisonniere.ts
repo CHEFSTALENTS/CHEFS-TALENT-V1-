@@ -8,7 +8,7 @@ export const tarificationMissionSaisonniere: Guide = {
   slug: 'tarifer-mission-saisonniere',
   heroImage: '/images/email/villa-service.jpg',
   readingMinutes: 6,
-  pillar: 'pricing',
+  pillar: 'business',
   publishedAt: '2026-05-07',
 
   fr: {

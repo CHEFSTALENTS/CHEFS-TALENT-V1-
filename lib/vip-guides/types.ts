@@ -19,6 +19,9 @@ export type GuideTranslation = {
   body: GuideBlock[];
 };
 
+/** Les 4 piliers du programme VIP : les 4 dimensions du métier de chef privé. */
+export type Pillar = 'metier' | 'business' | 'marque' | 'humain';
+
 export type Guide = {
   slug: string;
   /** Chemin sous /public, ex: /images/email/villa-service.jpg */
@@ -26,19 +29,19 @@ export type Guide = {
   /** Temps de lecture estimé en minutes (affiché en méta). */
   readingMinutes: number;
   /** Pilier auquel le guide se rattache (affiché en méta). */
-  pillar: 'pricing' | 'operations' | 'positioning' | 'mindset';
+  pillar: Pillar;
   /** Date de publication ISO (affichée en méta). */
   publishedAt: string;
   fr: GuideTranslation;
   en: GuideTranslation;
 };
 
-export const PILLAR_LABELS: Record<
-  Guide['pillar'],
-  Record<GuideLocale, string>
-> = {
-  pricing: { fr: 'Tarification', en: 'Pricing' },
-  operations: { fr: 'Opérations', en: 'Operations' },
-  positioning: { fr: 'Positionnement', en: 'Positioning' },
-  mindset: { fr: 'Posture', en: 'Mindset' },
+export const PILLAR_LABELS: Record<Pillar, Record<GuideLocale, string>> = {
+  metier: { fr: 'Le métier', en: 'The craft' },
+  business: { fr: 'Le business', en: 'Business' },
+  marque: { fr: 'La marque', en: 'Brand' },
+  humain: { fr: 'L’humain', en: 'People' },
 };
+
+/** Ordre canonique des piliers utilisé dans toute l’UI. */
+export const PILLAR_ORDER: Pillar[] = ['metier', 'business', 'marque', 'humain'];
