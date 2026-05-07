@@ -504,6 +504,79 @@ export type Dictionary = {
     footerNote: string;
   };
 
+  upgrade: {
+    pageLabel: string;
+    pageTitle: string;
+    subtitle: string;
+    monthlyToggle: string;
+    upfrontToggle: string;
+    monthlyHint: string;
+    upfrontHint: string;
+    perMonth: string; // "/mois"
+    totalLabel: string; // "Total {amount}€"
+    discountBadge: string; // "-{n}%"
+    bestValueBadge: string;
+    plans: {
+      vip_3m: { name: string; commitmentLabel: string };
+      vip_6m: { name: string; commitmentLabel: string };
+      vip_12m: { name: string; commitmentLabel: string };
+    };
+    submitCta: string;
+    submitLoading: string;
+    benefitsTitle: string;
+    benefits: string[];
+    boostSectionLabel: string;
+    boostSectionTitle: string;
+    boostSectionDesc: string;
+    boostCta: string;
+    alreadyVipBanner: string; // "Vous êtes déjà membre VIP — gérer votre abonnement →"
+    cancelledBanner: string;
+    paidBanner: string;
+    loginRequired: string;
+    stripeError: string;
+  };
+
+  vip: {
+    pageLabel: string;
+    pageTitle: string;
+    notVipTitle: string;
+    notVipBody: string;
+    notVipCta: string;
+    activePlanLabel: string;
+    activePlanName: string; // "VIP {months} mois"
+    paymentModeLabel: string;
+    paymentModeMonthly: string;
+    paymentModeUpfront: string;
+    engagementUntil: string; // "Engagement jusqu'au {date}"
+    daysRemaining: string; // "{n} jours restants"
+    manageSubscriptionCta: string;
+    manageLoading: string;
+    pastDueWarning: string;
+    cancelledNotice: string;
+
+    groupSectionLabel: string;
+    groupTitle: string;
+    groupDesc: string;
+    groupCta: string;
+    groupComingSoon: string;
+
+    tipsSectionLabel: string;
+    tipsTitle: string;
+    tipsDesc: string;
+    tipsItems: { title: string; desc: string }[];
+
+    callSectionLabel: string;
+    callTitle: string;
+    callDescIncluded: string; // for 12m
+    callDescNotIncluded: string; // for 3m/6m
+    callCta: string;
+    callBadgeIncluded: string;
+
+    statsSectionLabel: string;
+    statsTitle: string;
+    statsComingSoon: string;
+  };
+
   auth: {
     sectionLabel: string;
     loginTitle: string;
@@ -1174,6 +1247,111 @@ const fr: Dictionary = {
     footerNote:
       'Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).',
   },
+  upgrade: {
+    pageLabel: 'Devenir VIP',
+    pageTitle: 'Passez au niveau supérieur',
+    subtitle:
+      "Plus votre engagement est long, plus vous économisez. Choisissez la formule qui vous convient.",
+    monthlyToggle: 'Mensuel',
+    upfrontToggle: 'Payer en 1 fois',
+    monthlyHint: 'Facturé chaque mois pendant la durée de votre engagement.',
+    upfrontHint: 'Total réglé immédiatement — vous lockez votre tarif.',
+    perMonth: '€/mois',
+    totalLabel: 'Total {amount}€',
+    discountBadge: '−{n}%',
+    bestValueBadge: 'MEILLEURE OFFRE',
+    plans: {
+      vip_3m:  { name: 'VIP 3 mois',  commitmentLabel: 'Engagement 3 mois' },
+      vip_6m:  { name: 'VIP 6 mois',  commitmentLabel: 'Engagement 6 mois' },
+      vip_12m: { name: 'VIP 12 mois', commitmentLabel: 'Engagement 12 mois' },
+    },
+    submitCta: 'Commencer mon abonnement →',
+    submitLoading: 'Redirection vers le paiement…',
+    benefitsTitle: 'Inclus dans votre abonnement VIP',
+    benefits: [
+      'Profil boosté en haut des sélections conciergerie',
+      'Accès au groupe privé "Missions Last Minute"',
+      "Tips & e-books exclusifs sur l'activité de chef privé",
+      'Statistiques privées : vues profil, taux d\'apparition matching',
+      'Call de positionnement offert (engagement 12 mois)',
+    ],
+    boostSectionLabel: 'Boost ponctuel',
+    boostSectionTitle: 'Boost de visibilité — 1 mois',
+    boostSectionDesc:
+      'Pas envie de vous engager ? Activez un boost de 30 jours pour passer en tête des sélections conciergerie. Idéal avant une saison ou un événement.',
+    boostCta: 'Activer le boost — 119€',
+    alreadyVipBanner: 'Vous êtes déjà membre VIP. Gérer votre abonnement →',
+    cancelledBanner:
+      'Paiement annulé. Aucun montant n\'a été prélevé.',
+    paidBanner: 'Paiement confirmé ! Bienvenue dans le réseau VIP.',
+    loginRequired: 'Vous devez être connecté pour souscrire.',
+    stripeError: 'Erreur lors de la création du paiement. Réessayez ou contactez le support.',
+  },
+  vip: {
+    pageLabel: 'Espace VIP',
+    pageTitle: 'Espace Chef VIP',
+    notVipTitle: 'Cet espace est réservé aux membres VIP.',
+    notVipBody:
+      'Devenez membre VIP pour accéder au groupe Last Minute, aux tips exclusifs, à un call de positionnement et aux statistiques privées.',
+    notVipCta: 'Découvrir les formules VIP →',
+    activePlanLabel: 'Plan actif',
+    activePlanName: 'VIP {months} mois',
+    paymentModeLabel: 'Mode de paiement',
+    paymentModeMonthly: 'Mensuel',
+    paymentModeUpfront: 'Payé en 1 fois',
+    engagementUntil: 'Engagement jusqu\'au {date}',
+    daysRemaining: '{n} jours restants',
+    manageSubscriptionCta: 'Gérer mon abonnement →',
+    manageLoading: 'Ouverture du portail…',
+    pastDueWarning:
+      'Votre dernier paiement a échoué. Mettez à jour votre carte pour conserver votre accès VIP.',
+    cancelledNotice:
+      'Votre abonnement a été annulé. Vous gardez l\'accès jusqu\'à la fin de votre engagement.',
+
+    groupSectionLabel: 'Réseau privé',
+    groupTitle: 'Groupe Missions Last Minute',
+    groupDesc:
+      'Accès au groupe WhatsApp privé où sont partagées les missions urgentes du réseau (départs sous 48h, charters de dernière minute, remplacements premium).',
+    groupCta: 'Rejoindre le groupe →',
+    groupComingSoon: 'Lien envoyé par email sous 24h après votre première souscription.',
+
+    tipsSectionLabel: 'Ressources',
+    tipsTitle: 'Tips & E-books exclusifs',
+    tipsDesc:
+      'Une bibliothèque de ressources pour faire monter votre activité de chef privé.',
+    tipsItems: [
+      {
+        title: 'Comment négocier un séjour saisonnier 12-18k€/mois',
+        desc: 'Le guide stratégique pour positionner vos tarifs face aux familles UHNW.',
+      },
+      {
+        title: 'Checklist pré-mission yacht',
+        desc: 'Tout ce qu\'il faut vérifier 7 jours avant un embarquement charter.',
+      },
+      {
+        title: '10 erreurs des chefs qui perdent leurs clients UHNW',
+        desc: 'Les pièges relationnels et opérationnels à éviter en mission privée.',
+      },
+      {
+        title: 'Modèle de devis chef privé (FR/EN)',
+        desc: 'Un template propre pour répondre à un brief conciergerie.',
+      },
+    ],
+
+    callSectionLabel: 'Coaching',
+    callTitle: 'Call de positionnement offert',
+    callDescIncluded:
+      '30 minutes en visio avec Thomas pour cadrer votre positionnement, vos tarifs et votre stratégie de saison. Inclus dans votre engagement 12 mois.',
+    callDescNotIncluded:
+      'Le call de positionnement est inclus uniquement avec l\'engagement 12 mois. Passez à VIP 12 mois pour en bénéficier.',
+    callCta: 'Réserver mon call →',
+    callBadgeIncluded: 'Inclus 12 mois',
+
+    statsSectionLabel: 'Performance',
+    statsTitle: 'Statistiques privées',
+    statsComingSoon:
+      'Vues de profil, taux d\'apparition dans les sélections conciergerie, missions proposées : disponibles dès la prochaine mise à jour.',
+  },
   auth: {
     sectionLabel: 'Espace Chef',
     loginTitle: 'Connexion',
@@ -1783,6 +1961,110 @@ const en: Dictionary = {
     },
     footerNote:
       'Note: during launch, Chef Talents reserves the right to prioritise complete and responsive profiles (fast reply).',
+  },
+  upgrade: {
+    pageLabel: 'Become VIP',
+    pageTitle: 'Step up your visibility',
+    subtitle:
+      'The longer your commitment, the more you save. Choose the plan that fits.',
+    monthlyToggle: 'Monthly',
+    upfrontToggle: 'Pay in one go',
+    monthlyHint: 'Billed every month for your commitment period.',
+    upfrontHint: 'Pay the total now — lock your rate.',
+    perMonth: '€/month',
+    totalLabel: 'Total €{amount}',
+    discountBadge: '−{n}%',
+    bestValueBadge: 'BEST VALUE',
+    plans: {
+      vip_3m:  { name: 'VIP 3 months',  commitmentLabel: '3-month commitment' },
+      vip_6m:  { name: 'VIP 6 months',  commitmentLabel: '6-month commitment' },
+      vip_12m: { name: 'VIP 12 months', commitmentLabel: '12-month commitment' },
+    },
+    submitCta: 'Start my subscription →',
+    submitLoading: 'Redirecting to payment…',
+    benefitsTitle: 'Included in your VIP subscription',
+    benefits: [
+      'Boosted profile at the top of concierge selections',
+      'Access to the private "Last Minute Missions" group',
+      'Exclusive tips & e-books for private chefs',
+      'Private analytics: profile views, matching appearance rate',
+      'Free positioning call (12-month commitment)',
+    ],
+    boostSectionLabel: 'One-off boost',
+    boostSectionTitle: 'Visibility boost — 1 month',
+    boostSectionDesc:
+      "Don't want to commit? Activate a 30-day boost to top concierge selections. Ideal before a season or an event.",
+    boostCta: 'Activate boost — €119',
+    alreadyVipBanner: 'You are already a VIP member. Manage your subscription →',
+    cancelledBanner: 'Payment cancelled. No amount was charged.',
+    paidBanner: 'Payment confirmed! Welcome to the VIP network.',
+    loginRequired: 'You must be signed in to subscribe.',
+    stripeError: 'Error creating payment. Please retry or contact support.',
+  },
+  vip: {
+    pageLabel: 'VIP space',
+    pageTitle: 'VIP Chef space',
+    notVipTitle: 'This space is reserved for VIP members.',
+    notVipBody:
+      'Become a VIP member to access the Last Minute group, exclusive tips, a positioning call and private analytics.',
+    notVipCta: 'Discover VIP plans →',
+    activePlanLabel: 'Active plan',
+    activePlanName: 'VIP {months} months',
+    paymentModeLabel: 'Payment mode',
+    paymentModeMonthly: 'Monthly',
+    paymentModeUpfront: 'Paid upfront',
+    engagementUntil: 'Commitment until {date}',
+    daysRemaining: '{n} days remaining',
+    manageSubscriptionCta: 'Manage subscription →',
+    manageLoading: 'Opening portal…',
+    pastDueWarning:
+      'Your last payment failed. Update your card to keep your VIP access.',
+    cancelledNotice:
+      'Your subscription has been cancelled. You keep access until the end of your commitment.',
+
+    groupSectionLabel: 'Private network',
+    groupTitle: 'Last Minute Missions group',
+    groupDesc:
+      "Access to the private WhatsApp group where urgent missions are shared (departures within 48h, last-minute charters, premium replacements).",
+    groupCta: 'Join the group →',
+    groupComingSoon: 'Link sent by email within 24h after your first subscription.',
+
+    tipsSectionLabel: 'Resources',
+    tipsTitle: 'Exclusive Tips & E-books',
+    tipsDesc:
+      'A library of resources to grow your private-chef business.',
+    tipsItems: [
+      {
+        title: 'How to negotiate a €12-18k/month seasonal stay',
+        desc: 'The strategic guide to positioning your rates with UHNW families.',
+      },
+      {
+        title: 'Pre-mission yacht checklist',
+        desc: 'Everything to check 7 days before a charter embark.',
+      },
+      {
+        title: '10 mistakes that lose UHNW clients',
+        desc: 'Relational and operational pitfalls to avoid on private missions.',
+      },
+      {
+        title: 'Private-chef quote template (FR/EN)',
+        desc: 'A clean template to respond to a concierge brief.',
+      },
+    ],
+
+    callSectionLabel: 'Coaching',
+    callTitle: 'Free positioning call',
+    callDescIncluded:
+      '30 minutes on video with Thomas to frame your positioning, rates and seasonal strategy. Included in your 12-month commitment.',
+    callDescNotIncluded:
+      'The positioning call is included only with the 12-month commitment. Upgrade to VIP 12 months to benefit from it.',
+    callCta: 'Book my call →',
+    callBadgeIncluded: '12 months included',
+
+    statsSectionLabel: 'Performance',
+    statsTitle: 'Private analytics',
+    statsComingSoon:
+      'Profile views, appearance rate in concierge selections, missions proposed: available in the next update.',
   },
   auth: {
     sectionLabel: 'Chef Portal',
@@ -2395,6 +2677,109 @@ const es: Dictionary = {
     },
     footerNote:
       'Nota: durante el lanzamiento, Chef Talents se reserva el derecho de priorizar perfiles completos y reactivos (respuesta rápida).',
+  },
+  upgrade: {
+    pageLabel: 'Hacerse VIP',
+    pageTitle: 'Suba al siguiente nivel',
+    subtitle:
+      'Cuanto más largo es su compromiso, más ahorra. Elija la fórmula que le conviene.',
+    monthlyToggle: 'Mensual',
+    upfrontToggle: 'Pagar de una vez',
+    monthlyHint: 'Facturado cada mes durante la duración de su compromiso.',
+    upfrontHint: 'Pague el total ahora — bloquea su tarifa.',
+    perMonth: '€/mes',
+    totalLabel: 'Total {amount}€',
+    discountBadge: '−{n}%',
+    bestValueBadge: 'MEJOR OFERTA',
+    plans: {
+      vip_3m:  { name: 'VIP 3 meses',  commitmentLabel: 'Compromiso 3 meses' },
+      vip_6m:  { name: 'VIP 6 meses',  commitmentLabel: 'Compromiso 6 meses' },
+      vip_12m: { name: 'VIP 12 meses', commitmentLabel: 'Compromiso 12 meses' },
+    },
+    submitCta: 'Iniciar mi suscripción →',
+    submitLoading: 'Redirigiendo al pago…',
+    benefitsTitle: 'Incluido en su suscripción VIP',
+    benefits: [
+      'Perfil potenciado en lo alto de las selecciones de conciergeries',
+      'Acceso al grupo privado "Misiones Last Minute"',
+      'Tips y e-books exclusivos sobre la actividad de chef privado',
+      'Estadísticas privadas: vistas de perfil, tasa de aparición en matching',
+      'Llamada de posicionamiento ofrecida (compromiso 12 meses)',
+    ],
+    boostSectionLabel: 'Boost puntual',
+    boostSectionTitle: 'Boost de visibilidad — 1 mes',
+    boostSectionDesc:
+      '¿No quiere comprometerse? Active un boost de 30 días para destacar en las selecciones de conciergeries. Ideal antes de una temporada o un evento.',
+    boostCta: 'Activar el boost — 119€',
+    alreadyVipBanner: 'Ya es miembro VIP. Gestionar su suscripción →',
+    cancelledBanner: 'Pago cancelado. No se ha cobrado ningún importe.',
+    paidBanner: '¡Pago confirmado! Bienvenido a la red VIP.',
+    loginRequired: 'Debe iniciar sesión para suscribirse.',
+    stripeError: 'Error al crear el pago. Reintente o contacte con soporte.',
+  },
+  vip: {
+    pageLabel: 'Espacio VIP',
+    pageTitle: 'Espacio Chef VIP',
+    notVipTitle: 'Este espacio está reservado a los miembros VIP.',
+    notVipBody:
+      'Hágase miembro VIP para acceder al grupo Last Minute, los tips exclusivos, una llamada de posicionamiento y las estadísticas privadas.',
+    notVipCta: 'Descubrir las fórmulas VIP →',
+    activePlanLabel: 'Plan activo',
+    activePlanName: 'VIP {months} meses',
+    paymentModeLabel: 'Modo de pago',
+    paymentModeMonthly: 'Mensual',
+    paymentModeUpfront: 'Pagado de una vez',
+    engagementUntil: 'Compromiso hasta el {date}',
+    daysRemaining: '{n} días restantes',
+    manageSubscriptionCta: 'Gestionar mi suscripción →',
+    manageLoading: 'Abriendo el portal…',
+    pastDueWarning:
+      'Su último pago ha fallado. Actualice su tarjeta para conservar su acceso VIP.',
+    cancelledNotice:
+      'Su suscripción ha sido cancelada. Mantiene el acceso hasta el final de su compromiso.',
+
+    groupSectionLabel: 'Red privada',
+    groupTitle: 'Grupo Misiones Last Minute',
+    groupDesc:
+      'Acceso al grupo WhatsApp privado donde se comparten las misiones urgentes de la red (salidas en menos de 48h, charters de última hora, reemplazos premium).',
+    groupCta: 'Unirse al grupo →',
+    groupComingSoon: 'Enlace enviado por email en 24h tras su primera suscripción.',
+
+    tipsSectionLabel: 'Recursos',
+    tipsTitle: 'Tips y E-books exclusivos',
+    tipsDesc: 'Una biblioteca de recursos para hacer crecer su actividad de chef privado.',
+    tipsItems: [
+      {
+        title: 'Cómo negociar una estancia estacional 12-18k€/mes',
+        desc: 'La guía estratégica para posicionar sus tarifas frente a las familias UHNW.',
+      },
+      {
+        title: 'Checklist pre-misión yate',
+        desc: 'Todo lo que hay que verificar 7 días antes de un embarque charter.',
+      },
+      {
+        title: '10 errores de los chefs que pierden a sus clientes UHNW',
+        desc: 'Las trampas relacionales y operativas a evitar en misión privada.',
+      },
+      {
+        title: 'Plantilla de presupuesto de chef privado (FR/EN)',
+        desc: 'Una plantilla limpia para responder a un brief de conciergerie.',
+      },
+    ],
+
+    callSectionLabel: 'Coaching',
+    callTitle: 'Llamada de posicionamiento ofrecida',
+    callDescIncluded:
+      '30 minutos en videollamada con Thomas para enmarcar su posicionamiento, tarifas y estrategia de temporada. Incluida en su compromiso 12 meses.',
+    callDescNotIncluded:
+      'La llamada de posicionamiento está incluida solo con el compromiso 12 meses. Suba a VIP 12 meses para beneficiarse.',
+    callCta: 'Reservar mi llamada →',
+    callBadgeIncluded: '12 meses incluido',
+
+    statsSectionLabel: 'Rendimiento',
+    statsTitle: 'Estadísticas privadas',
+    statsComingSoon:
+      'Vistas de perfil, tasa de aparición en selecciones de conciergeries, misiones propuestas: disponibles en la próxima actualización.',
   },
   auth: {
     sectionLabel: 'Portal Chef',
