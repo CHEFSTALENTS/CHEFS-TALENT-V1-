@@ -22,6 +22,9 @@ export function AdminSidebar({ badges }: { badges?: Record<string, string | numb
 
     { label: 'Proposals', href: '/admin/proposals' },
     { label: 'Missions', href: '/admin/missions' },
+
+    // ✅ NEW — Contenu VIP éditable
+    { label: 'Contenu VIP', href: '/admin/vip-content' },
   ];
 
   return (
