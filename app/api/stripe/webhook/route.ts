@@ -10,6 +10,7 @@ import {
   isPlanKey,
   type PlanKey,
 } from '@/lib/chef-plans';
+import { sendVipWelcome } from '@/lib/email/sendVipWelcome';
 
 // Stripe webhooks need raw body access — Next 14 App Router supports this via req.text()
 export const runtime = 'nodejs';
@@ -136,6 +137,34 @@ export async function POST(req: Request) {
             stripeCustomerId,
             ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
           });
+
+          // Send welcome email (fire & forget — pas bloquant pour Stripe)
+          try {
+            const email =
+              session.customer_email ||
+              (typeof session.customer_details?.email === 'string'
+                ? session.customer_details.email
+                : '') ||
+              '';
+            if (email) {
+              const admin = getSupabaseAdmin();
+              const { data: row } = await admin
+                .from('chef_profiles')
+                .select('profile')
+                .eq('user_id', userId)
+                .maybeSingle();
+              const p = (row?.profile as any) ?? {};
+              await sendVipWelcome({
+                email,
+                firstName: p.firstName,
+                planKey,
+                isComplimentary: false,
+                locale: p.preferredLocale,
+              });
+            }
+          } catch (e: any) {
+            console.error('[webhook] welcome email failed', e?.message);
+          }
         }
         break;
       }

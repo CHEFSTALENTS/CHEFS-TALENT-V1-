@@ -16,6 +16,8 @@ import {
   Phone,
   Crown,
   Eye,
+  Send,
+  Mail,
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
@@ -338,6 +340,9 @@ export default function AdminVipContentPage() {
               Enregistrer
             </Button>
           </div>
+
+          {/* Broadcast custom aux VIP */}
+          <BroadcastSection />
         </div>
 
         {/* ────── PREVIEW ────── */}
@@ -353,6 +358,124 @@ export default function AdminVipContentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ───────────────────────────────────────────── */
+/* Broadcast custom — Notifier tous les VIP      */
+/* ───────────────────────────────────────────── */
+
+function BroadcastSection() {
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ sent: number; failed: number } | null>(
+    null,
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    if (!subject.trim() || !body.trim()) {
+      setError('Sujet et message requis.');
+      return;
+    }
+    if (
+      !confirm(
+        `Envoyer cet email à tous les chefs VIP actifs ? Cette action est irréversible.`,
+      )
+    ) {
+      return;
+    }
+
+    setSending(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const res = await fetch('/api/admin/vip-content/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-email': ADMIN_EMAIL,
+        },
+        body: JSON.stringify({ subject: subject.trim(), body: body.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.detail || json?.error || 'Erreur');
+
+      setResult({ sent: json.sent ?? 0, failed: json.failed ?? 0 });
+      setSubject('');
+      setBody('');
+    } catch (e: any) {
+      setError(e?.message || 'Erreur envoi');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <section className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <Mail className="w-4 h-4 text-stone-700" />
+        <h2 className="text-lg font-serif text-stone-900">
+          Notifier tous les VIP
+        </h2>
+      </div>
+      <p className="text-xs text-stone-500">
+        Envoie un email à <b>tous les chefs VIP actifs</b> (payants + offerts).
+        Pour les nouveaux tips, l&apos;email est envoyé automatiquement à
+        l&apos;enregistrement.
+      </p>
+
+      <div className="space-y-2">
+        <Label>Sujet</Label>
+        <Input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder="Ex : Mise à jour importante des outils VIP"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Message</Label>
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Texte du message. Les sauts de ligne sont préservés."
+          className="min-h-[180px]"
+        />
+        <p className="text-xs text-stone-400">
+          Le greeting &laquo;&nbsp;Bonjour {'{firstName}'}&nbsp;&raquo; et le
+          bouton &laquo;&nbsp;Accéder à mon espace VIP&nbsp;&raquo; sont ajoutés
+          automatiquement.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm">
+          {error ? (
+            <span className="text-red-600">{error}</span>
+          ) : result ? (
+            <span className="text-green-700">
+              ✓ {result.sent} envoi(s) · {result.failed} échec(s)
+            </span>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          onClick={send}
+          disabled={sending || !subject.trim() || !body.trim()}
+          className="bg-stone-900 hover:bg-stone-800"
+        >
+          {sending ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <Send className="w-4 h-4 mr-2" />
+          )}
+          Envoyer aux VIP
+        </Button>
+      </div>
+    </section>
   );
 }
 

@@ -5,6 +5,7 @@ import {
   computePlanEndsAt,
   type PlanKey,
 } from '@/lib/chef-plans';
+import { sendVipWelcome } from '@/lib/email/sendVipWelcome';
 
 export const runtime = 'nodejs';
 
@@ -104,6 +105,22 @@ export async function POST(
       complimentary: true,
       complimentaryGrantedAt: new Date().toISOString(),
     });
+
+    // Welcome email (fire & forget)
+    try {
+      const email = (next.email || '').trim();
+      if (email) {
+        await sendVipWelcome({
+          email,
+          firstName: next.firstName,
+          planKey,
+          isComplimentary: true,
+          locale: next.preferredLocale,
+        });
+      }
+    } catch (e: any) {
+      console.error('[grant-vip] welcome email failed', e?.message);
+    }
 
     return NextResponse.json({
       ok: true,
