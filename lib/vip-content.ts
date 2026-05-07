@@ -30,24 +30,39 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
   tips: [
     {
       id: 'tip-1',
-      title: 'Tarifer une mission saisonnière à 5 zéros sans baisser de garde',
-      desc: 'La méthode pour construire un tarif qui se défend face à un agent et qui sécurise une mission de 4 à 12 semaines.',
+      title: 'Tarifer une mission saisonnière à cinq zéros sans baisser de garde',
+      desc: 'Tenir un tarif net face à un agent expérimenté et sortir de la négociation avec une marge intacte.',
       href: '/chef/vip/guides/tarifer-mission-saisonniere',
     },
     {
       id: 'tip-2',
-      title: 'Checklist pré-mission yacht (à venir)',
-      desc: "Tout ce qu'il faut vérifier 7 jours avant un embarquement charter.",
+      title: 'Le brief client en huit questions, avant d’accepter une mission',
+      desc: 'Les questions précises qu’un chef privé installé pose avant d’engager sa signature.',
+      href: '/chef/vip/guides/brief-client-huit-questions',
     },
     {
       id: 'tip-3',
-      title: '10 erreurs des chefs qui perdent leurs clients UHNW (à venir)',
-      desc: 'Les pièges relationnels et opérationnels à éviter en mission privée.',
+      title: 'Yacht, villa, chalet : adapter sa cuisine et son rythme à chaque terrain',
+      desc: 'Trois environnements qui semblent voisins et qui imposent des logiques opposées.',
+      href: '/chef/vip/guides/yacht-villa-chalet',
     },
     {
       id: 'tip-4',
-      title: 'Modèle de devis chef privé FR/EN (à venir)',
-      desc: 'Un template propre pour répondre à un brief conciergerie.',
+      title: 'Bâtir un menu signature reproductible, qui se vend et qui dure',
+      desc: 'Le menu signature comme actif commercial, pas comme manifeste créatif.',
+      href: '/chef/vip/guides/menu-signature',
+    },
+    {
+      id: 'tip-5',
+      title: 'Gérer un client difficile pendant une mission longue',
+      desc: 'Tenir la qualité, protéger votre énergie, et sortir de la mission avec votre tarif et votre santé intacts.',
+      href: '/chef/vip/guides/gerer-client-difficile-mission-longue',
+    },
+    {
+      id: 'tip-6',
+      title: 'Tisser son réseau de fournisseurs locaux n’importe où en Europe',
+      desc: 'Construire en quatre jours un sourcing solide sur une destination que vous ne connaissez pas.',
+      href: '/chef/vip/guides/reseau-fournisseurs-europe',
     },
   ],
 };
