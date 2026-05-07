@@ -6,6 +6,7 @@ import {
   type PlanKey,
 } from '@/lib/chef-plans';
 import { sendVipWelcome } from '@/lib/email/sendVipWelcome';
+import { sendInternalUpsellNotification } from '@/lib/email/sendInternalUpsellNotification';
 
 export const runtime = 'nodejs';
 
@@ -106,9 +107,15 @@ export async function POST(
       complimentaryGrantedAt: new Date().toISOString(),
     });
 
-    // Welcome email (fire & forget)
+    // Notifications (fire & forget)
     try {
       const email = (next.email || '').trim();
+      const chefName =
+        `${next.firstName ?? ''} ${next.lastName ?? ''}`.trim() ||
+        next.name ||
+        email ||
+        'Chef';
+
       if (email) {
         await sendVipWelcome({
           email,
@@ -118,8 +125,16 @@ export async function POST(
           locale: next.preferredLocale,
         });
       }
+      await sendInternalUpsellNotification({
+        kind: 'vip_complimentary',
+        chefId: params.id,
+        chefName,
+        chefEmail: email,
+        planLabel: `${CHEF_PLANS[planKey].label} (offert)`,
+        amountCents: 0,
+      });
     } catch (e: any) {
-      console.error('[grant-vip] welcome email failed', e?.message);
+      console.error('[grant-vip] notifications failed', e?.message);
     }
 
     return NextResponse.json({

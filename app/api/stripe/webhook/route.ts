@@ -11,6 +11,8 @@ import {
   type PlanKey,
 } from '@/lib/chef-plans';
 import { sendVipWelcome } from '@/lib/email/sendVipWelcome';
+import { sendBoostWelcome } from '@/lib/email/sendBoostWelcome';
+import { sendInternalUpsellNotification } from '@/lib/email/sendInternalUpsellNotification';
 
 // Stripe webhooks need raw body access — Next 14 App Router supports this via req.text()
 export const runtime = 'nodejs';
@@ -107,10 +109,58 @@ export async function POST(req: Request) {
 
         if (planKey === 'boost_1m') {
           // Boost activation : 30 jours de visibilité
+          const boostedUntil = computeBoostedUntil();
           await patchProfile(userId, {
-            boostedUntil: computeBoostedUntil(),
+            boostedUntil,
+            // Reset notif J-7 pour que le cron puisse renotifier ce nouveau boost
+            boostEndingNotifiedAt: null,
             stripeCustomerId,
           });
+
+          // Emails (fire & forget — pas bloquant)
+          try {
+            const admin = getSupabaseAdmin();
+            const { data: row } = await admin
+              .from('chef_profiles')
+              .select('email, profile')
+              .eq('user_id', userId)
+              .maybeSingle();
+            const p = (row?.profile as any) ?? {};
+            const email =
+              session.customer_email ||
+              (typeof session.customer_details?.email === 'string'
+                ? session.customer_details.email
+                : '') ||
+              row?.email ||
+              p.email ||
+              '';
+            const chefName =
+              `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() ||
+              p.name ||
+              email ||
+              'Chef';
+
+            // Email confirmation au chef
+            if (email) {
+              await sendBoostWelcome({
+                email,
+                firstName: p.firstName,
+                boostedUntil,
+                locale: p.preferredLocale,
+              });
+            }
+            // Notification interne (Thomas)
+            await sendInternalUpsellNotification({
+              kind: 'boost_paid',
+              chefId: userId,
+              chefName,
+              chefEmail: email,
+              planLabel: 'Boost — 1 mois',
+              amountCents: typeof session.amount_total === 'number' ? session.amount_total : null,
+            });
+          } catch (e: any) {
+            console.error('[webhook boost] notifications failed', e?.message);
+          }
         } else {
           // VIP activation
           const months = CHEF_PLANS[planKey].months;
@@ -138,22 +188,30 @@ export async function POST(req: Request) {
             ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
           });
 
-          // Send welcome email (fire & forget — pas bloquant pour Stripe)
+          // Notifications (fire & forget — pas bloquant pour Stripe)
           try {
+            const admin = getSupabaseAdmin();
+            const { data: row } = await admin
+              .from('chef_profiles')
+              .select('email, profile')
+              .eq('user_id', userId)
+              .maybeSingle();
+            const p = (row?.profile as any) ?? {};
             const email =
               session.customer_email ||
               (typeof session.customer_details?.email === 'string'
                 ? session.customer_details.email
                 : '') ||
+              row?.email ||
+              p.email ||
               '';
+            const chefName =
+              `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() ||
+              p.name ||
+              email ||
+              'Chef';
+
             if (email) {
-              const admin = getSupabaseAdmin();
-              const { data: row } = await admin
-                .from('chef_profiles')
-                .select('profile')
-                .eq('user_id', userId)
-                .maybeSingle();
-              const p = (row?.profile as any) ?? {};
               await sendVipWelcome({
                 email,
                 firstName: p.firstName,
@@ -162,8 +220,24 @@ export async function POST(req: Request) {
                 locale: p.preferredLocale,
               });
             }
+
+            const planLabel = `${CHEF_PLANS[planKey].label}${
+              paymentMode ? ` (${paymentMode})` : ''
+            }`;
+            await sendInternalUpsellNotification({
+              kind: 'vip_paid',
+              chefId: userId,
+              chefName,
+              chefEmail: email,
+              planLabel,
+              amountCents:
+                typeof session.amount_total === 'number'
+                  ? session.amount_total
+                  : null,
+              paymentMode,
+            });
           } catch (e: any) {
-            console.error('[webhook] welcome email failed', e?.message);
+            console.error('[webhook vip] notifications failed', e?.message);
           }
         }
         break;
