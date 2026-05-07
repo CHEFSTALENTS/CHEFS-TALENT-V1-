@@ -30,22 +30,23 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
   tips: [
     {
       id: 'tip-1',
-      title: 'Comment négocier un séjour saisonnier 12-18k€/mois',
-      desc: 'Le guide stratégique pour positionner vos tarifs face aux familles UHNW.',
+      title: 'Tarifer une mission saisonnière à 5 zéros sans baisser de garde',
+      desc: 'La méthode pour construire un tarif qui se défend face à un agent et qui sécurise une mission de 4 à 12 semaines.',
+      href: '/chef/vip/guides/tarifer-mission-saisonniere',
     },
     {
       id: 'tip-2',
-      title: 'Checklist pré-mission yacht',
+      title: 'Checklist pré-mission yacht (à venir)',
       desc: "Tout ce qu'il faut vérifier 7 jours avant un embarquement charter.",
     },
     {
       id: 'tip-3',
-      title: '10 erreurs des chefs qui perdent leurs clients UHNW',
+      title: '10 erreurs des chefs qui perdent leurs clients UHNW (à venir)',
       desc: 'Les pièges relationnels et opérationnels à éviter en mission privée.',
     },
     {
       id: 'tip-4',
-      title: 'Modèle de devis chef privé (FR/EN)',
+      title: 'Modèle de devis chef privé FR/EN (à venir)',
       desc: 'Un template propre pour répondre à un brief conciergerie.',
     },
   ],

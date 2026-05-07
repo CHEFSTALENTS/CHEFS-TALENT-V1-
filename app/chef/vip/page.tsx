@@ -349,6 +349,7 @@ export default function ChefVipPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {tips.map((item) => {
+            const isInternal = !!item.href && item.href.startsWith('/');
             const inner = (
               <div className="flex items-start gap-3 w-full">
                 <BookOpen className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
@@ -361,8 +362,12 @@ export default function ChefVipPage() {
                   )}
                   {item.href && (
                     <div className="text-xs text-stone-400 mt-1.5 inline-flex items-center gap-1 group-hover:text-stone-700 transition-colors">
-                      <ExternalLink className="w-3 h-3" />
-                      {t.common.open}
+                      {isInternal ? null : <ExternalLink className="w-3 h-3" />}
+                      {isInternal
+                        ? locale === 'en'
+                          ? 'Read the guide'
+                          : 'Lire le guide'
+                        : t.common.open}
                     </div>
                   )}
                 </div>
@@ -371,6 +376,17 @@ export default function ChefVipPage() {
             const baseCls =
               'border border-stone-200 bg-stone-50/50 p-4 transition-colors';
             if (item.href) {
+              if (isInternal) {
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`group ${baseCls} hover:border-stone-400 hover:bg-white cursor-pointer`}
+                  >
+                    {inner}
+                  </Link>
+                );
+              }
               return (
                 <a
                   key={item.id}
