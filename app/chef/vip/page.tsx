@@ -22,6 +22,7 @@ import {
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
 import { CHEF_PLANS, type PlanKey } from '@/lib/chef-plans';
+import type { VipContent } from '@/lib/vip-content';
 
 type ChefProfile = {
   plan?: 'free' | 'pro';
@@ -30,11 +31,9 @@ type ChefProfile = {
   paymentMode?: 'monthly' | 'upfront';
   planEndsAt?: string;
   stripeCustomerId?: string;
+  complimentary?: boolean;
   [key: string]: any;
 };
-
-const CALENDLY_URL = 'https://calendly.com/contact-chefstalents/30min';
-const PRIVATE_GROUP_URL = ''; // Sera fourni par email après souscription (sécurité)
 
 export default function ChefVipPage() {
   const router = useRouter();
@@ -44,6 +43,7 @@ export default function ChefVipPage() {
   const [booting, setBooting] = useState(true);
   const [sbUser, setSbUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<ChefProfile | null>(null);
+  const [vipContent, setVipContent] = useState<VipContent | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -61,15 +61,24 @@ export default function ChefVipPage() {
       }
       setSbUser(u);
 
+      // Fetch profile + vip content en parallèle
       try {
-        const res = await fetch(
-          `/api/chef/profile?id=${encodeURIComponent(u.id)}`,
-          { cache: 'no-store' },
-        );
-        const json = await res.json();
-        if (alive) setProfile(json?.profile ?? null);
+        const [profileRes, vipRes] = await Promise.all([
+          fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, {
+            cache: 'no-store',
+          }),
+          fetch('/api/chef/vip-content', { cache: 'no-store' }),
+        ]);
+
+        const profileJson = await profileRes.json().catch(() => null);
+        const vipJson = await vipRes.json().catch(() => null);
+
+        if (alive) {
+          setProfile(profileJson?.profile ?? null);
+          setVipContent(vipJson?.content ?? null);
+        }
       } catch {
-        /* ignore */
+        /* ignore — fallback i18n côté render */
       } finally {
         if (alive) setBooting(false);
       }
@@ -159,6 +168,21 @@ export default function ChefVipPage() {
   const planMonths =
     planKey && CHEF_PLANS[planKey] ? CHEF_PLANS[planKey].months : 0;
   const isAnnual = planKey === 'vip_12m';
+  const isComplimentary = profile?.complimentary === true;
+
+  // Contenu live (depuis /api/chef/vip-content) avec fallback i18n
+  const groupUrl = vipContent?.groupUrl || '';
+  const calendlyUrl =
+    vipContent?.calendlyUrl || 'https://calendly.com/contact-chefstalents/30min';
+  const tips =
+    vipContent && vipContent.tips.length > 0
+      ? vipContent.tips
+      : t.vip.tipsItems.map((it, i) => ({
+          id: `fallback-${i}`,
+          title: it.title,
+          desc: it.desc,
+          href: undefined as string | undefined,
+        }));
 
   const dateLocale = t.availability.dateLocale;
   const endsAtDate = profile?.planEndsAt
@@ -238,17 +262,24 @@ export default function ChefVipPage() {
       <div className="border border-amber-200 bg-amber-50 p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-amber-700 mb-1">
+            <div className="text-xs uppercase tracking-widest text-amber-700 mb-1 flex items-center gap-2">
               {t.vip.activePlanLabel}
+              {isComplimentary && (
+                <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-900 bg-amber-200 border border-amber-300 rounded">
+                  ★ Offert
+                </span>
+              )}
             </div>
             <div className="text-2xl font-serif text-stone-900 flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-600" />
               {format(t.vip.activePlanName, { months: planMonths })}
             </div>
             <div className="text-sm text-stone-600 mt-2 space-y-0.5">
-              <div>
-                {t.vip.paymentModeLabel} : <b>{paymentModeLabel}</b>
-              </div>
+              {!isComplimentary && (
+                <div>
+                  {t.vip.paymentModeLabel} : <b>{paymentModeLabel}</b>
+                </div>
+              )}
               {profile?.planEndsAt && (
                 <>
                   <div>{format(t.vip.engagementUntil, { date: endsAtDate })}</div>
@@ -259,21 +290,23 @@ export default function ChefVipPage() {
               )}
             </div>
           </div>
-          <Button
-            type="button"
-            onClick={openBillingPortal}
-            disabled={portalLoading || !profile?.stripeCustomerId}
-            className="bg-stone-900 hover:bg-stone-800 shrink-0"
-          >
-            {portalLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                {t.vip.manageLoading}
-              </>
-            ) : (
-              t.vip.manageSubscriptionCta
-            )}
-          </Button>
+          {!isComplimentary && (
+            <Button
+              type="button"
+              onClick={openBillingPortal}
+              disabled={portalLoading || !profile?.stripeCustomerId}
+              className="bg-stone-900 hover:bg-stone-800 shrink-0"
+            >
+              {portalLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  {t.vip.manageLoading}
+                </>
+              ) : (
+                t.vip.manageSubscriptionCta
+              )}
+            </Button>
+          )}
         </div>
         {portalError && (
           <div className="mt-3 text-sm text-red-700">{portalError}</div>
@@ -288,9 +321,9 @@ export default function ChefVipPage() {
         </div>
         <h3 className="text-xl font-serif text-stone-900">{t.vip.groupTitle}</h3>
         <p className="text-sm text-stone-500 max-w-2xl">{t.vip.groupDesc}</p>
-        {PRIVATE_GROUP_URL ? (
+        {groupUrl ? (
           <a
-            href={PRIVATE_GROUP_URL}
+            href={groupUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white px-5 py-2.5 text-sm font-semibold transition-colors"
@@ -316,20 +349,47 @@ export default function ChefVipPage() {
           <p className="text-sm text-stone-500 mt-1">{t.vip.tipsDesc}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {t.vip.tipsItems.map((item, i) => (
-            <div
-              key={i}
-              className="border border-stone-200 bg-stone-50/50 p-4 flex items-start gap-3"
-            >
-              <BookOpen className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-sm font-medium text-stone-900">
-                  {item.title}
+          {tips.map((item) => {
+            const inner = (
+              <div className="flex items-start gap-3 w-full">
+                <BookOpen className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-stone-900">
+                    {item.title}
+                  </div>
+                  {item.desc && (
+                    <div className="text-xs text-stone-500 mt-1">{item.desc}</div>
+                  )}
+                  {item.href && (
+                    <div className="text-xs text-stone-400 mt-1.5 inline-flex items-center gap-1 group-hover:text-stone-700 transition-colors">
+                      <ExternalLink className="w-3 h-3" />
+                      {t.common.open}
+                    </div>
+                  )}
                 </div>
-                <div className="text-xs text-stone-500 mt-1">{item.desc}</div>
               </div>
-            </div>
-          ))}
+            );
+            const baseCls =
+              'border border-stone-200 bg-stone-50/50 p-4 transition-colors';
+            if (item.href) {
+              return (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`group ${baseCls} hover:border-stone-400 hover:bg-white cursor-pointer`}
+                >
+                  {inner}
+                </a>
+              );
+            }
+            return (
+              <div key={item.id} className={baseCls}>
+                {inner}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -350,7 +410,7 @@ export default function ChefVipPage() {
         </p>
         {isAnnual ? (
           <a
-            href={CALENDLY_URL}
+            href={calendlyUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-stone-900 hover:bg-stone-800 text-white px-5 py-2.5 text-sm font-semibold transition-colors"
