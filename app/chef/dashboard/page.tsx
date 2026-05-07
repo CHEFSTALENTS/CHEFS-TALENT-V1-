@@ -65,20 +65,6 @@ function CalendlyBanner({ score, status }: { score: number; status: string }) {
 function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string }) {
   const { t } = useChefLocale();
   const isVip = plan === 'pro' && planStatus === 'active';
-  const [sending, setSending] = useState(false);
-
-  const handleUpgrade = async () => {
-    setSending(true);
-    try {
-      const res = await fetch('/api/chef/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'vip' }),
-      });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch { setSending(false); }
-  };
 
   if (isVip) return (
     <div className="border border-amber-200 bg-amber-50 p-6 flex items-center gap-4">
@@ -109,13 +95,12 @@ function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string })
           </div>
         </div>
       </div>
-      <button
-        onClick={handleUpgrade}
-        disabled={sending}
-        className="shrink-0 flex items-center gap-2 bg-stone-900 text-white px-6 py-3 text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-50"
+      <Link
+        href="/chef/upgrade"
+        className="shrink-0 inline-flex items-center gap-2 bg-stone-900 text-white px-6 py-3 text-sm font-semibold hover:bg-stone-800 transition-colors"
       >
-        {sending ? t.dashboard.vipRedirecting : <><Crown className="w-4 h-4" /> {t.dashboard.vipCta}</>}
-      </button>
+        <Crown className="w-4 h-4" /> {t.dashboard.vipCta}
+      </Link>
     </div>
   );
 }
@@ -124,20 +109,6 @@ function VipBanner({ plan, planStatus }: { plan?: string; planStatus?: string })
 function BoostCard({ chefId, boostedUntil }: { chefId: string; boostedUntil?: string }) {
   const { t } = useChefLocale();
   const isBoosted = boostedUntil && new Date(boostedUntil) > new Date();
-  const [sending, setSending] = useState(false);
-
-  const handleBoost = async () => {
-    setSending(true);
-    try {
-      const res = await fetch('/api/chef/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'boost' }),
-      });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch { setSending(false); }
-  };
 
   const daysLeft = isBoosted
     ? Math.ceil((new Date(boostedUntil!).getTime() - Date.now()) / 86400000)
@@ -165,13 +136,12 @@ function BoostCard({ chefId, boostedUntil }: { chefId: string; boostedUntil?: st
           </div>
         </div>
         {!isBoosted && (
-          <button
-            onClick={handleBoost}
-            disabled={sending}
-            className="shrink-0 flex items-center gap-2 border border-stone-900 text-stone-900 px-5 py-2.5 text-sm font-semibold hover:bg-stone-900 hover:text-white transition-colors disabled:opacity-50"
+          <Link
+            href="/chef/upgrade"
+            className="shrink-0 inline-flex items-center gap-2 border border-stone-900 text-stone-900 px-5 py-2.5 text-sm font-semibold hover:bg-stone-900 hover:text-white transition-colors"
           >
-            {sending ? '…' : <><Zap className="w-4 h-4" /> {t.dashboard.boostCta}</>}
-          </button>
+            <Zap className="w-4 h-4" /> {t.dashboard.boostCta}
+          </Link>
         )}
       </div>
     </div>

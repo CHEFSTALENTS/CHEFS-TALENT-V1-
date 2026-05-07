@@ -300,6 +300,29 @@ export function scoreChefForRequestV2(
     reasons.push('✅ Profil complet');
   }
 
+  // ── Boost monétisation ──────────────────────────────────────────────
+  // Chef VIP actif (subscription en cours) : +10
+  // Boost ponctuel actif (boostedUntil > now) : +5
+  // Cumulables si les deux conditions sont remplies.
+  const profileAny: any = chef.profile ?? {};
+  const planActive =
+    String((chef as any).plan || profileAny.plan || '') === 'pro' &&
+    String((chef as any).planStatus || profileAny.planStatus || '') === 'active';
+  if (planActive) {
+    score += 10;
+    reasons.push('👑 Membre VIP');
+  }
+
+  const boostedUntilRaw =
+    profileAny.boostedUntil ?? (chef as any).boostedUntil ?? null;
+  if (boostedUntilRaw) {
+    const boostedUntil = new Date(String(boostedUntilRaw));
+    if (!Number.isNaN(boostedUntil.getTime()) && boostedUntil > new Date()) {
+      score += 5;
+      reasons.push('⚡ Boost actif');
+    }
+  }
+
   // Clamp strict 0-100
   score = Math.max(0, Math.min(100, Math.round(score)));
 
