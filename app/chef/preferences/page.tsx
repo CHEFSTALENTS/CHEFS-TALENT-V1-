@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
 
 type ChefProfile = {
   id?: string;
@@ -17,36 +18,8 @@ type ChefProfile = {
   [key: string]: any;
 };
 
-const CUISINES_PRESET = [
-  'Française',
-  'Italienne',
-  'Japonaise',
-  'Méditerranéenne',
-  'Asiatique',
-  'Végétarienne',
-  'Healthy',
-  'Fusion',
-];
-
-const LANGUAGES_PRESET = ['Français', 'Anglais', 'Espagnol', 'Italien', 'Allemand', 'Arabe'];
-
-const SPECIALTIES_PRESET = [
-  'Fine dining',
-  'Family style',
-  'Brunch',
-  'Private villa',
-  'Yacht',
-  'Chalet',
-  'Event / catering',
-  'Menu dégustation',
-];
-
-const MISSION_TYPES_PRESET = [
-  { key: 'one_shot', label: 'Ponctuelle ( déjeuner / dîner )' },
-  { key: 'residence', label: 'Résidence (villa / chalet )' },
-  { key: 'yacht', label: 'Yacht' },
-  { key: 'event_catering', label: 'Event / catering' },
-];
+const MISSION_TYPE_KEYS = ['one_shot', 'residence', 'yacht', 'event_catering'] as const;
+type MissionTypeKey = (typeof MISSION_TYPE_KEYS)[number];
 
 function normalizeList(v: any): string[] {
   if (!v) return [];
@@ -65,13 +38,12 @@ function toggle(list: string[], value: string) {
 
 export default function ChefPreferencesPage() {
   const router = useRouter();
+  const { t } = useChefLocale();
 
-  // session
   const [booting, setBooting] = useState(true);
   const [sbUserId, setSbUserId] = useState<string | null>(null);
   const [sbEmail, setSbEmail] = useState<string>('');
 
-  // data
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -86,7 +58,14 @@ export default function ChefPreferencesPage() {
   const [customLanguage, setCustomLanguage] = useState('');
   const [customSpecialty, setCustomSpecialty] = useState('');
 
-  // 0) Boot session (source de vérité)
+  const MISSION_TYPES_PRESET: Array<{ key: MissionTypeKey; label: string }> = MISSION_TYPE_KEYS.map(
+    (k) => ({ key: k, label: t.preferences.missionTypes[k] }),
+  );
+  const CUISINES_PRESET = t.preferences.cuisinesPreset;
+  const LANGUAGES_PRESET = t.preferences.languagesPreset;
+  const SPECIALTIES_PRESET = t.preferences.specialtiesPreset;
+
+  // 0) Boot session
   useEffect(() => {
     let alive = true;
 
@@ -184,7 +163,6 @@ export default function ChefPreferencesPage() {
     try {
       if (!sbUserId) throw new Error('No user');
 
-      // 🔒 merge pour ne rien écraser
       const merged: ChefProfile = {
         ...baseProfile,
         id: sbUserId,
@@ -209,7 +187,7 @@ export default function ChefPreferencesPage() {
       setTimeout(() => setSuccess(false), 2500);
     } catch (e) {
       console.error('PREFERENCES SAVE ERROR', e);
-      alert("Erreur d’enregistrement (check console)");
+      alert(t.preferences.saveError);
     } finally {
       setSaving(false);
     }
@@ -217,11 +195,9 @@ export default function ChefPreferencesPage() {
 
   if (booting) {
     return (
-
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
-
     );
   }
 
@@ -229,8 +205,8 @@ export default function ChefPreferencesPage() {
 
       <div className="max-w-3xl">
         <Marker />
-        <Label>Préférences</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Matching</h1>
+        <Label>{t.preferences.pageLabel}</Label>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">{t.preferences.pageTitle}</h1>
 
         <div className="space-y-8 bg-white p-8 border border-stone-200">
           {loading ? (
@@ -241,7 +217,7 @@ export default function ChefPreferencesPage() {
             <>
               {/* Types de missions souhaitées */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
-                <Label>Types de missions souhaitées</Label>
+                <Label>{t.preferences.missionTypesLabel}</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {MISSION_TYPES_PRESET.map((x) => {
                     const on = missionTypes.includes(x.key);
@@ -255,7 +231,7 @@ export default function ChefPreferencesPage() {
                         }`}
                       >
                         <div className="text-sm font-medium text-stone-900">{x.label}</div>
-                        <div className="text-xs text-stone-500">{on ? 'Sélectionné' : 'Cliquer'}</div>
+                        <div className="text-xs text-stone-500">{on ? t.preferences.selected : t.preferences.clickToSelect}</div>
                       </button>
                     );
                   })}
@@ -278,13 +254,13 @@ export default function ChefPreferencesPage() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-stone-500">Choisis ce que tu veux recevoir (utilisé pour le matching).</p>
+                  <p className="text-xs text-stone-500">{t.preferences.missionTypesEmpty}</p>
                 )}
               </div>
 
               {/* Cuisines */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
-                <Label>Cuisines (min. 1)</Label>
+                <Label>{t.preferences.cuisinesLabel}</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {CUISINES_PRESET.map((x) => (
                     <button
@@ -296,15 +272,15 @@ export default function ChefPreferencesPage() {
                       }`}
                     >
                       <div className="text-sm font-medium text-stone-900">{x}</div>
-                      <div className="text-xs text-stone-500">{cuisines.includes(x) ? 'Sélectionné' : 'Cliquer'}</div>
+                      <div className="text-xs text-stone-500">{cuisines.includes(x) ? t.preferences.selected : t.preferences.clickToSelect}</div>
                     </button>
                   ))}
                 </div>
 
                 <div className="flex gap-2">
-                  <Input value={customCuisine} onChange={(e) => setCustomCuisine(e.target.value)} placeholder="Ajouter une cuisine…" />
+                  <Input value={customCuisine} onChange={(e) => setCustomCuisine(e.target.value)} placeholder={t.preferences.addCuisinePlaceholder} />
                   <Button type="button" onClick={() => addCustom('cuisine')}>
-                    Ajouter
+                    {t.preferences.addCta}
                   </Button>
                 </div>
 
@@ -326,7 +302,7 @@ export default function ChefPreferencesPage() {
 
               {/* Langues */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
-                <Label>Langues (min. 1)</Label>
+                <Label>{t.preferences.languagesLabel}</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {LANGUAGES_PRESET.map((x) => (
                     <button
@@ -338,15 +314,15 @@ export default function ChefPreferencesPage() {
                       }`}
                     >
                       <div className="text-sm font-medium text-stone-900">{x}</div>
-                      <div className="text-xs text-stone-500">{languages.includes(x) ? 'Sélectionné' : 'Cliquer'}</div>
+                      <div className="text-xs text-stone-500">{languages.includes(x) ? t.preferences.selected : t.preferences.clickToSelect}</div>
                     </button>
                   ))}
                 </div>
 
                 <div className="flex gap-2">
-                  <Input value={customLanguage} onChange={(e) => setCustomLanguage(e.target.value)} placeholder="Ajouter une langue…" />
+                  <Input value={customLanguage} onChange={(e) => setCustomLanguage(e.target.value)} placeholder={t.preferences.addLanguagePlaceholder} />
                   <Button type="button" onClick={() => addCustom('language')}>
-                    Ajouter
+                    {t.preferences.addCta}
                   </Button>
                 </div>
 
@@ -366,9 +342,9 @@ export default function ChefPreferencesPage() {
                 ) : null}
               </div>
 
-              {/* Spécialités (optionnel) */}
+              {/* Spécialités */}
               <div className="space-y-3 pt-6 border-t border-stone-100">
-                <Label>Spécialités (optionnel)</Label>
+                <Label>{t.preferences.specialtiesLabel}</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {SPECIALTIES_PRESET.map((x) => (
                     <button
@@ -380,7 +356,7 @@ export default function ChefPreferencesPage() {
                       }`}
                     >
                       <div className="text-sm font-medium text-stone-900">{x}</div>
-                      <div className="text-xs text-stone-500">{specialties.includes(x) ? 'Sélectionné' : 'Cliquer'}</div>
+                      <div className="text-xs text-stone-500">{specialties.includes(x) ? t.preferences.selected : t.preferences.clickToSelect}</div>
                     </button>
                   ))}
                 </div>
@@ -389,10 +365,10 @@ export default function ChefPreferencesPage() {
                   <Input
                     value={customSpecialty}
                     onChange={(e) => setCustomSpecialty(e.target.value)}
-                    placeholder="Ajouter une spécialité…"
+                    placeholder={t.preferences.addSpecialtyPlaceholder}
                   />
                   <Button type="button" onClick={() => addCustom('specialty')}>
-                    Ajouter
+                    {t.preferences.addCta}
                   </Button>
                 </div>
 
@@ -415,21 +391,21 @@ export default function ChefPreferencesPage() {
               {/* Save */}
               <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
                 <div className="text-xs text-stone-500">
-                  Checklist :{' '}
+                  {t.preferences.checklistLabel}{' '}
                   <span className={canSave ? 'text-green-700' : 'text-stone-500'}>
-                    {canSave ? 'OK ✅' : 'Il faut 1 mission + 1 cuisine + 1 langue'}
+                    {canSave ? t.preferences.checklistOk : t.preferences.checklistMissing}
                   </span>
-                  {success ? <span className="ml-2 text-green-700">Enregistré ✅</span> : null}
+                  {success ? <span className="ml-2 text-green-700">{t.preferences.saved}</span> : null}
                 </div>
 
                 <Button type="button" onClick={handleSave} disabled={saving || loading || !canSave} className="w-32">
-                  {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
+                  {saving ? <Loader2 className="animate-spin w-4 h-4" /> : t.common.save}
                 </Button>
               </div>
             </>
           )}
         </div>
       </div>
-  
+
   );
 }

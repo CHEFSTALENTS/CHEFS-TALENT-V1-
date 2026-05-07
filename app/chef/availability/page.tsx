@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Marker, Button, Input } from '../../../components/ui';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format } from '@/lib/chef-i18n';
 
 type ChefProfile = {
   id?: string;
@@ -19,15 +21,8 @@ type ChefProfile = {
   [key: string]: any;
 };
 
-const PERIODS = [
-  { key: 'weekdays', label: 'Semaine' },
-  { key: 'weekends', label: 'Week-ends' },
-  { key: 'evenings', label: 'Soirs' },
-  { key: 'season_winter', label: 'Saison hiver' },
-  { key: 'season_summer', label: 'Saison été' },
-];
-
-const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const PERIOD_KEYS = ['weekdays', 'weekends', 'evenings', 'season_winter', 'season_summer'] as const;
+type PeriodKey = (typeof PERIOD_KEYS)[number];
 
 function pad2(n: number) {
   return String(n).padStart(2, '0');
@@ -35,11 +30,7 @@ function pad2(n: number) {
 function toISODate(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
-function monthLabel(d: Date) {
-  return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-}
 
-/** grille 6 semaines (42 cases), semaine commence lundi */
 function buildMonthGrid(monthDate: Date) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -47,8 +38,8 @@ function buildMonthGrid(monthDate: Date) {
   const firstOfMonth = new Date(year, month, 1);
   const lastOfMonth = new Date(year, month + 1, 0);
 
-  const jsDay = firstOfMonth.getDay(); // 0=dim..6=sam
-  const mondayIndex = (jsDay + 6) % 7; // lundi=0..dim=6
+  const jsDay = firstOfMonth.getDay();
+  const mondayIndex = (jsDay + 6) % 7;
 
   const gridStart = new Date(firstOfMonth);
   gridStart.setDate(firstOfMonth.getDate() - mondayIndex);
@@ -73,8 +64,8 @@ function uniq(arr: string[]) {
 export default function ChefAvailabilityPage() {
   const router = useRouter();
   const didRedirect = useRef(false);
+  const { t } = useChefLocale();
 
-  // ✅ si tu veux auto-save à chaque clic (date/période/toggle), passe à true
   const AUTO_SAVE = false;
 
   const [booting, setBooting] = useState(true);
@@ -94,7 +85,15 @@ export default function ChefAvailabilityPage() {
   const [month, setMonth] = useState<Date>(() => new Date());
   const monthGrid = useMemo(() => buildMonthGrid(month), [month]);
 
-  // 1) session supabase = vérité
+  const monthLabel = (d: Date) =>
+    d.toLocaleDateString(t.availability.dateLocale, { month: 'long', year: 'numeric' });
+
+  const PERIODS: Array<{ key: PeriodKey; label: string }> = PERIOD_KEYS.map((k) => ({
+    key: k,
+    label: t.availability.periods[k],
+  }));
+
+  // 1) session supabase
   useEffect(() => {
     let alive = true;
 
@@ -129,7 +128,7 @@ export default function ChefAvailabilityPage() {
     };
   }, [router]);
 
-  // 2) load DB profile (source de vérité)
+  // 2) load DB profile
   useEffect(() => {
     let cancelled = false;
 
@@ -144,7 +143,6 @@ export default function ChefAvailabilityPage() {
 
         const base: ChefProfile = fromDb ?? { id: sbUser.id, email: sbUser.email ?? '' };
 
-        // compat : certains historiques peuvent stocker à plat
         const a = (base.availability ?? {}) as any;
 
         const available =
@@ -198,7 +196,6 @@ export default function ChefAvailabilityPage() {
     setSuccess(false);
 
     try {
-      // 1) GET current (merge safe)
       const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
       const jsonGet = await resGet.json();
       const current = jsonGet?.profile ?? {};
@@ -216,7 +213,6 @@ export default function ChefAvailabilityPage() {
         email: sbUser.email ?? current.email ?? '',
         availability: nextAvailability,
 
-        // ✅ compat legacy (si d'autres pages lisent à plat)
         availableNow: nextAvailability.availableNow,
         nextAvailableFrom: nextAvailability.nextAvailableFrom,
         preferredPeriods: nextAvailability.preferredPeriods,
@@ -225,7 +221,6 @@ export default function ChefAvailabilityPage() {
         updatedAt: new Date().toISOString(),
       };
 
-      // 2) PUT
       const resPut = await fetch('/api/chef/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -269,7 +264,7 @@ export default function ChefAvailabilityPage() {
       await saveAvailability({ availableNow, nextAvailableFrom, preferredPeriods, unavailableDates });
     } catch (e) {
       console.error('AVAILABILITY SAVE ERROR', e);
-      alert((e as any)?.message || 'Erreur lors de la sauvegarde');
+      alert((e as any)?.message || t.common.saveError);
     }
   };
 
@@ -288,12 +283,15 @@ export default function ChefAvailabilityPage() {
 
   if (!sbUser) return null;
 
+  // Help line with split tokens (for colored fragments)
+  const helpParts = t.availability.calendarHelp1.split(/(\{available\}|\{unavailable\})/);
+
   return (
 
       <div className="max-w-4xl">
         <Marker />
-        <Label>Planning</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Disponibilités</h1>
+        <Label>{t.availability.pageLabel}</Label>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">{t.availability.pageTitle}</h1>
 
         <form onSubmit={onSubmit} className="bg-white p-8 border border-stone-200 space-y-8">
           {/* Quick status */}
@@ -312,14 +310,14 @@ export default function ChefAvailabilityPage() {
                   }}
                 />
                 <div>
-                  <div className="text-sm font-medium text-stone-900">Disponible immédiatement</div>
-                  <div className="text-xs text-stone-500">Active si tu peux accepter une mission maintenant.</div>
+                  <div className="text-sm font-medium text-stone-900">{t.availability.availableNowLabel}</div>
+                  <div className="text-xs text-stone-500">{t.availability.availableNowDesc}</div>
                 </div>
               </div>
             </label>
 
             <div className="p-4 border border-stone-200">
-              <Label>Prochaine disponibilité</Label>
+              <Label>{t.availability.nextAvailableLabel}</Label>
               <Input
                 type="date"
                 value={nextAvailableFrom}
@@ -331,11 +329,11 @@ export default function ChefAvailabilityPage() {
                   }
                 }}
               />
-              <div className="text-xs text-stone-500 mt-1">Laisse vide si tu es flexible.</div>
+              <div className="text-xs text-stone-500 mt-1">{t.availability.nextAvailableHint}</div>
             </div>
 
             <div className="p-4 border border-stone-200">
-              <Label>Périodes préférées</Label>
+              <Label>{t.availability.preferredPeriodsLabel}</Label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {PERIODS.map(p => {
                   const on = preferredPeriods.includes(p.key);
@@ -360,8 +358,11 @@ export default function ChefAvailabilityPage() {
           <div>
             <div className="text-center md:text-left">
               <p className="text-stone-600 font-light mb-3">
-                Par défaut, vous êtes considéré comme <strong>disponible</strong>. Cliquez sur une date pour la marquer comme{' '}
-                <span className="text-red-500 font-medium">indisponible</span>.
+                {helpParts.map((part, i) => {
+                  if (part === '{available}') return <strong key={i}>{t.availability.calendarHelpAvailable}</strong>;
+                  if (part === '{unavailable}') return <span key={i} className="text-red-500 font-medium">{t.availability.calendarHelpUnavailable}</span>;
+                  return <React.Fragment key={i}>{part}</React.Fragment>;
+                })}
               </p>
             </div>
 
@@ -371,7 +372,7 @@ export default function ChefAvailabilityPage() {
                 type="button"
                 onClick={goPrevMonth}
                 className="p-2 rounded-md border border-stone-200 hover:bg-stone-50 transition"
-                aria-label="Mois précédent"
+                aria-label={t.availability.prevMonth}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -383,7 +384,7 @@ export default function ChefAvailabilityPage() {
                   onClick={goToday}
                   className="mt-1 text-xs text-stone-500 hover:text-stone-900 underline underline-offset-2"
                 >
-                  Revenir à aujourd’hui
+                  {t.availability.backToToday}
                 </button>
               </div>
 
@@ -391,14 +392,14 @@ export default function ChefAvailabilityPage() {
                 type="button"
                 onClick={goNextMonth}
                 className="p-2 rounded-md border border-stone-200 hover:bg-stone-50 transition"
-                aria-label="Mois suivant"
+                aria-label={t.availability.nextMonth}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             <div className="grid grid-cols-7 gap-px bg-stone-200 border border-stone-200">
-              {WEEKDAYS.map(day => (
+              {t.availability.weekdays.map(day => (
                 <div
                   key={day}
                   className="bg-stone-50 px-2 py-3 text-center text-xs font-medium uppercase tracking-widest text-stone-500"
@@ -439,7 +440,7 @@ export default function ChefAvailabilityPage() {
 
                       {isToday ? (
                         <span className="text-[10px] uppercase tracking-widest text-stone-700 border border-stone-300 px-2 py-0.5">
-                          Aujourd’hui
+                          {t.availability.todayBadge}
                         </span>
                       ) : null}
                     </div>
@@ -447,12 +448,12 @@ export default function ChefAvailabilityPage() {
                     {isUnavailable ? (
                       <div className="absolute inset-x-3 bottom-3">
                         <span className="text-[10px] uppercase tracking-widest text-red-500 bg-red-50 px-2 py-1 inline-block">
-                          Indisponible
+                          {t.availability.unavailable}
                         </span>
                       </div>
                     ) : (
                       <div className="absolute inset-x-3 bottom-3">
-                        <span className="text-[10px] uppercase tracking-widest text-stone-400">Disponible</span>
+                        <span className="text-[10px] uppercase tracking-widest text-stone-400">{t.availability.available}</span>
                       </div>
                     )}
                   </button>
@@ -461,9 +462,9 @@ export default function ChefAvailabilityPage() {
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-              {success ? <span className="text-sm text-green-600">Enregistré ✅</span> : <span />}
+              {success ? <span className="text-sm text-green-600">{t.availability.saved}</span> : <span />}
               <Button type="submit" disabled={saving} className="w-32">
-                {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
+                {saving ? <Loader2 className="animate-spin w-4 h-4" /> : t.common.save}
               </Button>
             </div>
           </div>
@@ -471,6 +472,6 @@ export default function ChefAvailabilityPage() {
 
         <div className="text-xs text-stone-400 mt-4" />
       </div>
-   
+
   );
 }

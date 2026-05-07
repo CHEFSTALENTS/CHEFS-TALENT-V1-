@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format, type Dictionary } from '@/lib/chef-i18n';
 
 type PricingTier = 'essential' | 'premium' | 'luxury' | 'ultra';
 
@@ -34,16 +36,12 @@ const defaultPricing = (): ChefPricing => ({
 
 const PRICING_BENCHMARK: Record<
   PricingTier,
-  {
-    residence: { min: number; max: number };
-    event: { min: number; max: number };
-    label: string;
-  }
+  { residence: { min: number; max: number }; event: { min: number; max: number } }
 > = {
-  essential: { label: 'Essential', residence: { min: 300, max: 450 }, event: { min: 60, max: 100 } },
-  premium: { label: 'Premium', residence: { min: 400, max: 700 }, event: { min: 90, max: 150 } },
-  luxury: { label: 'Luxury', residence: { min: 600, max: 900 }, event: { min: 150, max: 280 } },
-  ultra: { label: 'Ultra', residence: { min: 700, max: 1400 }, event: { min: 200, max: 500 } },
+  essential: { residence: { min: 300, max: 450 },  event: { min: 60,  max: 100 } },
+  premium:   { residence: { min: 400, max: 700 },  event: { min: 90,  max: 150 } },
+  luxury:    { residence: { min: 600, max: 900 },  event: { min: 150, max: 280 } },
+  ultra:     { residence: { min: 700, max: 1400 }, event: { min: 200, max: 500 } },
 };
 
 const PRICING_MULTIPLIERS = {
@@ -87,11 +85,11 @@ function toNumberOrNull(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function getRangeStatus(value: number | null, min: number, max: number) {
-  if (value === null) return { state: 'empty' as const, text: 'Non renseigné' };
-  if (value < min) return { state: 'low' as const, text: `Plutôt bas (marché: ${min}–${max})` };
-  if (value > max) return { state: 'high' as const, text: `Plutôt haut (marché: ${min}–${max})` };
-  return { state: 'ok' as const, text: `Dans le marché (${min}–${max})` };
+function getRangeStatus(t: Dictionary, value: number | null, min: number, max: number) {
+  if (value === null) return { state: 'empty' as const, text: t.pricing.rangeEmpty };
+  if (value < min)  return { state: 'low' as const,  text: format(t.pricing.rangeLow,  { min, max }) };
+  if (value > max)  return { state: 'high' as const, text: format(t.pricing.rangeHigh, { min, max }) };
+  return { state: 'ok' as const, text: format(t.pricing.rangeOk, { min, max }) };
 }
 
 function statusClass(state: 'empty' | 'low' | 'high' | 'ok') {
@@ -149,6 +147,7 @@ function FlagToggle({ checked, label, onChange }: { checked: boolean; label: str
 export default function ChefPricingPage() {
   const router = useRouter();
   const didRedirect = useRef(false);
+  const { t } = useChefLocale();
 
   const [booting, setBooting] = useState(true);
   const [sbUser, setSbUser] = useState<any | null>(null);
@@ -164,7 +163,7 @@ export default function ChefPricingPage() {
   const [profile, setProfile] = useState<ChefProfile>({});
   const [pricing, setPricing] = useState<ChefPricing>(defaultPricing());
 
-  // 1) session supabase = vérité
+  // 1) session supabase
   useEffect(() => {
     let alive = true;
 
@@ -199,7 +198,7 @@ export default function ChefPricingPage() {
     };
   }, [router]);
 
-  // 2) load DB profile (no-store) et init pricing
+  // 2) load DB profile
   useEffect(() => {
     let cancelled = false;
 
@@ -248,10 +247,6 @@ export default function ChefPricingPage() {
     if (!pricing.tier) return null;
     return getSuggestedForTier(pricing.tier, pricing.flags);
   }, [pricing.tier, pricing.flags]);
-
-  const tierHelp = useMemo(() => {
-    return <div className="text-xs text-stone-500 mt-2">Ce choix sert à <b>positionner</b> votre offre (pas à vous noter).</div>;
-  }, []);
 
   async function saveChefProfilePatchDb(patch: any) {
     if (!sbUser?.id) throw new Error('No user');
@@ -311,7 +306,7 @@ export default function ChefPricingPage() {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       console.warn('[ChefPricing] save failed', err?.message || err);
-      alert(err?.message || 'Erreur lors de l’enregistrement');
+      alert(err?.message || t.common.saveError);
     } finally {
       setSaving(false);
     }
@@ -319,69 +314,73 @@ export default function ChefPricingPage() {
 
   if (booting || loadingPage) {
     return (
-
         <div className="py-16 flex justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-stone-300" />
         </div>
-
     );
   }
 
   if (!sbUser) return null;
 
+  const tierLabel = pricing.tier ? t.pricing.tiers[pricing.tier].title : '';
+
   return (
-   
+
       <div className="max-w-2xl">
         <Marker />
-        <Label>Tarifs</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Positionnement & Pricing</h1>
+        <Label>{t.pricing.pageLabel}</Label>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">{t.pricing.pageTitle}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 border border-stone-200">
           {/* Tier */}
           <div className="space-y-3">
-            <Label>Votre positionnement</Label>
+            <Label>{t.pricing.positionLabel}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TierCard
-                title="Essential"
-                subtitle="Déjeuners / dîners privés, familles, petits groupes"
+                title={t.pricing.tiers.essential.title}
+                subtitle={t.pricing.tiers.essential.subtitle}
                 active={pricing.tier === 'essential'}
                 onClick={() => setPricing((p) => ({ ...p, tier: 'essential' }))}
               />
               <TierCard
-                title="Premium"
-                subtitle="Villas, conciergeries, expériences soignées"
+                title={t.pricing.tiers.premium.title}
+                subtitle={t.pricing.tiers.premium.subtitle}
                 active={pricing.tier === 'premium'}
                 onClick={() => setPricing((p) => ({ ...p, tier: 'premium' }))}
               />
               <TierCard
-                title="Luxury"
-                subtitle="Chalets, yachts, UHNW, exigences élevées"
+                title={t.pricing.tiers.luxury.title}
+                subtitle={t.pricing.tiers.luxury.subtitle}
                 active={pricing.tier === 'luxury'}
                 onClick={() => setPricing((p) => ({ ...p, tier: 'luxury' }))}
               />
               <TierCard
-                title="Ultra"
-                subtitle="Résidences longues, yachts >40m, brigade possible"
+                title={t.pricing.tiers.ultra.title}
+                subtitle={t.pricing.tiers.ultra.subtitle}
                 active={pricing.tier === 'ultra'}
                 onClick={() => setPricing((p) => ({ ...p, tier: 'ultra' }))}
               />
             </div>
 
-            {tierHelp}
+            <div className="text-xs text-stone-500 mt-2">{t.pricing.tierHelp}</div>
 
             {pricing.tier && suggestion ? (
               <div className="mt-3 rounded-xl border border-stone-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-stone-900">
-                      Suggestions ({PRICING_BENCHMARK[pricing.tier].label})
+                      {format(t.pricing.suggestionsTitle, { tier: tierLabel })}
                     </div>
                     <div className="text-xs text-stone-500 mt-1">
-                      Base marché: Résidence <b>{suggestion.base.residence.min}–{suggestion.base.residence.max} €/jour</b> •
-                      Événementiel <b>{suggestion.base.event.min}–{suggestion.base.event.max} €/pers</b>
+                      {format(t.pricing.suggestionsBaseMarket, {
+                        rmin: suggestion.base.residence.min,
+                        rmax: suggestion.base.residence.max,
+                        emin: suggestion.base.event.min,
+                        emax: suggestion.base.event.max,
+                      })}
                     </div>
                     <div className="text-xs text-stone-500 mt-1">
-                      Ajustement options: <b>x{suggestion.multiplier.toFixed(2)}</b>
+                      {format(t.pricing.suggestionsAdjustment, { m: suggestion.multiplier.toFixed(2) })}
                     </div>
                   </div>
 
@@ -397,7 +396,7 @@ export default function ChefPricingPage() {
                       }
                       className="px-3 py-2 text-sm border border-stone-200 bg-stone-50 hover:bg-stone-100"
                     >
-                      Appliquer suggestions
+                      {t.pricing.applySuggestions}
                     </button>
 
                     <button
@@ -411,7 +410,7 @@ export default function ChefPricingPage() {
                       }
                       className="px-3 py-2 text-sm border border-stone-200 bg-white hover:bg-stone-50 text-stone-600"
                     >
-                      Réinitialiser
+                      {t.pricing.resetCta}
                     </button>
                   </div>
                 </div>
@@ -425,7 +424,7 @@ export default function ChefPricingPage() {
                       mode === 'simple' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700'
                     }`}
                   >
-                    Mode simple
+                    {t.pricing.modeSimple}
                   </button>
                   <button
                     type="button"
@@ -434,43 +433,43 @@ export default function ChefPricingPage() {
                       mode === 'target' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700'
                     }`}
                   >
-                    Objectif de revenu
+                    {t.pricing.modeTarget}
                   </button>
                 </div>
 
                 {mode === 'target' ? (
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <div className="text-xs text-stone-500">Objectif net / jour (€)</div>
+                      <div className="text-xs text-stone-500">{t.pricing.targetNetLabel}</div>
                       <Input
                         type="number"
                         min={0}
                         value={targetNetPerDay ?? ''}
                         onChange={(e) => setTargetNetPerDay(toNumberOrNull(e.target.value))}
-                        placeholder="ex: 600"
+                        placeholder={t.pricing.targetNetPlaceholder}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <div className="text-xs text-stone-500">Coûts estimés / jour (€)</div>
+                      <div className="text-xs text-stone-500">{t.pricing.estimatedCostsLabel}</div>
                       <Input
                         type="number"
                         min={0}
                         value={estimatedCostsPerDay ?? ''}
                         onChange={(e) => setEstimatedCostsPerDay(toNumberOrNull(e.target.value))}
-                        placeholder="ex: 120"
+                        placeholder={t.pricing.estimatedCostsPlaceholder}
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <div className="text-xs text-stone-500">Tarif conseillé</div>
+                      <div className="text-xs text-stone-500">{t.pricing.suggestedRateLabel}</div>
                       <div className="border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900">
                         {(() => {
                           const net = targetNetPerDay ?? null;
                           if (!net) return '—';
                           const costs = estimatedCostsPerDay ?? 0;
                           const suggested = roundTo((net + costs) * suggestion.multiplier, 25);
-                          return `${suggested} €/jour`;
+                          return `${suggested} ${t.pricing.suggestedRateUnit}`;
                         })()}
                       </div>
 
@@ -485,14 +484,14 @@ export default function ChefPricingPage() {
                           setPricing((p) => ({ ...p, residence: { ...p.residence, dailyRate: suggested } }));
                         }}
                       >
-                        Appliquer au tarif journalier
+                        {t.pricing.applyToDailyCta}
                       </button>
                     </div>
                   </div>
                 ) : null}
 
                 <div className="mt-3 text-[11px] text-stone-500">
-                  *Indicatif. Ça sert à aider le matching et à éviter l’inconnu pour concierges/clients.
+                  {t.pricing.indicativeNote}
                 </div>
               </div>
             ) : null}
@@ -500,10 +499,10 @@ export default function ChefPricingPage() {
 
           {/* Residence */}
           <div className="space-y-3 pt-6 border-t border-stone-100">
-            <Label>Résidence privée</Label>
+            <Label>{t.pricing.residenceLabel}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Tarif journalier (€/jour)</Label>
+                <Label>{t.pricing.dailyRateLabel}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -514,20 +513,20 @@ export default function ChefPricingPage() {
                       residence: { ...p.residence, dailyRate: toNumberOrNull(e.target.value) },
                     }))
                   }
-                  placeholder="ex: 500"
+                  placeholder={t.pricing.dailyRatePlaceholder}
                 />
-                <p className="text-xs text-stone-400">Indiquez votre base hors achats matière première si besoin.</p>
+                <p className="text-xs text-stone-400">{t.pricing.dailyRateHint}</p>
                 {pricing.tier ? (() => {
                   const r = PRICING_BENCHMARK[pricing.tier].residence;
-                  const s = getRangeStatus(pricing.residence.dailyRate, r.min, r.max);
+                  const s = getRangeStatus(t, pricing.residence.dailyRate, r.min, r.max);
                   return <div className={`text-xs mt-1 ${statusClass(s.state)}`}>{s.text}</div>;
                 })() : (
-                  <div className="text-xs mt-1 text-stone-400">Choisissez un positionnement pour voir la référence marché.</div>
+                  <div className="text-xs mt-1 text-stone-400">{t.pricing.chooseTierFirst}</div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label>Minimum de jours (optionnel)</Label>
+                <Label>{t.pricing.minDaysLabel}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -538,19 +537,19 @@ export default function ChefPricingPage() {
                       residence: { ...p.residence, minDays: toNumberOrNull(e.target.value) },
                     }))
                   }
-                  placeholder="ex: 3"
+                  placeholder={t.pricing.minDaysPlaceholder}
                 />
-                <p className="text-xs text-stone-400">Ex: 2 jours minimum pour déplacement.</p>
+                <p className="text-xs text-stone-400">{t.pricing.minDaysHint}</p>
               </div>
             </div>
           </div>
 
           {/* Event */}
           <div className="space-y-3 pt-6 border-t border-stone-100">
-            <Label>Événementiel</Label>
+            <Label>{t.pricing.eventLabel}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Prix par personne (€/pers)</Label>
+                <Label>{t.pricing.eventPriceLabel}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -561,17 +560,17 @@ export default function ChefPricingPage() {
                       event: { ...p.event, pricePerPerson: toNumberOrNull(e.target.value) },
                     }))
                   }
-                  placeholder="ex: 120"
+                  placeholder={t.pricing.eventPricePlaceholder}
                 />
                 {pricing.tier ? (() => {
                   const r = PRICING_BENCHMARK[pricing.tier].event;
-                  const s = getRangeStatus(pricing.event.pricePerPerson, r.min, r.max);
+                  const s = getRangeStatus(t, pricing.event.pricePerPerson, r.min, r.max);
                   return <div className={`text-xs mt-1 ${statusClass(s.state)}`}>{s.text}</div>;
                 })() : null}
               </div>
 
               <div className="space-y-2">
-                <Label>Minimum de convives (optionnel)</Label>
+                <Label>{t.pricing.minGuestsLabel}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -582,34 +581,34 @@ export default function ChefPricingPage() {
                       event: { ...p.event, minGuests: toNumberOrNull(e.target.value) },
                     }))
                   }
-                  placeholder="ex: 12"
+                  placeholder={t.pricing.minGuestsPlaceholder}
                 />
               </div>
             </div>
-            <p className="text-xs text-stone-400">Si vous ne faites pas d’événementiel, laissez vide.</p>
+            <p className="text-xs text-stone-400">{t.pricing.eventEmpty}</p>
           </div>
 
           {/* Flags */}
           <div className="space-y-3 pt-6 border-t border-stone-100">
-            <Label>Options</Label>
+            <Label>{t.pricing.flagsLabel}</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FlagToggle
-                label="Haute saison"
+                label={t.pricing.flags.highSeason}
                 checked={!!pricing.flags.highSeason}
                 onChange={() => setPricing((p) => ({ ...p, flags: { ...p.flags, highSeason: !p.flags.highSeason } }))}
               />
               <FlagToggle
-                label="International"
+                label={t.pricing.flags.international}
                 checked={!!pricing.flags.international}
                 onChange={() => setPricing((p) => ({ ...p, flags: { ...p.flags, international: !p.flags.international } }))}
               />
               <FlagToggle
-                label="Yacht"
+                label={t.pricing.flags.yacht}
                 checked={!!pricing.flags.yacht}
                 onChange={() => setPricing((p) => ({ ...p, flags: { ...p.flags, yacht: !p.flags.yacht } }))}
               />
               <FlagToggle
-                label="Brigade possible"
+                label={t.pricing.flags.brigade}
                 checked={!!pricing.flags.brigade}
                 onChange={() => setPricing((p) => ({ ...p, flags: { ...p.flags, brigade: !p.flags.brigade } }))}
               />
@@ -618,32 +617,32 @@ export default function ChefPricingPage() {
 
           {/* Résumé */}
           <div className="pt-6 border-t border-stone-100">
-            <Label>Résumé (visible concierge)</Label>
+            <Label>{t.pricing.summaryLabel}</Label>
             <div className="mt-2 rounded-xl border border-stone-200 bg-white p-4 text-sm">
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">
-                  Tier: <b>{pricing.tier ?? '—'}</b>
+                  {format(t.pricing.summaryTier, { tier: pricing.tier ?? '—' })}
                 </span>
-                {pricing.flags.highSeason ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">Haute saison</span> : null}
-                {pricing.flags.international ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">International</span> : null}
-                {pricing.flags.yacht ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">Yacht</span> : null}
-                {pricing.flags.brigade ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">Brigade</span> : null}
+                {pricing.flags.highSeason ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">{t.pricing.flags.highSeason}</span> : null}
+                {pricing.flags.international ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">{t.pricing.flags.international}</span> : null}
+                {pricing.flags.yacht ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">{t.pricing.flags.yacht}</span> : null}
+                {pricing.flags.brigade ? <span className="px-2 py-1 border border-stone-200 bg-stone-50 text-xs">{t.pricing.flags.brigade}</span> : null}
               </div>
 
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="border border-stone-200 bg-stone-50 p-3">
-                  <div className="text-xs text-stone-500">Résidence</div>
+                  <div className="text-xs text-stone-500">{t.pricing.summaryResidence}</div>
                   <div className="mt-1">
-                    <b>{pricing.residence.dailyRate ? `${pricing.residence.dailyRate} €/jour` : '—'}</b>
-                    {pricing.residence.minDays ? <span className="text-stone-600"> • min {pricing.residence.minDays} jours</span> : null}
+                    <b>{pricing.residence.dailyRate ? `${pricing.residence.dailyRate} ${t.pricing.summaryDailyUnit}` : '—'}</b>
+                    {pricing.residence.minDays ? <span className="text-stone-600"> • {format(t.pricing.summaryMinDays, { n: pricing.residence.minDays })}</span> : null}
                   </div>
                 </div>
 
                 <div className="border border-stone-200 bg-stone-50 p-3">
-                  <div className="text-xs text-stone-500">Événementiel</div>
+                  <div className="text-xs text-stone-500">{t.pricing.summaryEvent}</div>
                   <div className="mt-1">
-                    <b>{pricing.event.pricePerPerson ? `${pricing.event.pricePerPerson} €/pers` : '—'}</b>
-                    {pricing.event.minGuests ? <span className="text-stone-600"> • min {pricing.event.minGuests} pers</span> : null}
+                    <b>{pricing.event.pricePerPerson ? `${pricing.event.pricePerPerson} ${t.pricing.summaryPerPersonUnit}` : '—'}</b>
+                    {pricing.event.minGuests ? <span className="text-stone-600"> • {format(t.pricing.summaryMinGuests, { n: pricing.event.minGuests })}</span> : null}
                   </div>
                 </div>
               </div>
@@ -652,9 +651,9 @@ export default function ChefPricingPage() {
 
           {/* Save */}
           <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
-            {success ? <span className="text-sm text-green-600">Modifications enregistrées.</span> : <span />}
+            {success ? <span className="text-sm text-green-600">{t.common.savedSuccess}</span> : <span />}
             <Button type="submit" disabled={saving} className="ml-auto w-32">
-              {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
+              {saving ? <Loader2 className="animate-spin w-4 h-4" /> : t.common.save}
             </Button>
           </div>
         </form>

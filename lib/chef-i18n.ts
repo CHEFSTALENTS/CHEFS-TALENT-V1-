@@ -326,6 +326,126 @@ export type Dictionary = {
     suggestedZonesHint: string;
     saveError: string;
   };
+
+  availability: {
+    pageLabel: string;
+    pageTitle: string;
+    dateLocale: string; // 'fr-FR' | 'en-US' | 'es-ES'
+    weekdays: [string, string, string, string, string, string, string]; // Mon-Sun
+    availableNowLabel: string;
+    availableNowDesc: string;
+    nextAvailableLabel: string;
+    nextAvailableHint: string;
+    preferredPeriodsLabel: string;
+    periods: {
+      weekdays: string;
+      weekends: string;
+      evenings: string;
+      season_winter: string;
+      season_summer: string;
+    };
+    calendarHelp1: string; // "Par défaut, vous êtes considéré comme {available}..."
+    calendarHelpAvailable: string; // "disponible"
+    calendarHelpUnavailable: string; // "indisponible"
+    prevMonth: string;
+    nextMonth: string;
+    backToToday: string;
+    todayBadge: string;
+    available: string;
+    unavailable: string;
+    saved: string;
+  };
+
+  preferences: {
+    pageLabel: string;
+    pageTitle: string;
+    missionTypesLabel: string;
+    missionTypes: {
+      one_shot: string;
+      residence: string;
+      yacht: string;
+      event_catering: string;
+    };
+    selected: string;
+    clickToSelect: string;
+    missionTypesEmpty: string;
+    cuisinesLabel: string;
+    cuisinesPreset: string[]; // 8 items
+    addCuisinePlaceholder: string;
+    languagesLabel: string;
+    languagesPreset: string[]; // 6 items
+    addLanguagePlaceholder: string;
+    specialtiesLabel: string;
+    specialtiesPreset: string[]; // 8 items
+    addSpecialtyPlaceholder: string;
+    addCta: string;
+    checklistLabel: string;
+    checklistOk: string;
+    checklistMissing: string;
+    saved: string;
+    saveError: string;
+  };
+
+  pricing: {
+    pageLabel: string;
+    pageTitle: string;
+    positionLabel: string;
+    tierHelp: string;
+    tiers: {
+      essential: { title: string; subtitle: string };
+      premium:   { title: string; subtitle: string };
+      luxury:    { title: string; subtitle: string };
+      ultra:     { title: string; subtitle: string };
+    };
+    suggestionsTitle: string; // "Suggestions ({tier})"
+    suggestionsBaseMarket: string; // "Base marché: Résidence {rmin}–{rmax} €/jour • Événementiel {emin}–{emax} €/pers"
+    suggestionsAdjustment: string; // "Ajustement options: x{m}"
+    applySuggestions: string;
+    resetCta: string;
+    modeSimple: string;
+    modeTarget: string;
+    targetNetLabel: string;
+    targetNetPlaceholder: string;
+    estimatedCostsLabel: string;
+    estimatedCostsPlaceholder: string;
+    suggestedRateLabel: string;
+    suggestedRateUnit: string; // "€/jour"
+    applyToDailyCta: string;
+    indicativeNote: string;
+    residenceLabel: string;
+    dailyRateLabel: string;
+    dailyRatePlaceholder: string;
+    dailyRateHint: string;
+    chooseTierFirst: string;
+    rangeEmpty: string;
+    rangeLow: string; // "Plutôt bas (marché: {min}–{max})"
+    rangeHigh: string; // "Plutôt haut (marché: {min}–{max})"
+    rangeOk: string; // "Dans le marché ({min}–{max})"
+    minDaysLabel: string;
+    minDaysPlaceholder: string;
+    minDaysHint: string;
+    eventLabel: string;
+    eventPriceLabel: string;
+    eventPricePlaceholder: string;
+    minGuestsLabel: string;
+    minGuestsPlaceholder: string;
+    eventEmpty: string;
+    flagsLabel: string;
+    flags: {
+      highSeason: string;
+      international: string;
+      yacht: string;
+      brigade: string;
+    };
+    summaryLabel: string;
+    summaryTier: string; // "Tier: {tier}"
+    summaryResidence: string;
+    summaryEvent: string;
+    summaryDailyUnit: string; // "€/jour"
+    summaryPerPersonUnit: string; // "€/pers"
+    summaryMinDays: string; // "min {n} jours"
+    summaryMinGuests: string; // "min {n} pers"
+  };
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -639,6 +759,131 @@ const fr: Dictionary = {
       'Les zones suggérées sont calculées automatiquement à partir de votre ville et de votre rayon.',
     saveError: 'Erreur lors de la sauvegarde',
   },
+  availability: {
+    pageLabel: 'Planning',
+    pageTitle: 'Disponibilités',
+    dateLocale: 'fr-FR',
+    weekdays: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+    availableNowLabel: 'Disponible immédiatement',
+    availableNowDesc: 'Active si tu peux accepter une mission maintenant.',
+    nextAvailableLabel: 'Prochaine disponibilité',
+    nextAvailableHint: 'Laisse vide si tu es flexible.',
+    preferredPeriodsLabel: 'Périodes préférées',
+    periods: {
+      weekdays: 'Semaine',
+      weekends: 'Week-ends',
+      evenings: 'Soirs',
+      season_winter: 'Saison hiver',
+      season_summer: 'Saison été',
+    },
+    calendarHelp1:
+      'Par défaut, vous êtes considéré comme {available}. Cliquez sur une date pour la marquer comme {unavailable}.',
+    calendarHelpAvailable: 'disponible',
+    calendarHelpUnavailable: 'indisponible',
+    prevMonth: 'Mois précédent',
+    nextMonth: 'Mois suivant',
+    backToToday: 'Revenir à aujourd’hui',
+    todayBadge: 'Aujourd’hui',
+    available: 'Disponible',
+    unavailable: 'Indisponible',
+    saved: 'Enregistré ✅',
+  },
+  preferences: {
+    pageLabel: 'Préférences',
+    pageTitle: 'Matching',
+    missionTypesLabel: 'Types de missions souhaitées',
+    missionTypes: {
+      one_shot: 'Ponctuelle ( déjeuner / dîner )',
+      residence: 'Résidence (villa / chalet )',
+      yacht: 'Yacht',
+      event_catering: 'Event / catering',
+    },
+    selected: 'Sélectionné',
+    clickToSelect: 'Cliquer',
+    missionTypesEmpty: 'Choisis ce que tu veux recevoir (utilisé pour le matching).',
+    cuisinesLabel: 'Cuisines (min. 1)',
+    cuisinesPreset: [
+      'Française', 'Italienne', 'Japonaise', 'Méditerranéenne',
+      'Asiatique', 'Végétarienne', 'Healthy', 'Fusion',
+    ],
+    addCuisinePlaceholder: 'Ajouter une cuisine…',
+    languagesLabel: 'Langues (min. 1)',
+    languagesPreset: ['Français', 'Anglais', 'Espagnol', 'Italien', 'Allemand', 'Arabe'],
+    addLanguagePlaceholder: 'Ajouter une langue…',
+    specialtiesLabel: 'Spécialités (optionnel)',
+    specialtiesPreset: [
+      'Fine dining', 'Family style', 'Brunch', 'Private villa',
+      'Yacht', 'Chalet', 'Event / catering', 'Menu dégustation',
+    ],
+    addSpecialtyPlaceholder: 'Ajouter une spécialité…',
+    addCta: 'Ajouter',
+    checklistLabel: 'Checklist :',
+    checklistOk: 'OK ✅',
+    checklistMissing: 'Il faut 1 mission + 1 cuisine + 1 langue',
+    saved: 'Enregistré ✅',
+    saveError: "Erreur d’enregistrement (check console)",
+  },
+  pricing: {
+    pageLabel: 'Tarifs',
+    pageTitle: 'Positionnement & Pricing',
+    positionLabel: 'Votre positionnement',
+    tierHelp: 'Ce choix sert à positionner votre offre (pas à vous noter).',
+    tiers: {
+      essential: { title: 'Essential', subtitle: 'Déjeuners / dîners privés, familles, petits groupes' },
+      premium:   { title: 'Premium',   subtitle: 'Villas, conciergeries, expériences soignées' },
+      luxury:    { title: 'Luxury',    subtitle: 'Chalets, yachts, UHNW, exigences élevées' },
+      ultra:     { title: 'Ultra',     subtitle: 'Résidences longues, yachts >40m, brigade possible' },
+    },
+    suggestionsTitle: 'Suggestions ({tier})',
+    suggestionsBaseMarket:
+      'Base marché: Résidence {rmin}–{rmax} €/jour • Événementiel {emin}–{emax} €/pers',
+    suggestionsAdjustment: 'Ajustement options: x{m}',
+    applySuggestions: 'Appliquer suggestions',
+    resetCta: 'Réinitialiser',
+    modeSimple: 'Mode simple',
+    modeTarget: 'Objectif de revenu',
+    targetNetLabel: 'Objectif net / jour (€)',
+    targetNetPlaceholder: 'ex: 600',
+    estimatedCostsLabel: 'Coûts estimés / jour (€)',
+    estimatedCostsPlaceholder: 'ex: 120',
+    suggestedRateLabel: 'Tarif conseillé',
+    suggestedRateUnit: '€/jour',
+    applyToDailyCta: 'Appliquer au tarif journalier',
+    indicativeNote: '*Indicatif. Ça sert à aider le matching et à éviter l’inconnu pour concierges/clients.',
+    residenceLabel: 'Résidence privée',
+    dailyRateLabel: 'Tarif journalier (€/jour)',
+    dailyRatePlaceholder: 'ex: 500',
+    dailyRateHint: 'Indiquez votre base hors achats matière première si besoin.',
+    chooseTierFirst: 'Choisissez un positionnement pour voir la référence marché.',
+    rangeEmpty: 'Non renseigné',
+    rangeLow: 'Plutôt bas (marché: {min}–{max})',
+    rangeHigh: 'Plutôt haut (marché: {min}–{max})',
+    rangeOk: 'Dans le marché ({min}–{max})',
+    minDaysLabel: 'Minimum de jours (optionnel)',
+    minDaysPlaceholder: 'ex: 3',
+    minDaysHint: 'Ex: 2 jours minimum pour déplacement.',
+    eventLabel: 'Événementiel',
+    eventPriceLabel: 'Prix par personne (€/pers)',
+    eventPricePlaceholder: 'ex: 120',
+    minGuestsLabel: 'Minimum de convives (optionnel)',
+    minGuestsPlaceholder: 'ex: 12',
+    eventEmpty: 'Si vous ne faites pas d’événementiel, laissez vide.',
+    flagsLabel: 'Options',
+    flags: {
+      highSeason: 'Haute saison',
+      international: 'International',
+      yacht: 'Yacht',
+      brigade: 'Brigade possible',
+    },
+    summaryLabel: 'Résumé (visible concierge)',
+    summaryTier: 'Tier: {tier}',
+    summaryResidence: 'Résidence',
+    summaryEvent: 'Événementiel',
+    summaryDailyUnit: '€/jour',
+    summaryPerPersonUnit: '€/pers',
+    summaryMinDays: 'min {n} jours',
+    summaryMinGuests: 'min {n} pers',
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -950,6 +1195,131 @@ const en: Dictionary = {
     suggestedZonesHint:
       'Suggested zones are calculated automatically from your city and radius.',
     saveError: 'Error while saving',
+  },
+  availability: {
+    pageLabel: 'Schedule',
+    pageTitle: 'Availability',
+    dateLocale: 'en-US',
+    weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    availableNowLabel: 'Available now',
+    availableNowDesc: 'Enable if you can accept a mission immediately.',
+    nextAvailableLabel: 'Next available date',
+    nextAvailableHint: 'Leave empty if flexible.',
+    preferredPeriodsLabel: 'Preferred periods',
+    periods: {
+      weekdays: 'Weekdays',
+      weekends: 'Weekends',
+      evenings: 'Evenings',
+      season_winter: 'Winter season',
+      season_summer: 'Summer season',
+    },
+    calendarHelp1:
+      'By default you are considered {available}. Click a date to mark it as {unavailable}.',
+    calendarHelpAvailable: 'available',
+    calendarHelpUnavailable: 'unavailable',
+    prevMonth: 'Previous month',
+    nextMonth: 'Next month',
+    backToToday: 'Back to today',
+    todayBadge: 'Today',
+    available: 'Available',
+    unavailable: 'Unavailable',
+    saved: 'Saved ✅',
+  },
+  preferences: {
+    pageLabel: 'Preferences',
+    pageTitle: 'Matching',
+    missionTypesLabel: 'Desired mission types',
+    missionTypes: {
+      one_shot: 'One-off (lunch / dinner)',
+      residence: 'Residence (villa / chalet)',
+      yacht: 'Yacht',
+      event_catering: 'Event / catering',
+    },
+    selected: 'Selected',
+    clickToSelect: 'Click',
+    missionTypesEmpty: 'Pick what you want to receive (used for matching).',
+    cuisinesLabel: 'Cuisines (min. 1)',
+    cuisinesPreset: [
+      'French', 'Italian', 'Japanese', 'Mediterranean',
+      'Asian', 'Vegetarian', 'Healthy', 'Fusion',
+    ],
+    addCuisinePlaceholder: 'Add a cuisine…',
+    languagesLabel: 'Languages (min. 1)',
+    languagesPreset: ['French', 'English', 'Spanish', 'Italian', 'German', 'Arabic'],
+    addLanguagePlaceholder: 'Add a language…',
+    specialtiesLabel: 'Specialties (optional)',
+    specialtiesPreset: [
+      'Fine dining', 'Family style', 'Brunch', 'Private villa',
+      'Yacht', 'Chalet', 'Event / catering', 'Tasting menu',
+    ],
+    addSpecialtyPlaceholder: 'Add a specialty…',
+    addCta: 'Add',
+    checklistLabel: 'Checklist:',
+    checklistOk: 'OK ✅',
+    checklistMissing: 'Need 1 mission + 1 cuisine + 1 language',
+    saved: 'Saved ✅',
+    saveError: 'Save error (check console)',
+  },
+  pricing: {
+    pageLabel: 'Rates',
+    pageTitle: 'Positioning & Pricing',
+    positionLabel: 'Your positioning',
+    tierHelp: 'This positions your offer (not a rating).',
+    tiers: {
+      essential: { title: 'Essential', subtitle: 'Private lunches/dinners, families, small groups' },
+      premium:   { title: 'Premium',   subtitle: 'Villas, concierges, refined experiences' },
+      luxury:    { title: 'Luxury',    subtitle: 'Chalets, yachts, UHNW, high standards' },
+      ultra:     { title: 'Ultra',     subtitle: 'Long residences, yachts >40m, brigade option' },
+    },
+    suggestionsTitle: 'Suggestions ({tier})',
+    suggestionsBaseMarket:
+      'Market base: Residence {rmin}–{rmax} €/day • Events {emin}–{emax} €/pp',
+    suggestionsAdjustment: 'Options adjustment: x{m}',
+    applySuggestions: 'Apply suggestions',
+    resetCta: 'Reset',
+    modeSimple: 'Simple mode',
+    modeTarget: 'Income target',
+    targetNetLabel: 'Target net / day (€)',
+    targetNetPlaceholder: 'e.g. 600',
+    estimatedCostsLabel: 'Estimated costs / day (€)',
+    estimatedCostsPlaceholder: 'e.g. 120',
+    suggestedRateLabel: 'Suggested rate',
+    suggestedRateUnit: '€/day',
+    applyToDailyCta: 'Apply to daily rate',
+    indicativeNote: '*Indicative. Helps matching and gives clarity to concierges/clients.',
+    residenceLabel: 'Private residence',
+    dailyRateLabel: 'Daily rate (€/day)',
+    dailyRatePlaceholder: 'e.g. 500',
+    dailyRateHint: 'Set your base, excluding ingredient purchases if needed.',
+    chooseTierFirst: 'Choose a positioning to see market reference.',
+    rangeEmpty: 'Not set',
+    rangeLow: 'Low side (market: {min}–{max})',
+    rangeHigh: 'High side (market: {min}–{max})',
+    rangeOk: 'Within market ({min}–{max})',
+    minDaysLabel: 'Minimum days (optional)',
+    minDaysPlaceholder: 'e.g. 3',
+    minDaysHint: 'E.g. 2-day minimum for travel.',
+    eventLabel: 'Events',
+    eventPriceLabel: 'Price per person (€/pp)',
+    eventPricePlaceholder: 'e.g. 120',
+    minGuestsLabel: 'Minimum guests (optional)',
+    minGuestsPlaceholder: 'e.g. 12',
+    eventEmpty: "If you don't do events, leave empty.",
+    flagsLabel: 'Options',
+    flags: {
+      highSeason: 'High season',
+      international: 'International',
+      yacht: 'Yacht',
+      brigade: 'Brigade option',
+    },
+    summaryLabel: 'Summary (visible to concierge)',
+    summaryTier: 'Tier: {tier}',
+    summaryResidence: 'Residence',
+    summaryEvent: 'Events',
+    summaryDailyUnit: '€/day',
+    summaryPerPersonUnit: '€/pp',
+    summaryMinDays: 'min {n} days',
+    summaryMinGuests: 'min {n} guests',
   },
 };
 
@@ -1263,6 +1633,131 @@ const es: Dictionary = {
     suggestedZonesHint:
       'Las zonas sugeridas se calculan automáticamente a partir de su ciudad y radio.',
     saveError: 'Error al guardar',
+  },
+  availability: {
+    pageLabel: 'Calendario',
+    pageTitle: 'Disponibilidad',
+    dateLocale: 'es-ES',
+    weekdays: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+    availableNowLabel: 'Disponible ahora',
+    availableNowDesc: 'Activa si puedes aceptar una misión inmediatamente.',
+    nextAvailableLabel: 'Próxima disponibilidad',
+    nextAvailableHint: 'Deja vacío si eres flexible.',
+    preferredPeriodsLabel: 'Periodos preferidos',
+    periods: {
+      weekdays: 'Entre semana',
+      weekends: 'Fines de semana',
+      evenings: 'Noches',
+      season_winter: 'Temporada invierno',
+      season_summer: 'Temporada verano',
+    },
+    calendarHelp1:
+      'Por defecto, eres considerado {available}. Haz clic en una fecha para marcarla como {unavailable}.',
+    calendarHelpAvailable: 'disponible',
+    calendarHelpUnavailable: 'no disponible',
+    prevMonth: 'Mes anterior',
+    nextMonth: 'Mes siguiente',
+    backToToday: 'Volver a hoy',
+    todayBadge: 'Hoy',
+    available: 'Disponible',
+    unavailable: 'No disponible',
+    saved: 'Guardado ✅',
+  },
+  preferences: {
+    pageLabel: 'Preferencias',
+    pageTitle: 'Matching',
+    missionTypesLabel: 'Tipos de misión deseados',
+    missionTypes: {
+      one_shot: 'Puntual (almuerzo / cena)',
+      residence: 'Residencia (villa / chalet)',
+      yacht: 'Yate',
+      event_catering: 'Evento / catering',
+    },
+    selected: 'Seleccionado',
+    clickToSelect: 'Haz clic',
+    missionTypesEmpty: 'Elige lo que quieres recibir (usado para el matching).',
+    cuisinesLabel: 'Cocinas (mín. 1)',
+    cuisinesPreset: [
+      'Francesa', 'Italiana', 'Japonesa', 'Mediterránea',
+      'Asiática', 'Vegetariana', 'Healthy', 'Fusión',
+    ],
+    addCuisinePlaceholder: 'Añadir una cocina…',
+    languagesLabel: 'Idiomas (mín. 1)',
+    languagesPreset: ['Francés', 'Inglés', 'Español', 'Italiano', 'Alemán', 'Árabe'],
+    addLanguagePlaceholder: 'Añadir un idioma…',
+    specialtiesLabel: 'Especialidades (opcional)',
+    specialtiesPreset: [
+      'Fine dining', 'Family style', 'Brunch', 'Villa privada',
+      'Yate', 'Chalet', 'Evento / catering', 'Menú degustación',
+    ],
+    addSpecialtyPlaceholder: 'Añadir una especialidad…',
+    addCta: 'Añadir',
+    checklistLabel: 'Lista:',
+    checklistOk: 'OK ✅',
+    checklistMissing: 'Necesitas 1 misión + 1 cocina + 1 idioma',
+    saved: 'Guardado ✅',
+    saveError: 'Error al guardar (revisa la consola)',
+  },
+  pricing: {
+    pageLabel: 'Tarifas',
+    pageTitle: 'Posicionamiento y Precios',
+    positionLabel: 'Su posicionamiento',
+    tierHelp: 'Esta elección sirve para posicionar su oferta (no para calificarle).',
+    tiers: {
+      essential: { title: 'Essential', subtitle: 'Almuerzos / cenas privadas, familias, grupos pequeños' },
+      premium:   { title: 'Premium',   subtitle: 'Villas, conciergeries, experiencias cuidadas' },
+      luxury:    { title: 'Luxury',    subtitle: 'Chalets, yates, UHNW, altas exigencias' },
+      ultra:     { title: 'Ultra',     subtitle: 'Residencias largas, yates >40m, brigada posible' },
+    },
+    suggestionsTitle: 'Sugerencias ({tier})',
+    suggestionsBaseMarket:
+      'Base de mercado: Residencia {rmin}–{rmax} €/día • Eventos {emin}–{emax} €/pers',
+    suggestionsAdjustment: 'Ajuste de opciones: x{m}',
+    applySuggestions: 'Aplicar sugerencias',
+    resetCta: 'Restablecer',
+    modeSimple: 'Modo simple',
+    modeTarget: 'Objetivo de ingresos',
+    targetNetLabel: 'Objetivo neto / día (€)',
+    targetNetPlaceholder: 'ej.: 600',
+    estimatedCostsLabel: 'Costos estimados / día (€)',
+    estimatedCostsPlaceholder: 'ej.: 120',
+    suggestedRateLabel: 'Tarifa sugerida',
+    suggestedRateUnit: '€/día',
+    applyToDailyCta: 'Aplicar a la tarifa diaria',
+    indicativeNote: '*Indicativo. Ayuda al matching y aclara la oferta para conciergeries/clientes.',
+    residenceLabel: 'Residencia privada',
+    dailyRateLabel: 'Tarifa diaria (€/día)',
+    dailyRatePlaceholder: 'ej.: 500',
+    dailyRateHint: 'Indique su base sin compras de materia prima si es necesario.',
+    chooseTierFirst: 'Elija un posicionamiento para ver la referencia de mercado.',
+    rangeEmpty: 'Sin indicar',
+    rangeLow: 'Más bien bajo (mercado: {min}–{max})',
+    rangeHigh: 'Más bien alto (mercado: {min}–{max})',
+    rangeOk: 'Dentro del mercado ({min}–{max})',
+    minDaysLabel: 'Mínimo de días (opcional)',
+    minDaysPlaceholder: 'ej.: 3',
+    minDaysHint: 'Ej.: 2 días mínimo por desplazamiento.',
+    eventLabel: 'Eventos',
+    eventPriceLabel: 'Precio por persona (€/pers)',
+    eventPricePlaceholder: 'ej.: 120',
+    minGuestsLabel: 'Mínimo de invitados (opcional)',
+    minGuestsPlaceholder: 'ej.: 12',
+    eventEmpty: 'Si no hace eventos, deje vacío.',
+    flagsLabel: 'Opciones',
+    flags: {
+      highSeason: 'Temporada alta',
+      international: 'Internacional',
+      yacht: 'Yate',
+      brigade: 'Brigada posible',
+    },
+    summaryLabel: 'Resumen (visible para conciergerie)',
+    summaryTier: 'Tier: {tier}',
+    summaryResidence: 'Residencia',
+    summaryEvent: 'Eventos',
+    summaryDailyUnit: '€/día',
+    summaryPerPersonUnit: '€/pers',
+    summaryMinDays: 'mín. {n} días',
+    summaryMinGuests: 'mín. {n} invitados',
   },
 };
 
