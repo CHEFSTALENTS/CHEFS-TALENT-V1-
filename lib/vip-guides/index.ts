@@ -11,6 +11,10 @@ import { yachtVillaChalet } from './_guides/yacht-villa-chalet';
 import { menuSignature } from './_guides/menu-signature';
 import { clientDifficileMissionLongue } from './_guides/client-difficile-mission-longue';
 import { reseauFournisseursEurope } from './_guides/reseau-fournisseurs-europe';
+import { cuisineEvenementPrive } from './_guides/cuisine-evenement-prive';
+import { contratChefPrive } from './_guides/contrat-chef-prive';
+import { dossierPresseChefPrive } from './_guides/dossier-presse-chef-prive';
+import { travaillerAvecAgentConciergerie } from './_guides/travailler-avec-agent-conciergerie';
 
 export type {
   Guide,
@@ -28,6 +32,10 @@ const ALL_GUIDES: Guide[] = [
   menuSignature,
   clientDifficileMissionLongue,
   reseauFournisseursEurope,
+  cuisineEvenementPrive,
+  contratChefPrive,
+  dossierPresseChefPrive,
+  travaillerAvecAgentConciergerie,
 ];
 
 export const GUIDES: Record<string, Guide> = ALL_GUIDES.reduce(

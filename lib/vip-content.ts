@@ -68,8 +68,9 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
     {
       id: 'tip-metier-3',
       pillar: 'metier',
-      title: 'La cuisine d’événement privé : un dîner pour 30 dans une villa',
-      desc: 'À venir. Logistique, menu, équipe et timing pour les grands services privés.',
+      title: 'La cuisine d’événement privé : un dîner pour trente dans une villa',
+      desc: 'Logistique, menu, équipe et timing pour passer du service quotidien au dîner d’événement sans rupture de niveau.',
+      href: '/chef/vip/guides/cuisine-evenement-prive',
     },
     {
       id: 'tip-metier-4',
@@ -97,7 +98,8 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
       id: 'tip-business-3',
       pillar: 'business',
       title: 'Le contrat chef privé : les clauses qui protègent vraiment',
-      desc: 'À venir. Périmètre, paiement, rupture, RC pro : ce qui doit figurer noir sur blanc.',
+      desc: 'Les sept clauses qui font la différence entre un contrat décoratif et un contrat qui tient.',
+      href: '/chef/vip/guides/contrat-chef-prive',
     },
     {
       id: 'tip-business-4',
@@ -118,7 +120,8 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
       id: 'tip-marque-2',
       pillar: 'marque',
       title: 'Le dossier de presse du chef privé',
-      desc: 'À venir. Ce que les médias attendent, et comment le présenter sans avoir un attaché de presse.',
+      desc: 'Ce que les médias attendent, et comment leur servir une matière propre sans attaché de presse.',
+      href: '/chef/vip/guides/dossier-presse-chef-prive',
     },
     {
       id: 'tip-marque-3',
@@ -139,7 +142,8 @@ export const DEFAULT_VIP_CONTENT: VipContent = {
       id: 'tip-humain-2',
       pillar: 'humain',
       title: 'Travailler avec un agent ou une conciergerie',
-      desc: 'À venir. La relation à entretenir, les attentes implicites, les pièges des contrats triangulaires.',
+      desc: 'La relation à entretenir, les attentes implicites, les pièges des contrats triangulaires.',
+      href: '/chef/vip/guides/travailler-avec-agent-conciergerie',
     },
     {
       id: 'tip-humain-3',
