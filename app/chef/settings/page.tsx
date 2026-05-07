@@ -21,15 +21,17 @@ import {
   Calendar,
   SlidersHorizontal,
   DollarSign,
-  Upload,
 } from 'lucide-react';
 import { computeChefScore } from '@/lib/chefScore';
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 import { supabase } from '@/services/supabaseClient';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format } from '@/lib/chef-i18n';
 
 /* ----------------- Password Section (Supabase) ----------------- */
 
 function PasswordSection() {
+  const { t } = useChefLocale();
   const [pw1, setPw1] = useState('');
   const [pw2, setPw2] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,8 +40,8 @@ function PasswordSection() {
   const onSave = async () => {
     setMsg(null);
 
-    if (pw1.length < 8) return setMsg('Mot de passe trop court (8+ caractères).');
-    if (pw1 !== pw2) return setMsg('Les mots de passe ne correspondent pas.');
+    if (pw1.length < 8) return setMsg(t.settings.password.tooShort);
+    if (pw1 !== pw2) return setMsg(t.settings.password.mismatch);
 
     setLoading(true);
     try {
@@ -48,9 +50,9 @@ function PasswordSection() {
 
       setPw1('');
       setPw2('');
-      setMsg('✅ Mot de passe mis à jour.');
+      setMsg(t.settings.password.success);
     } catch (e: any) {
-      setMsg(e?.message || 'Erreur lors de la mise à jour.');
+      setMsg(e?.message || t.settings.password.error);
     } finally {
       setLoading(false);
     }
@@ -59,36 +61,36 @@ function PasswordSection() {
   return (
     <div className="bg-white border border-stone-200 p-6 space-y-4 rounded-2xl">
       <div>
-        <Label>Mot de passe</Label>
+        <Label>{t.settings.password.label}</Label>
         <p className="text-xs text-stone-500 mt-1">
-          Après votre première connexion via lien magique, vous pouvez définir un mot de passe pour vous reconnecter plus facilement.
+          {t.settings.password.desc}
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label>Nouveau mot de passe</Label>
+        <Label>{t.settings.password.newLabel}</Label>
         <Input
           type="password"
           value={pw1}
           onChange={(e) => setPw1((e.target as HTMLInputElement).value)}
-          placeholder="8+ caractères"
+          placeholder={t.settings.password.newPlaceholder}
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Confirmer</Label>
+        <Label>{t.settings.password.confirmLabel}</Label>
         <Input
           type="password"
           value={pw2}
           onChange={(e) => setPw2((e.target as HTMLInputElement).value)}
-          placeholder="Répéter"
+          placeholder={t.settings.password.confirmPlaceholder}
         />
       </div>
 
       {msg && <div className="text-sm text-stone-600">{msg}</div>}
 
       <Button onClick={onSave} disabled={loading} className="bg-stone-900 hover:bg-stone-800">
-        {loading ? 'Mise à jour…' : 'Mettre à jour le mot de passe'}
+        {loading ? t.settings.password.ctaLoading : t.settings.password.cta}
       </Button>
     </div>
   );
@@ -114,10 +116,10 @@ type ChefProfile = {
   portfolioUrl?: string;
 
   avatarUrl?: string;
-  photoUrl?: string; // legacy
+  photoUrl?: string;
   yearsExperience?: number | null;
 
-  images?: string[]; // portfolio photos
+  images?: string[];
   founder?: boolean;
 
   pricing?: any;
@@ -172,6 +174,7 @@ function safeWriteLS(key: string, value: any) {
 
 export default function ChefSettingsPage() {
   const router = useRouter();
+  const { t } = useChefLocale();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -181,7 +184,6 @@ export default function ChefSettingsPage() {
   const [profile, setProfile] = useState<ChefProfile>({});
   const [notice, setNotice] = useState<string | null>(null);
 
-  // ✅ Normalisation pour score / compat legacy
   const scoreInput = useMemo(() => {
     const p: any = profile ?? {};
     return {
@@ -193,7 +195,6 @@ export default function ChefSettingsPage() {
     };
   }, [profile]);
 
-  // (si tu l’utilises ailleurs)
   const validationCompletion = useMemo(() => {
     const { details, ok } = isProfileCompleteForValidation(profile ?? {});
     const items = Object.entries(details).map(([k, v]) => ({ key: k, ok: Boolean(v) }));
@@ -204,7 +205,6 @@ export default function ChefSettingsPage() {
 
   const { score, rules } = useMemo(() => computeChefScore(scoreInput), [scoreInput]);
 
-  // ✅ Source de vérité = DB (Supabase session + /api/chef/profile)
   useEffect(() => {
     let cancelled = false;
 
@@ -232,7 +232,6 @@ export default function ChefSettingsPage() {
         if (fromDb) {
           setProfile(fromDb);
         } else {
-          // fallback localStorage (au cas où)
           const fromLs =
             safeReadLS<ChefProfile>(STORAGE_KEY) ??
             FALLBACK_KEYS.map((k) => safeReadLS<ChefProfile>(k)).find(Boolean) ??
@@ -260,7 +259,6 @@ export default function ChefSettingsPage() {
     };
   }, [router]);
 
-  // ✅ Checklist tolérante (bio / images / avatar / location / pricing etc.)
   const checklist = useMemo(() => {
     const bio = String(profile.bio ?? (profile as any).about ?? (profile as any).description ?? '').trim();
 
@@ -274,15 +272,9 @@ export default function ChefSettingsPage() {
       (profile as any).portfolioImages ??
       [];
 
-const MIN_PORTFOLIO = 5;
-const imageCount = Array.isArray(imagesRaw) ? imagesRaw.filter(Boolean).length : 0;
-const hasMinImages = imageCount >= MIN_PORTFOLIO;
-    
-    const photoUrl = String((profile as any).photoUrl ?? (profile as any).avatarUrl ?? '').trim();
-
-    const instagram = String((profile as any).instagram ?? '').trim();
-    const website = String((profile as any).website ?? '').trim();
-    const portfolioUrl = String((profile as any).portfolioUrl ?? '').trim();
+    const MIN_PORTFOLIO = 5;
+    const imageCount = Array.isArray(imagesRaw) ? imagesRaw.filter(Boolean).length : 0;
+    const hasMinImages = imageCount >= MIN_PORTFOLIO;
 
     const items: Array<{
       key: string;
@@ -294,70 +286,70 @@ const hasMinImages = imageCount >= MIN_PORTFOLIO;
     }> = [
       {
         key: 'identity',
-        label: 'Identité',
+        label: t.settings.items.identity.label,
         ok:
           !!String((profile as any).name ?? '').trim() &&
           !!String(profile.phone ?? '').trim() &&
           (!!String((profile as any).city ?? '').trim() || !!String(profile.location?.baseCity ?? '').trim()),
-        hint: 'Nom, téléphone, ville…',
+        hint: t.settings.items.identity.hint,
         href: '/chef/identity',
         icon: User,
       },
       {
         key: 'experience',
-        label: 'Expérience',
+        label: t.settings.items.experience.label,
         ok: years > 0 || bio.length >= 80 || (profile.specialties?.length ?? 0) >= 1,
-        hint: 'Bio + expérience',
+        hint: t.settings.items.experience.hint,
         href: '/chef/experience',
         icon: Briefcase,
       },
       {
         key: 'portfolio',
-        label: 'Portfolio',
+        label: t.settings.items.portfolio.label,
         ok: hasMinImages,
-hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
+        hint: format(t.settings.items.portfolio.hint, { n: imageCount, min: MIN_PORTFOLIO }),
         href: '/chef/portfolio',
         icon: ImageIcon,
       },
       {
         key: 'mobility',
-        label: 'Zone & mobilité',
+        label: t.settings.items.mobility.label,
         ok:
           !!String(profile.location?.baseCity ?? '').trim() ||
           profile.location?.internationalMobility === true ||
           (profile.location?.coverageZones?.length ?? 0) > 0,
-        hint: 'Zones, déplacements',
+        hint: t.settings.items.mobility.hint,
         href: '/chef/mobility',
         icon: MapPinned,
       },
       {
         key: 'pricing',
-        label: 'Tarifs',
+        label: t.settings.items.pricing.label,
         ok: isPricingComplete(profile),
-        hint: 'Prix / jour ou prix / personne',
+        hint: t.settings.items.pricing.hint,
         href: '/chef/pricing',
         icon: DollarSign,
       },
       {
         key: 'availability',
-        label: 'Disponibilités',
-        ok: true, // volontairement non-bloquant
-        hint: 'Calendrier, périodes',
+        label: t.settings.items.availability.label,
+        ok: true,
+        hint: t.settings.items.availability.hint,
         href: '/chef/availability',
         icon: Calendar,
       },
       {
         key: 'preferences',
-        label: 'Préférences',
+        label: t.settings.items.preferences.label,
         ok: (profile.cuisines?.length ?? 0) >= 1 && (profile.languages?.length ?? 0) >= 1,
-        hint: 'Cuisines, langues…',
+        hint: t.settings.items.preferences.hint,
         href: '/chef/preferences',
         icon: SlidersHorizontal,
       },
     ];
 
     return items;
-  }, [profile]);
+  }, [profile, t]);
 
   const completion = useMemo(() => {
     const total = checklist.length;
@@ -368,11 +360,11 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
 
   const launchTier = useMemo(() => {
     const s = completion.score;
-    if (s >= 90) return { label: 'Priorité MAX', tone: 'dark' as const, icon: Crown };
-    if (s >= 70) return { label: 'Prioritaire', tone: 'violet' as const, icon: ShieldCheck };
-    if (s >= 40) return { label: 'En progression', tone: 'stone' as const, icon: Sparkles };
-    return { label: 'À compléter', tone: 'stone' as const, icon: Lock };
-  }, [completion.score]);
+    if (s >= 90) return { label: t.settings.tier.priorityMax, tone: 'dark' as const, icon: Crown };
+    if (s >= 70) return { label: t.settings.tier.priority, tone: 'violet' as const, icon: ShieldCheck };
+    if (s >= 40) return { label: t.settings.tier.progress, tone: 'stone' as const, icon: Sparkles };
+    return { label: t.settings.tier.todo, tone: 'stone' as const, icon: Lock };
+  }, [completion.score, t]);
 
   const canBecomeFounder = completion.score >= 70 && isPricingComplete(profile);
 
@@ -391,10 +383,8 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
         updatedAt: new Date().toISOString(),
       };
 
-      // ✅ cache local
       safeWriteLS(STORAGE_KEY, merged);
 
-      // ✅ DB
       const res = await fetch('/api/chef/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -404,10 +394,10 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
       if (!res.ok) throw new Error(await res.text());
 
       setProfile(merged);
-      setNotice('Enregistré ✅');
+      setNotice(t.settings.saved);
     } catch (e) {
       console.error('SAVE ERROR', e);
-      setNotice('Erreur d’enregistrement');
+      setNotice(t.settings.saveError);
     } finally {
       setSaving(false);
       setTimeout(() => setNotice(null), 2500);
@@ -420,15 +410,15 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
   };
 
   return (
-  
+
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Header */}
         <div>
           <Marker />
-          <Label>Paramètres</Label>
-          <h1 className="text-3xl font-serif text-stone-900">Votre profil Chef</h1>
+          <Label>{t.settings.pageLabel}</Label>
+          <h1 className="text-3xl font-serif text-stone-900">{t.settings.pageTitle}</h1>
           <p className="text-sm text-stone-500 mt-2 max-w-2xl">
-            Plateforme en lancement : les missions arrivent bientôt. Compléter votre profil vous place en priorité lors du matching.
+            {t.settings.subtitle}
           </p>
         </div>
 
@@ -438,13 +428,17 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <launchTier.icon className="w-5 h-5 text-stone-500" />
-                <div className="font-medium text-stone-900">Statut de lancement</div>
+                <div className="font-medium text-stone-900">{t.settings.launchStatus}</div>
                 <Pill tone={launchTier.tone}>{launchTier.label}</Pill>
-                {profile.founder ? <Pill tone="dark">Chef Fondateur</Pill> : null}
+                {profile.founder ? <Pill tone="dark">{t.settings.founderPill}</Pill> : null}
               </div>
 
               <div className="text-sm text-stone-600">
-                Complétion profil : <span className="font-semibold text-stone-900">{completion.score}%</span> ({completion.ok}/{completion.total})
+                {format(t.settings.completionLabel, {
+                  pct: completion.score,
+                  ok: completion.ok,
+                  total: completion.total,
+                })}
               </div>
 
               <div className="h-2 w-full bg-stone-100 rounded-full overflow-hidden">
@@ -452,7 +446,7 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
               </div>
 
               <div className="text-xs text-stone-500">
-                Règle simple : <span className="text-stone-800 font-medium">plus ton profil est complet</span>, plus tu remontes en priorité sur les demandes (fast & standard).
+                {t.settings.completionRule}
               </div>
             </div>
 
@@ -464,7 +458,7 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
                 className="bg-stone-900 hover:bg-stone-800"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                Enregistrer
+                {t.settings.saveCta}
               </Button>
               {notice ? <div className="text-sm text-stone-600">{notice}</div> : null}
             </div>
@@ -478,15 +472,15 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
             <div className="flex-1">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-serif text-stone-900">Chef Fondateur</h2>
+                  <h2 className="text-lg font-serif text-stone-900">{t.settings.founderSectionTitle}</h2>
                   <p className="text-sm text-stone-600 mt-1">
-                    Badge réservé aux premiers chefs : visibilité renforcée au lancement + accès prioritaire aux premières missions.
+                    {t.settings.founderSectionDesc}
                   </p>
                 </div>
 
                 <div>
                   {profile.founder ? (
-                    <Pill tone="dark">Activé</Pill>
+                    <Pill tone="dark">{t.settings.founderActivated}</Pill>
                   ) : (
                     <Button
                       size="sm"
@@ -494,7 +488,7 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
                       onClick={activateFounder}
                       disabled={!canBecomeFounder || saving || loading}
                     >
-                      Activer
+                      {t.settings.founderActivateCta}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   )}
@@ -503,8 +497,7 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
 
               {!profile.founder ? (
                 <div className="mt-3 text-xs text-stone-500">
-                  Condition : profil ≥ <span className="font-semibold text-stone-800">70%</span>.{' '}
-                  {canBecomeFounder ? '✅ OK' : 'Complète encore 2–3 sections.'}
+                  {canBecomeFounder ? t.settings.founderConditionMet : t.settings.founderConditionUnmet}
                 </div>
               ) : null}
             </div>
@@ -515,8 +508,8 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Checklist */}
           <div className="lg:col-span-1 border border-stone-200 bg-white rounded-2xl p-6">
-            <h3 className="text-base font-semibold text-stone-900">Checklist (Priorité)</h3>
-            <p className="text-sm text-stone-500 mt-1">Atteins 70% pour être prioritaire.</p>
+            <h3 className="text-base font-semibold text-stone-900">{t.settings.checklistTitle}</h3>
+            <p className="text-sm text-stone-500 mt-1">{t.settings.checklistSubtitle}</p>
 
             <div className="mt-4 space-y-3">
               {checklist.map((item) => (
@@ -528,12 +521,12 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
                   )}
                   <div className="flex-1">
                     <div className="text-sm text-stone-900 font-medium">{item.label}</div>
-                    <div className="text-xs text-stone-400">{item.ok ? 'OK' : item.hint ?? 'À compléter'}</div>
+                    <div className="text-xs text-stone-400">{item.ok ? t.settings.checklistOk : item.hint ?? t.settings.sectionTodo}</div>
                   </div>
 
                   {item.href ? (
                     <Link href={item.href} className="text-xs text-stone-700 hover:text-stone-900 transition whitespace-nowrap">
-                      Ouvrir →
+                      {t.settings.checklistOpen}
                     </Link>
                   ) : null}
                 </div>
@@ -551,13 +544,13 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
               <div className="space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-serif text-stone-900">Gérer votre profil</h3>
+                    <h3 className="text-lg font-serif text-stone-900">{t.settings.hubTitle}</h3>
                     <p className="text-sm text-stone-500 mt-1">
-                      Les informations se remplissent dans les pages dédiées (Identité, Expérience, Portfolio…). Ici, on centralise tout.
+                      {t.settings.hubSubtitle}
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs uppercase tracking-widest text-stone-400">Profil</div>
+                    <div className="text-xs uppercase tracking-widest text-stone-400">{t.settings.hubProfileLabel}</div>
                     <div className="text-sm text-stone-900 font-medium">{profile.name?.trim() ? profile.name : '—'}</div>
                     <div className="text-xs text-stone-500">{profile.email ?? '—'}</div>
                   </div>
@@ -565,63 +558,77 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   <SectionCard
-                    title="Identité"
-                    desc="Nom, téléphone, ville…"
+                    title={t.settings.sections.identity.title}
+                    desc={t.settings.sections.identity.desc}
                     href="/chef/identity"
                     icon={User}
                     ok={checklist.find((i) => i.key === 'identity')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                   <SectionCard
-                    title="Expérience"
-                    desc="Bio, années, style…"
+                    title={t.settings.sections.experience.title}
+                    desc={t.settings.sections.experience.desc}
                     href="/chef/experience"
                     icon={Briefcase}
                     ok={checklist.find((i) => i.key === 'experience')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                   <SectionCard
-                    title="Portfolio"
-                    desc="Photos, Instagram, site…"
+                    title={t.settings.sections.portfolio.title}
+                    desc={t.settings.sections.portfolio.desc}
                     href="/chef/portfolio"
                     icon={ImageIcon}
                     ok={checklist.find((i) => i.key === 'portfolio')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                   <SectionCard
-                    title="Zone & Mobilité"
-                    desc="Zones, déplacements…"
+                    title={t.settings.sections.mobility.title}
+                    desc={t.settings.sections.mobility.desc}
                     href="/chef/mobility"
                     icon={MapPinned}
                     ok={checklist.find((i) => i.key === 'mobility')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                   <SectionCard
-                    title="Disponibilités"
-                    desc="Périodes, calendrier…"
+                    title={t.settings.sections.availability.title}
+                    desc={t.settings.sections.availability.desc}
                     href="/chef/availability"
                     icon={Calendar}
                     ok={checklist.find((i) => i.key === 'availability')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                   <SectionCard
-                    title="Préférences"
-                    desc="Cuisines, langues…"
+                    title={t.settings.sections.preferences.title}
+                    desc={t.settings.sections.preferences.desc}
                     href="/chef/preferences"
                     icon={SlidersHorizontal}
                     ok={checklist.find((i) => i.key === 'preferences')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                   <SectionCard
-                    title="Tarifs"
-                    desc="Positionnement & prix"
+                    title={t.settings.sections.pricing.title}
+                    desc={t.settings.sections.pricing.desc}
                     href="/chef/pricing"
                     icon={DollarSign}
                     ok={checklist.find((i) => i.key === 'pricing')?.ok}
+                    okLabel={t.settings.sectionOk}
+                    todoLabel={t.settings.sectionTodo}
                   />
                 </div>
 
                 <div className="pt-3 flex items-center gap-2">
                   <Button className="bg-stone-900 hover:bg-stone-800" onClick={() => saveProfile(profile)} disabled={saving}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                    Enregistrer
+                    {t.settings.saveCta}
                   </Button>
                   <div className="text-xs text-stone-500">
-                    Astuce : vise <span className="font-semibold text-stone-800">70%+</span> pour être prioritaire dès l’ouverture des missions.
+                    {t.settings.hubAdvice}
                   </div>
                 </div>
               </div>
@@ -639,10 +646,10 @@ hint: `5 photos minimum (${imageCount}/${MIN_PORTFOLIO})`,
 
         {/* Footer note */}
         <div className="text-xs text-stone-400">
-          Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).
+          {t.settings.footerNote}
         </div>
       </div>
-   
+
   );
 }
 
@@ -665,12 +672,16 @@ function SectionCard({
   href,
   icon: Icon,
   ok,
+  okLabel,
+  todoLabel,
 }: {
   title: string;
   desc: string;
   href: string;
   icon: React.ElementType;
   ok?: boolean;
+  okLabel: string;
+  todoLabel: string;
 }) {
   return (
     <Link
@@ -684,11 +695,11 @@ function SectionCard({
       <div className="flex-1">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold text-stone-900">{title}</div>
-          {ok ? <Pill tone="dark">OK</Pill> : <Pill>À compléter</Pill>}
+          {ok ? <Pill tone="dark">{okLabel}</Pill> : <Pill>{todoLabel}</Pill>}
         </div>
         <div className="text-xs text-stone-500 mt-1">{desc}</div>
         <div className="text-xs text-stone-700 mt-2 opacity-0 group-hover:opacity-100 transition">
-          Ouvrir <span aria-hidden>→</span>
+          <span aria-hidden>→</span>
         </div>
       </div>
     </Link>

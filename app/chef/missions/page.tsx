@@ -18,10 +18,11 @@ import {
   ArrowRight,
   FileText,
 } from 'lucide-react';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format, type Dictionary } from '@/lib/chef-i18n';
 
 type Tab = 'offered' | 'active' | 'history';
 
-// Convertit une ligne Supabase (snake_case) vers Mission (camelCase)
 function rowToMission(m: any): Mission {
   return {
     id: m.id,
@@ -43,13 +44,15 @@ function rowToMission(m: any): Mission {
 }
 
 export default function ChefMissionsPage() {
+  const { t, locale } = useChefLocale();
+  const dateLocale = t.availability.dateLocale;
+
   const [loading, setLoading] = useState(true);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('offered');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Récupérer le user Supabase au montage
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       const id = data?.session?.user?.id ?? null;
@@ -115,8 +118,8 @@ export default function ChefMissionsPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
         <Marker />
-        <Label>Operations</Label>
-        <h1 className="text-3xl font-serif text-stone-900">Your Missions</h1>
+        <Label>{t.missions.pageLabel}</Label>
+        <h1 className="text-3xl font-serif text-stone-900">{t.missions.pageTitle}</h1>
       </div>
 
       {/* Banner */}
@@ -129,15 +132,14 @@ export default function ChefMissionsPage() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border bg-stone-900 text-white border-stone-900">
-                  Summer 2026
+                  {t.missions.bannerSeason}
                 </span>
                 <p className="text-sm text-stone-900 font-medium">
-                  Missions opening now — Ibiza, Saint-Tropez, Mykonos
+                  {t.missions.bannerHeadline}
                 </p>
               </div>
               <p className="text-sm text-stone-500 font-light mt-1">
-                Complete your profile to be matched with incoming client requests.
-                The most complete profiles get placed first.
+                {t.missions.bannerDesc}
               </p>
             </div>
           </div>
@@ -148,7 +150,7 @@ export default function ChefMissionsPage() {
               className="border-stone-200"
               onClick={() => window.location.assign('/chef/identity')}
             >
-              Complete profile
+              {t.missions.completeProfile}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
             <Button
@@ -156,7 +158,7 @@ export default function ChefMissionsPage() {
               className="bg-stone-900 hover:bg-stone-800"
               onClick={fetchMissions}
             >
-              Refresh
+              {t.missions.refresh}
             </Button>
           </div>
         </div>
@@ -164,9 +166,9 @@ export default function ChefMissionsPage() {
 
       {/* Tabs */}
       <div className="border-b border-stone-200 flex gap-8">
-        <TabButton label="Proposals" active={activeTab === 'offered'} onClick={() => setActiveTab('offered')} count={offeredCount} />
-        <TabButton label="Active" active={activeTab === 'active'} onClick={() => setActiveTab('active')} count={activeCount} />
-        <TabButton label="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+        <TabButton label={t.missions.tabs.proposals} active={activeTab === 'offered'} onClick={() => setActiveTab('offered')} count={offeredCount} />
+        <TabButton label={t.missions.tabs.active} active={activeTab === 'active'} onClick={() => setActiveTab('active')} count={activeCount} />
+        <TabButton label={t.missions.tabs.history} active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
       </div>
 
       {/* Content */}
@@ -183,10 +185,12 @@ export default function ChefMissionsPage() {
                 mission={mission}
                 onAction={handleAction}
                 isActionLoading={actionLoading === mission.id}
+                t={t}
+                dateLocale={dateLocale}
               />
             ))
           ) : (
-            <EmptyState tab={activeTab} />
+            <EmptyState tab={activeTab} t={t} />
           )}
         </div>
       )}
@@ -221,9 +225,11 @@ interface MissionCardProps {
   mission: Mission & { contractUrl?: string | null; notes?: string };
   onAction: (id: string, action: 'accepted' | 'declined') => void;
   isActionLoading: boolean;
+  t: Dictionary;
+  dateLocale: string;
 }
 
-const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLoading }) => {
+const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLoading, t, dateLocale }) => {
   const isOffer = mission.status === 'offered';
   const isConfirmed = mission.status === 'confirmed';
   const contractUrl = (mission as any).contractUrl;
@@ -233,9 +239,9 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
       <div className="flex flex-col md:flex-row justify-between md:items-start gap-6">
         <div className="space-y-4 flex-grow">
           <div className="flex items-center gap-3">
-            <MissionStatusBadge status={mission.status} />
+            <MissionStatusBadge status={mission.status} t={t} />
             <span className="text-xs text-stone-400 uppercase tracking-widest">
-              {mission.createdAt ? new Date(mission.createdAt).toLocaleDateString() : ''}
+              {mission.createdAt ? new Date(mission.createdAt).toLocaleDateString(dateLocale) : ''}
             </span>
           </div>
 
@@ -251,15 +257,15 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
               <div className="flex items-center gap-2 text-sm text-stone-600">
                 <Calendar className="w-4 h-4 text-stone-400" />
                 <span>
-                  {new Date(mission.startDate).toLocaleDateString()}
-                  {mission.endDate && ` — ${new Date(mission.endDate).toLocaleDateString()}`}
+                  {new Date(mission.startDate).toLocaleDateString(dateLocale)}
+                  {mission.endDate && ` — ${new Date(mission.endDate).toLocaleDateString(dateLocale)}`}
                 </span>
               </div>
             )}
             {mission.guestCount > 0 && (
               <div className="flex items-center gap-2 text-sm text-stone-600">
                 <Users className="w-4 h-4 text-stone-400" />
-                <span>{mission.guestCount} guests</span>
+                <span>{format(t.missions.cardGuests, { n: mission.guestCount })}</span>
               </div>
             )}
             {mission.serviceLevel && (
@@ -281,9 +287,9 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
         <div className="md:text-right flex flex-col items-start md:items-end gap-4 min-w-[160px]">
           {mission.estimatedAmount > 0 && (
             <div>
-              <span className="block text-xs uppercase tracking-widest text-stone-400">Your fee</span>
+              <span className="block text-xs uppercase tracking-widest text-stone-400">{t.missions.cardYourFee}</span>
               <span className="text-xl font-medium text-stone-900">
-                {Number(mission.estimatedAmount).toLocaleString('en-GB')} €
+                {Number(mission.estimatedAmount).toLocaleString(dateLocale)} €
               </span>
             </div>
           )}
@@ -296,7 +302,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
                 disabled={isActionLoading}
                 className="w-full bg-stone-900 hover:bg-stone-800"
               >
-                {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Check className="w-3 h-3 mr-2" /> Accept</>}
+                {isActionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Check className="w-3 h-3 mr-2" /> {t.missions.cardAccept}</>}
               </Button>
               <Button
                 size="sm"
@@ -305,7 +311,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
                 disabled={isActionLoading}
                 className="w-full"
               >
-                <X className="w-3 h-3 mr-2" /> Decline
+                <X className="w-3 h-3 mr-2" /> {t.missions.cardDecline}
               </Button>
             </div>
           )}
@@ -317,7 +323,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-sm text-stone-600 hover:text-stone-900 border border-stone-200 px-3 py-2 rounded-lg transition w-full justify-center"
             >
-              <FileText className="w-4 h-4" /> View contract
+              <FileText className="w-4 h-4" /> {t.missions.cardViewContract}
             </a>
           )}
 
@@ -327,11 +333,14 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
               className="w-full bg-[#25D366] hover:bg-[#128C7E] border-none text-white"
               onClick={() => {
                 const cleanPhone = (mission as any).clientPhone?.replace(/[^0-9]/g, '');
-                const message = `Hello, I'm your private chef via Chefs Talents for the mission on ${new Date(mission.startDate).toLocaleDateString()} in ${mission.location}. Please let me know if you have any questions.`;
+                const message = format(t.missions.waMessage, {
+                  date: new Date(mission.startDate).toLocaleDateString(dateLocale),
+                  location: mission.location,
+                });
                 window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
               }}
             >
-              <MessageCircle className="w-4 h-4 mr-2" /> Contact Client
+              <MessageCircle className="w-4 h-4 mr-2" /> {t.missions.cardContactClient}
             </Button>
           )}
         </div>
@@ -341,7 +350,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
 };
 
 /* ── MissionStatusBadge ── */
-const MissionStatusBadge = ({ status }: { status: string }) => {
+const MissionStatusBadge = ({ status, t }: { status: string; t: Dictionary }) => {
   const styles: Record<string, string> = {
     offered: 'bg-blue-50 text-blue-700 border-blue-100',
     accepted: 'bg-yellow-50 text-yellow-700 border-yellow-100',
@@ -351,12 +360,12 @@ const MissionStatusBadge = ({ status }: { status: string }) => {
     cancelled: 'bg-stone-50 text-stone-400 border-stone-100',
   };
   const labels: Record<string, string> = {
-    offered: 'Proposal',
-    accepted: 'Accepted',
-    confirmed: 'Confirmed',
-    completed: 'Completed',
-    declined: 'Declined',
-    cancelled: 'Cancelled',
+    offered: t.missions.status.offered,
+    accepted: t.missions.status.accepted,
+    confirmed: t.missions.status.confirmed,
+    completed: t.missions.status.completed,
+    declined: t.missions.status.declined,
+    cancelled: t.missions.status.cancelled,
   };
   return (
     <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${styles[status] || 'bg-gray-100 text-gray-500'}`}>
@@ -366,11 +375,11 @@ const MissionStatusBadge = ({ status }: { status: string }) => {
 };
 
 /* ── EmptyState ── */
-const EmptyState = ({ tab }: { tab: Tab }) => {
-  const messages = {
-    offered: 'No mission proposals yet.',
-    active: 'No active or upcoming missions.',
-    history: 'No history yet.',
+const EmptyState = ({ tab, t }: { tab: Tab; t: Dictionary }) => {
+  const messages: Record<Tab, string> = {
+    offered: t.missions.emptyOffered,
+    active: t.missions.emptyActive,
+    history: t.missions.emptyHistory,
   };
   return (
     <div className="py-16 text-center border border-dashed border-stone-200 bg-stone-50/50">

@@ -386,6 +386,124 @@ export type Dictionary = {
     saveError: string;
   };
 
+  missions: {
+    pageLabel: string;
+    pageTitle: string;
+    bannerSeason: string;
+    bannerHeadline: string;
+    bannerDesc: string;
+    completeProfile: string;
+    refresh: string;
+    tabs: { proposals: string; active: string; history: string };
+    cardYourFee: string;
+    cardGuests: string; // "{n} guests"
+    cardAccept: string;
+    cardDecline: string;
+    cardViewContract: string;
+    cardContactClient: string;
+    waMessage: string; // template with {date} and {location}
+    status: {
+      offered: string;
+      accepted: string;
+      confirmed: string;
+      completed: string;
+      declined: string;
+      cancelled: string;
+    };
+    emptyOffered: string;
+    emptyActive: string;
+    emptyHistory: string;
+  };
+
+  earnings: {
+    pageLabel: string;
+    pageTitle: string;
+    kpis: {
+      totalLabel: string;
+      totalDesc: string;
+      last30Label: string;
+      last30Desc: string;
+      missionsLabel: string;
+      missionsDesc: string;
+      averageLabel: string;
+      averageDesc: string;
+    };
+    detailsTitle: string;
+    tableDate: string;
+    tableMission: string;
+    tableLocation: string;
+    tableAmount: string;
+    empty: string;
+  };
+
+  settings: {
+    pageLabel: string;
+    pageTitle: string;
+    subtitle: string;
+    launchStatus: string;
+    tier: {
+      priorityMax: string;
+      priority: string;
+      progress: string;
+      todo: string;
+    };
+    founderPill: string;
+    completionLabel: string; // "Complétion profil : {pct}% ({ok}/{total})"
+    completionRule: string;
+    saveCta: string;
+    saved: string;
+    saveError: string;
+    founderSectionTitle: string;
+    founderSectionDesc: string;
+    founderActivated: string;
+    founderActivateCta: string;
+    founderConditionMet: string;
+    founderConditionUnmet: string;
+    checklistTitle: string;
+    checklistSubtitle: string;
+    checklistOk: string;
+    checklistOpen: string;
+    items: {
+      identity: { label: string; hint: string };
+      experience: { label: string; hint: string };
+      portfolio: { label: string; hint: string }; // "5 photos minimum ({n}/{min})"
+      mobility: { label: string; hint: string };
+      pricing: { label: string; hint: string };
+      availability: { label: string; hint: string };
+      preferences: { label: string; hint: string };
+    };
+    hubTitle: string;
+    hubSubtitle: string;
+    hubProfileLabel: string;
+    hubAdvice: string;
+    sections: {
+      identity: { title: string; desc: string };
+      experience: { title: string; desc: string };
+      portfolio: { title: string; desc: string };
+      mobility: { title: string; desc: string };
+      availability: { title: string; desc: string };
+      preferences: { title: string; desc: string };
+      pricing: { title: string; desc: string };
+    };
+    sectionOk: string;
+    sectionTodo: string;
+    password: {
+      label: string;
+      desc: string;
+      newLabel: string;
+      newPlaceholder: string;
+      confirmLabel: string;
+      confirmPlaceholder: string;
+      tooShort: string;
+      mismatch: string;
+      success: string;
+      error: string;
+      cta: string;
+      ctaLoading: string;
+    };
+    footerNote: string;
+  };
+
   pricing: {
     pageLabel: string;
     pageTitle: string;
@@ -884,6 +1002,130 @@ const fr: Dictionary = {
     summaryMinDays: 'min {n} jours',
     summaryMinGuests: 'min {n} pers',
   },
+  missions: {
+    pageLabel: 'Opérations',
+    pageTitle: 'Vos missions',
+    bannerSeason: 'Été 2026',
+    bannerHeadline: 'Missions ouvertes — Ibiza, Saint-Tropez, Mykonos',
+    bannerDesc:
+      'Complétez votre profil pour être proposé aux demandes clients. Les profils les plus complets passent en priorité.',
+    completeProfile: 'Compléter le profil',
+    refresh: 'Rafraîchir',
+    tabs: { proposals: 'Propositions', active: 'En cours', history: 'Historique' },
+    cardYourFee: 'Votre rémunération',
+    cardGuests: '{n} convives',
+    cardAccept: 'Accepter',
+    cardDecline: 'Refuser',
+    cardViewContract: 'Voir le contrat',
+    cardContactClient: 'Contacter le client',
+    waMessage:
+      "Bonjour, je suis votre chef privé via Chefs Talents pour la mission du {date} à {location}. N'hésitez pas si vous avez des questions.",
+    status: {
+      offered: 'Proposition',
+      accepted: 'Acceptée',
+      confirmed: 'Confirmée',
+      completed: 'Terminée',
+      declined: 'Refusée',
+      cancelled: 'Annulée',
+    },
+    emptyOffered: 'Aucune proposition de mission pour l’instant.',
+    emptyActive: 'Aucune mission en cours ou à venir.',
+    emptyHistory: 'Aucun historique pour l’instant.',
+  },
+  earnings: {
+    pageLabel: 'Performance',
+    pageTitle: 'Revenus & Activité',
+    kpis: {
+      totalLabel: 'CA Total',
+      totalDesc: 'Missions réalisées',
+      last30Label: '30 derniers jours',
+      last30Desc: 'Revenus glissants',
+      missionsLabel: 'Missions',
+      missionsDesc: 'Complétées',
+      averageLabel: 'Panier moyen',
+      averageDesc: 'Par mission',
+    },
+    detailsTitle: 'Détail des revenus',
+    tableDate: 'Date',
+    tableMission: 'Mission',
+    tableLocation: 'Lieu',
+    tableAmount: 'Montant',
+    empty: 'Aucune donnée de revenu disponible.',
+  },
+  settings: {
+    pageLabel: 'Paramètres',
+    pageTitle: 'Votre profil Chef',
+    subtitle:
+      'Plateforme en lancement : les missions arrivent bientôt. Compléter votre profil vous place en priorité lors du matching.',
+    launchStatus: 'Statut de lancement',
+    tier: {
+      priorityMax: 'Priorité MAX',
+      priority: 'Prioritaire',
+      progress: 'En progression',
+      todo: 'À compléter',
+    },
+    founderPill: 'Chef Fondateur',
+    completionLabel: 'Complétion profil : {pct}% ({ok}/{total})',
+    completionRule:
+      'Règle simple : plus ton profil est complet, plus tu remontes en priorité sur les demandes (fast & standard).',
+    saveCta: 'Enregistrer',
+    saved: 'Enregistré ✅',
+    saveError: 'Erreur d’enregistrement',
+    founderSectionTitle: 'Chef Fondateur',
+    founderSectionDesc:
+      'Badge réservé aux premiers chefs : visibilité renforcée au lancement + accès prioritaire aux premières missions.',
+    founderActivated: 'Activé',
+    founderActivateCta: 'Activer',
+    founderConditionMet: '✅ OK',
+    founderConditionUnmet: 'Complète encore 2–3 sections.',
+    checklistTitle: 'Checklist (Priorité)',
+    checklistSubtitle: 'Atteins 70% pour être prioritaire.',
+    checklistOk: 'OK',
+    checklistOpen: 'Ouvrir →',
+    items: {
+      identity:    { label: 'Identité',         hint: 'Nom, téléphone, ville…' },
+      experience:  { label: 'Expérience',       hint: 'Bio + expérience' },
+      portfolio:   { label: 'Portfolio',        hint: '5 photos minimum ({n}/{min})' },
+      mobility:    { label: 'Zone & mobilité',  hint: 'Zones, déplacements' },
+      pricing:     { label: 'Tarifs',           hint: 'Prix / jour ou prix / personne' },
+      availability:{ label: 'Disponibilités',   hint: 'Calendrier, périodes' },
+      preferences: { label: 'Préférences',      hint: 'Cuisines, langues…' },
+    },
+    hubTitle: 'Gérer votre profil',
+    hubSubtitle:
+      'Les informations se remplissent dans les pages dédiées (Identité, Expérience, Portfolio…). Ici, on centralise tout.',
+    hubProfileLabel: 'Profil',
+    hubAdvice:
+      'Astuce : vise 70%+ pour être prioritaire dès l’ouverture des missions.',
+    sections: {
+      identity:     { title: 'Identité',           desc: 'Nom, téléphone, ville…' },
+      experience:   { title: 'Expérience',         desc: 'Bio, années, style…' },
+      portfolio:    { title: 'Portfolio',          desc: 'Photos, Instagram, site…' },
+      mobility:     { title: 'Zone & Mobilité',    desc: 'Zones, déplacements…' },
+      availability: { title: 'Disponibilités',     desc: 'Périodes, calendrier…' },
+      preferences:  { title: 'Préférences',        desc: 'Cuisines, langues…' },
+      pricing:      { title: 'Tarifs',             desc: 'Positionnement & prix' },
+    },
+    sectionOk: 'OK',
+    sectionTodo: 'À compléter',
+    password: {
+      label: 'Mot de passe',
+      desc:
+        'Après votre première connexion via lien magique, vous pouvez définir un mot de passe pour vous reconnecter plus facilement.',
+      newLabel: 'Nouveau mot de passe',
+      newPlaceholder: '8+ caractères',
+      confirmLabel: 'Confirmer',
+      confirmPlaceholder: 'Répéter',
+      tooShort: 'Mot de passe trop court (8+ caractères).',
+      mismatch: 'Les mots de passe ne correspondent pas.',
+      success: '✅ Mot de passe mis à jour.',
+      error: 'Erreur lors de la mise à jour.',
+      cta: 'Mettre à jour le mot de passe',
+      ctaLoading: 'Mise à jour…',
+    },
+    footerNote:
+      'Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).',
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -1320,6 +1562,129 @@ const en: Dictionary = {
     summaryPerPersonUnit: '€/pp',
     summaryMinDays: 'min {n} days',
     summaryMinGuests: 'min {n} guests',
+  },
+  missions: {
+    pageLabel: 'Operations',
+    pageTitle: 'Your missions',
+    bannerSeason: 'Summer 2026',
+    bannerHeadline: 'Missions opening — Ibiza, Saint-Tropez, Mykonos',
+    bannerDesc:
+      'Complete your profile to be matched with incoming requests. The most complete profiles get placed first.',
+    completeProfile: 'Complete profile',
+    refresh: 'Refresh',
+    tabs: { proposals: 'Proposals', active: 'Active', history: 'History' },
+    cardYourFee: 'Your fee',
+    cardGuests: '{n} guests',
+    cardAccept: 'Accept',
+    cardDecline: 'Decline',
+    cardViewContract: 'View contract',
+    cardContactClient: 'Contact client',
+    waMessage:
+      "Hello, I'm your private chef via Chefs Talents for the mission on {date} in {location}. Please let me know if you have any questions.",
+    status: {
+      offered: 'Proposal',
+      accepted: 'Accepted',
+      confirmed: 'Confirmed',
+      completed: 'Completed',
+      declined: 'Declined',
+      cancelled: 'Cancelled',
+    },
+    emptyOffered: 'No mission proposals yet.',
+    emptyActive: 'No active or upcoming missions.',
+    emptyHistory: 'No history yet.',
+  },
+  earnings: {
+    pageLabel: 'Performance',
+    pageTitle: 'Earnings & Activity',
+    kpis: {
+      totalLabel: 'Total revenue',
+      totalDesc: 'Completed missions',
+      last30Label: 'Last 30 days',
+      last30Desc: 'Rolling revenue',
+      missionsLabel: 'Missions',
+      missionsDesc: 'Completed',
+      averageLabel: 'Average ticket',
+      averageDesc: 'Per mission',
+    },
+    detailsTitle: 'Revenue details',
+    tableDate: 'Date',
+    tableMission: 'Mission',
+    tableLocation: 'Location',
+    tableAmount: 'Amount',
+    empty: 'No revenue data available.',
+  },
+  settings: {
+    pageLabel: 'Settings',
+    pageTitle: 'Your Chef profile',
+    subtitle:
+      'Platform launching: missions are coming soon. A complete profile gives you priority during matching.',
+    launchStatus: 'Launch status',
+    tier: {
+      priorityMax: 'MAX priority',
+      priority: 'Priority',
+      progress: 'In progress',
+      todo: 'To complete',
+    },
+    founderPill: 'Founding Chef',
+    completionLabel: 'Profile completion: {pct}% ({ok}/{total})',
+    completionRule:
+      'Simple rule: the more complete your profile, the higher you rank on requests (fast & standard).',
+    saveCta: 'Save',
+    saved: 'Saved ✅',
+    saveError: 'Save error',
+    founderSectionTitle: 'Founding Chef',
+    founderSectionDesc:
+      'Badge reserved for early chefs: enhanced visibility at launch + priority access to first missions.',
+    founderActivated: 'Activated',
+    founderActivateCta: 'Activate',
+    founderConditionMet: '✅ OK',
+    founderConditionUnmet: 'Complete 2–3 more sections.',
+    checklistTitle: 'Checklist (Priority)',
+    checklistSubtitle: 'Reach 70% to gain priority.',
+    checklistOk: 'OK',
+    checklistOpen: 'Open →',
+    items: {
+      identity:    { label: 'Identity',          hint: 'Name, phone, city…' },
+      experience:  { label: 'Experience',        hint: 'Bio + experience' },
+      portfolio:   { label: 'Portfolio',         hint: '5 photos minimum ({n}/{min})' },
+      mobility:    { label: 'Area & mobility',   hint: 'Zones, travel' },
+      pricing:     { label: 'Rates',             hint: 'Per day or per person' },
+      availability:{ label: 'Availability',      hint: 'Calendar, periods' },
+      preferences: { label: 'Preferences',       hint: 'Cuisines, languages…' },
+    },
+    hubTitle: 'Manage your profile',
+    hubSubtitle:
+      'Information is filled in dedicated pages (Identity, Experience, Portfolio…). Here we centralise everything.',
+    hubProfileLabel: 'Profile',
+    hubAdvice: 'Tip: aim for 70%+ to get priority when missions open.',
+    sections: {
+      identity:     { title: 'Identity',          desc: 'Name, phone, city…' },
+      experience:   { title: 'Experience',        desc: 'Bio, years, style…' },
+      portfolio:    { title: 'Portfolio',         desc: 'Photos, Instagram, website…' },
+      mobility:     { title: 'Area & Mobility',   desc: 'Zones, travel…' },
+      availability: { title: 'Availability',      desc: 'Periods, calendar…' },
+      preferences:  { title: 'Preferences',       desc: 'Cuisines, languages…' },
+      pricing:      { title: 'Rates',             desc: 'Positioning & pricing' },
+    },
+    sectionOk: 'OK',
+    sectionTodo: 'To complete',
+    password: {
+      label: 'Password',
+      desc:
+        'After your first magic-link login, you can set a password for easier future logins.',
+      newLabel: 'New password',
+      newPlaceholder: '8+ characters',
+      confirmLabel: 'Confirm',
+      confirmPlaceholder: 'Repeat',
+      tooShort: 'Password too short (8+ characters).',
+      mismatch: 'Passwords do not match.',
+      success: '✅ Password updated.',
+      error: 'Error during update.',
+      cta: 'Update password',
+      ctaLoading: 'Updating…',
+    },
+    footerNote:
+      'Note: during launch, Chef Talents reserves the right to prioritise complete and responsive profiles (fast reply).',
   },
 };
 
@@ -1758,6 +2123,130 @@ const es: Dictionary = {
     summaryPerPersonUnit: '€/pers',
     summaryMinDays: 'mín. {n} días',
     summaryMinGuests: 'mín. {n} invitados',
+  },
+  missions: {
+    pageLabel: 'Operaciones',
+    pageTitle: 'Sus misiones',
+    bannerSeason: 'Verano 2026',
+    bannerHeadline: 'Misiones abiertas — Ibiza, Saint-Tropez, Mykonos',
+    bannerDesc:
+      'Complete su perfil para ser propuesto a las solicitudes de clientes. Los perfiles más completos pasan primero.',
+    completeProfile: 'Completar el perfil',
+    refresh: 'Actualizar',
+    tabs: { proposals: 'Propuestas', active: 'En curso', history: 'Historial' },
+    cardYourFee: 'Su remuneración',
+    cardGuests: '{n} invitados',
+    cardAccept: 'Aceptar',
+    cardDecline: 'Rechazar',
+    cardViewContract: 'Ver el contrato',
+    cardContactClient: 'Contactar al cliente',
+    waMessage:
+      'Hola, soy su chef privado a través de Chefs Talents para la misión del {date} en {location}. Avíseme si tiene preguntas.',
+    status: {
+      offered: 'Propuesta',
+      accepted: 'Aceptada',
+      confirmed: 'Confirmada',
+      completed: 'Completada',
+      declined: 'Rechazada',
+      cancelled: 'Cancelada',
+    },
+    emptyOffered: 'Aún no hay propuestas de misión.',
+    emptyActive: 'No hay misiones activas o próximas.',
+    emptyHistory: 'Aún no hay historial.',
+  },
+  earnings: {
+    pageLabel: 'Rendimiento',
+    pageTitle: 'Ingresos y Actividad',
+    kpis: {
+      totalLabel: 'Facturación total',
+      totalDesc: 'Misiones realizadas',
+      last30Label: 'Últimos 30 días',
+      last30Desc: 'Ingresos móviles',
+      missionsLabel: 'Misiones',
+      missionsDesc: 'Completadas',
+      averageLabel: 'Ticket medio',
+      averageDesc: 'Por misión',
+    },
+    detailsTitle: 'Detalle de ingresos',
+    tableDate: 'Fecha',
+    tableMission: 'Misión',
+    tableLocation: 'Lugar',
+    tableAmount: 'Importe',
+    empty: 'No hay datos de ingresos disponibles.',
+  },
+  settings: {
+    pageLabel: 'Ajustes',
+    pageTitle: 'Su perfil Chef',
+    subtitle:
+      'Plataforma en lanzamiento: las misiones llegan pronto. Completar su perfil le da prioridad en el matching.',
+    launchStatus: 'Estado del lanzamiento',
+    tier: {
+      priorityMax: 'Prioridad MÁX',
+      priority: 'Prioritario',
+      progress: 'En progreso',
+      todo: 'Por completar',
+    },
+    founderPill: 'Chef Fundador',
+    completionLabel: 'Perfil completado: {pct}% ({ok}/{total})',
+    completionRule:
+      'Regla simple: cuanto más completo el perfil, más alto en las solicitudes (fast & standard).',
+    saveCta: 'Guardar',
+    saved: 'Guardado ✅',
+    saveError: 'Error al guardar',
+    founderSectionTitle: 'Chef Fundador',
+    founderSectionDesc:
+      'Insignia reservada a los primeros chefs: visibilidad reforzada al lanzamiento + acceso prioritario a las primeras misiones.',
+    founderActivated: 'Activado',
+    founderActivateCta: 'Activar',
+    founderConditionMet: '✅ OK',
+    founderConditionUnmet: 'Completa 2–3 secciones más.',
+    checklistTitle: 'Lista (Prioridad)',
+    checklistSubtitle: 'Alcanza 70% para tener prioridad.',
+    checklistOk: 'OK',
+    checklistOpen: 'Abrir →',
+    items: {
+      identity:    { label: 'Identidad',         hint: 'Nombre, teléfono, ciudad…' },
+      experience:  { label: 'Experiencia',       hint: 'Bio + experiencia' },
+      portfolio:   { label: 'Portafolio',        hint: '5 fotos mínimo ({n}/{min})' },
+      mobility:    { label: 'Zona y movilidad',  hint: 'Zonas, desplazamientos' },
+      pricing:     { label: 'Tarifas',           hint: 'Precio / día o precio / persona' },
+      availability:{ label: 'Disponibilidad',    hint: 'Calendario, periodos' },
+      preferences: { label: 'Preferencias',      hint: 'Cocinas, idiomas…' },
+    },
+    hubTitle: 'Gestionar su perfil',
+    hubSubtitle:
+      'La información se rellena en las páginas dedicadas (Identidad, Experiencia, Portafolio…). Aquí se centraliza todo.',
+    hubProfileLabel: 'Perfil',
+    hubAdvice:
+      'Consejo: apunte al 70%+ para tener prioridad en cuanto se abran las misiones.',
+    sections: {
+      identity:     { title: 'Identidad',          desc: 'Nombre, teléfono, ciudad…' },
+      experience:   { title: 'Experiencia',        desc: 'Bio, años, estilo…' },
+      portfolio:    { title: 'Portafolio',         desc: 'Fotos, Instagram, sitio…' },
+      mobility:     { title: 'Zona y Movilidad',   desc: 'Zonas, desplazamientos…' },
+      availability: { title: 'Disponibilidad',     desc: 'Periodos, calendario…' },
+      preferences:  { title: 'Preferencias',       desc: 'Cocinas, idiomas…' },
+      pricing:      { title: 'Tarifas',            desc: 'Posicionamiento y precio' },
+    },
+    sectionOk: 'OK',
+    sectionTodo: 'Por completar',
+    password: {
+      label: 'Contraseña',
+      desc:
+        'Tras su primer inicio de sesión por enlace mágico, puede definir una contraseña para reconectarse más fácilmente.',
+      newLabel: 'Nueva contraseña',
+      newPlaceholder: '8+ caracteres',
+      confirmLabel: 'Confirmar',
+      confirmPlaceholder: 'Repetir',
+      tooShort: 'Contraseña demasiado corta (8+ caracteres).',
+      mismatch: 'Las contraseñas no coinciden.',
+      success: '✅ Contraseña actualizada.',
+      error: 'Error en la actualización.',
+      cta: 'Actualizar contraseña',
+      ctaLoading: 'Actualizando…',
+    },
+    footerNote:
+      'Nota: durante el lanzamiento, Chef Talents se reserva el derecho de priorizar perfiles completos y reactivos (respuesta rápida).',
   },
 };
 
