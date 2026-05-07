@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { Loader2, Info, X } from 'lucide-react';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
 
 type ChefProfileMobility = {
   baseCity?: string;
@@ -106,17 +107,23 @@ function getSuggestedZones(baseCity: string, radiusKm: number, international: bo
   return uniq(suggested);
 }
 
-/* ----------------- Modal info (simple, sans dépendance) ----------------- */
+/* ----------------- Modal info ----------------- */
 
 function InfoModal({
   open,
   onClose,
   title,
+  subtitle,
+  closeAriaLabel,
+  understoodCta,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  subtitle: string;
+  closeAriaLabel: string;
+  understoodCta: string;
   children: React.ReactNode;
 }) {
   useEffect(() => {
@@ -132,29 +139,25 @@ function InfoModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" role="dialog" aria-modal="true">
-      {/* overlay (clic outside) */}
       <button
         type="button"
-        aria-label="Fermer"
+        aria-label={closeAriaLabel}
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
 
-      {/* panel */}
       <div className="relative w-[92vw] max-w-xl rounded-2xl bg-white border border-stone-200 shadow-xl">
         <div className="flex items-start justify-between gap-3 p-5 border-b border-stone-100">
           <div>
             <div className="text-sm font-semibold text-stone-900">{title}</div>
-            <div className="text-xs text-stone-500 mt-1">
-              Nous utilisons ces infos pour te proposer les missions les plus pertinentes.
-            </div>
+            <div className="text-xs text-stone-500 mt-1">{subtitle}</div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
             className="p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition"
-            aria-label="Fermer"
+            aria-label={closeAriaLabel}
           >
             <X className="w-4 h-4" />
           </button>
@@ -164,7 +167,7 @@ function InfoModal({
 
         <div className="p-5 pt-0 flex justify-end">
           <Button type="button" onClick={onClose} className="bg-stone-900 hover:bg-stone-800">
-            J’ai compris
+            {understoodCta}
           </Button>
         </div>
       </div>
@@ -174,13 +177,12 @@ function InfoModal({
 
 export default function ChefMobilityPage() {
   const router = useRouter();
+  const { t } = useChefLocale();
 
-  // session (source de vérité)
   const [booting, setBooting] = useState(true);
   const [sbUserId, setSbUserId] = useState<string | null>(null);
   const [sbEmail, setSbEmail] = useState<string>('');
 
-  // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -195,7 +197,7 @@ export default function ChefMobilityPage() {
 
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // 0) Boot session
+  // Boot session
   useEffect(() => {
     let alive = true;
 
@@ -225,7 +227,7 @@ export default function ChefMobilityPage() {
     };
   }, [router]);
 
-  // 1) Load profile DB
+  // Load profile DB
   useEffect(() => {
     if (!sbUserId) return;
     let cancelled = false;
@@ -263,16 +265,15 @@ export default function ChefMobilityPage() {
     return getSuggestedZones(data.baseCity, Number(data.travelRadiusKm || 0), !!data.internationalMobility);
   }, [data.baseCity, data.travelRadiusKm, data.internationalMobility]);
 
-  // petit “résumé” clair pour que le chef comprenne
   const positioning = useMemo(() => {
     const r = Number(data.travelRadiusKm || 0);
     const intl = !!data.internationalMobility;
 
-    if (intl) return { label: 'International', desc: 'Très visible : missions premium + déplacements.' };
-    if (r >= 300) return { label: 'Large / multi-zones', desc: 'Très visible : résidences/saisons et missions multi-destinations.' };
-    if (r >= 150) return { label: 'Régional', desc: 'Visible : missions dans plusieurs zones autour de ta base.' };
-    return { label: 'Local', desc: 'Priorité : missions proches de ta ville de base.' };
-  }, [data.travelRadiusKm, data.internationalMobility]);
+    if (intl) return t.mobility.positioning.international;
+    if (r >= 300) return t.mobility.positioning.large;
+    if (r >= 150) return t.mobility.positioning.regional;
+    return t.mobility.positioning.local;
+  }, [data.travelRadiusKm, data.internationalMobility, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,20 +284,16 @@ export default function ChefMobilityPage() {
       if (!sbUserId) throw new Error('No user');
 
       const patch = {
-        // ✅ source de vérité
         location: {
           baseCity: normalizeStr(data.baseCity),
           travelRadiusKm: Number(data.travelRadiusKm || 0),
           internationalMobility: !!data.internationalMobility,
         },
-
-        // ✅ compat legacy
         baseCity: normalizeStr(data.baseCity),
         travelRadiusKm: Number(data.travelRadiusKm || 0),
         internationalMobility: !!data.internationalMobility,
       };
 
-      // 🔒 merge DB pour ne rien écraser
       const merged: any = {
         ...baseProfile,
         ...patch,
@@ -318,7 +315,7 @@ export default function ChefMobilityPage() {
       setTimeout(() => setSuccess(false), 3000);
     } catch (e: any) {
       console.error('MOBILITY SAVE ERROR', e);
-      alert(e?.message || 'Erreur lors de la sauvegarde');
+      alert(e?.message || t.mobility.saveError);
     } finally {
       setSaving(false);
     }
@@ -335,56 +332,53 @@ export default function ChefMobilityPage() {
   return (
       <div className="max-w-2xl">
         <Marker />
-        <Label>Logistique</Label>
+        <Label>{t.mobility.pageLabel}</Label>
 
         {/* Titre + (i) */}
         <div className="flex items-center gap-3 mb-8">
-          <h1 className="text-3xl font-serif text-stone-900">Zone & Mobilité</h1>
+          <h1 className="text-3xl font-serif text-stone-900">{t.mobility.pageTitle}</h1>
 
           <button
             type="button"
             onClick={() => setInfoOpen(true)}
             className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-stone-200 bg-white hover:bg-stone-50 transition"
-            aria-label="Informations"
-            title="Comment ça marche ?"
+            aria-label={t.mobility.helpAriaLabel}
+            title={t.mobility.helpTitle}
           >
             <Info className="w-4 h-4 text-stone-600" />
           </button>
         </div>
 
         {/* Popup info */}
-        <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} title="Comment tu es positionné grâce à ta mobilité">
+        <InfoModal
+          open={infoOpen}
+          onClose={() => setInfoOpen(false)}
+          title={t.mobility.helpModalTitle}
+          subtitle={t.mobility.helpModalSubtitle}
+          closeAriaLabel={t.common.close}
+          understoodCta={t.mobility.helpUnderstood}
+        >
           <div className="space-y-3">
             <div>
-              <div className="font-medium text-stone-900">1) Ville de base</div>
-              <div className="text-stone-600">
-                Elle sert de point de départ. On te propose en priorité des missions proches de cette zone.
-              </div>
+              <div className="font-medium text-stone-900">{t.mobility.helpStep1Title}</div>
+              <div className="text-stone-600">{t.mobility.helpStep1Desc}</div>
             </div>
 
             <div>
-              <div className="font-medium text-stone-900">2) Rayon (km)</div>
-              <div className="text-stone-600">
-                Plus ton rayon est grand, plus tu apparais sur des missions (ex: villas, chalets, résidences, event).
-              </div>
-              <div className="text-xs text-stone-500 mt-1">
-                Repères : 50km = local • 150km = régional • 300km+ = multi-zones
-              </div>
+              <div className="font-medium text-stone-900">{t.mobility.helpStep2Title}</div>
+              <div className="text-stone-600">{t.mobility.helpStep2Desc}</div>
+              <div className="text-xs text-stone-500 mt-1">{t.mobility.helpStep2Refs}</div>
             </div>
 
             <div>
-              <div className="font-medium text-stone-900">3) Mobilité internationale</div>
-              <div className="text-stone-600">
-                Active si tu es prêt à voyager (missions premium : yachts, saisons, résidences longues).
-              </div>
+              <div className="font-medium text-stone-900">{t.mobility.helpStep3Title}</div>
+              <div className="text-stone-600">{t.mobility.helpStep3Desc}</div>
             </div>
 
             <div className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-              <div className="font-medium text-stone-900">✅ Important</div>
-              <div className="text-stone-700 mt-1">Tu restes libre d’accepter ou refuser une mission à tout moment.</div>
-              <div className="text-xs text-stone-500 mt-2">
-                Les “zones suggérées” ci-dessous sont une aide automatique (pas un engagement).
-              </div>
+              <div className="font-medium text-stone-900">{t.mobility.helpImportantTitle}</div>
+              <div className="text-stone-700 mt-1">{t.mobility.helpImportantBody}</div>
+              <div className="text-xs text-stone-500 mt-2">{t.mobility.helpImportantNote}</div>
             </div>
           </div>
         </InfoModal>
@@ -398,30 +392,30 @@ export default function ChefMobilityPage() {
             <>
               {/* résumé positionnement */}
               <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
-                <div className="text-xs uppercase tracking-widest text-stone-500">Positionnement actuel</div>
+                <div className="text-xs uppercase tracking-widest text-stone-500">{t.mobility.positioningLabel}</div>
                 <div className="mt-1 text-lg font-semibold text-stone-900">{positioning.label}</div>
                 <div className="mt-1 text-sm text-stone-600">{positioning.desc}</div>
               </div>
 
               <div className="space-y-2">
-                <Label>Ville de base</Label>
+                <Label>{t.mobility.baseCityLabel}</Label>
                 <Input
                   value={data.baseCity}
                   onChange={(e) => setData({ ...data, baseCity: e.target.value })}
-                  placeholder="Ex: Paris, Nice, Genève..."
+                  placeholder={t.mobility.baseCityPlaceholder}
                 />
-                <p className="text-xs text-stone-400">Cette ville sert à suggérer automatiquement des zones.</p>
+                <p className="text-xs text-stone-400">{t.mobility.baseCityHint}</p>
               </div>
 
               <div className="space-y-2">
-                <Label>Rayon de déplacement (km)</Label>
+                <Label>{t.mobility.radiusLabel}</Label>
                 <Input
                   type="number"
                   value={data.travelRadiusKm}
                   onChange={(e) => setData({ ...data, travelRadiusKm: parseInt(e.target.value || '0', 10) || 0 })}
-                  placeholder="50"
+                  placeholder={t.mobility.radiusPlaceholder}
                 />
-                <p className="text-xs text-stone-400">Ex : 50 = local • 150 = régional • 300+ = multi-zones</p>
+                <p className="text-xs text-stone-400">{t.mobility.radiusHint}</p>
               </div>
 
               <label className="flex items-center gap-4 p-6 bg-stone-50 border border-stone-100 cursor-pointer">
@@ -441,17 +435,17 @@ export default function ChefMobilityPage() {
                 />
 
                 <div>
-                  <span className="block font-medium text-stone-900">Mobilité Internationale</span>
-                  <span className="text-xs text-stone-500">Prêt à voyager pour des missions (passeport valide requis).</span>
+                  <span className="block font-medium text-stone-900">{t.mobility.intlLabel}</span>
+                  <span className="text-xs text-stone-500">{t.mobility.intlDesc}</span>
                 </div>
               </label>
 
               {/* Zones suggérées (affichage uniquement) */}
               <div className="space-y-3 pt-4 border-t border-stone-100">
                 <div className="flex items-center justify-between gap-3">
-                  <Label>Zones suggérées</Label>
+                  <Label>{t.mobility.suggestedZonesLabel}</Label>
                   <Button type="button" disabled className="w-auto px-4 opacity-50 cursor-not-allowed">
-                    Auto
+                    {t.mobility.suggestedZonesAuto}
                   </Button>
                 </div>
 
@@ -462,19 +456,17 @@ export default function ChefMobilityPage() {
                     </span>
                   ))}
                   {suggestedZones.length === 0 ? (
-                    <span className="text-xs text-stone-400">Indique une ville pour obtenir des suggestions.</span>
+                    <span className="text-xs text-stone-400">{t.mobility.suggestedZonesEmpty}</span>
                   ) : null}
                 </div>
 
-                <p className="text-xs text-stone-400">
-                  Les zones suggérées sont calculées automatiquement à partir de votre ville et de votre rayon.
-                </p>
+                <p className="text-xs text-stone-400">{t.mobility.suggestedZonesHint}</p>
               </div>
 
               <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
-                {success && <span className="text-sm text-green-600">Modifications enregistrées.</span>}
+                {success && <span className="text-sm text-green-600">{t.common.savedSuccess}</span>}
                 <Button type="submit" disabled={saving} className="ml-auto w-32">
-                  {saving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Enregistrer'}
+                  {saving ? <Loader2 className="animate-spin w-4 h-4" /> : t.common.save}
                 </Button>
               </div>
             </>

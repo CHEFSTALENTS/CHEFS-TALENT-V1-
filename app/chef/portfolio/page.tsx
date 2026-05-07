@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Marker, Input } from '../../../components/ui';
 import { Loader2, X, Image as ImageIcon, Upload, Link as LinkIcon } from 'lucide-react';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format } from '@/lib/chef-i18n';
 
 function normalizeUrl(raw: string) {
   const v = String(raw || '').trim();
   if (!v) return '';
-  // accepte "instagram.com/..." -> ajoute https
   if (!/^https?:\/\//i.test(v)) return `https://${v}`;
   return v;
 }
@@ -25,6 +26,7 @@ function isProbablyUrl(v: string) {
 
 export default function ChefPortfolioPage() {
   const router = useRouter();
+  const { t } = useChefLocale();
 
   const [booting, setBooting] = useState(true);
   const [sbUser, setSbUser] = useState<any | null>(null);
@@ -39,11 +41,11 @@ export default function ChefPortfolioPage() {
   const photoCount = images.filter(Boolean).length;
   const isPortfolioValid = photoCount >= MIN_PORTFOLIO;
 
-  
+
   const [instagramUrl, setInstagramUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
 
- 
+
   // 1) Session Supabase
   useEffect(() => {
     let alive = true;
@@ -75,7 +77,7 @@ export default function ChefPortfolioPage() {
     };
   }, [router]);
 
-  // 2) Load profile from DB (source de vérité)
+  // 2) Load profile from DB
   useEffect(() => {
     let cancelled = false;
 
@@ -86,8 +88,8 @@ export default function ChefPortfolioPage() {
         const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
         const json = await res.json();
         const p: any = json?.profile ?? {};
-  
-        
+
+
         const imgs = Array.isArray(p.images) ? p.images.map(String).filter(Boolean) : [];
         const ig = String(p.instagramUrl ?? p.instagram ?? p.socialInstagram ?? '').trim();
         const web = String(p.websiteUrl ?? p.website ?? p.siteUrl ?? '').trim();
@@ -110,12 +112,10 @@ export default function ChefPortfolioPage() {
   async function saveChefProfilePatch(patch: any) {
     if (!sbUser?.id) throw new Error('No user');
 
-    // 1) GET existing profile
     const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
     const json = await resGet.json();
     const current = json?.profile ?? {};
 
-    // 2) MERGE
     const merged = {
       ...current,
       ...patch,
@@ -124,7 +124,6 @@ export default function ChefPortfolioPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    // 3) PUT
     const resPut = await fetch('/api/chef/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -156,7 +155,6 @@ export default function ChefPortfolioPage() {
 
     if (typeof next.instagramUrl === 'string') {
       patch.instagramUrl = next.instagramUrl || undefined;
-      // compat legacy si besoin
       patch.instagram = next.instagramUrl || undefined;
     }
 
@@ -193,7 +191,7 @@ export default function ChefPortfolioPage() {
       }
 
       if (urls.length === 0) {
-        alert("Aucune image n'a pu être uploadée (format/taille).");
+        alert(t.portfolio.uploadFailed);
         return;
       }
 
@@ -204,7 +202,7 @@ export default function ChefPortfolioPage() {
       if (fileRef.current) fileRef.current.value = '';
     } catch (e: any) {
       console.error('[portfolio] upload error', e);
-      alert(e?.message || "Erreur lors de l'upload");
+      alert(e?.message || t.portfolio.uploadError);
     } finally {
       setLoading(false);
     }
@@ -218,7 +216,7 @@ export default function ChefPortfolioPage() {
       await persistAll({ images: updated });
     } catch (e: any) {
       console.error('[portfolio] remove error', e);
-      alert(e?.message || 'Erreur lors de la suppression');
+      alert(e?.message || t.portfolio.deleteError);
     } finally {
       setLoading(false);
     }
@@ -231,11 +229,11 @@ export default function ChefPortfolioPage() {
       const web = normalizeUrl(websiteUrl);
 
       if (ig && !isProbablyUrl(ig)) {
-        alert("Lien Instagram invalide. Exemple: https://instagram.com/tonprofil");
+        alert(t.portfolio.invalidInstagram);
         return;
       }
       if (web && !isProbablyUrl(web)) {
-        alert("Lien site web invalide. Exemple: https://tonsite.com");
+        alert(t.portfolio.invalidWebsite);
         return;
       }
 
@@ -245,86 +243,85 @@ export default function ChefPortfolioPage() {
       await persistAll({ instagramUrl: ig, websiteUrl: web });
     } catch (e: any) {
       console.error('[portfolio] save links error', e);
-      alert(e?.message || 'Erreur lors de la sauvegarde des liens');
+      alert(e?.message || t.portfolio.saveLinksError);
     } finally {
       setLoading(false);
     }
   };
 
-  if (booting) return <div className="p-10">Chargement…</div>;
+  if (booting) return <div className="p-10">{t.common.loading}</div>;
   if (!sbUser) return null;
 
   return (
       <div className="max-w-4xl">
         <Marker />
-        <Label>Visuel</Label>
-        <h1 className="text-3xl font-serif text-stone-900 mb-8">Portfolio</h1>
+        <Label>{t.portfolio.pageLabel}</Label>
+        <h1 className="text-3xl font-serif text-stone-900 mb-8">{t.portfolio.pageTitle}</h1>
 
         <div className="bg-white p-8 border border-stone-200 space-y-8">
           {/* Message important */}
           <div className="p-5 border border-stone-200 bg-stone-50">
-            <div className="text-sm font-medium text-stone-900 mb-1">📸 Important</div>
+            <div className="text-sm font-medium text-stone-900 mb-1">{t.portfolio.importantTitle}</div>
             <p className="text-sm text-stone-500 font-light">
-  Ces photos servent à mettre en avant votre profil auprès des clients.
-  Choisissez des plats bien dressés, bien éclairés, sans filtres excessifs.
-  <b className="ml-1">Minimum 5 photos</b> pour valider votre portfolio.
-</p>
+              {t.portfolio.importantBody1}{' '}
+              <b className="ml-1">{t.portfolio.importantBody2}</b>
+            </p>
           </div>
 
           {/* Liens */}
           <div className="space-y-4">
-            <Label>Liens (optionnel)</Label>
+            <Label>{t.portfolio.linksLabel}</Label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs text-stone-500">
                   <LinkIcon className="w-3.5 h-3.5" />
-                  Instagram
+                  {t.portfolio.instagramLabel}
                 </div>
                 <Input
                   value={instagramUrl}
                   onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="https://instagram.com/tonprofil"
+                  placeholder={t.portfolio.instagramPlaceholder}
                 />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs text-stone-500">
                   <LinkIcon className="w-3.5 h-3.5" />
-                  Site web
+                  {t.portfolio.websiteLabel}
                 </div>
                 <Input
                   value={websiteUrl}
                   onChange={(e) => setWebsiteUrl(e.target.value)}
-                  placeholder="https://tonsite.com"
+                  placeholder={t.portfolio.websitePlaceholder}
                 />
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-stone-500">Facultatif — mais utile pour renforcer la crédibilité du profil.</div>
+              <div className="text-xs text-stone-500">{t.portfolio.linksHint}</div>
               <Button type="button" onClick={handleSaveLinks} disabled={loading} className="w-40">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enregistrer les liens'}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t.portfolio.saveLinksCta}
               </Button>
             </div>
           </div>
 
           {/* Upload photos */}
           <div className="space-y-2 pt-4 border-t border-stone-100">
-            <Label>Ajouter des photos (upload uniquement)</Label>
-<div className="text-xs text-stone-500">
-  JPG/PNG/WebP • max 8MB / image • idéal : 5 à 10 photos
-  <span className={`ml-2 font-medium ${isPortfolioValid ? 'text-green-700' : 'text-amber-700'}`}>
-    ({photoCount}/{MIN_PORTFOLIO})
-  </span>
-</div>
+            <Label>{t.portfolio.addPhotosLabel}</Label>
+            <div className="text-xs text-stone-500">
+              {t.portfolio.photoConstraints}
+              <span className={`ml-2 font-medium ${isPortfolioValid ? 'text-green-700' : 'text-amber-700'}`}>
+                ({photoCount}/{MIN_PORTFOLIO})
+              </span>
+            </div>
 
-<div className="mt-2 text-xs text-stone-500">
-  {isPortfolioValid
-    ? '✅ Portfolio validé (5 photos minimum).'
-    : `⚠️ Ajoute encore ${Math.max(0, MIN_PORTFOLIO - photoCount)} photo(s) pour valider ton portfolio.`}
-</div>
-            
+            <div className="mt-2 text-xs text-stone-500">
+              {isPortfolioValid
+                ? t.portfolio.portfolioValid
+                : format(t.portfolio.portfolioMissing, { n: Math.max(0, MIN_PORTFOLIO - photoCount) })}
+            </div>
+
             <input
               ref={fileRef}
               type="file"
@@ -337,12 +334,12 @@ export default function ChefPortfolioPage() {
             <div className="flex flex-wrap gap-3 items-center">
               <Button type="button" onClick={handlePickFiles} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                Upload photos
+                {t.portfolio.uploadCta}
               </Button>
 
-              <div className="text-xs text-stone-500">JPG/PNG/WebP • max 8MB / image • idéal : 5 à 10 photos</div>
+              <div className="text-xs text-stone-500">{t.portfolio.photoConstraints}</div>
 
-              {success ? <div className="text-sm text-green-600 ml-auto">✅ Enregistré</div> : null}
+              {success ? <div className="text-sm text-green-600 ml-auto">{t.portfolio.uploadSuccess}</div> : null}
             </div>
           </div>
 
@@ -365,7 +362,7 @@ export default function ChefPortfolioPage() {
             {images.length === 0 && (
               <div className="col-span-full py-12 text-center text-stone-400 border border-stone-200 border-dashed">
                 <ImageIcon className="w-8 h-8 mx-auto mb-4 opacity-50" />
-                <p>Aucune image ajoutée.</p>
+                <p>{t.portfolio.noImages}</p>
               </div>
             )}
           </div>
