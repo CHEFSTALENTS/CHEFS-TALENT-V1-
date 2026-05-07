@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import {
   CHEF_PLANS,
   computeBoostedUntil,
+  computeCancelAt,
   computePlanEndsAt,
   isPlanKey,
   type PlanKey,
@@ -112,6 +113,20 @@ export async function POST(req: Request) {
         } else {
           // VIP activation
           const months = CHEF_PLANS[planKey].months;
+
+          // Applique l'engagement via cancel_at sur la subscription Stripe
+          // (n'est pas accepté à la création du Checkout Session).
+          if (stripeSubscriptionId && paymentMode === 'monthly') {
+            try {
+              await stripe.subscriptions.update(stripeSubscriptionId, {
+                cancel_at: computeCancelAt(months),
+              });
+            } catch (e: any) {
+              console.error('[webhook] failed to apply cancel_at on subscription', e?.message);
+              // On n'arrête pas le flow : l'engagement sera enforced côté UI/business
+            }
+          }
+
           await patchProfile(userId, {
             plan: 'pro',
             planStatus: 'active',

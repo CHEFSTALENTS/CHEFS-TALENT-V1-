@@ -4,8 +4,6 @@ import { stripe } from '@/lib/stripe';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import {
   CHEF_PLANS,
-  computeCancelAt,
-  getEngagementMonths,
   getPriceId,
   getStripeMode,
   isPaymentMode,
@@ -114,14 +112,15 @@ export async function POST(req: Request) {
     }
 
     if (stripeMode === 'subscription') {
-      const months = getEngagementMonths(planKey);
+      // Note : `cancel_at` n'est pas accepté ici par le type Stripe Checkout.
+      // L'engagement est appliqué au webhook (checkout.session.completed) via
+      // stripe.subscriptions.update(id, { cancel_at }).
       sessionConfig.subscription_data = {
         metadata: {
           userId: user.id,
           planKey,
           paymentMode: mode,
         },
-        cancel_at: computeCancelAt(months),
       };
     }
 
