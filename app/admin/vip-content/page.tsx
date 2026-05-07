@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import { Marker, Label, Button, Input, Textarea } from '@/components/ui';
 import type { VipContent, VipTip } from '@/lib/vip-content';
+import { listGuides } from '@/lib/vip-guides';
 import {
   Loader2,
   Plus,
@@ -18,6 +19,7 @@ import {
   Eye,
   Send,
   Mail,
+  Link2,
 } from 'lucide-react';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
@@ -279,7 +281,7 @@ export default function AdminVipContentPage() {
 
                   <div className="space-y-2">
                     <Label>
-                      Lien — PDF / Notion / Google Doc{' '}
+                      Lien — guide interne, PDF, Notion ou Google Doc{' '}
                       <span className="text-stone-400 font-normal normal-case">
                         (optionnel)
                       </span>
@@ -289,11 +291,59 @@ export default function AdminVipContentPage() {
                       onChange={(e) =>
                         updateTip(tip.id, { href: e.target.value })
                       }
-                      placeholder="https://drive.google.com/..."
+                      placeholder="/chef/vip/guides/slug ou https://..."
                     />
                     <p className="text-xs text-stone-400">
-                      Si rempli, la card devient cliquable côté chef.
+                      Si rempli, la card devient cliquable côté chef. Lien
+                      interne (commence par /) → ouverture dans le même onglet.
+                      Lien externe → nouvel onglet.
                     </p>
+
+                    {/* Sélecteur de guides internes — 1 click → href rempli */}
+                    {(() => {
+                      const guides = listGuides();
+                      if (guides.length === 0) return null;
+                      return (
+                        <div className="border border-stone-200 bg-white rounded-lg p-3 mt-2">
+                          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-semibold mb-2 inline-flex items-center gap-1.5">
+                            <Link2 className="w-3 h-3" />
+                            Guides internes disponibles
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {guides.map((g) => {
+                              const path = `/chef/vip/guides/${g.slug}`;
+                              const active = tip.href === path;
+                              return (
+                                <button
+                                  key={g.slug}
+                                  type="button"
+                                  onClick={() =>
+                                    updateTip(tip.id, {
+                                      href: active ? '' : path,
+                                      // Auto-remplit titre/desc si vides
+                                      title: tip.title || g.fr.title,
+                                      desc: tip.desc || g.fr.excerpt,
+                                    })
+                                  }
+                                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                                    active
+                                      ? 'border-stone-900 bg-stone-900 text-white'
+                                      : 'border-stone-200 text-stone-700 hover:border-stone-400'
+                                  }`}
+                                  title={g.fr.title}
+                                >
+                                  {g.slug}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-stone-400 mt-2">
+                            Clique sur un slug pour lier ce tip à un guide
+                            interne. Re-clic = délier.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}

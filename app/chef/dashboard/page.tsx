@@ -453,19 +453,23 @@ export default function ChefDashboardPage() {
                 <div className="text-xs uppercase tracking-widest text-stone-400">{t.dashboard.profileCompletedLabel}</div>
                 <div className="text-2xl font-serif text-stone-900">{Number(score || 0)}%</div>
               </div>
-              <span className="ml-auto text-xs text-stone-500">
-                {t.dashboard.checklistLabel} <span className="font-medium text-stone-900">{progress}%</span>
-              </span>
+              {status !== 'active' && (
+                <span className="ml-auto text-xs text-stone-500">
+                  {t.dashboard.checklistLabel} <span className="font-medium text-stone-900">{progress}%</span>
+                </span>
+              )}
             </div>
             <div className="w-full bg-stone-100 h-1">
               <div className="bg-stone-900 h-1 transition-all duration-700" style={{ width: `${score}%` }} />
             </div>
-            <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
-              {t.dashboard.profileCompletionBody}{' '}
-              <span className="text-stone-900 font-medium">{t.dashboard.profileCompletionGoal}</span>
-            </p>
+            {status !== 'active' && (
+              <p className="text-stone-500 font-light leading-relaxed max-w-3xl">
+                {t.dashboard.profileCompletionBody}{' '}
+                <span className="text-stone-900 font-medium">{t.dashboard.profileCompletionGoal}</span>
+              </p>
+            )}
           </div>
-          {completedCount < checks.length && (
+          {status !== 'active' && completedCount < checks.length && (
             <Link href="/chef/settings">
               <Button className="bg-stone-900 hover:bg-stone-800">
                 {t.dashboard.completeProfileCta} <ArrowRight className="w-4 h-4 ml-2" />
@@ -514,12 +518,14 @@ export default function ChefDashboardPage() {
         </>
       )}
 
-      {/* Checklist */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {checks.map(c => (
-          <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
-        ))}
-      </div>
+      {/* Checklist — masquée quand le profil est actif (le chef a fini son onboarding) */}
+      {status !== 'active' && (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {checks.map(c => (
+            <ActionCard key={c.key} icon={c.icon} title={c.title} desc={c.desc} path={c.path} done={c.done} />
+          ))}
+        </div>
+      )}
 
       {/* ✅ Proposer une mission */}
       <ProposeMissionCard
