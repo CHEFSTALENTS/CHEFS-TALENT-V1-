@@ -1,10 +1,12 @@
-"use client";
-import { useState } from "react";
-import { createClientSupabase } from "@/utils/supabase/client";
+'use client';
+import { useState } from 'react';
+import { createClientSupabase } from '@/utils/supabase/client';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
 
 export default function ForgotPasswordPage() {
-const supabase = createClientSupabase();
-  const [email, setEmail] = useState("");
+  const supabase = createClientSupabase();
+  const { t } = useChefLocale();
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,10 +15,8 @@ const supabase = createClientSupabase();
     setError(null);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${window.location.origin}/auth/callback`,
-});
-
-
+      redirectTo: `${window.location.origin}/auth/callback`,
+    });
 
     if (error) return setError(error.message);
     setSent(true);
@@ -24,8 +24,8 @@ const supabase = createClientSupabase();
 
   return (
     <div className="max-w-md mx-auto p-6">
-      <h1 className="text-xl font-semibold">Mot de passe oublié</h1>
-      <p className="mt-2 opacity-80">Entrez votre email pour recevoir un lien de réinitialisation.</p>
+      <h1 className="text-xl font-semibold">{t.auth.forgotTitle}</h1>
+      <p className="mt-2 opacity-80">{t.auth.forgotDesc}</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-3">
         <input
@@ -33,15 +33,15 @@ const supabase = createClientSupabase();
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@exemple.com"
+          placeholder={t.auth.forgotEmailPlaceholder}
           className="w-full border rounded-lg p-3"
         />
 
         <button className="w-full rounded-lg p-3 bg-black text-white">
-          Envoyer le lien
+          {t.auth.forgotCta}
         </button>
 
-        {sent && <p className="text-sm">Si l’email existe, un lien vient d’être envoyé.</p>}
+        {sent && <p className="text-sm">{t.auth.forgotSent}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
     </div>

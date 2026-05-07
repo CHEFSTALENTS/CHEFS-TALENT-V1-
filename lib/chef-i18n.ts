@@ -504,6 +504,54 @@ export type Dictionary = {
     footerNote: string;
   };
 
+  auth: {
+    sectionLabel: string;
+    loginTitle: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    forgotPassword: string;
+    loginCta: string;
+    loginLoading: string;
+    noAccount: string;
+    createAccountLink: string;
+    errEmailMissing: string;
+    errPasswordMissing: string;
+    errSessionMissing: string;
+    errLogin: string;
+
+    signupSidebarLabel: string;
+    signupSidebarTitle: string;
+    signupSidebarDesc: string;
+    signupBenefit1: string;
+    signupBenefit2: string;
+    signupBenefit3: string;
+    signupSidebarFooter: string;
+    signupCandidateLabel: string;
+    signupTitle: string;
+    signupSubtitle: string;
+    firstNameLabel: string;
+    firstNamePlaceholder: string;
+    lastNameLabel: string;
+    lastNamePlaceholder: string;
+    emailSignupPlaceholder: string;
+    passwordSignupPlaceholder: string;
+    privateNote: string;
+    errEmailMissingSignup: string;
+    errPasswordTooShort: string;
+    errSignup: string;
+    signupCta: string;
+    haveAccount: string;
+    signupLegalNote: string;
+
+    forgotTitle: string;
+    forgotDesc: string;
+    forgotEmailPlaceholder: string;
+    forgotCta: string;
+    forgotSent: string;
+  };
+
   pricing: {
     pageLabel: string;
     pageTitle: string;
@@ -1126,6 +1174,56 @@ const fr: Dictionary = {
     footerNote:
       'Note : pendant le lancement, Chef Talents se réserve le droit de prioriser les profils complets et réactifs (réponse rapide).',
   },
+  auth: {
+    sectionLabel: 'Espace Chef',
+    loginTitle: 'Connexion',
+    emailLabel: 'Email',
+    emailPlaceholder: 'ex : chef@exemple.com',
+    passwordLabel: 'Mot de passe',
+    passwordPlaceholder: 'Votre mot de passe',
+    forgotPassword: 'Mot de passe oublié ?',
+    loginCta: 'Se connecter',
+    loginLoading: 'Connexion…',
+    noAccount: 'Pas encore de compte ?',
+    createAccountLink: 'Créer un compte',
+    errEmailMissing: 'Veuillez entrer un email.',
+    errPasswordMissing: 'Veuillez entrer votre mot de passe.',
+    errSessionMissing: 'Session non créée.',
+    errLogin: 'Erreur de connexion.',
+
+    signupSidebarLabel: 'Chef Talents • Accès privé',
+    signupSidebarTitle: 'Un réseau discret,\nDes missions premium.',
+    signupSidebarDesc:
+      'Villas, résidences et yachts. Matching selon vos disponibilités, demandes qualifiées.',
+    signupBenefit1: 'Accès aux missions au cas par cas',
+    signupBenefit2: 'Profil non public • données protégées',
+    signupBenefit3: 'Inscription en 2 minutes (profil à compléter ensuite)',
+    signupSidebarFooter: 'Ce lien est réservé aux chefs invités.',
+    signupCandidateLabel: 'Candidature Chef',
+    signupTitle: 'Créer votre compte',
+    signupSubtitle:
+      'Créez votre accès, puis complétez votre profil depuis votre Dashboard.',
+    firstNameLabel: 'Prénom',
+    firstNamePlaceholder: 'ex : Jean',
+    lastNameLabel: 'Nom',
+    lastNamePlaceholder: 'ex : Dupont',
+    emailSignupPlaceholder: 'ex : chef@domaine.com',
+    passwordSignupPlaceholder: '8+ caractères',
+    privateNote: '🔒 Accès privé • votre profil ne sera pas public.',
+    errEmailMissingSignup: 'Email manquant.',
+    errPasswordTooShort: 'Mot de passe : 8+ caractères.',
+    errSignup: 'Erreur lors de la création du compte.',
+    signupCta: 'Commencer mon inscription',
+    haveAccount: 'J’ai déjà un compte',
+    signupLegalNote:
+      'En créant un compte, vous confirmez que ce lien vous a été partagé par Chef Talents.',
+
+    forgotTitle: 'Mot de passe oublié',
+    forgotDesc: 'Entrez votre email pour recevoir un lien de réinitialisation.',
+    forgotEmailPlaceholder: 'email@exemple.com',
+    forgotCta: 'Envoyer le lien',
+    forgotSent: 'Si l’email existe, un lien vient d’être envoyé.',
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -1685,6 +1783,56 @@ const en: Dictionary = {
     },
     footerNote:
       'Note: during launch, Chef Talents reserves the right to prioritise complete and responsive profiles (fast reply).',
+  },
+  auth: {
+    sectionLabel: 'Chef Portal',
+    loginTitle: 'Sign in',
+    emailLabel: 'Email',
+    emailPlaceholder: 'e.g. chef@example.com',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'Your password',
+    forgotPassword: 'Forgot your password?',
+    loginCta: 'Sign in',
+    loginLoading: 'Signing in…',
+    noAccount: 'No account yet?',
+    createAccountLink: 'Create an account',
+    errEmailMissing: 'Please enter an email.',
+    errPasswordMissing: 'Please enter your password.',
+    errSessionMissing: 'Session not created.',
+    errLogin: 'Login error.',
+
+    signupSidebarLabel: 'Chef Talents • Private access',
+    signupSidebarTitle: 'A discreet network,\npremium missions.',
+    signupSidebarDesc:
+      'Villas, residences and yachts. Matching based on your availability, qualified requests.',
+    signupBenefit1: 'Mission access on a case-by-case basis',
+    signupBenefit2: 'Non-public profile • protected data',
+    signupBenefit3: 'Sign up in 2 minutes (complete your profile afterwards)',
+    signupSidebarFooter: 'This link is reserved for invited chefs.',
+    signupCandidateLabel: 'Chef application',
+    signupTitle: 'Create your account',
+    signupSubtitle:
+      'Create your access, then complete your profile from your Dashboard.',
+    firstNameLabel: 'First name',
+    firstNamePlaceholder: 'e.g. John',
+    lastNameLabel: 'Last name',
+    lastNamePlaceholder: 'e.g. Smith',
+    emailSignupPlaceholder: 'e.g. chef@domain.com',
+    passwordSignupPlaceholder: '8+ characters',
+    privateNote: '🔒 Private access • your profile will not be public.',
+    errEmailMissingSignup: 'Missing email.',
+    errPasswordTooShort: 'Password: 8+ characters.',
+    errSignup: 'Error creating the account.',
+    signupCta: 'Start my registration',
+    haveAccount: 'I already have an account',
+    signupLegalNote:
+      'By creating an account, you confirm this link was shared with you by Chef Talents.',
+
+    forgotTitle: 'Forgot your password',
+    forgotDesc: 'Enter your email to receive a reset link.',
+    forgotEmailPlaceholder: 'email@example.com',
+    forgotCta: 'Send the link',
+    forgotSent: 'If the email exists, a link has just been sent.',
   },
 };
 
@@ -2247,6 +2395,56 @@ const es: Dictionary = {
     },
     footerNote:
       'Nota: durante el lanzamiento, Chef Talents se reserva el derecho de priorizar perfiles completos y reactivos (respuesta rápida).',
+  },
+  auth: {
+    sectionLabel: 'Portal Chef',
+    loginTitle: 'Iniciar sesión',
+    emailLabel: 'Email',
+    emailPlaceholder: 'ej.: chef@ejemplo.com',
+    passwordLabel: 'Contraseña',
+    passwordPlaceholder: 'Su contraseña',
+    forgotPassword: '¿Olvidó su contraseña?',
+    loginCta: 'Iniciar sesión',
+    loginLoading: 'Iniciando sesión…',
+    noAccount: '¿Aún no tiene cuenta?',
+    createAccountLink: 'Crear una cuenta',
+    errEmailMissing: 'Introduzca un email.',
+    errPasswordMissing: 'Introduzca su contraseña.',
+    errSessionMissing: 'Sesión no creada.',
+    errLogin: 'Error de conexión.',
+
+    signupSidebarLabel: 'Chef Talents • Acceso privado',
+    signupSidebarTitle: 'Una red discreta,\nmisiones premium.',
+    signupSidebarDesc:
+      'Villas, residencias y yates. Matching según su disponibilidad, solicitudes cualificadas.',
+    signupBenefit1: 'Acceso a misiones caso por caso',
+    signupBenefit2: 'Perfil no público • datos protegidos',
+    signupBenefit3: 'Registro en 2 minutos (perfil a completar después)',
+    signupSidebarFooter: 'Este enlace está reservado a chefs invitados.',
+    signupCandidateLabel: 'Candidatura Chef',
+    signupTitle: 'Crear su cuenta',
+    signupSubtitle:
+      'Cree su acceso, después complete su perfil desde su Panel.',
+    firstNameLabel: 'Nombre',
+    firstNamePlaceholder: 'ej.: Juan',
+    lastNameLabel: 'Apellido',
+    lastNamePlaceholder: 'ej.: García',
+    emailSignupPlaceholder: 'ej.: chef@dominio.com',
+    passwordSignupPlaceholder: '8+ caracteres',
+    privateNote: '🔒 Acceso privado • su perfil no será público.',
+    errEmailMissingSignup: 'Falta el email.',
+    errPasswordTooShort: 'Contraseña: 8+ caracteres.',
+    errSignup: 'Error al crear la cuenta.',
+    signupCta: 'Comenzar mi registro',
+    haveAccount: 'Ya tengo cuenta',
+    signupLegalNote:
+      'Al crear una cuenta, confirma que este enlace le fue compartido por Chef Talents.',
+
+    forgotTitle: 'Contraseña olvidada',
+    forgotDesc: 'Introduzca su email para recibir un enlace de restablecimiento.',
+    forgotEmailPlaceholder: 'email@ejemplo.com',
+    forgotCta: 'Enviar el enlace',
+    forgotSent: 'Si el email existe, se acaba de enviar un enlace.',
   },
 };
 

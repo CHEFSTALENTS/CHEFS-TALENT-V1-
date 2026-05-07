@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation';
 import { Button, Input, Marker, Label } from '../../../components/ui';
 import { Loader2, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { LOCALES, LOCALE_LABELS, LOCALE_FULL_LABELS } from '@/lib/chef-i18n';
 
 export default function ChefSignupPage() {
   const router = useRouter();
+  const { t, locale, setLocale } = useChefLocale();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -29,10 +32,9 @@ export default function ChefSignupPage() {
       const email = formData.email.trim().toLowerCase();
       const password = formData.password;
 
-      if (!email) throw new Error('Email manquant.');
-      if (!password || password.length < 8) throw new Error('Mot de passe: 8+ caractères.');
+      if (!email) throw new Error(t.auth.errEmailMissingSignup);
+      if (!password || password.length < 8) throw new Error(t.auth.errPasswordTooShort);
 
-      // ✅ 1) Création du vrai compte Supabase Auth
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -41,6 +43,7 @@ export default function ChefSignupPage() {
             firstName: formData.firstName.trim(),
             lastName: formData.lastName.trim(),
             role: 'chef',
+            preferredLocale: locale,
           },
         },
       });
@@ -49,14 +52,10 @@ export default function ChefSignupPage() {
 
       const userId = data.user?.id;
       if (!userId) {
-        // Cas fréquent si "email confirmation" activé: user peut être null selon config
-        // On redirige vers login + message
         router.replace('/chef/login?checkEmail=1');
         return;
       }
 
-      // ✅ 2) Optionnel: créer le profil en DB (si ton endpoint existe)
-      // (si tu n'as pas encore /api/chef/profile, commente ce bloc)
       await fetch('/api/chef/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -67,15 +66,13 @@ export default function ChefSignupPage() {
             email,
             firstName: formData.firstName.trim(),
             lastName: formData.lastName.trim(),
+            preferredLocale: locale,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
         }),
       });
 
-      // ✅ 3) Redirection
-      // Si confirmation email ON, l'utilisateur n'aura pas de session -> login
-      // Sinon il peut être direct dashboard
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) {
         router.replace('/chef/dashboard');
@@ -83,7 +80,7 @@ export default function ChefSignupPage() {
         router.replace('/chef/login?justSignedUp=1');
       }
     } catch (err: any) {
-      setError(err?.message || 'Erreur lors de la création du compte.');
+      setError(err?.message || t.auth.errSignup);
     } finally {
       setLoading(false);
     }
@@ -105,37 +102,35 @@ export default function ChefSignupPage() {
         <div className="absolute inset-0 p-12 flex items-center justify-center">
           <div className="max-w-lg text-center">
             <div className="text-[10px] uppercase tracking-[0.35em] text-stone-200/80">
-              Chef Talents • Accès privé
+              {t.auth.signupSidebarLabel}
             </div>
 
-            <h2 className="text-4xl font-serif mt-6 leading-tight text-stone-50">
-              Un réseau discret,
-              <br />
-              des missions premium.
+            <h2 className="text-4xl font-serif mt-6 leading-tight text-stone-50 whitespace-pre-line">
+              {t.auth.signupSidebarTitle}
             </h2>
 
             <p className="mt-5 text-stone-100/80 font-light leading-relaxed">
-              Villas, résidences et yachts. Matching selon vos disponibilités, demandes qualifiées.
+              {t.auth.signupSidebarDesc}
             </p>
 
             <div className="mt-8 space-y-3 text-sm text-stone-100/80 inline-block text-left">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-stone-200/80" />
-                <span>Accès aux missions au cas par cas</span>
+                <span>{t.auth.signupBenefit1}</span>
               </div>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-stone-200/80" />
-                <span>Profil non public • données protégées</span>
+                <span>{t.auth.signupBenefit2}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-stone-200/80" />
-                <span>Inscription en 2 minutes (profil à compléter ensuite)</span>
+                <span>{t.auth.signupBenefit3}</span>
               </div>
             </div>
 
             <div className="mt-10 text-xs text-stone-200/70 flex items-center justify-center gap-2">
               <ShieldCheck className="w-4 h-4" />
-              <span>Ce lien est réservé aux chefs invités.</span>
+              <span>{t.auth.signupSidebarFooter}</span>
             </div>
           </div>
         </div>
@@ -144,14 +139,43 @@ export default function ChefSignupPage() {
       {/* Right */}
       <div className="flex items-center justify-center p-8 md:p-24">
         <div className="w-full max-w-md space-y-7">
+          {/* Locale switcher (compact) */}
+          <div className="flex justify-end">
+            <div
+              role="group"
+              aria-label={t.switcher.ariaLabel}
+              className="inline-flex items-center rounded-full border border-stone-200 bg-white overflow-hidden text-[10px]"
+            >
+              {LOCALES.map((l) => {
+                const isActive = l === locale;
+                return (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => !isActive && setLocale(l)}
+                    aria-pressed={isActive}
+                    title={LOCALE_FULL_LABELS[l]}
+                    className={`px-2.5 py-1 font-medium tracking-wide transition-colors ${
+                      isActive
+                        ? 'bg-stone-900 text-white'
+                        : 'text-stone-500 hover:text-stone-900 hover:bg-stone-50'
+                    }`}
+                  >
+                    {LOCALE_LABELS[l]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="text-center md:text-left">
             <Marker className="mx-auto md:mx-0" />
-            <Label>Candidature Chef</Label>
+            <Label>{t.auth.signupCandidateLabel}</Label>
 
             <div className="mt-4 space-y-2">
-              <h1 className="text-3xl font-serif text-stone-900">Créer votre compte</h1>
+              <h1 className="text-3xl font-serif text-stone-900">{t.auth.signupTitle}</h1>
               <p className="text-sm text-stone-500 font-light leading-relaxed">
-                Créez votre accès, puis complétez votre profil depuis votre Dashboard.
+                {t.auth.signupSubtitle}
               </p>
             </div>
           </div>
@@ -159,19 +183,19 @@ export default function ChefSignupPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Prénom</Label>
+                <Label>{t.auth.firstNameLabel}</Label>
                 <Input
                   required
-                  placeholder="ex : Jean"
+                  placeholder={t.auth.firstNamePlaceholder}
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Nom</Label>
+                <Label>{t.auth.lastNameLabel}</Label>
                 <Input
                   required
-                  placeholder="ex : Dupont"
+                  placeholder={t.auth.lastNamePlaceholder}
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 />
@@ -179,26 +203,26 @@ export default function ChefSignupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>{t.auth.emailLabel}</Label>
               <Input
                 type="email"
                 required
-                placeholder="ex : chef@domaine.com"
+                placeholder={t.auth.emailSignupPlaceholder}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Mot de passe</Label>
+              <Label>{t.auth.passwordLabel}</Label>
               <Input
                 type="password"
                 required
-                placeholder="8+ caractères"
+                placeholder={t.auth.passwordSignupPlaceholder}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
-              <div className="text-xs text-stone-400">🔒 Accès privé • votre profil ne sera pas public.</div>
+              <div className="text-xs text-stone-400">{t.auth.privateNote}</div>
             </div>
 
             {error && (
@@ -208,7 +232,7 @@ export default function ChefSignupPage() {
             )}
 
             <Button type="submit" className="w-full bg-stone-900 hover:bg-stone-800" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Commencer mon inscription'}
+              {loading ? <Loader2 className="animate-spin w-4 h-4" /> : t.auth.signupCta}
             </Button>
 
             <div className="text-center pt-2">
@@ -216,13 +240,13 @@ export default function ChefSignupPage() {
                 href="/chef/login"
                 className="text-xs text-stone-600 hover:text-stone-900 border-b border-transparent hover:border-stone-900 transition-all"
               >
-                J’ai déjà un compte
+                {t.auth.haveAccount}
               </Link>
             </div>
           </form>
 
           <div className="text-[11px] text-stone-400 leading-relaxed">
-            En créant un compte, vous confirmez que ce lien vous a été partagé par Chef Talents.
+            {t.auth.signupLegalNote}
           </div>
         </div>
       </div>
