@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Lock,
+  FileText,
+  Printer,
 } from 'lucide-react';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
@@ -28,6 +30,7 @@ import {
   PILLAR_ORDER,
   type Pillar,
 } from '@/lib/vip-guides';
+import { listTemplates } from '@/lib/vip-templates';
 
 type ChefProfile = {
   plan?: 'free' | 'pro';
@@ -350,6 +353,9 @@ export default function ChefVipPage() {
         openLabel={t.common.open}
       />
 
+      {/* Templates téléchargeables */}
+      <VipTemplatesSection locale={locale} />
+
       {/* Call de positionnement (12m only) */}
       <div className="border border-stone-200 bg-white p-6 md:p-8 space-y-4">
         <div className="flex items-center gap-3">
@@ -385,6 +391,104 @@ export default function ChefVipPage() {
         )}
       </div>
 
+    </div>
+  );
+}
+
+// ─── Templates téléchargeables ──────────────────────────────────────────────
+
+function VipTemplatesSection({
+  locale,
+}: {
+  locale: 'fr' | 'en' | 'es';
+}) {
+  const localeKey: 'fr' | 'en' = locale === 'en' ? 'en' : 'fr';
+  const templates = listTemplates();
+
+  // Groupe par pilier en respectant l'ordre canonique.
+  const grouped: Record<Pillar, ReturnType<typeof listTemplates>> = {
+    metier: [],
+    business: [],
+    marque: [],
+    humain: [],
+  };
+  for (const tpl of templates) {
+    grouped[tpl.pillar].push(tpl);
+  }
+
+  return (
+    <div className="border border-stone-200 bg-white p-6 md:p-8 space-y-6">
+      <div className="flex items-baseline justify-between gap-4 border-b border-stone-200 pb-5">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.32em] text-stone-400 mb-1">
+            {localeKey === 'en' ? 'Documents' : 'Documents'}
+          </p>
+          <h2 className="text-2xl font-serif text-stone-900">
+            {localeKey === 'en'
+              ? 'Downloadable templates'
+              : 'Templates téléchargeables'}
+          </h2>
+          <p className="text-sm text-stone-500 mt-1 max-w-2xl">
+            {localeKey === 'en'
+              ? 'Print-ready A4 documents to customise and use in your missions. Open, customise, then print or save as PDF.'
+              : 'Documents A4 imprimables, à personnaliser pour vos missions. Ouvrir, adapter, puis imprimer ou enregistrer en PDF.'}
+          </p>
+        </div>
+        <span className="text-[10px] uppercase tracking-[0.24em] text-stone-400 hidden md:block">
+          {localeKey === 'en'
+            ? `${templates.length} documents`
+            : `${templates.length} documents`}
+        </span>
+      </div>
+
+      {PILLAR_ORDER.map((pillar) => {
+        const items = grouped[pillar];
+        if (items.length === 0) return null;
+        const pillarNumber = PILLAR_ORDER.indexOf(pillar) + 1;
+        const labels = PILLAR_LABELS[pillar];
+        return (
+          <section key={pillar}>
+            <div className="flex items-baseline gap-3 mb-3">
+              <span className="text-[11px] font-semibold tracking-[0.18em] text-[#7f1d1d]">
+                {String(pillarNumber).padStart(2, '0')}
+              </span>
+              <h3 className="text-base font-serif text-stone-900">
+                {labels[localeKey]}
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {items.map((tpl) => {
+                const tr = tpl[localeKey];
+                return (
+                  <Link
+                    key={tpl.slug}
+                    href={`/chef/vip/templates/${tpl.slug}`}
+                    className="group border border-stone-200 bg-stone-50/40 p-4 transition-colors hover:border-stone-400 hover:bg-white"
+                  >
+                    <div className="flex items-start gap-3 w-full">
+                      <FileText className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-stone-900">
+                          {tr.title}
+                        </div>
+                        <div className="text-xs text-stone-500 mt-1 leading-relaxed">
+                          {tr.excerpt}
+                        </div>
+                        <div className="text-xs text-stone-400 mt-1.5 inline-flex items-center gap-1 group-hover:text-stone-700 transition-colors">
+                          <Printer className="w-3 h-3" />
+                          {localeKey === 'en'
+                            ? 'Open and print →'
+                            : 'Ouvrir et imprimer →'}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
