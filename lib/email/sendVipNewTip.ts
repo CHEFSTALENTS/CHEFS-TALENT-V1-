@@ -1,5 +1,6 @@
 // lib/email/sendVipNewTip.ts
-// Email envoyé à tous les chefs VIP actifs quand l'admin ajoute un nouveau tip.
+// Email envoyé à tous les chefs VIP actifs quand l'admin ajoute un nouveau
+// tip. Design éditorial, pas d'emojis.
 
 import { Resend } from 'resend';
 import type { VipTip } from '@/lib/vip-content';
@@ -16,109 +17,63 @@ const T: Record<
   {
     subject: (title: string) => string;
     greeting: (name: string) => string;
-    p1: string;
+    intro: string;
+    overline: string;
     ctaWithLink: string;
     ctaSpace: string;
-    p3: string;
-    sign: string;
+    closing: string;
+    signLine1: string;
+    signLine2: string;
+    signTitle: string;
+    footer: string;
   }
 > = {
   fr: {
-    subject: (title) => `🎁 Nouvelle ressource VIP : ${title}`,
+    subject: (title) => `Nouvelle ressource — ${title}`,
     greeting: (name) => `Bonjour ${name},`,
-    p1: 'Une nouvelle ressource vient d\'être ajoutée à votre espace VIP.',
-    ctaWithLink: 'Ouvrir la ressource →',
-    ctaSpace: 'Voir dans mon espace VIP →',
-    p3:
-      'Toutes les ressources VIP restent disponibles dans votre espace, accessibles à tout moment.',
-    sign: 'À très vite,\nThomas',
+    intro:
+      'Une nouvelle ressource vient d’être ajoutée à votre espace VIP. Elle est désormais disponible à votre consultation.',
+    overline: 'Nouvelle parution',
+    ctaWithLink: 'Ouvrir la ressource',
+    ctaSpace: 'Consulter mon espace',
+    closing:
+      'Toutes les ressources VIP restent disponibles dans votre espace, à tout moment.',
+    signLine1: 'Bien à vous,',
+    signLine2: 'Thomas Delcroix',
+    signTitle: 'Fondateur, Chefs Talents',
+    footer: 'Chefs Talents · Bordeaux',
   },
   en: {
-    subject: (title) => `🎁 New VIP resource: ${title}`,
-    greeting: (name) => `Hi ${name},`,
-    p1: 'A new resource has just been added to your VIP space.',
-    ctaWithLink: 'Open the resource →',
-    ctaSpace: 'See in my VIP space →',
-    p3:
-      'All VIP resources remain available in your space, accessible anytime.',
-    sign: 'Speak soon,\nThomas',
+    subject: (title) => `New resource — ${title}`,
+    greeting: (name) => `Hello ${name},`,
+    intro:
+      'A new resource has just been added to your VIP space. It is now available to you.',
+    overline: 'New release',
+    ctaWithLink: 'Open the resource',
+    ctaSpace: 'Open my space',
+    closing:
+      'All VIP resources remain available in your space, at any time.',
+    signLine1: 'With kind regards,',
+    signLine2: 'Thomas Delcroix',
+    signTitle: 'Founder, Chefs Talents',
+    footer: 'Chefs Talents · Bordeaux',
   },
   es: {
-    subject: (title) => `🎁 Nuevo recurso VIP: ${title}`,
-    greeting: (name) => `Hola ${name},`,
-    p1: 'Acaba de añadirse un nuevo recurso a su espacio VIP.',
-    ctaWithLink: 'Abrir el recurso →',
-    ctaSpace: 'Ver en mi espacio VIP →',
-    p3:
-      'Todos los recursos VIP siguen disponibles en su espacio, accesibles en cualquier momento.',
-    sign: 'Hasta pronto,\nThomas',
+    subject: (title) => `Nuevo recurso — ${title}`,
+    greeting: (name) => `Buenos días ${name},`,
+    intro:
+      'Acaba de añadirse un nuevo recurso a su espacio VIP. Ya está disponible para su consulta.',
+    overline: 'Nueva publicación',
+    ctaWithLink: 'Abrir el recurso',
+    ctaSpace: 'Consultar mi espacio',
+    closing:
+      'Todos los recursos VIP permanecen disponibles en su espacio, en todo momento.',
+    signLine1: 'Atentamente,',
+    signLine2: 'Thomas Delcroix',
+    signTitle: 'Fundador, Chefs Talents',
+    footer: 'Chefs Talents · Burdeos',
   },
 };
-
-function buildHtml(opts: {
-  firstName: string;
-  tip: VipTip;
-  locale: Locale;
-}): string {
-  const t = T[opts.locale];
-  const name = opts.firstName?.trim() || 'Chef';
-  const tip = opts.tip;
-  const link = tip.href || `${SITE_URL}/chef/vip`;
-  const cta = tip.href ? t.ctaWithLink : t.ctaSpace;
-
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4efe8;font-family:Georgia,serif;">
-  <div style="max-width:580px;margin:0 auto;padding:48px 32px;">
-
-    <p style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#8a7f73;margin:0 0 40px;">
-      CHEFS TALENTS · CHEF VIP
-    </p>
-
-    <h1 style="font-size:26px;font-weight:normal;color:#161616;margin:0 0 24px;line-height:1.3;">
-      ${t.greeting(name)}
-    </h1>
-
-    <p style="font-size:16px;line-height:1.8;color:#3f3a34;margin:0 0 28px;">
-      ${t.p1}
-    </p>
-
-    <div style="border:1px solid #e2dccf;background:#ffffff;padding:28px;margin:0 0 28px;">
-      <p style="font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#8a7f73;margin:0 0 12px;">
-        Nouveau guide
-      </p>
-      <h2 style="font-size:22px;font-weight:normal;color:#161616;margin:0 0 12px;line-height:1.4;">
-        ${escapeHtml(tip.title)}
-      </h2>
-      ${
-        tip.desc
-          ? `<p style="font-size:15px;line-height:1.7;color:#59544d;margin:0;">${escapeHtml(tip.desc)}</p>`
-          : ''
-      }
-    </div>
-
-    <p style="margin:0 0 32px;">
-      <a href="${escapeHtml(link)}" style="display:inline-block;background:#161616;color:#ffffff;text-decoration:none;padding:14px 28px;font-size:14px;letter-spacing:0.05em;">
-        ${cta}
-      </a>
-    </p>
-
-    <p style="font-size:13px;line-height:1.7;color:#8a7f73;margin:0 0 32px;font-style:italic;">
-      ${t.p3}
-    </p>
-
-    <p style="font-size:14px;line-height:1.7;color:#3f3a34;margin:32px 0 0;white-space:pre-line;">
-      ${t.sign}
-    </p>
-
-    <p style="font-size:11px;color:#a8a29e;margin:48px 0 0;border-top:1px solid #e2dccf;padding-top:24px;">
-      Vous recevez cet email car vous êtes membre VIP Chefs Talents · ${SITE_URL}
-    </p>
-  </div>
-</body>
-</html>`;
-}
 
 function escapeHtml(s: string): string {
   return String(s ?? '')
@@ -129,9 +84,119 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function buildHtml(opts: {
+  firstName: string;
+  tip: VipTip;
+  locale: Locale;
+}): string {
+  const t = T[opts.locale];
+  const tip = opts.tip;
+  const link = tip.href || `${SITE_URL}/chef/vip`;
+  const cta = tip.href ? t.ctaWithLink : t.ctaSpace;
+
+  return `<!DOCTYPE html>
+<html lang="${opts.locale}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(tip.title)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f5f2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f5f2;">
+    <tr>
+      <td align="center" style="padding:56px 16px;">
+        <table role="presentation" width="540" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border:1px solid #ece6dc;width:100%;max-width:540px;">
+
+          <tr>
+            <td style="padding:36px 40px 22px;border-bottom:1px solid #ece6dc;">
+              <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:11px;letter-spacing:0.42em;text-transform:uppercase;color:#9b9082;">
+                CHEFS&nbsp;TALENTS
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px 40px 8px;font-family:Georgia,'Times New Roman',serif;">
+              <h1 style="margin:0 0 28px;font-size:28px;font-weight:400;color:#1a1815;letter-spacing:-0.01em;line-height:1.25;">
+                ${t.greeting(opts.firstName)}
+              </h1>
+
+              <p style="margin:0 0 28px;font-size:16px;line-height:1.75;color:#3f3a34;">
+                ${t.intro}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 40px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fbf9f5;border:1px solid #ece6dc;">
+                <tr>
+                  <td style="padding:28px 30px;font-family:Georgia,'Times New Roman',serif;">
+                    <p style="margin:0 0 14px;font-size:10px;letter-spacing:0.34em;text-transform:uppercase;color:#9b9082;">
+                      ${t.overline}
+                    </p>
+                    <h2 style="margin:0 0 14px;font-size:22px;font-weight:400;color:#1a1815;line-height:1.35;">
+                      ${escapeHtml(tip.title)}
+                    </h2>
+                    ${
+                      tip.desc
+                        ? `<p style="margin:0;font-size:15px;line-height:1.7;color:#59544d;">${escapeHtml(tip.desc)}</p>`
+                        : ''
+                    }
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td align="left" style="padding:0 40px 36px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#1a1815;">
+                    <a href="${escapeHtml(link)}" style="display:inline-block;padding:14px 30px;font-family:Georgia,'Times New Roman',serif;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#ffffff;text-decoration:none;">
+                      ${cta}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 40px 32px;font-family:Georgia,'Times New Roman',serif;">
+              <p style="margin:0 0 28px;font-size:14px;line-height:1.7;color:#7d756a;font-style:italic;">
+                ${t.closing}
+              </p>
+
+              <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#3f3a34;">
+                ${t.signLine1}
+              </p>
+              <p style="margin:0;font-size:15px;line-height:1.6;color:#3f3a34;">
+                <em>${t.signLine2}</em><br>
+                <span style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#9b9082;">${t.signTitle}</span>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 40px;background:#f7f5f2;border-top:1px solid #ece6dc;">
+              <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:#a8a29e;text-align:center;">
+                ${t.footer} &middot; chefstalents.com
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 /**
- * Envoie l'email "nouveau tip VIP" à tous les chefs VIP actifs.
- * Concurrent en parallèle (Resend supporte le rate limit interne).
+ * Envoie l'email "nouvelle ressource VIP" à tous les chefs VIP actifs.
  * Returns: { sent, failed }
  */
 export async function sendVipNewTipToAll(tip: VipTip): Promise<{
@@ -161,7 +226,7 @@ export async function sendVipNewTipToAll(tip: VipTip): Promise<{
           to: r.email,
           subject: subjectByLocale[r.locale] || subjectByLocale.fr,
           html: buildHtml({
-            firstName: r.firstName,
+            firstName: r.firstName?.trim() || 'Chef',
             tip,
             locale: r.locale,
           }),

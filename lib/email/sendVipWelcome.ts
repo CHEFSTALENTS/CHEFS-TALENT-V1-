@@ -1,5 +1,6 @@
 // lib/email/sendVipWelcome.ts
 // Email envoyé au chef après activation VIP (paiement Stripe ou grant admin).
+// Design : éditorial, serif, palette warm-luxe restreinte. Pas d'emojis.
 
 import { Resend } from 'resend';
 
@@ -14,102 +15,244 @@ const T: Record<
   {
     subject: string;
     greeting: (name: string) => string;
-    p1: (planLabel: string) => string;
-    p1Comp: (planLabel: string) => string;
-    p2: string;
-    bulletsTitle: string;
+    introPaid: (planLabel: string) => string;
+    introComp: (planLabel: string) => string;
+    paragraph2: string;
+    overlineWhatsNext: string;
     bullets: string[];
     callIncluded: string;
     cta: string;
-    p3: string;
-    sign: string;
+    closing: string;
+    signLine1: string;
+    signLine2: string;
+    footerLeft: string;
   }
 > = {
   fr: {
-    subject: '🎉 Bienvenue dans le réseau Chef VIP — Chefs Talents',
+    subject: 'Bienvenue parmi les Chef VIP — Chefs Talents',
     greeting: (name) => `Bonjour ${name},`,
-    p1: (planLabel) =>
-      `Votre abonnement <strong>${planLabel}</strong> est actif. Bienvenue dans le réseau VIP Chefs Talents.`,
-    p1Comp: (planLabel) =>
-      `Nous vous offrons un accès <strong>${planLabel}</strong> au réseau VIP Chefs Talents. À utiliser sans modération.`,
-    p2:
-      'À partir de maintenant, vous bénéficiez de la priorité sur les missions, des guides exclusifs et des ressources réservées aux chefs membres.',
-    bulletsTitle: 'Ce qui vous attend',
+    introPaid: (planLabel) =>
+      `Votre adhésion <em>${planLabel}</em> est confirmée. Vous rejoignez le cercle restreint des chefs membres VIP de Chefs Talents.`,
+    introComp: (planLabel) =>
+      `Nous vous offrons un accès <em>${planLabel}</em> au cercle des chefs membres VIP de Chefs Talents.`,
+    paragraph2:
+      'Vous bénéficiez désormais d’un accès prioritaire aux missions, des ressources éditoriales exclusives et de l’accompagnement réservé au réseau.',
+    overlineWhatsNext: 'Ce qui vous attend',
     bullets: [
-      'Accès au canal WhatsApp VIP — missions proposées en priorité',
-      '4 guides par mois (tarification, codes clients, gestion de mission, business)',
-      'Accès à votre espace VIP avec toutes les ressources',
+      'Canal WhatsApp VIP — missions adressées en priorité',
+      'Documentation éditoriale : tarification, codes clients, gestion de mission',
+      'Espace VIP avec l’ensemble des ressources',
     ],
     callIncluded:
-      'Votre engagement 12 mois inclut un call de positionnement de 30 min avec Thomas. Le lien Calendly est dans votre espace VIP.',
-    cta: 'Accéder à mon espace VIP →',
-    p3:
-      'Le lien du groupe WhatsApp Last Minute vous sera envoyé par email sous 24h après vérification de votre profil.',
-    sign: 'À très vite,\nThomas',
+      'Votre engagement annuel inclut un échange de positionnement de trente minutes avec Thomas. Le lien est disponible dans votre espace.',
+    cta: 'Accéder à mon espace',
+    closing:
+      'Le canal WhatsApp Last Minute vous sera adressé personnellement sous vingt-quatre heures, après vérification de votre profil.',
+    signLine1: 'Bien à vous,',
+    signLine2: 'Thomas Delcroix',
+    footerLeft: 'Chefs Talents · Bordeaux',
   },
   en: {
-    subject: '🎉 Welcome to the VIP Chef network — Chefs Talents',
-    greeting: (name) => `Hi ${name},`,
-    p1: (planLabel) =>
-      `Your <strong>${planLabel}</strong> subscription is now active. Welcome to the Chefs Talents VIP network.`,
-    p1Comp: (planLabel) =>
-      `We are offering you <strong>${planLabel}</strong> access to the Chefs Talents VIP network. Enjoy.`,
-    p2:
-      'From now on, you have priority on missions, exclusive guides and resources reserved for member chefs.',
-    bulletsTitle: 'What awaits you',
+    subject: 'Welcome to Chef VIP — Chefs Talents',
+    greeting: (name) => `Hello ${name},`,
+    introPaid: (planLabel) =>
+      `Your <em>${planLabel}</em> membership is confirmed. You are now part of the inner circle of VIP member chefs at Chefs Talents.`,
+    introComp: (planLabel) =>
+      `We are offering you <em>${planLabel}</em> access to the inner circle of VIP member chefs at Chefs Talents.`,
+    paragraph2:
+      'You now enjoy priority access to missions, exclusive editorial resources, and the support reserved to the network.',
+    overlineWhatsNext: 'What awaits you',
     bullets: [
-      'Access to the VIP WhatsApp channel — missions sent in priority',
-      '4 guides per month (pricing, client codes, mission management, business)',
-      'Access to your VIP space with all resources',
+      'VIP WhatsApp channel — missions sent to you first',
+      'Editorial documentation: pricing, client codes, mission management',
+      'VIP space with all the resources',
     ],
     callIncluded:
-      'Your 12-month commitment includes a 30-min positioning call with Thomas. The Calendly link is in your VIP space.',
-    cta: 'Open my VIP space →',
-    p3:
-      'The Last Minute WhatsApp group link will be sent to you by email within 24h after profile verification.',
-    sign: 'Speak soon,\nThomas',
+      'Your annual commitment includes a thirty-minute positioning conversation with Thomas. The link is available in your space.',
+    cta: 'Open my space',
+    closing:
+      'The Last Minute WhatsApp channel will be sent to you personally within twenty-four hours, after profile verification.',
+    signLine1: 'With kind regards,',
+    signLine2: 'Thomas Delcroix',
+    footerLeft: 'Chefs Talents · Bordeaux',
   },
   es: {
-    subject: '🎉 Bienvenido a la red Chef VIP — Chefs Talents',
-    greeting: (name) => `Hola ${name},`,
-    p1: (planLabel) =>
-      `Su suscripción <strong>${planLabel}</strong> está activa. Bienvenido a la red VIP de Chefs Talents.`,
-    p1Comp: (planLabel) =>
-      `Le ofrecemos un acceso <strong>${planLabel}</strong> a la red VIP de Chefs Talents. Disfrute.`,
-    p2:
-      'A partir de ahora, tiene prioridad en las misiones, las guías exclusivas y los recursos reservados a los chefs miembros.',
-    bulletsTitle: 'Lo que le espera',
+    subject: 'Bienvenido al círculo Chef VIP — Chefs Talents',
+    greeting: (name) => `Buenos días ${name},`,
+    introPaid: (planLabel) =>
+      `Su adhesión <em>${planLabel}</em> está confirmada. Se une al círculo restringido de chefs miembros VIP de Chefs Talents.`,
+    introComp: (planLabel) =>
+      `Le ofrecemos un acceso <em>${planLabel}</em> al círculo de chefs miembros VIP de Chefs Talents.`,
+    paragraph2:
+      'A partir de ahora dispone de acceso prioritario a las misiones, de recursos editoriales exclusivos y del acompañamiento reservado a la red.',
+    overlineWhatsNext: 'Lo que le espera',
     bullets: [
-      'Acceso al canal WhatsApp VIP — misiones enviadas con prioridad',
-      '4 guías al mes (tarificación, códigos cliente, gestión de misión, business)',
-      'Acceso a su espacio VIP con todos los recursos',
+      'Canal WhatsApp VIP — misiones enviadas con prioridad',
+      'Documentación editorial: tarificación, códigos cliente, gestión de misión',
+      'Espacio VIP con todos los recursos',
     ],
     callIncluded:
-      'Su compromiso 12 meses incluye una llamada de posicionamiento de 30 min con Thomas. El enlace Calendly está en su espacio VIP.',
-    cta: 'Acceder a mi espacio VIP →',
-    p3:
-      'El enlace del grupo WhatsApp Last Minute se le enviará por email en 24h tras la verificación del perfil.',
-    sign: 'Hasta pronto,\nThomas',
+      'Su compromiso anual incluye una conversación de posicionamiento de treinta minutos con Thomas. El enlace está disponible en su espacio.',
+    cta: 'Acceder a mi espacio',
+    closing:
+      'El canal WhatsApp Last Minute le será enviado personalmente en veinticuatro horas, tras la verificación de su perfil.',
+    signLine1: 'Atentamente,',
+    signLine2: 'Thomas Delcroix',
+    footerLeft: 'Chefs Talents · Burdeos',
   },
 };
 
 const PLAN_LABELS: Record<string, Record<Locale, string>> = {
-  vip_3m: {
-    fr: 'VIP 3 mois',
-    en: 'VIP 3 months',
-    es: 'VIP 3 meses',
-  },
-  vip_6m: {
-    fr: 'VIP 6 mois',
-    en: 'VIP 6 months',
-    es: 'VIP 6 meses',
-  },
-  vip_12m: {
-    fr: 'VIP 12 mois',
-    en: 'VIP 12 months',
-    es: 'VIP 12 meses',
-  },
+  vip_3m: { fr: 'VIP 3 mois', en: 'VIP 3 months', es: 'VIP 3 meses' },
+  vip_6m: { fr: 'VIP 6 mois', en: 'VIP 6 months', es: 'VIP 6 meses' },
+  vip_12m: { fr: 'VIP 12 mois', en: 'VIP 12 months', es: 'VIP 12 meses' },
 };
+
+const SIGN_TITLE: Record<Locale, string> = {
+  fr: 'Fondateur, Chefs Talents',
+  en: 'Founder, Chefs Talents',
+  es: 'Fundador, Chefs Talents',
+};
+
+function buildHtml(opts: {
+  firstName: string;
+  planLabel: string;
+  isComplimentary: boolean;
+  includesCall: boolean;
+  locale: Locale;
+}): string {
+  const t = T[opts.locale];
+  const intro = opts.isComplimentary
+    ? t.introComp(opts.planLabel)
+    : t.introPaid(opts.planLabel);
+
+  const bulletRows = t.bullets
+    .map(
+      (b) => `
+              <tr>
+                <td style="padding:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.7;color:#3f3a34;">
+                  <span style="display:inline-block;width:22px;color:#9b9082;">—</span>${b}
+                </td>
+              </tr>`,
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="${opts.locale}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${t.subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#f7f5f2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f5f2;">
+    <tr>
+      <td align="center" style="padding:56px 16px;">
+        <table role="presentation" width="540" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border:1px solid #ece6dc;width:100%;max-width:540px;">
+
+          <tr>
+            <td style="padding:36px 40px 22px;border-bottom:1px solid #ece6dc;">
+              <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:11px;letter-spacing:0.42em;text-transform:uppercase;color:#9b9082;">
+                CHEFS&nbsp;TALENTS
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px 40px 8px;font-family:Georgia,'Times New Roman',serif;">
+              <h1 style="margin:0 0 28px;font-size:30px;font-weight:400;color:#1a1815;letter-spacing:-0.01em;line-height:1.2;">
+                ${t.greeting(opts.firstName)}
+              </h1>
+
+              <p style="margin:0 0 18px;font-size:16px;line-height:1.75;color:#3f3a34;">
+                ${intro}
+              </p>
+
+              <p style="margin:0 0 28px;font-size:16px;line-height:1.75;color:#3f3a34;">
+                ${t.paragraph2}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 40px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fbf9f5;border:1px solid #ece6dc;">
+                <tr>
+                  <td style="padding:24px 28px;">
+                    <p style="margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:10px;letter-spacing:0.34em;text-transform:uppercase;color:#9b9082;">
+                      ${t.overlineWhatsNext}
+                    </p>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      ${bulletRows}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${
+            opts.includesCall
+              ? `
+          <tr>
+            <td style="padding:0 40px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-left:2px solid #c9a85f;padding:6px 0 6px 18px;font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.7;color:#5c4a18;font-style:italic;">
+                    ${t.callIncluded}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`
+              : ''
+          }
+
+          <tr>
+            <td align="left" style="padding:8px 40px 36px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#1a1815;">
+                    <a href="${SITE_URL}/chef/vip" style="display:inline-block;padding:14px 30px;font-family:Georgia,'Times New Roman',serif;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#ffffff;text-decoration:none;">
+                      ${t.cta}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 40px 32px;font-family:Georgia,'Times New Roman',serif;">
+              <p style="margin:0 0 28px;font-size:14px;line-height:1.7;color:#7d756a;font-style:italic;">
+                ${t.closing}
+              </p>
+
+              <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#3f3a34;">
+                ${t.signLine1}
+              </p>
+              <p style="margin:0;font-size:15px;line-height:1.6;color:#3f3a34;">
+                <em>${t.signLine2}</em><br>
+                <span style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#9b9082;">${SIGN_TITLE[opts.locale]}</span>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 40px;background:#f7f5f2;border-top:1px solid #ece6dc;">
+              <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:#a8a29e;text-align:center;">
+                ${t.footerLeft} &middot; chefstalents.com
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
 
 export async function sendVipWelcome(opts: {
   email: string;
@@ -127,82 +270,16 @@ export async function sendVipWelcome(opts: {
   const planLabel =
     PLAN_LABELS[opts.planKey]?.[locale] || opts.planKey || 'VIP';
 
-  const intro = opts.isComplimentary ? t.p1Comp(planLabel) : t.p1(planLabel);
-  const includesCall = opts.planKey === 'vip_12m';
-
-  const html = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4efe8;font-family:Georgia,serif;">
-  <div style="max-width:580px;margin:0 auto;padding:48px 32px;">
-
-    <p style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#8a7f73;margin:0 0 40px;">
-      CHEFS TALENTS · CHEF VIP
-    </p>
-
-    <h1 style="font-size:28px;font-weight:normal;color:#161616;margin:0 0 24px;line-height:1.3;">
-      ${t.greeting(name)}
-    </h1>
-
-    <p style="font-size:16px;line-height:1.8;color:#3f3a34;margin:0 0 16px;">
-      ${intro}
-    </p>
-
-    <p style="font-size:16px;line-height:1.8;color:#59544d;margin:0 0 28px;">
-      ${t.p2}
-    </p>
-
-    <div style="border:1px solid #e2dccf;background:#ffffff;padding:24px;margin:0 0 28px;">
-      <p style="font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#8a7f73;margin:0 0 12px;">
-        ${t.bulletsTitle}
-      </p>
-      <ul style="margin:0;padding:0;list-style:none;">
-        ${t.bullets
-          .map(
-            (b) => `
-        <li style="font-size:15px;line-height:1.6;color:#3f3a34;margin:0 0 10px;padding-left:20px;position:relative;">
-          <span style="position:absolute;left:0;top:0;color:#8a7f73;">•</span>${b}
-        </li>`,
-          )
-          .join('')}
-      </ul>
-    </div>
-
-    ${
-      includesCall
-        ? `<div style="border-left:3px solid #d4b96a;background:#faf6ec;padding:16px 20px;margin:0 0 28px;">
-            <p style="font-size:14px;line-height:1.6;color:#5c4a18;margin:0;">
-              ✦ ${t.callIncluded}
-            </p>
-           </div>`
-        : ''
-    }
-
-    <p style="margin:0 0 28px;">
-      <a href="${SITE_URL}/chef/vip" style="display:inline-block;background:#161616;color:#ffffff;text-decoration:none;padding:14px 28px;font-size:14px;letter-spacing:0.05em;">
-        ${t.cta}
-      </a>
-    </p>
-
-    <p style="font-size:13px;line-height:1.7;color:#8a7f73;margin:0 0 32px;font-style:italic;">
-      ${t.p3}
-    </p>
-
-    <p style="font-size:14px;line-height:1.7;color:#3f3a34;margin:32px 0 0;white-space:pre-line;">
-      ${t.sign}
-    </p>
-
-    <p style="font-size:11px;color:#a8a29e;margin:48px 0 0;border-top:1px solid #e2dccf;padding-top:24px;">
-      Chefs Talents · ${SITE_URL}
-    </p>
-  </div>
-</body>
-</html>`;
-
   await resend.emails.send({
     from: FROM,
     to: opts.email,
     subject: t.subject,
-    html,
+    html: buildHtml({
+      firstName: name,
+      planLabel,
+      isComplimentary: opts.isComplimentary,
+      includesCall: opts.planKey === 'vip_12m',
+      locale,
+    }),
   });
 }

@@ -593,10 +593,6 @@ export type Dictionary = {
     callDescNotIncluded: string; // for 3m/6m
     callCta: string;
     callBadgeIncluded: string;
-
-    statsSectionLabel: string;
-    statsTitle: string;
-    statsComingSoon: string;
   };
 
   auth: {
@@ -1410,11 +1406,6 @@ const fr: Dictionary = {
       'Le call de positionnement est inclus uniquement avec l\'engagement 12 mois. Passez à VIP 12 mois pour en bénéficier.',
     callCta: 'Réserver mon call →',
     callBadgeIncluded: 'Inclus 12 mois',
-
-    statsSectionLabel: 'Performance',
-    statsTitle: 'Statistiques privées',
-    statsComingSoon:
-      'Vues de profil, taux d\'apparition dans les sélections conciergerie, missions proposées : disponibles dès la prochaine mise à jour.',
   },
   auth: {
     sectionLabel: 'Espace Chef',
@@ -2166,11 +2157,6 @@ const en: Dictionary = {
       'The positioning call is included only with the 12-month commitment. Upgrade to VIP 12 months to benefit from it.',
     callCta: 'Book my call →',
     callBadgeIncluded: '12 months included',
-
-    statsSectionLabel: 'Performance',
-    statsTitle: 'Private analytics',
-    statsComingSoon:
-      'Profile views, appearance rate in concierge selections, missions proposed: available in the next update.',
   },
   auth: {
     sectionLabel: 'Chef Portal',
@@ -2923,11 +2909,6 @@ const es: Dictionary = {
       'La llamada de posicionamiento está incluida solo con el compromiso 12 meses. Suba a VIP 12 meses para beneficiarse.',
     callCta: 'Reservar mi llamada →',
     callBadgeIncluded: '12 meses incluido',
-
-    statsSectionLabel: 'Rendimiento',
-    statsTitle: 'Estadísticas privadas',
-    statsComingSoon:
-      'Vistas de perfil, tasa de aparición en selecciones de conciergeries, misiones propuestas: disponibles en la próxima actualización.',
   },
   auth: {
     sectionLabel: 'Portal Chef',

@@ -12,7 +12,6 @@ import {
   MessageCircle,
   BookOpen,
   Phone,
-  BarChart3,
   Loader2,
   ExternalLink,
   AlertTriangle,
@@ -428,17 +427,6 @@ export default function ChefVipPage() {
         )}
       </div>
 
-      {/* Stats privées (placeholder) */}
-      <div className="border border-stone-200 bg-stone-50/50 p-6 md:p-8 space-y-4">
-        <div className="flex items-center gap-3">
-          <BarChart3 className="w-5 h-5 text-stone-700" />
-          <Label className="mb-0">{t.vip.statsSectionLabel}</Label>
-        </div>
-        <h3 className="text-xl font-serif text-stone-900">{t.vip.statsTitle}</h3>
-        <p className="text-sm text-stone-500 max-w-2xl">
-          {t.vip.statsComingSoon}
-        </p>
-      </div>
     </div>
   );
 }
