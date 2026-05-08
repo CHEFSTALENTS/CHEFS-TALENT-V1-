@@ -46,7 +46,7 @@ export default function ConditionsPage() {
             </h1>
 
             <p className="text-stone-500 font-light">
-              {isFR ? 'Dernière mise à jour' : 'Last updated'} : <strong>janvier 2026</strong>
+              {isFR ? 'Dernière mise à jour' : 'Last updated'} : <strong>{isFR ? 'mai 2026' : 'May 2026'}</strong>
             </p>
           </div>
 
@@ -135,17 +135,20 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">5. Rôle de Chefs Talents</p>
         <p>
-          Chefs Talents agit exclusivement en tant qu’intermédiaire et tiers de confiance. Chefs Talents :
+          Chefs Talents (SASU Chefs Talents, SIRET 89832072600026, siège 73 rue Porte Dijeaux, 33000 Bordeaux)
+          agit en qualité de <strong>vendeur en nom propre</strong> de la prestation culinaire commandée par le Client.
+          Chefs Talents :
         </p>
         <ul className="list-disc pl-6 space-y-2">
-          <li>ne fournit aucune prestation culinaire directe ;</li>
-          <li>n’emploie pas les chefs référencés ;</li>
-          <li>n’intervient pas dans l’exécution matérielle des prestations.</li>
+          <li>vend la prestation au Client en son nom et pour son compte ;</li>
+          <li>confie l’exécution matérielle de la prestation à un Chef indépendant qu’elle a sélectionné et avec lequel elle a négocié les conditions ;</li>
+          <li>n’emploie pas les Chefs référencés, qui interviennent comme prestataires indépendants pour le compte de Chefs Talents ;</li>
+          <li>n’intervient pas dans la réalisation culinaire elle-même, mais demeure l’interlocuteur contractuel du Client.</li>
         </ul>
         <p>
-          Les Chefs sont des professionnels indépendants, responsables de leurs obligations légales, sociales, fiscales et
-          assurantielles. Le contrat de prestation culinaire est conclu entre le Client et le Chef, sous réserve des règles
-          applicables au parcours et aux outils de la Plateforme (paiements, validation, coordination).
+          Le contrat de prestation est conclu entre le Client et Chefs Talents. Le Chef qui exécute la prestation est lié à
+          Chefs Talents par un contrat de mission distinct, sans relation contractuelle directe avec le Client. Chefs Talents
+          engage sa propre responsabilité commerciale vis-à-vis du Client pour la conformité de la prestation.
         </p>
       </section>
 
@@ -261,10 +264,20 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">15. Responsabilité</p>
         <p>
-          Chefs Talents ne saurait être tenu responsable : (i) des prestations réalisées par les Chefs, (ii) des dommages liés
-          à l’exécution des missions, (iii) des litiges entre Chefs et Clients. Chefs Talents est soumis à une obligation de
-          moyens dans la mise en relation et la coordination, et non de résultat.
+          Chefs Talents agissant en qualité de vendeur, elle engage sa propre responsabilité commerciale vis-à-vis du
+          Client pour la conformité de la prestation au cahier des charges convenu. Chefs Talents conserve un recours
+          interne contre le Chef en cas de manquement de ce dernier.
         </p>
+        <p>
+          La responsabilité de Chefs Talents est limitée au montant facturé pour la prestation concernée, à l’exclusion
+          de tout dommage indirect, perte de jouissance, préjudice moral non démontré ou perte commerciale.
+          Chefs Talents ne saurait être tenu responsable :
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>des cas de force majeure tels que définis à l’article 9 des CGV ;</li>
+          <li>des conséquences liées à des informations erronées, incomplètes ou trompeuses fournies par le Client (allergies, contraintes, dates, lieu) ;</li>
+          <li>des dommages causés par le Client à ses propres équipements, installations ou tiers présents pendant la prestation.</li>
+        </ul>
       </section>
 
       {/* ✅ NEW: Sanctions */}
@@ -341,23 +354,22 @@ export default function ConditionsPage() {
                 <section className="space-y-3">
                   <p className="text-stone-900 font-medium">2. Nature et rôle de Chefs Talents</p>
                   <p>
-                    Chefs Talents intervient exclusivement en tant que tiers de confiance et intermédiaire dans la mise en
-                    relation entre le Client et un chef indépendant.
+                    <strong>SASU Chefs Talents</strong>, immatriculée au RCS de Bordeaux sous le SIRET 89832072600026,
+                    siège 73 rue Porte Dijeaux 33000 Bordeaux, agit en qualité de <strong>vendeur en nom propre</strong>
+                    {' '}de la prestation culinaire commandée par le Client.
                   </p>
-                  <p>À ce titre, Chefs Talents assure notamment :</p>
+                  <p>À ce titre, Chefs Talents :</p>
                   <ul className="list-disc pl-6 space-y-2">
-                    <li>l’analyse du besoin exprimé par le Client ;</li>
-                    <li>la sélection et la présentation de profils adaptés ;</li>
-                    <li>la coordination du processus de réservation ;</li>
-                    <li>la sécurisation du cadre contractuel et financier.</li>
+                    <li>analyse le besoin exprimé par le Client et formalise le périmètre de la prestation ;</li>
+                    <li>sélectionne le ou les Chefs adaptés et négocie avec eux le budget de leur intervention ;</li>
+                    <li>vend la prestation au Client à un prix incluant la marge commerciale de Chefs Talents et la TVA applicable ;</li>
+                    <li>confie l’exécution au Chef sélectionné, qui intervient en qualité de prestataire indépendant pour le compte de Chefs Talents ;</li>
+                    <li>demeure l’interlocuteur contractuel du Client tout au long de la mission.</li>
                   </ul>
                   <p>
-                    Chefs Talents n’est pas partie au contrat de prestation culinaire, lequel est conclu directement entre
-                    le Client et le chef sélectionné.
-                  </p>
-                  <p>
-                    Les chefs référencés sont des professionnels indépendants, seuls responsables de l’exécution de leurs
-                    prestations, de leurs obligations légales et de leurs assurances.
+                    Le contrat de prestation est conclu entre le Client et Chefs Talents. Le Chef qui exécute la prestation
+                    est lié à Chefs Talents par un contrat de mission distinct, sans relation contractuelle directe avec
+                    le Client. Chefs Talents engage sa propre responsabilité commerciale pour la conformité de la prestation.
                   </p>
                 </section>
 
@@ -378,60 +390,89 @@ export default function ConditionsPage() {
                 </section>
 
                 <section className="space-y-3">
-                  <p className="text-stone-900 font-medium">4. Modalités de paiement</p>
+                  <p className="text-stone-900 font-medium">4. Tarification et modalités de paiement</p>
 
                   <div className="space-y-2">
-                    <p className="text-stone-900 font-medium">4.1 Prestations ponctuelles (One Shot – 1 à 3 jours)</p>
-                    <p>Pour toute prestation courte ou événementielle :</p>
-                    <ul className="list-disc pl-6 space-y-2">
-                      <li>le règlement de 100 % du montant total de la prestation est exigé ;</li>
-                      <li>le paiement intervient après sélection du chef ;</li>
-                      <li>
-                        en l’absence de paiement, le chef n’est pas réservé et la mission n’est pas confirmée.
-                      </li>
-                    </ul>
+                    <p className="text-stone-900 font-medium">4.1 Tarification</p>
                     <p>
-                      Ce règlement permet de sécuriser l’engagement du chef, de confirmer la date, et de cadrer les
-                      conditions d’exécution (horaires, convives, contraintes, etc.).
+                      Le prix facturé au Client est exprimé toutes taxes comprises (TTC). Il inclut la prestation
+                      culinaire convenue, la marge commerciale de Chefs Talents et la TVA française au taux applicable.
+                      Pour les missions à l’étranger, les règles de TVA spécifiques sont précisées dans le contrat de
+                      mission signé entre les parties.
+                    </p>
+                    <p>
+                      Le prix est ferme et définitif une fois le contrat de mission signé, sauf modification écrite du
+                      périmètre acceptée par les deux parties.
                     </p>
                   </div>
 
                   <div className="space-y-2 mt-6">
-                    <p className="text-stone-900 font-medium">4.2 Missions de longue durée (résidences, yachts, séjours)</p>
-                    <p>Pour les missions supérieures à une semaine :</p>
+                    <p className="text-stone-900 font-medium">4.2 Prestations ponctuelles (1 à 3 jours, &lt; 10 000 € TTC)</p>
+                    <p>
+                      Le règlement intégral du montant TTC est exigé à la commande pour confirmer la mission. À défaut
+                      de paiement intégral, la mission n’est pas réputée confirmée et le Chef n’est pas mobilisé.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 mt-6">
+                    <p className="text-stone-900 font-medium">4.3 Missions de moyen et long format (≥ 10 000 € TTC)</p>
+                    <p>
+                      Pour les missions de durée supérieure à 4 jours ou d’un montant supérieur à 10 000 € TTC, les
+                      modalités sont fixées dans le contrat de mission signé pour la mission concernée. À défaut de
+                      stipulation contraire, le Client règle :
+                    </p>
                     <ul className="list-disc pl-6 space-y-2">
-                      <li>seuls les frais de service Chefs Talents sont facturés à la réservation ;</li>
-                      <li>
-                        ces frais permettent de valider :
-                        <ul className="list-disc pl-6 mt-2 space-y-2">
-                          <li>le démarrage de la mission ;</li>
-                          <li>le cadre contractuel ;</li>
-                          <li>les conditions générales de collaboration.</li>
-                        </ul>
-                      </li>
+                      <li>un acompte minimum de 50 % à la commande pour bloquer les dates et activer le Chef ;</li>
+                      <li>le solde au plus tard 4 jours ouvrés avant le début de la mission.</li>
                     </ul>
                     <p>
-                      La rémunération du chef fait l’objet d’un accord distinct, selon un calendrier défini entre le Client
-                      et le chef, éventuellement facilité par Chefs Talents.
+                      Pour les missions saisonnières (≥ 6 semaines), un échelonnement mensuel à terme à échoir peut être
+                      formalisé dans le contrat de mission.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 mt-6">
+                    <p className="text-stone-900 font-medium">4.4 Carte de mission (avance courses)</p>
+                    <p>
+                      Pour certaines missions, Chefs Talents alloue au Chef une carte de paiement dédiée pour les courses
+                      alimentaires et matières premières. Le budget de cette carte est distinct du prix de la prestation
+                      et peut faire l’objet d’une avance complémentaire prélevée auprès du Client à la commande, dont le
+                      montant est précisé dans le contrat de mission.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 mt-6">
+                    <p className="text-stone-900 font-medium">4.5 Moyens de paiement</p>
+                    <p>
+                      Les paiements sont effectués par virement bancaire SEPA ou carte bancaire via une plateforme de
+                      paiement sécurisée. Les coordonnées de règlement sont communiquées au Client à la commande.
                     </p>
                   </div>
                 </section>
 
                 <section className="space-y-3">
-                  <p className="text-stone-900 font-medium">5. Annulation – Client</p>
+                  <p className="text-stone-900 font-medium">5. Annulation par le Client</p>
                   <p>
-                    Les conditions d’annulation dépendent de la nature de la mission, de sa durée et du délai d’annulation.
+                    Les conditions d’annulation dépendent de la nature de la mission et du délai d’annulation par rapport
+                    au début de la prestation. Le barème précis applicable à chaque mission est défini dans le contrat
+                    de mission signé pour cette mission.
                   </p>
-                  <p>Sauf stipulation contraire communiquée avant validation :</p>
+                  <p>À défaut de stipulation contraire dans le contrat de mission, le barème suivant s’applique :</p>
                   <ul className="list-disc pl-6 space-y-2">
-                    <li>les frais de service Chefs Talents ne sont pas remboursables ;</li>
-                    <li>
-                      toute annulation tardive peut entraîner la facturation partielle ou totale de la prestation,
-                      conformément aux engagements pris avec le chef (réservation de dates, organisation, achats, etc.).
-                    </li>
+                    <li>annulation plus de 30 jours avant le début de la mission : 25 % du montant TTC retenu à titre d’indemnité forfaitaire ;</li>
+                    <li>annulation entre 30 et 14 jours avant le début : 50 % du montant TTC retenu ;</li>
+                    <li>annulation entre 14 et 7 jours avant le début : 75 % du montant TTC retenu ;</li>
+                    <li>annulation à moins de 7 jours du début, ou en cours de mission : 100 % du montant TTC retenu.</li>
                   </ul>
                   <p>
-                    Les conditions précises (barème et délais) sont communiquées au Client avant confirmation de la mission.
+                    Ces retenues couvrent les engagements pris par Chefs Talents et le Chef (mobilisation des dates,
+                    organisation, achats déjà engagés, manque à gagner) et ne peuvent faire l’objet d’une contestation
+                    fondée sur l’absence d’exécution effective de la prestation, l’annulation étant le fait exclusif
+                    du Client.
+                  </p>
+                  <p>
+                    En cas de force majeure dûment caractérisée affectant le Client, les modalités sont étudiées au
+                    cas par cas dans le respect du droit français.
                   </p>
                 </section>
 
@@ -449,18 +490,28 @@ export default function ConditionsPage() {
                 </section>
 
                 <section className="space-y-3">
-                  <p className="text-stone-900 font-medium">7. Rôle de tiers de confiance et responsabilité financière</p>
+                  <p className="text-stone-900 font-medium">7. Responsabilité de Chefs Talents</p>
                   <p>
-                    Chefs Talents peut intervenir comme intermédiaire de paiement afin de sécuriser les flux financiers liés
-                    à la mission, sans toutefois devenir partie au contrat de prestation culinaire.
+                    Chefs Talents agissant en qualité de vendeur, elle engage sa propre responsabilité commerciale
+                    vis-à-vis du Client pour la conformité de la prestation au cahier des charges convenu. Le Chef
+                    intervient pour le compte de Chefs Talents et n’a pas de relation contractuelle directe avec le
+                    Client.
                   </p>
                   <p>
-                    Toute contestation relative à l’exécution de la prestation devra être signalée dans un délai raisonnable
-                    après la mission afin de permettre une analyse appropriée.
+                    En cas de manquement constaté pendant ou après la mission, le Client adresse sa contestation à
+                    Chefs Talents qui pilote l’analyse et la résolution. Toute contestation doit être signalée par
+                    écrit dans un délai raisonnable et au plus tard 30 jours après la fin de la mission.
                   </p>
                   <p>
-                    Chefs Talents ne saurait être tenu responsable des litiges liés à l’exécution matérielle de la prestation,
-                    laquelle relève du chef et du Client.
+                    La responsabilité de Chefs Talents est limitée au montant TTC facturé pour la prestation concernée,
+                    à l’exclusion de tout dommage indirect, perte de jouissance, préjudice moral non démontré, perte
+                    commerciale ou conséquence d’un cas de force majeure.
+                  </p>
+                  <p>
+                    Chefs Talents ne saurait par ailleurs être tenue responsable des dommages causés par le Client à
+                    ses propres équipements ou installations, ni des préjudices résultant d’informations erronées,
+                    incomplètes ou trompeuses fournies par le Client (notamment allergies, contraintes médicales,
+                    accès aux lieux).
                   </p>
                 </section>
 
@@ -483,7 +534,86 @@ export default function ConditionsPage() {
                 </section>
 
                 <section className="space-y-3">
-                  <p className="text-stone-900 font-medium">10. Droit applicable et juridiction compétente</p>
+                  <p className="text-stone-900 font-medium">10. Abonnements et services premium aux Chefs (VIP, Boost)</p>
+                  <p>
+                    Indépendamment des prestations vendues aux Clients finaux, Chefs Talents propose aux Chefs référencés
+                    sur la Plateforme des produits payants destinés à améliorer leur visibilité et leur accompagnement.
+                    Les présentes stipulations s’appliquent à toute souscription par un Chef à l’un de ces produits. Elles
+                    complètent les Conditions de Collaboration acceptées par le Chef à son inscription.
+                  </p>
+
+                  <div className="space-y-2 mt-4">
+                    <p className="text-stone-900 font-medium">10.1 Statut VIP</p>
+                    <p>
+                      Le statut VIP confère au Chef une priorité dans les sélections envoyées aux Clients et conciergeries,
+                      un badge de visibilité et l’accès aux briefs en avant-première. Trois durées d’engagement sont
+                      proposées :
+                    </p>
+                    <ul className="list-disc pl-6 space-y-2">
+                      <li><strong>VIP 3 mois</strong> : 59 € HT / mois (177 € HT en règlement unique anticipé).</li>
+                      <li><strong>VIP 6 mois</strong> : 55 € HT / mois (330 € HT en règlement unique anticipé).</li>
+                      <li><strong>VIP 12 mois</strong> : 40 € HT / mois (480 € HT en règlement unique anticipé) ; cette
+                        formule inclut un appel de positionnement avec l’équipe Chefs Talents.</li>
+                    </ul>
+                    <p>
+                      Les paiements sont effectués via Stripe. En formule mensuelle, l’abonnement est automatiquement
+                      résilié à terme de l’engagement (mécanisme <em>cancel_at</em>) et ne fait l’objet d’aucun
+                      renouvellement tacite.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <p className="text-stone-900 font-medium">10.2 Boost de profil</p>
+                    <p>
+                      Le Boost confère au Chef une visibilité maximale et accrue de son profil dans les sélections
+                      envoyées aux partenaires (Clients privés, conciergeries) pendant <strong>trente (30) jours
+                      consécutifs</strong> à compter de son activation. Le profil bénéficie d’un badge « Disponible »
+                      et apparaît en priorité dans les présélections correspondant à ses critères.
+                    </p>
+                    <p>
+                      Le Boost est facturé <strong>119 € HT en paiement unique</strong> via Stripe. Il est expressément
+                      précisé que :
+                    </p>
+                    <ul className="list-disc pl-6 space-y-2">
+                      <li>le Boost <strong>ne garantit pas l’attribution de missions</strong> ; il garantit une visibilité
+                        accrue du profil sur les demandes des partenaires pendant la période active ;</li>
+                      <li>le Boost est <strong>non remboursable</strong> une fois activé, y compris en l’absence de
+                        mission attribuée pendant la période ;</li>
+                      <li>le Boost ne peut faire l’objet d’une suspension, d’un report ou d’un transfert vers un autre
+                        profil.</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <p className="text-stone-900 font-medium">10.3 Caractère professionnel et absence de droit de rétractation</p>
+                    <p>
+                      Les achats VIP et Boost étant directement liés à l’activité professionnelle du Chef, le droit de
+                      rétractation de quatorze (14) jours prévu par le Code de la consommation pour les contrats à
+                      distance entre professionnels et consommateurs ne s’applique pas. Le Chef reconnaît effectuer ces
+                      achats à titre exclusivement professionnel.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <p className="text-stone-900 font-medium">10.4 Suspension ou résiliation du compte Chef</p>
+                    <p>
+                      En cas de suspension ou résiliation du compte du Chef pour manquement à ses obligations contractuelles,
+                      les montants déjà versés au titre du VIP ou du Boost restent acquis à Chefs Talents. Aucun
+                      remboursement, prorata ou avoir ne peut être réclamé sur ce fondement.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <p className="text-stone-900 font-medium">10.5 TVA</p>
+                    <p>
+                      Les tarifs ci-dessus sont exprimés hors taxes. La TVA française au taux applicable est ajoutée à
+                      la facturation. Une facture conforme est mise à disposition du Chef après chaque paiement.
+                    </p>
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <p className="text-stone-900 font-medium">11. Droit applicable et juridiction compétente</p>
                   <p>
                     Les présentes CGV sont soumises au droit français. En cas de litige, et à défaut de résolution amiable
                     dans un délai de trente (30) jours à compter de la première notification écrite, les Parties conviennent
