@@ -28,9 +28,11 @@ async function patchProfile(userId: string, patch: Record<string, any>) {
 
   // Le profile est stocké soit indexé par profile->>id (legacy) soit par user_id.
   // On essaye d'abord avec user_id (pattern majoritaire actuel).
+  // On lit aussi la colonne email top-level qui est la source de vérité éditée
+  // par l'admin (le JSON profile.email peut être en retard).
   let { data: existing } = await admin
     .from('chef_profiles')
-    .select('user_id, profile')
+    .select('user_id, email, profile')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -38,7 +40,7 @@ async function patchProfile(userId: string, patch: Record<string, any>) {
     // Fallback : lookup via profile->>id
     const { data: byProfileId } = await admin
       .from('chef_profiles')
-      .select('user_id, profile')
+      .select('user_id, email, profile')
       .eq('profile->>id', userId)
       .maybeSingle();
     if (byProfileId) existing = byProfileId;
@@ -52,6 +54,8 @@ async function patchProfile(userId: string, patch: Record<string, any>) {
 
   const next = {
     ...current,
+    // L'email top-level prime sur le JSON (l'admin édite la colonne, pas le JSON)
+    email: existing?.email || current.email,
     ...patch,
     updatedAt: new Date().toISOString(),
   };

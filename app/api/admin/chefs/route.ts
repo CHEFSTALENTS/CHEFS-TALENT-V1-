@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendChefActivated } from '@/lib/email/sendChefActivated';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 const TABLE = 'chef_profiles';
@@ -131,7 +132,13 @@ export async function PUT(req: Request) {
     if (e1) return NextResponse.json({ error: e1.message }, { status: 500 });
 
     const current = normalizeProfile(row?.profile);
+    const previousStatus = String((current as any)?.status || '').toLowerCase();
     const nowIso = new Date().toISOString();
+
+    // Détecte la transition approved → active : c'est le moment où l'on
+    // envoie l'email d'activation au chef (validation post-onboarding visio).
+    const isActivationTransition =
+      previousStatus === 'approved' && status === 'active';
 
     // ✅ On écrit le status AU BON ENDROIT : profile.status
     const nextProfile = {
@@ -158,6 +165,24 @@ export async function PUT(req: Request) {
 
       if (e2) return NextResponse.json({ error: e2.message }, { status: 500 });
 
+      // Trigger l'email d'activation si transition approved → active.
+      // Fire & forget : on ne bloque pas la réponse admin.
+      if (isActivationTransition) {
+        try {
+          const firstName =
+            String((current as any)?.firstName || '').trim() || undefined;
+          const rawLocale = String((current as any)?.preferredLocale || '');
+          const locale: 'fr' | 'en' | 'es' =
+            rawLocale === 'en' || rawLocale === 'es' ? rawLocale : 'fr';
+          await sendChefActivated({ email, firstName, locale });
+        } catch (err: any) {
+          console.error(
+            '[admin/chefs PUT] activation email failed',
+            err?.message,
+          );
+        }
+      }
+
       return NextResponse.json({ ok: true, email, user_id: row.user_id, status });
     }
 
@@ -168,6 +193,22 @@ export async function PUT(req: Request) {
       .eq('email', email);
 
     if (e3) return NextResponse.json({ error: e3.message }, { status: 500 });
+
+    if (isActivationTransition) {
+      try {
+        const firstName =
+          String((current as any)?.firstName || '').trim() || undefined;
+        const rawLocale = String((current as any)?.preferredLocale || '');
+        const locale: 'fr' | 'en' | 'es' =
+          rawLocale === 'en' || rawLocale === 'es' ? rawLocale : 'fr';
+        await sendChefActivated({ email, firstName, locale });
+      } catch (err: any) {
+        console.error(
+          '[admin/chefs PUT] activation email failed (fallback)',
+          err?.message,
+        );
+      }
+    }
 
     return NextResponse.json({ ok: true, email, status });
   } catch (e: any) {
