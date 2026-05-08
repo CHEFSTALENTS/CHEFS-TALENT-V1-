@@ -26,6 +26,9 @@ export function AdminSidebar({ badges }: { badges?: Record<string, string | numb
     // ✅ NEW — Contenu VIP éditable
     { label: 'Contenu VIP', href: '/admin/vip-content' },
 
+    // ✅ NEW — Vue dédiée des chefs VIP (suivi expirations, complimentary…)
+    { label: 'Chefs VIP', href: '/admin/vip' },
+
     // ✅ NEW — Newsletter aux chefs
     { label: 'Newsletter', href: '/admin/newsletter' },
   ];
