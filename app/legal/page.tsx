@@ -40,13 +40,13 @@ export default function LegalPage() {
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">1. Éditeur du site</p>
                 <p>
-                  <strong>Chefs Talents</strong><br />
-                  Forme juridique : <em>SASU</em><br />
-                  Capital social : <em>1000.00€</em><br />
+                  <strong>SASU Chefs Talents</strong><br />
+                  Forme juridique : <em>Société par Actions Simplifiée Unipersonnelle</em><br />
+                  Capital social : <em>1 000,00 €</em><br />
                   SIRET : <em>89832072600026</em><br />
                   RCS : <em>Bordeaux</em><br />
                   TVA intracommunautaire : <em>FR35898320726</em><br />
-                  Siège social : <em>Bordeaux, France</em>
+                  Siège social : <em>73 rue Porte Dijeaux, 33000 Bordeaux, France</em>
                 </p>
               </div>
               <div className="space-y-3">
@@ -63,8 +63,8 @@ export default function LegalPage() {
               </div>
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">5. Objet du site</p>
-                <p>Chefs Talents est une plateforme de mise en relation entre des chefs indépendants et des clients privés ou professionnels (conciergeries, gestionnaires de biens, sociétés), dans le cadre de prestations culinaires privées.</p>
-                <p>Chefs Talents agit exclusivement en tant qu'intermédiaire et n'intervient pas comme prestataire culinaire. Les chefs référencés sont des professionnels indépendants.</p>
+                <p>Chefs Talents est une agence spécialisée dans la commercialisation de prestations culinaires privées auprès de clients particuliers et professionnels (conciergeries, gestionnaires de biens, sociétés, armateurs).</p>
+                <p>Chefs Talents agit en qualité de vendeur en nom propre des prestations qu'elle commercialise, et confie l'exécution culinaire à des chefs indépendants sélectionnés et missionnés par ses soins. Chefs Talents engage sa propre responsabilité commerciale vis-à-vis du client final.</p>
               </div>
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">6. Propriété intellectuelle</p>
@@ -73,7 +73,7 @@ export default function LegalPage() {
               </div>
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">7. Responsabilité</p>
-                <p>Chefs Talents agit exclusivement en tant qu'intermédiaire. Sa responsabilité ne saurait être engagée au titre des prestations réalisées par les chefs indépendants ni des litiges pouvant survenir entre les parties.</p>
+                <p>Chefs Talents engage sa responsabilité commerciale de vendeur vis-à-vis du client final pour la conformité de la prestation au cahier des charges convenu. Chefs Talents conserve un recours interne contre le chef en cas de manquement de ce dernier. La responsabilité de Chefs Talents est limitée au montant facturé pour la prestation concernée et exclut les dommages indirects, les pertes de jouissance et les cas de force majeure. Les modalités détaillées sont précisées aux Conditions Générales de Vente accessibles à <a href="/conditions" className="underline hover:text-stone-900">/conditions</a>.</p>
               </div>
             </div>
           </div>
@@ -114,13 +114,17 @@ export default function LegalPage() {
               </div>
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">5. Destinataires des données</p>
-                <p>Les données peuvent être transmises uniquement aux prestataires techniques nécessaires au fonctionnement du service, notamment :</p>
+                <p>Les données peuvent être transmises uniquement aux prestataires techniques et financiers nécessaires au fonctionnement du service :</p>
                 <ul className="list-disc pl-6 space-y-2">
-                  <li>hébergement (Vercel),</li>
-                  <li>base de données et authentification (Supabase),</li>
-                  <li>services de communication (email, WhatsApp).</li>
+                  <li>hébergement et infrastructure : Vercel Inc. (États-Unis) ;</li>
+                  <li>base de données et authentification : Supabase Inc. (États-Unis) ;</li>
+                  <li>paiements : Stripe Payments Europe Ltd. (Irlande) ;</li>
+                  <li>envoi des emails transactionnels et marketing : Resend, Inc. (États-Unis) ;</li>
+                  <li>cartes de mission : Revolut Bank UAB (Lituanie) ;</li>
+                  <li>services de communication directe (WhatsApp, téléphone, email).</li>
                 </ul>
-                <p>Aucune donnée n'est vendue ou cédée à des tiers.</p>
+                <p>Aucune donnée n'est vendue ou cédée à des tiers à des fins commerciales. Les transferts vers des pays hors Union Européenne (États-Unis notamment) sont encadrés par les clauses contractuelles types de la Commission Européenne ou par des certifications équivalentes (Data Privacy Framework).</p>
+                <p>Le détail complet des traitements et durées de conservation est précisé dans la politique de confidentialité dédiée à <a href="/privacy" className="underline hover:text-stone-900">/privacy</a>.</p>
               </div>
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">6. Durée de conservation</p>
@@ -220,10 +224,10 @@ export default function LegalPage() {
 
               <div className="border border-stone-200 bg-stone-50 p-5 rounded-xl">
                 <p className="text-sm text-stone-600 font-light">
-                  <strong className="text-stone-900">Note :</strong> La case à cocher présente lors de votre demande en ligne constitue 
-                  un accord de principe. Pour toutes les missions courtes ou les relations de longue durée, 
-                  Chefs Talents se réserve le droit de demander la signature d'un NDA complet via DocuSign avant 
-                  la transmission des profils.
+                  <strong className="text-stone-900">Note :</strong> La case à cocher présente lors de votre demande en ligne constitue
+                  un accord de principe. Pour toutes les missions importantes ou les relations de longue durée,
+                  Chefs Talents se réserve le droit de demander la signature d'un NDA complet par voie électronique
+                  avant la transmission des profils.
                 </p>
               </div>
             </div>
