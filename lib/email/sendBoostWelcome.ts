@@ -3,9 +3,16 @@
 // Design : Revolut Business — sans-serif, blanc, accent burgundy.
 
 import { Resend } from 'resend';
+import {
+  htmlToText,
+  buildUnsubscribeHeaders,
+  unsubscribeFooterHtml,
+  unsubscribeFooterText,
+} from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Thomas Delcroix <thomas@chefstalents.com>';
+const REPLY_TO = 'thomas@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const HERO_IMAGE = `${SITE_URL}/images/email/kitchen-preparation.jpg`;
 const ACCENT = '#7f1d1d';
@@ -154,6 +161,7 @@ function buildHtml(opts: {
   firstName: string;
   boostedUntil: string;
   locale: Locale;
+  unsubscribeHtml?: string;
 }): string {
   const t = T[opts.locale];
   const dateStr = new Date(opts.boostedUntil).toLocaleDateString(
@@ -293,6 +301,7 @@ function buildHtml(opts: {
                   </td>
                 </tr>
               </table>
+              ${opts.unsubscribeHtml || ''}
             </td>
           </tr>
 
@@ -317,14 +326,23 @@ export async function sendBoostWelcome(opts: {
   const t = T[locale];
   const name = (opts.firstName || '').trim() || 'Chef';
 
+  const unsub = unsubscribeFooterHtml(opts.email, 'boost', locale);
+  const html = buildHtml({
+    firstName: name,
+    boostedUntil: opts.boostedUntil,
+    locale,
+    unsubscribeHtml: unsub,
+  });
+  const text =
+    htmlToText(html) + unsubscribeFooterText(opts.email, 'boost', locale);
+
   await resend.emails.send({
     from: FROM,
+    replyTo: REPLY_TO,
     to: opts.email,
     subject: t.subject,
-    html: buildHtml({
-      firstName: name,
-      boostedUntil: opts.boostedUntil,
-      locale,
-    }),
+    html,
+    text,
+    headers: buildUnsubscribeHeaders(opts.email, 'boost'),
   });
 }

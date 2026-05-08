@@ -5,9 +5,16 @@
 import { Resend } from 'resend';
 import type { VipTip } from '@/lib/vip-content';
 import { listVipChefs } from './listVipChefs';
+import {
+  htmlToText,
+  buildUnsubscribeHeaders,
+  unsubscribeFooterHtml,
+  unsubscribeFooterText,
+} from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Thomas Delcroix <thomas@chefstalents.com>';
+const REPLY_TO = 'thomas@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const HERO_IMAGE = `${SITE_URL}/images/email/plating.jpg`;
 const ACCENT = '#7f1d1d';
@@ -100,6 +107,7 @@ function buildHtml(opts: {
   firstName: string;
   tip: VipTip;
   locale: Locale;
+  unsubscribeHtml?: string;
 }): string {
   const t = T[opts.locale];
   const tip = opts.tip;
@@ -221,6 +229,7 @@ function buildHtml(opts: {
                   </td>
                 </tr>
               </table>
+              ${opts.unsubscribeHtml || ''}
             </td>
           </tr>
 
@@ -257,18 +266,27 @@ export async function sendVipNewTipToAll(tip: VipTip): Promise<{
   for (let i = 0; i < recipients.length; i += BATCH) {
     const batch = recipients.slice(i, i + BATCH);
     const results = await Promise.allSettled(
-      batch.map((r) =>
-        resend.emails.send({
+      batch.map((r) => {
+        const unsub = unsubscribeFooterHtml(r.email, 'vip', r.locale);
+        const html = buildHtml({
+          firstName: r.firstName?.trim() || 'Chef',
+          tip,
+          locale: r.locale,
+          unsubscribeHtml: unsub,
+        });
+        const text =
+          htmlToText(html) +
+          unsubscribeFooterText(r.email, 'vip', r.locale);
+        return resend.emails.send({
           from: FROM,
+          replyTo: REPLY_TO,
           to: r.email,
           subject: subjectByLocale[r.locale] || subjectByLocale.fr,
-          html: buildHtml({
-            firstName: r.firstName?.trim() || 'Chef',
-            tip,
-            locale: r.locale,
-          }),
-        }),
-      ),
+          html,
+          text,
+          headers: buildUnsubscribeHeaders(r.email, 'vip'),
+        });
+      }),
     );
 
     for (const res of results) {

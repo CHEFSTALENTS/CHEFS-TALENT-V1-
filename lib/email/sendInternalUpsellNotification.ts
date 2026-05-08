@@ -4,9 +4,11 @@
 // Design : Revolut Business — sans-serif, blanc, accent burgundy, scan rapide.
 
 import { Resend } from 'resend';
+import { htmlToText } from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Chefs Talents Bot <thomas@chefstalents.com>';
+const REPLY_TO = 'thomas@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const ACCENT = '#7f1d1d';
 const FONT =
@@ -195,9 +197,11 @@ export async function sendInternalUpsellNotification(input: {
 
   await resend.emails.send({
     from: FROM,
+    replyTo: REPLY_TO,
     to,
     subject,
     html,
+    text: htmlToText(html),
   });
 
   return { sent: true, recipients: to.length };

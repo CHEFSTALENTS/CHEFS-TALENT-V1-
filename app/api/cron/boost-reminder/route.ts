@@ -82,6 +82,9 @@ export async function GET(req: Request) {
       // Hors fenêtre J-6 à J-8 → skip
       if (boostedUntilMs < minMs || boostedUntilMs > maxMs) continue;
 
+      // Chef désinscrit du marketing → skip
+      if (profile.marketingUnsubscribedAt) continue;
+
       // Déjà notifié pour ce boost ? Le notifiedAt doit être antérieur au
       // boost en cours pour qu'on renotifie ; sinon, déjà fait.
       const notifiedRaw = profile.boostEndingNotifiedAt;

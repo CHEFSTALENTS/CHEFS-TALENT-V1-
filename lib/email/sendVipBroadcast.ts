@@ -5,9 +5,16 @@
 
 import { Resend } from 'resend';
 import { listVipChefs } from './listVipChefs';
+import {
+  htmlToText,
+  buildUnsubscribeHeaders,
+  unsubscribeFooterHtml,
+  unsubscribeFooterText,
+} from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Thomas Delcroix <thomas@chefstalents.com>';
+const REPLY_TO = 'thomas@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const ACCENT = '#7f1d1d';
 const FONT =
@@ -79,6 +86,7 @@ function buildHtml(opts: {
   firstName: string;
   body: string;
   locale: Locale;
+  unsubscribeHtml?: string;
 }): string {
   const t = COPY[opts.locale];
 
@@ -157,6 +165,7 @@ function buildHtml(opts: {
                   </td>
                 </tr>
               </table>
+              ${opts.unsubscribeHtml || ''}
             </td>
           </tr>
 
@@ -188,18 +197,27 @@ export async function sendVipBroadcast(opts: {
   for (let i = 0; i < recipients.length; i += BATCH) {
     const batch = recipients.slice(i, i + BATCH);
     const results = await Promise.allSettled(
-      batch.map((r) =>
-        resend.emails.send({
+      batch.map((r) => {
+        const unsub = unsubscribeFooterHtml(r.email, 'broadcast', r.locale);
+        const html = buildHtml({
+          firstName: r.firstName?.trim() || 'Chef',
+          body,
+          locale: r.locale,
+          unsubscribeHtml: unsub,
+        });
+        const text =
+          htmlToText(html) +
+          unsubscribeFooterText(r.email, 'broadcast', r.locale);
+        return resend.emails.send({
           from: FROM,
+          replyTo: REPLY_TO,
           to: r.email,
           subject,
-          html: buildHtml({
-            firstName: r.firstName?.trim() || 'Chef',
-            body,
-            locale: r.locale,
-          }),
-        }),
-      ),
+          html,
+          text,
+          headers: buildUnsubscribeHeaders(r.email, 'broadcast'),
+        });
+      }),
     );
     for (const res of results) {
       if (res.status === 'fulfilled') sent++;

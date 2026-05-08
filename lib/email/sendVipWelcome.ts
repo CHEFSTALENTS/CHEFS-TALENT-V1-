@@ -4,9 +4,16 @@
 // hero image, CTA pill noir, signature Thomas Delcroix Founder.
 
 import { Resend } from 'resend';
+import {
+  htmlToText,
+  buildUnsubscribeHeaders,
+  unsubscribeFooterHtml,
+  unsubscribeFooterText,
+} from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = 'Thomas Delcroix <thomas@chefstalents.com>';
+const REPLY_TO = 'thomas@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const HERO_IMAGE = `${SITE_URL}/images/email/hero-vip-welcome.jpg`;
 const ACCENT = '#7f1d1d'; // burgundy
@@ -159,6 +166,7 @@ function buildHtml(opts: {
   isComplimentary: boolean;
   includesCall: boolean;
   locale: Locale;
+  unsubscribeHtml?: string;
 }): string {
   const t = T[opts.locale];
   const intro = opts.isComplimentary
@@ -315,6 +323,7 @@ function buildHtml(opts: {
                   </td>
                 </tr>
               </table>
+              ${opts.unsubscribeHtml || ''}
             </td>
           </tr>
 
@@ -342,16 +351,25 @@ export async function sendVipWelcome(opts: {
   const planLabel =
     PLAN_LABELS[opts.planKey]?.[locale] || opts.planKey || 'VIP';
 
+  const unsubFooterHtml = unsubscribeFooterHtml(opts.email, 'vip', locale);
+  const html = buildHtml({
+    firstName: name,
+    planLabel,
+    isComplimentary: opts.isComplimentary,
+    includesCall: opts.planKey === 'vip_12m',
+    locale,
+    unsubscribeHtml: unsubFooterHtml,
+  });
+  const text =
+    htmlToText(html) + unsubscribeFooterText(opts.email, 'vip', locale);
+
   await resend.emails.send({
     from: FROM,
+    replyTo: REPLY_TO,
     to: opts.email,
     subject: t.subject,
-    html: buildHtml({
-      firstName: name,
-      planLabel,
-      isComplimentary: opts.isComplimentary,
-      includesCall: opts.planKey === 'vip_12m',
-      locale,
-    }),
+    html,
+    text,
+    headers: buildUnsubscribeHeaders(opts.email, 'vip'),
   });
 }

@@ -49,6 +49,11 @@ export async function listVipChefs(): Promise<VipChefRecipient[]> {
       String(profile.planStatus || '') === 'active';
     if (!planActive) continue;
 
+    // Exclut les chefs ayant cliqué "se désinscrire" sur un broadcast/marketing.
+    // Les emails transactionnels (welcome, achat) restent envoyés via leurs
+    // propres entry points, ce filtre ne s'applique qu'aux mailings.
+    if (profile.marketingUnsubscribedAt) continue;
+
     const email = (row.email || profile.email || '').trim().toLowerCase();
     if (!email) continue;
 
