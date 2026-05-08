@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Marker } from '../../../components/ui';
+import { PhoneField } from '@/components/PhoneField';
 import { Loader2, Upload } from 'lucide-react';
 import { ChefProfileType, ChefSeniority } from '../../../types';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
@@ -295,7 +296,11 @@ async function saveChefProfilePatch(patch: any) {
 
             <div className="space-y-2">
               <Label>{t.identity.phoneLabel}</Label>
-              <Input value={data.phone} onChange={(e) => setData({ ...data, phone: e.target.value })} placeholder={t.identity.phonePlaceholder} />
+              <PhoneField
+                value={data.phone}
+                onChange={(v) => setData({ ...data, phone: v })}
+                placeholder={t.identity.phonePlaceholder}
+              />
             </div>
 
             {/* ✅ Photo de profil : upload ONLY */}
