@@ -59,10 +59,13 @@ function normalizeProfile(raw: any): any {
 
 /**
  * Normalise le status d'un profile en alignant la logique avec celle de
- * /api/admin/chefs (pickStatus + normalizeStatus). Lit plusieurs clés
- * possibles, traduit 'pending' → 'pending_validation', et fallback sur
- * 'pending_validation' si rien n'est défini (cohérent avec ce qu'affiche
- * l'admin UI).
+ * /api/admin/chefs (pickStatus + normalizeStatus).
+ *
+ * Tout status qui n'est pas un des 4 canoniques (pending_validation,
+ * approved, active, paused) tombe dans 'pending_validation'. Cela inclut
+ * notamment 'draft' (chefs ayant complété l'inscription mais en attente de
+ * validation par l'admin), 'pending' (forme courte), et le status absent
+ * ou vide.
  */
 function pickProfileStatus(profile: any): string {
   const raw = String(
@@ -70,9 +73,9 @@ function pickProfileStatus(profile: any): string {
   )
     .trim()
     .toLowerCase();
-  if (raw === 'pending') return 'pending_validation';
-  if (!raw) return 'pending_validation';
-  return raw;
+  if ((ALLOWED_STATUSES as string[]).includes(raw)) return raw;
+  // 'pending', 'draft', '', 'archived', etc. → considéré "à valider"
+  return 'pending_validation';
 }
 
 /**
