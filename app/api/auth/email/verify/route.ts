@@ -18,22 +18,28 @@ const ACCENT = '#7f1d1d';
 type PageKind = 'success' | 'expired' | 'invalid' | 'already';
 
 function htmlPage(kind: PageKind, opts: { email?: string }): string {
+  // Pour les états success / already, on redirige automatiquement vers le
+  // dashboard après 2.5 sec. Si la session Supabase est active dans le même
+  // navigateur, l'utilisateur arrive directement chez lui ; sinon le
+  // dashboard le renvoie vers /chef/login comme d'habitude.
   const copy =
     kind === 'success'
       ? {
           title: 'Email vérifié',
-          body: 'Votre adresse email est maintenant vérifiée. Vous pouvez accéder à votre espace chef.',
+          body: 'Votre adresse email est maintenant vérifiée. Vous allez être redirigé vers votre espace chef dans quelques instants.',
           cta: 'Accéder à mon espace',
           ctaHref: `${SITE_URL}/chef/dashboard`,
           tone: 'success' as const,
+          autoRedirect: true,
         }
       : kind === 'already'
         ? {
             title: 'Déjà vérifié',
-            body: 'Cette adresse email est déjà vérifiée. Vous pouvez vous connecter à votre espace.',
+            body: 'Cette adresse email est déjà vérifiée. Vous allez être redirigé vers votre espace chef.',
             cta: 'Accéder à mon espace',
             ctaHref: `${SITE_URL}/chef/dashboard`,
             tone: 'success' as const,
+            autoRedirect: true,
           }
         : kind === 'expired'
           ? {
@@ -42,6 +48,7 @@ function htmlPage(kind: PageKind, opts: { email?: string }): string {
               cta: 'Se connecter',
               ctaHref: `${SITE_URL}/chef/login?resendVerify=1`,
               tone: 'warning' as const,
+              autoRedirect: false,
             }
           : {
               title: 'Lien invalide',
@@ -49,16 +56,34 @@ function htmlPage(kind: PageKind, opts: { email?: string }): string {
               cta: 'Se connecter',
               ctaHref: `${SITE_URL}/chef/login?resendVerify=1`,
               tone: 'error' as const,
+              autoRedirect: false,
             };
 
   const accent =
     copy.tone === 'success' ? ACCENT : copy.tone === 'warning' ? '#92651a' : '#7f1d1d';
+
+  const redirectScript = copy.autoRedirect
+    ? `
+  <script>
+    // Redirige automatiquement après 2.5 sec vers le dashboard.
+    // Si la session Supabase est active, l'utilisateur arrive direct chez lui.
+    // Sinon le dashboard renvoie vers /chef/login (gestion existante).
+    setTimeout(function () {
+      window.location.replace('${copy.ctaHref}');
+    }, 2500);
+  </script>`
+    : '';
+
+  const metaRefresh = copy.autoRedirect
+    ? `<meta http-equiv="refresh" content="2.5;url=${copy.ctaHref}">`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${metaRefresh}
   <title>${copy.title} — Chefs Talents</title>
   <style>
     body { margin: 0; padding: 0; background: #f4f4f5; font-family: ${FONT}; color: #09090b; -webkit-font-smoothing: antialiased; }
@@ -72,6 +97,8 @@ function htmlPage(kind: PageKind, opts: { email?: string }): string {
     .cta:hover { background: #27272a; }
     .home { display: block; margin-top: 28px; color: #a1a1aa; font-size: 13px; text-decoration: none; }
     .home:hover { color: #71717a; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid #e7e5e4; border-top-color: ${accent}; animation: spin 0.9s linear infinite; vertical-align: middle; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -79,12 +106,13 @@ function htmlPage(kind: PageKind, opts: { email?: string }): string {
     <div class="card">
       <p class="eyebrow">CHEFS TALENTS</p>
       <h1>${copy.title}</h1>
-      <p>${copy.body}</p>
+      <p>${copy.body}${copy.autoRedirect ? '<span class="spinner"></span>' : ''}</p>
       ${opts.email ? `<div class="email">${opts.email}</div>` : ''}
       <a href="${copy.ctaHref}" class="cta">${copy.cta} →</a>
       <a href="${SITE_URL}" class="home">Retour vers chefstalents.com</a>
     </div>
   </div>
+  ${redirectScript}
 </body>
 </html>`;
 }
