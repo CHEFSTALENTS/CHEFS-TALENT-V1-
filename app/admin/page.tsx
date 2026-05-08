@@ -8,7 +8,28 @@ import Link from 'next/link';
 import { api, auth } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 
+const ADMIN_EMAIL = 'thomas@chef-talents.com';
+
 type StatusKey = 'new' | 'in_review' | 'assigned' | 'closed';
+
+type RevenueData = {
+  ok: true;
+  stripe: {
+    mrrEur: number;
+    activeSubscriptions: number;
+    chargesMonthEur: number;
+    chargesMonthCount: number;
+    chargesYtdEur: number;
+    chargesYtdCount: number;
+  };
+  missions: {
+    confirmedMonth: number;
+    commissionMonthEur: number;
+    confirmedYtd: number;
+    commissionYtdEur: number;
+  };
+  totals: { monthEur: number; ytdEur: number };
+};
 
 function safeDate(iso?: string) {
   const d = new Date(iso || '');
@@ -118,13 +139,30 @@ export default function AdminDashboardPage() {
   // chefs + missions : comme avant
   const [chefs, setChefs] = useState<ChefUser[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
+  // ✅ NEW — Revenue snapshot (Stripe + missions Supabase)
+  const [revenue, setRevenue] = useState<RevenueData | null>(null);
 
   const refresh = async () => {
     setLoading(true);
     try {
-      const json = await fetch('/api/admin/requests', { cache: 'no-store' }).then((r) => r.json());
-      const rows = json.items ?? [];
+      const [reqJson, revJson] = await Promise.all([
+        fetch('/api/admin/requests', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/admin/revenue', {
+          headers: { 'x-admin-email': ADMIN_EMAIL },
+          cache: 'no-store',
+        })
+          .then((r) => r.json())
+          .catch(() => null),
+      ]);
+
+      const rows = reqJson?.items ?? [];
       setRequests(rows.map(normalizeRequestRow));
+
+      if (revJson?.ok) {
+        setRevenue(revJson as RevenueData);
+      } else {
+        setRevenue(null);
+      }
 
       const [c, m] = await Promise.all([
         (auth.getAllChefs?.() ?? Promise.resolve([])) as Promise<ChefUser[]>,
@@ -138,6 +176,7 @@ export default function AdminDashboardPage() {
       setRequests([]);
       setChefs([]);
       setMissions([]);
+      setRevenue(null);
     } finally {
       setLoading(false);
     }
@@ -295,8 +334,54 @@ export default function AdminDashboardPage() {
             <KpiCard title="B2B (new)" value={kpi.b2bNew} subtitle="concierge" tone="amber" href="/admin/requests?type=b2b&status=new" />
             <KpiCard title="B2C (new)" value={kpi.b2cNew} subtitle="private" tone="blue" href="/admin/requests?type=b2c&status=new" />
             <KpiCard title="Chefs pending" value={kpi.chefsPending} subtitle="à valider" tone="violet" href="/admin/chefs" />
-            <KpiCard title="CA mois" value={money(kpi.revenueMonth)} subtitle="missions" tone="green" href="/admin/proposals" />
+            <KpiCard
+              title="CA mois"
+              value={money(revenue?.totals.monthEur ?? kpi.revenueMonth)}
+              subtitle={revenue ? 'Stripe + missions' : 'missions (local)'}
+              tone="green"
+              href="/admin/vip"
+            />
           </div>
+
+          {/* ✅ NEW — Détail des revenus (Stripe + commissions missions) */}
+          {revenue && (
+            <Panel
+              title="Revenus"
+              subtitle="Mensualités VIP + paiements Stripe + commissions missions"
+              right={
+                <span className="text-[11px] text-white/40">
+                  Source : Stripe live + Supabase
+                </span>
+              }
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <RevSubKpi
+                  label="MRR"
+                  value={money(revenue.stripe.mrrEur)}
+                  subtitle={`${revenue.stripe.activeSubscriptions} abonnement${revenue.stripe.activeSubscriptions > 1 ? 's' : ''} actif${revenue.stripe.activeSubscriptions > 1 ? 's' : ''}`}
+                  tone="green"
+                />
+                <RevSubKpi
+                  label="Stripe / mois"
+                  value={money(revenue.stripe.chargesMonthEur)}
+                  subtitle={`${revenue.stripe.chargesMonthCount} paiement${revenue.stripe.chargesMonthCount > 1 ? 's' : ''}`}
+                  tone="blue"
+                />
+                <RevSubKpi
+                  label="Missions / mois"
+                  value={money(revenue.missions.commissionMonthEur)}
+                  subtitle={`${revenue.missions.confirmedMonth} confirmée${revenue.missions.confirmedMonth > 1 ? 's' : ''}`}
+                  tone="violet"
+                />
+                <RevSubKpi
+                  label="Total YTD"
+                  value={money(revenue.totals.ytdEur)}
+                  subtitle={`${revenue.stripe.chargesYtdCount + revenue.missions.confirmedYtd} entrées année`}
+                  tone="amber"
+                />
+              </div>
+            </Panel>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             <Panel title="Demandes / jour (14j)" subtitle="Volume entrant">
@@ -455,6 +540,42 @@ function KpiCard({
   );
 
   return href ? <Link href={href}>{Card}</Link> : Card;
+}
+
+function RevSubKpi({
+  label,
+  value,
+  subtitle,
+  tone = 'stone',
+}: {
+  label: string;
+  value: string;
+  subtitle?: string;
+  tone?: 'stone' | 'amber' | 'green' | 'blue' | 'violet';
+}) {
+  const cls =
+    tone === 'amber'
+      ? 'border-amber-500/20 bg-amber-500/5'
+      : tone === 'green'
+        ? 'border-emerald-500/20 bg-emerald-500/5'
+        : tone === 'blue'
+          ? 'border-sky-500/20 bg-sky-500/5'
+          : tone === 'violet'
+            ? 'border-violet-500/20 bg-violet-500/5'
+            : 'border-white/10 bg-white/5';
+  return (
+    <div className={`rounded-xl border p-4 ${cls}`}>
+      <div className="text-[10px] uppercase tracking-widest text-white/55">
+        {label}
+      </div>
+      <div className="text-2xl font-semibold text-white mt-1 tabular-nums">
+        {value}
+      </div>
+      {subtitle && (
+        <div className="text-[11px] text-white/40 mt-1">{subtitle}</div>
+      )}
+    </div>
+  );
 }
 
 function DeltaBadge({ value, label }: { value: number; label: string }) {
