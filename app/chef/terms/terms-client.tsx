@@ -3,26 +3,74 @@
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
+import { TOC, BodyFR, BodyEN, BodyES, type Locale } from './_content';
 
 const CURRENT_TERMS_VERSION = '08/05/2026';
 const LS_TERMS_KEY = `ct_chef_terms_v_${CURRENT_TERMS_VERSION}`;
+
+// Wording du UI shell (titres, boutons, mentions) par locale
+const UI = {
+  fr: {
+    eyebrow: 'Chefs Talents',
+    title: 'Conditions de collaboration — Chefs',
+    lastUpdated: 'Dernière mise à jour',
+    tocLabel: 'Sommaire',
+    acceptCheckbox: 'J’ai lu et j’accepte les Conditions de Collaboration Chefs Talents.',
+    acceptCta: 'Accepter et continuer',
+    accepting: 'Enregistrement…',
+    versionLabel: 'Version en vigueur',
+    errorMissingCheckbox: 'Merci de cocher la case d’acceptation.',
+    errorAccept: 'Impossible d’enregistrer l’acceptation. Réessaie.',
+  },
+  en: {
+    eyebrow: 'Chefs Talents',
+    title: 'Terms of Collaboration — Chefs',
+    lastUpdated: 'Last updated',
+    tocLabel: 'Contents',
+    acceptCheckbox: 'I have read and accept the Chefs Talents Terms of Collaboration.',
+    acceptCta: 'Accept and continue',
+    accepting: 'Saving…',
+    versionLabel: 'Active version',
+    errorMissingCheckbox: 'Please tick the acceptance box.',
+    errorAccept: 'Could not save acceptance. Please retry.',
+  },
+  es: {
+    eyebrow: 'Chefs Talents',
+    title: 'Condiciones de Colaboración — Chefs',
+    lastUpdated: 'Última actualización',
+    tocLabel: 'Sumario',
+    acceptCheckbox: 'He leído y acepto las Condiciones de Colaboración de Chefs Talents.',
+    acceptCta: 'Aceptar y continuar',
+    accepting: 'Guardando…',
+    versionLabel: 'Versión vigente',
+    errorMissingCheckbox: 'Por favor marca la casilla de aceptación.',
+    errorAccept: 'No se pudo guardar la aceptación. Inténtalo de nuevo.',
+  },
+} as const;
 
 export default function TermsClient() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get('next') || '/chef/dashboard';
 
+  const [locale, setLocale] = useState<Locale>('fr');
+  const t = UI[locale];
+
   const [checked, setChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const title = useMemo(() => 'Conditions de collaboration – Chefs', []);
+  const Body = useMemo(() => {
+    if (locale === 'en') return BodyEN;
+    if (locale === 'es') return BodyES;
+    return BodyFR;
+  }, [locale]);
 
   const accept = async () => {
     setErr(null);
 
     if (!checked) {
-      setErr("Merci de cocher la case d’acceptation.");
+      setErr(t.errorMissingCheckbox);
       return;
     }
 
@@ -61,321 +109,82 @@ export default function TermsClient() {
 
       router.replace(next);
     } catch {
-      setErr("Impossible d’enregistrer l’acceptation. Réessaie.");
+      setErr(t.errorAccept);
     } finally {
       setLoading(false);
     }
   };
 
+  const localeOptions: Array<{ code: Locale; label: string }> = [
+    { code: 'fr', label: 'Français' },
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Español' },
+  ];
+
   return (
     <div className="min-h-screen bg-[#F7F5F2] text-stone-900">
       <div className="mx-auto max-w-3xl px-6 py-16">
         <div className="rounded-3xl border border-stone-200 bg-white shadow-sm p-8">
-          <div className="text-xs uppercase tracking-[0.25em] text-stone-400">
-            Chef Talents
+
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <div className="text-xs uppercase tracking-[0.25em] text-stone-400">
+              {t.eyebrow}
+            </div>
+
+            {/* Sélecteur de langue */}
+            <div className="inline-flex border border-stone-200 rounded-full overflow-hidden">
+              {localeOptions.map((opt) => {
+                const active = locale === opt.code;
+                return (
+                  <button
+                    key={opt.code}
+                    onClick={() => setLocale(opt.code)}
+                    className={`px-3 py-1.5 text-[11px] uppercase tracking-widest transition-colors ${
+                      active ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-50'
+                    }`}
+                  >
+                    {opt.code.toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <h1 className="mt-2 text-3xl md:text-4xl font-serif">
-            {title}
+            {t.title}
           </h1>
 
           <p className="mt-2 text-sm text-stone-500">
-            Dernière mise à jour : {CURRENT_TERMS_VERSION}
+            {t.lastUpdated} : {CURRENT_TERMS_VERSION}
           </p>
 
-{/* ===================== CONDITIONS ===================== */}
-<div className="mt-8 prose prose-stone max-w-none">
+          {/* Sommaire — case en haut, articles cliquables */}
+          <nav className="mt-8 border border-stone-200 bg-stone-50 rounded-2xl p-5">
+            <p className="text-[11px] uppercase tracking-widest text-stone-500 mb-3">
+              {t.tocLabel}
+            </p>
+            <ol className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-stone-700">
+              {TOC.map((entry) => (
+                <li key={entry.id}>
+                  <a
+                    href={`#${entry.id}`}
+                    className="hover:underline decoration-stone-400 underline-offset-4"
+                  >
+                    <span className="text-stone-400 mr-2 tabular-nums">{entry.number}.</span>
+                    {entry.label[locale]}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
 
-  <h2>1. Objet</h2>
-  <p>
-    Les présentes Conditions de Collaboration ont pour objet de définir les modalités selon lesquelles les chefs indépendants
-    (ci-après le « Chef ») collaborent avec Chef Talents, plateforme de mise en relation entre chefs privés et clients
-    (particuliers, conciergeries, agences, entreprises).
-  </p>
-  <p>
-    Chef Talents agit en qualité d’intermédiaire commercial et de gestion, sans lien de subordination avec le Chef.
-  </p>
+          {/* Corps des conditions */}
+          <div className="mt-8 [&_section]:scroll-mt-24">
+            <Body />
+          </div>
 
-  <hr />
-
-  <h2>2. Statut du Chef</h2>
-  <p>
-    Le Chef déclare exercer son activité en tant qu’indépendant (auto-entrepreneur, société, équivalent étranger).
-  </p>
-  <p>À ce titre :</p>
-  <ul>
-    <li>il est seul responsable de ses obligations fiscales, sociales et assurantielles,</li>
-    <li>il garantit disposer de toutes les autorisations légales, assurances RC Pro et compétences nécessaires à l’exercice de son activité.</li>
-  </ul>
-  <p>
-    Chef Talents n’est ni employeur, ni donneur d’ordre exclusif.
-  </p>
-  <p>
-    L’inscription du Chef sur la plateforme est sans engagement exclusif.
-  </p>
-  <p>
-    Le Chef demeure libre d’exercer son activité en dehors de Chef Talents, sous réserve du respect des obligations de confidentialité
-    et de non-contournement prévues aux présentes.
-  </p>
-
-  <h3>2.1 Absence de lien de subordination</h3>
-  <p>
-    Le Chef intervient en tant que prestataire indépendant, dans le cadre d’une relation commerciale librement consentie.
-  </p>
-  <p>Il est expressément convenu que :</p>
-  <ul>
-    <li>le Chef n’est pas salarié de Chef Talents ;</li>
-    <li>le Chef n’est pas salarié du client final ;</li>
-    <li>aucune relation de subordination, d’exclusivité ou de dépendance juridique ne peut être caractérisée entre le Chef, Chef Talents et le client ;</li>
-    <li>le Chef demeure libre d’accepter ou de refuser toute mission proposée via la plateforme.</li>
-  </ul>
-
-  <h4>Cas particulier des missions yachting</h4>
-  <p>
-    Dans le cadre de certaines missions spécifiques, notamment à bord de yachts ou navires, le Chef peut être amené à intervenir
-    en qualité de salarié du yacht, de l’armateur ou de la société d’exploitation du navire.
-  </p>
-  <p>Dans ce cas :</p>
-  <ul>
-    <li>le contrat de travail est établi directement entre le Chef et l’entité exploitante du yacht ;</li>
-    <li>Chef Talents n’est ni employeur, ni co-employeur, ni responsable des obligations sociales, fiscales ou contractuelles liées à ce contrat.</li>
-  </ul>
-
-  <p>Le Chef conserve l’entière liberté :</p>
-  <ul>
-    <li>d’accepter ou refuser une mission,</li>
-    <li>de fixer ses tarifs,</li>
-    <li>d’organiser son travail dans le respect du cahier des charges validé.</li>
-  </ul>
-
-  <p>
-    Chef Talents intervient exclusivement en qualité d’intermédiaire de mise en relation et de gestion administrative et financière,
-    sans direction ni contrôle hiérarchique sur l’exécution de la prestation.
-  </p>
-  <p>
-    En toute hypothèse, le recours aux services de Chef Talents, y compris pour la gestion des paiements, ne saurait être interprété
-    comme la création d’un lien de subordination ou d’un contrat de travail entre le Chef et Chef Talents.
-  </p>
-
-  <hr />
-
-  <h2>3. Processus de sélection des Chefs</h2>
-  <p>
-    L’accès à la plateforme Chef Talents est soumis à validation.
-  </p>
-  <p>Deux niveaux de sélection peuvent s’appliquer :</p>
-  <ol>
-    <li>
-      <strong>Validation standard</strong> : étude du dossier, parcours professionnel, références, positionnement.
-    </li>
-    <li>
-      <strong>Validation premium (prestations haut de gamme / résidences)</strong> : validation renforcée incluant, le cas échéant,
-      un entretien visio et une analyse approfondie du niveau de service.
-    </li>
-  </ol>
-
-  <p>Chef Talents se réserve le droit :</p>
-  <ul>
-    <li>de refuser une candidature sans justification,</li>
-    <li>de limiter certains types de missions à des profils validés premium.</li>
-  </ul>
-
-  <p>
-    L’inscription du Chef sur la plateforme Chef Talents ne constitue en aucun cas une garantie d’attribution de missions.
-  </p>
-
-  <p>Les missions sont proposées en fonction :</p>
-  <ul>
-    <li>des besoins spécifiques des clients,</li>
-    <li>du profil, de l’expérience, des disponibilités et de la validation du Chef,</li>
-    <li>des critères propres à chaque mission.</li>
-  </ul>
-
-  <p>
-    Chef Talents n’a aucune obligation de volume, de fréquence ou de récurrence de missions.
-  </p>
-
-  <h2>4. Fixation des tarifs</h2>
-  <p>Le Chef fixe librement ses tarifs, notamment :</p>
-  <ul>
-    <li>prix par personne pour les prestations ponctuelles (déjeuner, dîner, événement),</li>
-    <li>prix par jour pour les missions de résidence (villa, yacht, chalet, long séjour).</li>
-  </ul>
-  <p>Ces tarifs constituent la rémunération nette du Chef.</p>
-  <p><strong>Aucune commission n’est prélevée sur les honoraires du Chef.</strong></p>
-  <p>
-    Chef Talents applique des frais de service facturés au client, en supplément du tarif du Chef.
-    Le Chef est informé et valide chaque mission avant confirmation.
-  </p>
-
-  <p>
-    Chef Talents se réserve le droit de proposer, à l’avenir, des offres d’abonnement ou de services premium, destinées à améliorer la visibilité,
-    la formation, l’accompagnement, l’accès à certaines missions ou à des fonctionnalités avancées.
-  </p>
-  <p>
-    Ces offres feront l’objet de conditions distinctes et ne seront en aucun cas obligatoires pour rester inscrit sur la plateforme.
-  </p>
-
-  <hr />
-
-  <h2>5. Facturation et encaissement</h2>
-
-  <h3>5.1 Encaissement client</h3>
-  <ul>
-    <li>Le client règle 100 % de la prestation à l’avance via Chef Talents.</li>
-    <li>Pour les prestations supérieures à 10 000 €, un acompte de 50 % minimum est exigé à la commande pour activer le chef.</li>
-  </ul>
-  <p>
-    Chef Talents facture au client la prestation globale (honoraires Chef + frais de service).
-  </p>
-
-  <h3>5.2 Paiement du Chef</h3>
-  <ul>
-    <li>La part du Chef est reversée via Stripe ou virement, selon les modalités définies.</li>
-    <li>Le Chef facture Chef Talents, et non le client final.</li>
-    <li>Le paiement intervient après réalisation de la prestation (ou selon les conditions spécifiques prévues).</li>
-  </ul>
-  <p>
-    Chef Talents agit comme tiers de confiance dans la répartition des flux financiers.
-  </p>
-
-  <hr />
-
-  <h2>6. Déroulé d’une mission</h2>
-  <ol>
-    <li>Réception de la demande</li>
-    <li>Échange et validation du périmètre (menu, rythme, contraintes)</li>
-    <li>Validation du devis par les parties</li>
-    <li>Encaissement client</li>
-    <li>Réalisation de la prestation</li>
-    <li>Facturation du Chef à Chef Talents</li>
-    <li>Paiement du Chef</li>
-  </ol>
-
-  <p>Le Chef s’engage à :</p>
-  <ul>
-    <li>respecter le cahier des charges validé,</li>
-    <li>maintenir un niveau de service conforme à son positionnement.</li>
-  </ul>
-
-  <hr />
-
-  <h2>7. Annulations et manquements</h2>
-
-  <h3>7.1 Annulation par le Chef</h3>
-  <ul>
-    <li>Toute annulation doit être immédiatement signalée à Chef Talents.</li>
-    <li>En cas d’annulation moins de 48h avant la prestation, Chef Talents se réserve le droit de suspendre temporairement le compte ou de limiter l’accès aux futures missions.</li>
-  </ul>
-
-  <h3>7.2 Annulation grave (no-show / &lt; 24h sans justification)</h3>
-  <p>Toute annulation :</p>
-  <ul>
-    <li>à moins de 24 heures,</li>
-    <li>ou sans justification valable,</li>
-    <li>ou sans communication,</li>
-  </ul>
-  <p>
-    entraîne l’exclusion immédiate et définitive de la plateforme, dès la première occurrence.
-  </p>
-  <p>
-    Chef Talents se réserve également le droit de réclamer réparation en cas de préjudice client.
-  </p>
-
-  <hr />
-
-  <h2>8. Qualité, image et comportement</h2>
-  <p>Le Chef s’engage à :</p>
-  <ul>
-    <li>adopter une tenue et une attitude professionnelles,</li>
-    <li>respecter les règles d’hygiène, de sécurité alimentaire et de discrétion,</li>
-    <li>ne pas nuire à l’image de Chef Talents.</li>
-  </ul>
-  <p>Tout comportement inapproprié pourra entraîner suspension ou exclusion.</p>
-
-  <hr />
-
-  <h2>9. Confidentialité &amp; non-contournement</h2>
-
-  <h3>Confidentialité</h3>
-  <p>
-    Le Chef reconnaît que l’ensemble des informations auxquelles il a accès dans le cadre de son inscription et de ses missions via Chef Talents
-    (incluant notamment : identité des clients, conciergeries, lieux, budgets, habitudes, contraintes logistiques, échanges, documents, menus, coordonnées)
-    revêt un caractère strictement confidentiel.
-  </p>
-  <p>
-    Le Chef s’engage à ne divulguer aucune de ces informations à des tiers, sauf accord écrit préalable de Chef Talents ou obligation légale.
-  </p>
-
-  <h3>Non-contournement</h3>
-  <p>
-    Le Chef s’interdit formellement, pendant toute la durée de sa collaboration avec Chefs Talents et pendant une période de vingt-quatre (24) mois après la dernière mission, de :
-  </p>
-  <ul>
-    <li>contracter directement avec un client, une conciergerie, un armateur ou toute entité présentée par Chefs Talents ;</li>
-    <li>accepter une mission similaire ou équivalente avec ces mêmes parties, en dehors du cadre de Chefs Talents ;</li>
-    <li>utiliser les informations obtenues via Chefs Talents à des fins personnelles ou concurrentes ;</li>
-    <li>solliciter, transmettre ou divulguer à un tiers les coordonnées d’un client, d’une conciergerie ou d’un armateur présenté par Chefs Talents.</li>
-  </ul>
-  <p>
-    Toute tentative de contournement, directe ou indirecte, sera considérée comme un manquement grave.
-  </p>
-
-  <h3>Sanctions</h3>
-  <p>
-    En cas de violation avérée des obligations de confidentialité ou de non-contournement :
-  </p>
-  <ul>
-    <li>Chefs Talents se réserve le droit de suspendre ou résilier immédiatement l’accès du Chef à la plateforme ;</li>
-    <li>toute mission en cours pourra être annulée ;</li>
-    <li>le Chef sera redevable envers Chefs Talents d’une <strong>indemnité forfaitaire égale à 30 % du montant HT total de la mission contournée ou 30 000 €, le plus élevé des deux montants</strong>, sans préjudice de tout dommage complémentaire que Chefs Talents pourrait démontrer.</li>
-  </ul>
-  <p>
-    Cette indemnité est immédiatement exigible dès la constatation de la violation et payable dans un délai de quinze (15) jours à compter de la notification.
-  </p>
-
-  <hr />
-
-  <h2>10. Données &amp; communication</h2>
-  <p>Chef Talents est autorisé à :</p>
-  <ul>
-    <li>utiliser le profil du Chef (photos, bio) à des fins de promotion,</li>
-    <li>mentionner certaines prestations à titre de référence (sauf opposition écrite).</li>
-  </ul>
-
-  <hr />
-
-  <h2>11. Suspension / Résiliation</h2>
-  <p>Chef Talents peut suspendre ou résilier l’accès d’un Chef :</p>
-  <ul>
-    <li>en cas de manquement aux présentes conditions,</li>
-    <li>en cas de retours clients négatifs répétés,</li>
-    <li>pour préserver la qualité du réseau.</li>
-  </ul>
-  <p>Le Chef peut demander la suppression de son compte à tout moment.</p>
-
-  <hr />
-
-  <h2>12. Droit applicable et juridiction</h2>
-  <p>
-    Les présentes Conditions sont régies par le droit français.
-  </p>
-  <p>
-    En cas de litige, et à défaut de résolution amiable dans un délai de trente (30) jours à compter de la
-    première notification écrite, les Parties conviennent de la <strong>compétence exclusive des tribunaux
-    de Bordeaux</strong>.
-  </p>
-
-  <hr />
-
-  <h2>13. Acceptation</h2>
-  <p>
-    Le Chef reconnaît avoir lu, compris et accepté sans réserve les présentes Conditions de Collaboration.
-  </p>
-
-</div>
-{/* ===================== FIN CONDITIONS ===================== */}
-
+          {/* Acceptation */}
           <div className="mt-10 border-t border-stone-200 pt-6 space-y-4">
             <label className="flex items-start gap-3 text-sm text-stone-700">
               <input
@@ -384,7 +193,7 @@ export default function TermsClient() {
                 onChange={(e) => setChecked(e.target.checked)}
                 className="mt-1"
               />
-              <span>J’ai lu et j’accepte les Conditions de Collaboration Chef Talents.</span>
+              <span>{t.acceptCheckbox}</span>
             </label>
 
             {err ? <div className="text-sm text-red-600">{err}</div> : null}
@@ -394,11 +203,11 @@ export default function TermsClient() {
               disabled={loading || !checked}
               className="w-full rounded-2xl bg-stone-900 text-white py-3 font-medium hover:bg-stone-800 disabled:opacity-40"
             >
-              {loading ? 'Enregistrement…' : 'Accepter et continuer'}
+              {loading ? t.accepting : t.acceptCta}
             </button>
 
             <div className="text-xs text-stone-400">
-              Version en vigueur : {CURRENT_TERMS_VERSION}
+              {t.versionLabel} : {CURRENT_TERMS_VERSION}
             </div>
           </div>
         </div>
