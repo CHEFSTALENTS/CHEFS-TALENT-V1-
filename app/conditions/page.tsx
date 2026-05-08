@@ -407,7 +407,7 @@ export default function ConditionsPage() {
                   </div>
 
                   <div className="space-y-2 mt-6">
-                    <p className="text-stone-900 font-medium">4.2 Prestations ponctuelles (1 à 3 jours, &lt; 10 000 € TTC)</p>
+                    <p className="text-stone-900 font-medium">4.2 Missions inférieures à 30 000 € TTC</p>
                     <p>
                       Le règlement intégral du montant TTC est exigé à la commande pour confirmer la mission. À défaut
                       de paiement intégral, la mission n’est pas réputée confirmée et le Chef n’est pas mobilisé.
@@ -415,19 +415,18 @@ export default function ConditionsPage() {
                   </div>
 
                   <div className="space-y-2 mt-6">
-                    <p className="text-stone-900 font-medium">4.3 Missions de moyen et long format (≥ 10 000 € TTC)</p>
+                    <p className="text-stone-900 font-medium">4.3 Missions de 30 000 € TTC ou plus</p>
                     <p>
-                      Pour les missions de durée supérieure à 4 jours ou d’un montant supérieur à 10 000 € TTC, les
-                      modalités sont fixées dans le contrat de mission signé pour la mission concernée. À défaut de
-                      stipulation contraire, le Client règle :
+                      Pour toute mission d’un montant TTC supérieur ou égal à 30 000 €, le Client règle selon le calendrier
+                      suivant, sauf stipulation contraire dans le contrat de mission spécifique :
                     </p>
                     <ul className="list-disc pl-6 space-y-2">
-                      <li>un acompte minimum de 50 % à la commande pour bloquer les dates et activer le Chef ;</li>
-                      <li>le solde au plus tard 4 jours ouvrés avant le début de la mission.</li>
+                      <li>un <strong>acompte de 60 %</strong> à la réservation, pour bloquer les dates et activer le Chef ;</li>
+                      <li>le <strong>solde de 40 %</strong> au plus tard <strong>48 heures</strong> avant le début de la mission.</li>
                     </ul>
                     <p>
                       Pour les missions saisonnières (≥ 6 semaines), un échelonnement mensuel à terme à échoir peut être
-                      formalisé dans le contrat de mission.
+                      formalisé dans le contrat de mission spécifique.
                     </p>
                   </div>
 
@@ -453,22 +452,18 @@ export default function ConditionsPage() {
                 <section className="space-y-3">
                   <p className="text-stone-900 font-medium">5. Annulation par le Client</p>
                   <p>
-                    Les conditions d’annulation dépendent de la nature de la mission et du délai d’annulation par rapport
-                    au début de la prestation. Le barème précis applicable à chaque mission est défini dans le contrat
-                    de mission signé pour cette mission.
+                    Le barème précis applicable à chaque mission est défini dans le contrat de mission signé pour cette
+                    mission. À défaut de stipulation contraire, le barème suivant s’applique à toute annulation à
+                    l’initiative du Client :
                   </p>
-                  <p>À défaut de stipulation contraire dans le contrat de mission, le barème suivant s’applique :</p>
                   <ul className="list-disc pl-6 space-y-2">
-                    <li>annulation plus de 30 jours avant le début de la mission : 25 % du montant TTC retenu à titre d’indemnité forfaitaire ;</li>
-                    <li>annulation entre 30 et 14 jours avant le début : 50 % du montant TTC retenu ;</li>
-                    <li>annulation entre 14 et 7 jours avant le début : 75 % du montant TTC retenu ;</li>
-                    <li>annulation à moins de 7 jours du début, ou en cours de mission : 100 % du montant TTC retenu.</li>
+                    <li>annulation à <strong>7 jours ou plus avant le début</strong> de la mission : <strong>25 %</strong> du montant TTC retenu à titre d’indemnité forfaitaire ;</li>
+                    <li>annulation <strong>dans les 6 jours précédant le début</strong> de la mission, no-show, ou en cours de mission : <strong>50 %</strong> du montant TTC retenu.</li>
                   </ul>
                   <p>
                     Ces retenues couvrent les engagements pris par Chefs Talents et le Chef (mobilisation des dates,
                     organisation, achats déjà engagés, manque à gagner) et ne peuvent faire l’objet d’une contestation
-                    fondée sur l’absence d’exécution effective de la prestation, l’annulation étant le fait exclusif
-                    du Client.
+                    fondée sur l’absence d’exécution effective de la prestation, l’annulation étant le fait du Client.
                   </p>
                   <p>
                     En cas de force majeure dûment caractérisée affectant le Client, les modalités sont étudiées au
