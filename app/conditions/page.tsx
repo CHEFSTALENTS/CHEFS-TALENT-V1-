@@ -301,9 +301,11 @@ export default function ConditionsPage() {
       </section>
 
       <section className="space-y-3">
-        <p className="text-stone-900 font-medium">19. Droit applicable</p>
+        <p className="text-stone-900 font-medium">19. Droit applicable et juridiction</p>
         <p>
-          Les présentes CGU sont soumises au droit français. Tout litige relèvera de la compétence des tribunaux français.
+          Les présentes CGU sont soumises au droit français. En cas de litige, et à défaut de résolution amiable dans un délai
+          de trente (30) jours à compter de la première notification écrite, les Parties conviennent de la compétence exclusive
+          des tribunaux de Bordeaux.
         </p>
       </section>
     </div>
@@ -483,8 +485,9 @@ export default function ConditionsPage() {
                 <section className="space-y-3">
                   <p className="text-stone-900 font-medium">10. Droit applicable et juridiction compétente</p>
                   <p>
-                    Les présentes CGV sont soumises au droit français. Tout litige relatif à leur interprétation ou à leur
-                    exécution relève de la compétence exclusive des tribunaux français.
+                    Les présentes CGV sont soumises au droit français. En cas de litige, et à défaut de résolution amiable
+                    dans un délai de trente (30) jours à compter de la première notification écrite, les Parties conviennent
+                    de la compétence exclusive des tribunaux de Bordeaux.
                   </p>
                 </section>
               </div>

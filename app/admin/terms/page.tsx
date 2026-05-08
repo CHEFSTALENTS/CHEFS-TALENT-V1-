@@ -223,10 +223,11 @@ Le Chef s’engage à ne divulguer aucune information sans autorisation écrite 
 
 Non-contournement
 
-Le Chef s’interdit, pendant la durée de la collaboration et pendant 12 mois après la dernière mission, de :
-	•	contracter directement avec un client, une conciergerie, un armateur ou toute entité présentée par Chef Talents ;
-	•	accepter une mission similaire hors du cadre de Chef Talents ;
-	•	utiliser les informations obtenues à des fins personnelles ou concurrentes.
+Le Chef s’interdit, pendant la durée de la collaboration et pendant vingt-quatre (24) mois après la dernière mission, de :
+	•	contracter directement avec un client, une conciergerie, un armateur ou toute entité présentée par Chefs Talents ;
+	•	accepter une mission similaire hors du cadre de Chefs Talents ;
+	•	utiliser les informations obtenues à des fins personnelles ou concurrentes ;
+	•	solliciter, transmettre ou divulguer à un tiers les coordonnées d’un client, d’une conciergerie ou d’un armateur présenté par Chefs Talents.
 
 Toute tentative de contournement constitue un manquement grave.
 
@@ -237,7 +238,9 @@ Sanctions
 En cas de violation :
 	•	suspension ou résiliation immédiate ;
 	•	annulation des missions en cours ;
-	•	indemnité forfaitaire minimale équivalente aux frais de service non perçus, sans préjudice de dommages et intérêts.
+	•	indemnité forfaitaire égale à 30 % du montant HT total de la mission contournée ou 30 000 €, le plus élevé des deux montants, sans préjudice de tout dommage complémentaire que Chefs Talents pourrait démontrer.
+
+Cette indemnité est immédiatement exigible dès la constatation de la violation et payable dans un délai de quinze (15) jours à compter de la notification.
 
 ⸻
 
@@ -279,10 +282,11 @@ Les Chefs devront accepter les mises à jour pour continuer à accéder à la pl
 
 ⸻
 
-15. Droit applicable
+15. Droit applicable et juridiction
 
 Les présentes Conditions sont régies par le droit français.
-Tout litige relève des tribunaux compétents.
+
+En cas de litige, et à défaut de résolution amiable dans un délai de trente (30) jours à compter de la première notification écrite, les Parties conviennent de la compétence exclusive des tribunaux de Bordeaux.
 
 ⸻
 
