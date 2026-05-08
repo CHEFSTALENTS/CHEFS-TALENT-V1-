@@ -4,6 +4,11 @@ export interface ArticleBlock {
   content: string | string[];
 }
 
+export interface ArticleFaq {
+  question: string;
+  answer: string;
+}
+
 export interface Article {
   id: string;
   slug: string;
@@ -16,6 +21,8 @@ export interface Article {
   blocks: ArticleBlock[];
   relatedLink: string;
   relatedLinkText: string;
+  /** FAQs optionnelles : génèrent un FAQPage JSON-LD côté insights/[slug] */
+  faqs?: ArticleFaq[];
 }
 
 export const articles: Article[] = [
@@ -127,6 +134,12 @@ export const articles: Article[] = [
         type: 'quote',
         content: "Nous transformons une résidence privée en une extension d'un palace, où le service est fluide et la cuisine est une expérience, pas une contrainte."
       }
+    ],
+    faqs: [
+      { question: "Combien coûte un chef privé en villa pour une semaine ?", answer: "Pour une semaine en villa privée avec un chef seul, comptez 5 000 à 10 000 € hors fonds courses, selon la destination et le profil. Tarif jour : 500 à 800 € net en Riviera/Ibiza/Mykonos, 600 à 900 € en chalet d'hiver." },
+      { question: "Le chef privé apporte-t-il son matériel en villa ?", answer: "Le chef privé travaille avec les équipements en place. Avant la mission, une vérification des équipements (pianos, four, chambre froide, plonge) est effectuée pour anticiper les besoins. Si la cuisine est très sous-équipée, certains apports complémentaires peuvent être négociés." },
+      { question: "Combien de couverts un chef privé peut-il servir seul en villa ?", answer: "Un chef privé seul peut tenir un dîner à l'assiette jusqu'à 15 couverts. Au-delà, il faut un commis dédié au dressage. À 25 couverts ou plus, l'équipe nominale passe à 3 personnes en cuisine plus 2 en salle." },
+      { question: "Le chef privé gère-t-il aussi le service en salle ?", answer: "Selon le format. Sur un dîner intime jusqu'à 8-10 couverts, le chef peut gérer la présentation des plats en salle. Sur un format plus grand ou un dîner formel, un service en salle dédié (house manager, stewardess sur yacht, ou serveurs en extra) est nécessaire pour préserver la qualité du timing." }
     ]
   },
   {
@@ -235,6 +248,24 @@ export const articles: Article[] = [
       {
         type: 'quote',
         content: "Nos chefs sont certifiés STCW et expérimentés en mer. Ils comprennent la hiérarchie du bord et les impératifs de sécurité."
+      }
+    ],
+    faqs: [
+      {
+        question: "Un chef privé sur yacht doit-il avoir une certification spécifique ?",
+        answer: "Oui. Sur la plupart des yachts commerciaux, le chef doit détenir au minimum la certification STCW (Standards of Training, Certification and Watchkeeping), qui couvre la sécurité incendie, la survie en mer et les premiers secours. Les chefs Chefs Talents qui travaillent sur yachts sont tous certifiés STCW et habitués aux contraintes du bord."
+      },
+      {
+        question: "Combien coûte un chef privé sur un yacht à la semaine ?",
+        answer: "Pour un chef yacht confirmé, comptez 1 200 à 2 000 € par jour selon la taille du bateau, le niveau d'invités et la durée de la charter. Sur un superyacht (40m+) avec menu dégustation quotidien, les tarifs montent jusqu'à 2 500 € par jour. Le fonds courses (provisioning) est en sus, généralement géré par le chef en coordination avec le chief stewardess."
+      },
+      {
+        question: "Le chef yacht cuisine-t-il aussi pour l'équipage ?",
+        answer: "Oui, presque toujours. Le chef est responsable des deux services : les repas des invités (souvent menu dégustation) et la crew mess pour l'équipage (10 à 20 personnes). Cela demande une organisation très rigoureuse, surtout sur des charters longs où le moral de l'équipage dépend en partie de la qualité de la nourriture servie au mess."
+      },
+      {
+        question: "Comment se passe le provisioning sur un yacht en navigation ?",
+        answer: "Le chef anticipe les achats avant chaque leg de navigation. Il travaille avec des fournisseurs locaux dans chaque port (Antibes, Palma, Bonifacio, Mykonos, etc.) et planifie la rotation des produits frais en fonction de la durée entre deux escales. Sur les longues traversées, il s'appuie sur les congélateurs et les techniques de conservation pour maintenir un niveau gastronomique constant."
       }
     ]
   },
@@ -517,6 +548,13 @@ export const articles: Article[] = [
         type: 'paragraph',
         content: "Pour orienter votre projet, soumettez votre brief sur notre formulaire. Nous identifions le format de mission pertinent, sélectionnons trois profils alignés avec vos exigences et votre budget, et formalisons un devis transparent qui détaille chaque ligne — y compris ce qu'il n'inclut pas."
       }
+    ],
+    faqs: [
+      { question: "Combien coûte un chef privé pour un dîner à domicile ?", answer: "Pour un dîner ponctuel de 8 à 12 couverts à domicile, comptez 1 200 à 3 500 € tout compris (forfait chef, préparation, fonds courses). Le forfait chef seul est de 500 à 1 400 € par jour selon le profil et le format demandé." },
+      { question: "Quel est le tarif journalier d'un chef privé en 2026 ?", answer: "Pour un profil confirmé en mission saisonnière, comptez 500 à 1 000 € net par jour. Villa Côte d'Azur, Ibiza, Mykonos : 500 à 800 €. Yacht charter (10-20 m) : 600 à 1 000 €. Chalet hiver (Courchevel, Verbier) : 600 à 900 €. Mission ponctuelle d'une journée : 500 à 1 400 €." },
+      { question: "Le fonds courses est-il inclus dans le tarif chef ?", answer: "Non, le fonds courses est toujours géré séparément. Comptez 200 à 350 € par personne par semaine sur des produits standards, 500 à 700 € sur des produits exigeants (truffe, caviar, vins rares), 700 à 1 200 € en contexte UHNW avec sourcing luxe par défaut." },
+      { question: "Y a-t-il une commission de plateforme en plus du tarif chef ?", answer: "Sur une plateforme spécialisée comme Chefs Talents, la commission est intégrée dans le tarif chef qui vous est communiqué, jamais ajoutée par-dessus. Si vous payez deux fois (tarif chef + frais de plateforme séparés), c'est le signe d'un montage commercial mal structuré." },
+      { question: "Pourquoi deux chefs au CV similaire pratiquent-ils des tarifs différents ?", answer: "Un chef à 500 € par jour est souvent en début de carrière, cherche de l'exposition haut de gamme. Un chef à 1 000 € a un track record UHNW vérifiable, des références joignables, et la rigueur opérationnelle pour tenir une mission longue sans casse. La fourchette 700-800 € est où se trouve l'essentiel des profils qualifiés." }
     ]
   },
   {
@@ -999,6 +1037,13 @@ export const articles: Article[] = [
       { type: 'h2', content: "Les trois erreurs les plus fréquentes" },
       { type: 'list', content: ["Sous-estimer le budget : beaucoup de clients pensent qu'un chef privé coûte 200 € par jour. Pour un profil confirmé qui livre un haut niveau, le marché actuel est entre 500 et 1 000 € net par jour.", "Engager sur recommandation sans vérifier les références : un chef recommandé par un ami n'est pas forcément adapté à votre besoin spécifique.", "Négliger le contrat : sur une mission de 50 000 €, ne pas avoir de contrat formalisé revient à engager un fournisseur de cinq zéros sur un email."] },
       { type: 'quote', content: "Engager un chef privé n'est pas une décision d'impulsion. C'est un acte de pilotage qui structure plusieurs semaines de votre vie quotidienne. Méthode et rigueur en amont valent mieux que correction en cours de mission." }
+    ],
+    faqs: [
+      { question: "Combien de temps à l'avance faut-il engager un chef privé ?", answer: "Pour une mission saisonnière en haute saison (juin à septembre), comptez 4 à 6 mois minimum, idéalement 9 mois pour les meilleurs profils. Pour un dîner ponctuel ou un week-end, 4 à 6 semaines suffisent en général. Pour un dîner d'affaires, 2 semaines hors dates très demandées (Cannes, MIPIM)." },
+      { question: "Combien coûte un chef privé en moyenne ?", answer: "Pour un profil confirmé en 2026, comptez 500 à 1 000 € net par jour pour le chef seul, hors fonds courses. Pour une mission saisonnière d'un mois pour une famille de 6 personnes avec produits exigeants, le budget total atteint 33 000 à 39 000 € (chef, per diem, préparation, fonds courses inclus)." },
+      { question: "Quelle est la différence entre engager un chef directement ou via une plateforme ?", answer: "Engager directement demande de gérer la sélection, le contrat, la coordination et les imprévus. Une plateforme spécialisée comme Chefs Talents apporte la sélection rigoureuse, un contrat-cadre qui protège les deux parties, et la coordination en cas d'imprévu. La commission est intégrée au tarif chef, pas ajoutée." },
+      { question: "Faut-il un contrat écrit pour engager un chef privé ?", answer: "Oui, sur toute mission au-dessus de 15 000 €. Un contrat propre tient sur 4 à 6 pages et couvre le périmètre, le calendrier de paiement (acompte 30-40%, intermédiaire, solde), les conditions de rupture, la responsabilité civile, la confidentialité, la non-sollicitation et le droit applicable." },
+      { question: "Que se passe-t-il si la mission se passe mal ?", answer: "Sur les missions Chefs Talents, nous restons disponibles tout au long de la prestation et désamorçons les tensions avant qu'elles ne dégradent la mission. En cas de rupture justifiée, le contrat encadre précisément qui paie quoi selon l'origine du conflit (client, force majeure côté chef, ou convenance)." }
     ]
   },
   {
@@ -1031,6 +1076,13 @@ export const articles: Article[] = [
       { type: 'h2', content: "Délai de réservation" },
       { type: 'paragraph', content: "Pour un anniversaire à domicile : 4 à 6 semaines à l'avance suffisent en général. Pour un mariage en haute saison (mai à septembre) : 4 à 6 mois minimum, idéalement 9 mois. Pour un dîner d'affaires : 2 semaines suffisent souvent, mais sur des dates très demandées (semaine de Cannes, MIPIM, salons), le préavis monte à 2-3 mois." },
       { type: 'quote', content: "Un événement privé bien orchestré avec un chef privé n'a aucun équivalent dans le segment traiteur classique. Le sur-mesure n'est pas un argument commercial, c'est la nature même de la prestation." }
+    ],
+    faqs: [
+      { question: "Combien coûte un chef privé pour un anniversaire à domicile ?", answer: "Pour un anniversaire de 15 à 30 couverts à domicile, comptez 3 000 à 6 500 € tout compris (chef, équipe de renfort, préparation, fonds courses). La répartition : forfait chef 1 200-2 200 € net, équipe 800-2 500 €, préparation 600-1 500 €, fonds courses 70 à 180 € par couvert." },
+      { question: "Peut-on engager un chef privé pour un mariage de 60 personnes ?", answer: "Oui, c'est un format en croissance depuis 2023 pour les couples qui veulent éviter les grands traiteurs standardisés. La complexité opérationnelle est réelle : équipe de 2 chefs + 3 commis + 3 serveurs minimum, et une vraie réflexion sur les allergies dans un groupe diversifié. Réservez 4 à 6 mois à l'avance, idéalement 9 mois en haute saison." },
+      { question: "Quelle est la différence entre un chef privé et un traiteur pour un événement ?", answer: "Le traiteur produit en série depuis un laboratoire avec des menus catalogués. Le chef privé construit un menu sur mesure, cuisine sur place dans la maison, et signe l'expérience. Le sur-mesure n'est pas un argument commercial chez un chef privé, c'est la nature même de la prestation." },
+      { question: "Combien faut-il de personnel en cuisine pour 30 couverts ?", answer: "L'équipe nominale est de 3 personnes en cuisine (chef + 2 commis) plus 2 personnes en salle. À 50-80 couverts, on monte à 2 chefs + 3 commis + 3 serveurs. Le chef privé seul est en surchauffe technique au-delà de 25 couverts." },
+      { question: "Combien de temps à l'avance réserver un chef privé pour un événement ?", answer: "Anniversaire à domicile : 4 à 6 semaines. Mariage en haute saison : 4 à 6 mois minimum, idéalement 9 mois. Dîner d'affaires : 2 semaines hors dates très demandées (Cannes, MIPIM, salons)." }
     ]
   },
   {
@@ -1061,6 +1113,12 @@ export const articles: Article[] = [
       { type: 'h2', content: "Le piège commercial à éviter" },
       { type: 'paragraph', content: "Certains traiteurs se positionnent comme « chefs privés » pour facturer plus cher, et certains chefs à domicile peu expérimentés se présentent comme « chefs privés » pour valoriser leur tarif. Le critère discriminant est concret : un vrai chef privé est capable de cuisiner dans une cuisine qu'il ne connaît pas, avec les équipements qui s'y trouvent, sans laboratoire de support, et de tenir cette performance pendant 7 à 14 services consécutifs. C'est cette capacité qui définit le métier, pas le tarif." },
       { type: 'quote', content: "Engager le bon profil pour le bon besoin économise 30 % du budget et 100 % des frustrations. Engager un traiteur pour une mission saisonnière, ou un chef privé pour un mariage à 80, c'est garantir une mission qui ne correspondra pas à l'attente." }
+    ],
+    faqs: [
+      { question: "Quelle est la différence entre un chef privé et un chef à domicile ?", answer: "Le chef privé s'installe dans la résidence du client (villa, yacht, chalet) pour une mission de plusieurs jours à plusieurs mois, et cuisine sur place avec les équipements de la maison. Le chef à domicile travaille sur des prestations courtes (dîner, week-end), prépare souvent à l'avance dans son laboratoire et apporte son matériel. Tarif chef privé : 500 à 1 000 € net par jour. Tarif chef à domicile : 80 à 150 € par couvert." },
+      { question: "Un personal chef est-il un chef privé ?", answer: "Non. Le personal chef est un chef récurrent attaché à une famille, intervenant 1 à 3 fois par semaine pour préparer des repas batch-cookés. Le chef privé s'installe dans la maison pour des missions immersives. Le personal chef facture 600 à 1 200 € la séance pour 4 à 6 repas pour 4 personnes." },
+      { question: "Quand engager un traiteur plutôt qu'un chef privé ?", answer: "Pour servir 50 personnes ou plus sur un événement unique, le traiteur est plus adapté : industrialisation maîtrisée, logistique standardisée, tarifs prévisibles au couvert. Le chef privé devient pertinent à partir d'un format où la signature, l'immersion et le sur-mesure comptent plus que le volume." },
+      { question: "Comment vérifier qu'un chef privé est vraiment confirmé ?", answer: "Le critère discriminant est sa capacité à cuisiner dans une cuisine inconnue, avec les équipements en place, sans laboratoire de support, sur 7 à 14 services consécutifs. Demandez 3 références vérifiables sur des missions similaires à la vôtre, et vérifiez la cohérence du parcours." }
     ]
   },
   {
@@ -1092,6 +1150,12 @@ export const articles: Article[] = [
       { type: 'h2', content: "Anticiper deux pièges classiques" },
       { type: 'paragraph', content: "Premier piège : sous-estimer la vaisselle. Avec 30 convives sur un menu en 5 services, vous mobilisez 150 assiettes différentes plus les couverts. Les maisons standards n'ont pas ce stock. Comptez sur la location ou l'apport du chef. Deuxième piège : la cave et le service du vin. Un dîner à 30 couverts mobilise 12 à 18 bouteilles de vin minimum. Désigner une personne dédiée au service du vin, idéalement un sommelier en extra, change la qualité perçue de 30 %." },
       { type: 'quote', content: "Une grande tablée n'est pas une amplification du dîner privé classique. C'est un format différent qui demande une équipe, un menu et une logistique adaptés. Le chef privé qui sait basculer entre les deux modes est rare, c'est ce qu'il faut chercher en amont." }
+    ],
+    faqs: [
+      { question: "À partir de combien de couverts un chef privé seul est-il dépassé ?", answer: "Au-delà de 15 couverts, le dressage à l'assiette commence à dégrader. À 25 couverts, un commis dédié au dressage est obligatoire. À 30 couverts, l'équipe nominale est de 3 personnes en cuisine (chef + 2 commis) plus 2 personnes en salle." },
+      { question: "Quel équipement de cuisine est nécessaire pour 30 couverts ?", answer: "2 pianos ou 6 feux disponibles en parallèle, 1 four à basse température + 1 four standard, 1 chambre froide ou 2 grands réfrigérateurs, 1 zone de plonge dédiée, et une zone de dressage de 2 à 3 mètres de long minimum." },
+      { question: "Combien coûte un dîner privé à 30 couverts ?", answer: "Entre 4 500 et 9 000 € selon le format. Forfait chef 1 500-2 200 €, renfort équipe 1 200-2 200 €, préparation 600-1 200 €, fonds courses 80 à 200 € par couvert (soit 2 400 à 6 000 € pour 30 personnes)." },
+      { question: "Faut-il un sommelier pour un dîner à 30 couverts ?", answer: "Pour un service de qualité, oui. Un dîner à 30 couverts mobilise 12 à 18 bouteilles minimum. Désigner un sommelier en extra ou un service en salle dédié au vin change la qualité perçue de 30 % par rapport à un service mixte." }
     ]
   },
   {
@@ -1122,6 +1186,12 @@ export const articles: Article[] = [
       { type: 'h2', content: "Comment formuler votre demande" },
       { type: 'paragraph', content: "Au lieu d'écrire « régime spécial », précisez. Exemple bien formulé : « Mère cœliaque sévère (cuisine 100 % sans contamination), père flexitarien préférant 60 % de plats végétaux, deux enfants 8 et 12 ans sans contrainte particulière, allergie aux fruits à coque chez l'aîné (réaction sévère). Petit-déjeuner servi en self-service à partir de 8h, déjeuner familial à 13h, dîner servi à 20h sauf le dimanche. » Ce niveau de précision change tout dans la sélection du profil." },
       { type: 'quote', content: "Un régime spécial bien servi par un chef qui le maîtrise crée plus de fidélité qu'une cuisine classique servie à un client sans contrainte. La spécialisation, dans ce métier, paie." }
+    ],
+    faqs: [
+      { question: "Peut-on engager un chef privé pour un régime cœliaque sévère ?", answer: "Oui, mais le chef doit avoir l'expérience d'une cuisine 100 % sans contamination croisée : ustensiles dédiés, planches identifiées, fournisseurs sourcés en circuits sans gluten certifiés. Le surcoût matière est de 15 à 25 % par rapport à un menu standard. Un chef qui dit « savoir faire sans gluten » sans cette infrastructure n'est pas adapté." },
+      { question: "Un chef privé peut-il faire de la cuisine vegan haut de gamme sur plusieurs semaines ?", answer: "Oui, à condition qu'il maîtrise les protéines végétales (légumineuses, tofu lacto-fermenté, tempeh, oléagineux), les céréales variées (riz, sarrasin, quinoa, millet, épeautre) et le travail des umamis (champignons séchés, miso, soja fermenté). Un chef qui propose un menu vegan limité aux salades et bowls n'a pas l'expérience d'une mission longue." },
+      { question: "Quel est le surcoût d'un régime spécial sur le fonds courses ?", answer: "Bio strict : +20 à +35 %. Vegan haut de gamme : +5 à +15 %. Sans gluten médical : +15 à +25 %. Casher orthodoxe : +30 à +50 %. Halal strict : +10 à +20 %. Anti-inflammatoire : +20 à +30 %." },
+      { question: "Un chef privé travaille-t-il avec mon nutritionniste ?", answer: "Oui, sur un régime médical (postopératoire, diabète, FODMAP), le chef privé doit travailler en lien avec votre nutritionniste référent. Le brief médical doit être écrit, listant les aliments interdits, les apports nutritionnels journaliers et les réactions à surveiller. Le chef exécute le cadre, il ne se substitue pas au praticien." }
     ]
   },
   // ════════════════════════════════════════════════════════════
@@ -1159,6 +1229,13 @@ export const articles: Article[] = [
       { type: 'paragraph', content: "Putting it all together, a credible monthly budget for a one-month seasonal mission with a chef alone, family of 6, demanding produce :" },
       { type: 'list', content: ["Chef salary : 18 000 to 22 000 € net.", "Per diem : 1 200 to 1 800 €.", "Preparation fee : 2 200 to 3 500 €.", "Grocery fund (500 €/person/week × 4 weeks × 6 people) : 12 000 €.", "Total range : 33 400 to 39 300 € net for one month."] },
       { type: 'quote', content: "Private chef pricing in Europe is not a negotiation, it is a demonstration of level. Clients who push the rate down by 30 percent generally pay the gap back twofold in execution problems and time spent fixing them." }
+    ],
+    faqs: [
+      { question: "How much does a private chef cost per day in Europe ?", answer: "For a confirmed private chef in 2026, expect 500 to 1 000 € net per day for the chef alone. Riviera or Ibiza villa : 500 to 800 €. Yacht charter (10-20 m): 600 to 1 000 €. Winter chalet (Courchevel, Verbier): 600 to 900 €. London or Paris private residence: 600 to 900 €." },
+      { question: "What is the total budget for a one-month seasonal mission ?", answer: "Around 33 000 to 39 000 € net all-in for a chef alone serving a family of 6 with demanding produce. Breakdown: chef salary 18 000-22 000 €, per diem 1 200-1 800 €, preparation fee 2 200-3 500 €, grocery fund 12 000 € (500 €/person/week)." },
+      { question: "Are platform commissions added on top of the chef rate ?", answer: "On a serious specialised platform like Chefs Talents, the commission is integrated into the chef rate quoted to you, never added on top. Paying twice (chef rate plus separate platform fee) is a sign of a poorly structured deal." },
+      { question: "Why do similar chef CVs result in such different rates ?", answer: "A 500 €/day chef is often early-career looking for high-end exposure. A 1 000 €/day chef has a verifiable UHNW track record, reachable references, and operational rigour to handle a 6-week mission without breakage. The 700-800 € middle range is where most of the qualified pool sits." },
+      { question: "What does the grocery fund typically cover ?", answer: "Standard family-driven cooking on quality produce: 200 to 350 € per person per week. Demanding sourcing with truffle, caviar, aged meats, rare wines: 500 to 700 €. UHNW context with luxury sourcing as a default: 700 to 1 200 € per person per week. Always tracked separately with weekly recap and photographed receipts." }
     ]
   },
   {
@@ -1192,6 +1269,13 @@ export const articles: Article[] = [
       { type: 'h2', content: "The three most common mistakes" },
       { type: 'list', content: ["Underestimating the budget. Many clients believe a private chef costs 200 € a day. For a confirmed profile delivering high level, the current market is 500 to 1 000 € net per day.", "Hiring on word-of-mouth without checking references. A chef recommended by a friend is not necessarily fit for your specific need.", "Skipping the contract. On a 50 000 € mission, having no formalised contract is hiring a five-figure vendor on an email."] },
       { type: 'quote', content: "Hiring a private chef is not an impulse decision. It is a piloting act that frames several weeks of your daily life. Method and rigour upstream beat correction mid-mission." }
+    ],
+    faqs: [
+      { question: "How far in advance should I hire a private chef ?", answer: "Seasonal mission in peak season (June to September): 4 to 6 months minimum, ideally 9 months for the best profiles. One-off dinner or weekend: 4 to 6 weeks. Business dinner: 2 weeks outside very demanded dates (Cannes, MIPIM)." },
+      { question: "How much does it cost to hire a private chef ?", answer: "For a confirmed profile in 2026, count 500 to 1 000 € net per day for the chef alone, excluding food fund. For a one-month seasonal mission for a family of 6 with demanding produce, total budget reaches 33 000 to 39 000 € (chef, per diem, preparation, grocery fund all included)." },
+      { question: "Direct hire or platform : what is the difference ?", answer: "Direct hire means handling selection, contract, coordination and unforeseen issues yourself. A specialised platform like Chefs Talents brings rigorous profile vetting, a contract framework that protects both parties, and coordination if anything goes off-plan. Commission is integrated in the chef rate, never added on top." },
+      { question: "Do I need a written contract to hire a private chef ?", answer: "Yes, on any mission above 15 000 €. A clean contract runs 4 to 6 pages and covers scope, payment schedule (deposit 30-40 %, intermediate, balance), termination conditions, civil liability, confidentiality, non-solicitation and applicable law." },
+      { question: "What if the mission goes badly ?", answer: "On Chefs Talents missions, we stay available throughout and defuse tensions before they degrade the mission. If termination is justified, the contract precisely frames who pays what depending on the rupture origin (client, force majeure on chef side, or convenience)." }
     ]
   }
 ];

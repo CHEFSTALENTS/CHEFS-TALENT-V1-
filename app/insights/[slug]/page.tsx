@@ -113,6 +113,23 @@ export default function InsightPostPage({
     ],
   };
 
+  // FAQPage JSON-LD : généré uniquement si l'article expose des FAQs
+  const faqJsonLd =
+    article.faqs && article.faqs.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: article.faqs.map((f) => ({
+            '@type': 'Question',
+            name: f.question,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: f.answer,
+            },
+          })),
+        }
+      : null;
+
   return (
     <Layout>
       <script
@@ -123,6 +140,12 @@ export default function InsightPostPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <article className="bg-paper min-h-screen pt-32 pb-24">
         {/* Editorial Header */}
         <section className="px-6 md:px-12 max-w-4xl mx-auto text-center mb-24">
@@ -232,6 +255,25 @@ export default function InsightPostPage({
             })}
           </div>
         </Section>
+
+        {/* FAQs — featured snippets / People Also Ask */}
+        {article.faqs && article.faqs.length > 0 && (
+          <section className="px-6 md:px-12 max-w-3xl mx-auto mt-32">
+            <Label className="mb-8">Questions fréquentes</Label>
+            <div className="border-t border-stone-200 divide-y divide-stone-100">
+              {article.faqs.map((f, i) => (
+                <div key={i} className="py-8">
+                  <h3 className="text-xl md:text-2xl font-serif text-stone-900 mb-4">
+                    {f.question}
+                  </h3>
+                  <p className="text-base md:text-lg text-stone-600 font-light leading-relaxed">
+                    {f.answer}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Articles liés — maillage interne */}
         {related.length > 0 && (
