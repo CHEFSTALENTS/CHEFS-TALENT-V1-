@@ -144,7 +144,7 @@ export async function POST(req: Request) {
 
     // Notification interne
     await resend.emails.send({
-      from: 'Chefs Talents <noreply@chefstalents.com>',
+      from: 'Chefs Talents <contact@chefstalents.com>',
       to: 'contact@chefstalents.com',
       subject: `✅ Profils envoyés — ${clientName || clientEmail}`,
       html: `<div style="font-family:monospace;padding:24px;">

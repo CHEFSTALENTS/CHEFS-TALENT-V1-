@@ -156,7 +156,7 @@ export async function POST(req: Request) {
     // 4. Notification interne
     try {
       await resend.emails.send({
-        from: 'Chefs Talents <noreply@chefstalents.com>',
+        from: 'Chefs Talents <contact@chefstalents.com>',
         to: 'contact@chefstalents.com',
         subject: `✅ Mission assignée — ${chefName || chefEmail} · ${location || ''}`,
         html: `<div style="font-family:monospace;padding:24px;">
