@@ -2,18 +2,76 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { destinations } from "@/lib/destinations";
 
+const SITE_URL = "https://chefstalents.com";
+
 export const metadata: Metadata = {
   title: "Nos Destinations | Chef Privé en Europe — Chefs Talents",
   description: "Trouvez un chef privé dans toutes les destinations premium d'Europe. Côte d'Azur, Ibiza, Mykonos, Courchevel, Monaco, Sardaigne et bien plus.",
-  alternates: { canonical: "https://chefstalents.com/destinations" },
+  alternates: { canonical: `${SITE_URL}/destinations` },
+  openGraph: {
+    type: "website",
+    url: `${SITE_URL}/destinations`,
+    title: "Nos Destinations | Chef Privé en Europe — Chefs Talents",
+    description: "Trouvez un chef privé dans toutes les destinations premium d'Europe.",
+    images: [`${SITE_URL}/images/editorial/hero-chef-talents.jpg`],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nos Destinations | Chef Privé en Europe — Chefs Talents",
+    description: "Trouvez un chef privé dans toutes les destinations premium d'Europe.",
+    images: [`${SITE_URL}/images/editorial/hero-chef-talents.jpg`],
+  },
 };
 
 export default function DestinationsPage() {
   const france = destinations.filter((d) => d.country === "France");
   const europe = destinations.filter((d) => d.country !== "France");
 
+  // CollectionPage + ItemList : signale à Google que cette page est un hub.
+  const collectionPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Destinations Chef Privé en Europe — Chefs Talents",
+    url: `${SITE_URL}/destinations`,
+    description:
+      "Liste des destinations couvertes par Chefs Talents pour engager un chef privé en Europe.",
+    isPartOf: { "@type": "WebSite", name: "Chefs Talents", url: SITE_URL },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: destinations.length,
+      itemListElement: destinations.slice(0, 30).map((d, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: `${SITE_URL}/destinations/${d.slug}`,
+        name: d.heroTitle,
+      })),
+    },
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Accueil", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Destinations",
+        item: `${SITE_URL}/destinations`,
+      },
+    ],
+  };
+
   return (
     <div className="bg-paper min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
       {/* HERO */}
       <section className="relative bg-stone-900 text-white min-h-[60vh] flex flex-col justify-center px-6 md:px-12 pt-32 pb-20 overflow-hidden">

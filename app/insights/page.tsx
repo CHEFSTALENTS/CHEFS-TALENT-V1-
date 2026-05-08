@@ -43,12 +43,57 @@ const blogJsonLd = {
   },
 };
 
+// CollectionPage + ItemList listant tous les articles publiés. Permet à
+// Google de comprendre la page comme un hub de contenu (et pas une page
+// orpheline avec quelques liens).
+const collectionPageJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Guides Chef Privé — Le Journal Chefs Talents',
+  url: `${SITE_URL}/insights`,
+  description:
+    "Guides pour engager un chef privé en Europe : tarifs, destinations, types de mission, logistique.",
+  isPartOf: { '@type': 'WebSite', name: 'Chefs Talents', url: SITE_URL },
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: articles.length,
+    itemListElement: articles.slice(0, 30).map((a, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `${SITE_URL}/insights/${a.slug}`,
+      name: a.title,
+    })),
+  },
+};
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Accueil', item: SITE_URL },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Le Journal',
+      item: `${SITE_URL}/insights`,
+    },
+  ],
+};
+
 export default function InsightsPage() {
   return (
     <Layout>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <div className="pt-40 pb-24 px-6 md:px-12 bg-stone-50 border-b border-stone-200">
         <div className="max-w-4xl mx-auto text-center space-y-8">

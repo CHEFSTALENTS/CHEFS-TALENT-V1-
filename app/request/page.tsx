@@ -845,7 +845,7 @@ if (response?.success) {
           <CheckCircle2 className="w-10 h-10 text-stone-900" strokeWidth={1.5} />
         </div>
         <p className="text-xs uppercase tracking-[0.3em] text-stone-500 mb-4">CHEFS TALENTS</p>
-        <h1 className="text-4xl md:text-5xl font-serif font-normal text-white mb-4">{t.successTitle}</h1>
+        <h2 className="text-4xl md:text-5xl font-serif font-normal text-white mb-4">{t.successTitle}</h2>
         <p className="text-stone-400 font-light text-lg leading-relaxed max-w-md mb-4">
           {t.successSub.split("6 heures").map((part, i) => i === 0 ? part : <React.Fragment key={i}><strong className="text-white font-medium">6 heures</strong>{part}</React.Fragment>)}
         </p>
@@ -930,7 +930,7 @@ if (response?.success) {
           {step === 2 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 2 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s2title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s2title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s2sub}</p>
               <div className="relative" ref={cityRef as any}>
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">📍</span>
@@ -997,9 +997,9 @@ if (response?.success) {
           {step === 3 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 3 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">
                 {dateMode === "multi" ? t.s3title : t.s3titlesingle}
-              </h1>
+              </h2>
               <p className="text-stone-500 font-light text-center mb-6">
                 {dateMode === "multi" ? t.s3sub : t.s3subsingle}
               </p>
@@ -1037,7 +1037,7 @@ if (response?.success) {
           {step === 4 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 4 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s4title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s4title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s4sub}</p>
               <div className="grid grid-cols-2 gap-3">
                 {([
@@ -1058,7 +1058,7 @@ if (response?.success) {
           {step === 5 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 5 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s5title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s5title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s5sub}</p>
               <div className="space-y-3 max-w-sm mx-auto">
                 <Counter label={t.s5adults} sublabel={t.s5adultssub} value={data.adults ?? 0} min={1} onChange={v => set({ adults: v })} />
@@ -1076,7 +1076,7 @@ if (response?.success) {
           {step === 6 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 6 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s6title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s6title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s6sub}</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 {LANGUAGES.map(l => {
@@ -1107,7 +1107,7 @@ if (response?.success) {
           {step === 7 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 7 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s7title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s7title}</h2>
               <p className="text-stone-500 font-light text-center mb-6">{t.s7sub}</p>
 
               {/* Estimation contextuelle */}
@@ -1167,7 +1167,7 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
           {step === 8 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 8 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s8title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s8title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s8sub}</p>
               <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-5">
                 <OptionCard active={data.hasDietaryRestrictions === false} title={t.s8no} subtitle={t.s8nosub} onClick={() => set({ hasDietaryRestrictions: false, dietaryRestrictions: "" })} />
@@ -1186,7 +1186,7 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
           {step === 9 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 9 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s9title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s9title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s9sub}</p>
               <textarea autoFocus value={data.notes} onChange={e => set({ notes: e.target.value })}
                 placeholder={t.s9placeholder} rows={6}
@@ -1199,7 +1199,7 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
           {step === 10 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 10 {t.of} {TOTAL_STEPS}</p>
-              <h1 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s10title}</h1>
+              <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s10title}</h2>
               <p className="text-stone-500 font-light text-center mb-6">{t.s10sub}</p>
               <div className="space-y-3 max-w-md mx-auto">
                 <input type="text" autoFocus value={data.fullName} onChange={e => set({ fullName: e.target.value })}
