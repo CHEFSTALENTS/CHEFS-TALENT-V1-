@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Claude Code runtime files (keep .claude/seo-crons.md and other docs)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
