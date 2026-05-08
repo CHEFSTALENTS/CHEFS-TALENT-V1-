@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -151,11 +152,14 @@ export default function InsightPostPage({
 
         {/* Hero Image */}
         <Reveal delay={0.2} className="px-6 md:px-12 max-w-[100rem] mx-auto mb-24">
-          <div className="aspect-[21/9] w-full overflow-hidden bg-stone-200">
-            <img
+          <div className="relative aspect-[21/9] w-full overflow-hidden bg-stone-200">
+            <Image
               src={article.image}
               alt={article.title}
-              className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-[2s] ease-in-out"
+              fill
+              priority
+              sizes="(max-width: 1280px) 100vw, 1600px"
+              className="object-cover grayscale hover:grayscale-0 transition-all duration-[2s] ease-in-out"
             />
           </div>
         </Reveal>

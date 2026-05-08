@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Section, Reveal, Marker, Label } from '../../components/ui';
@@ -118,11 +119,13 @@ export default function InsightsPage() {
 
                   {/* Image Column */}
                   <div className="md:col-span-5 order-2 md:order-1">
-                    <div className="aspect-[4/3] bg-stone-200 w-full overflow-hidden">
-                       <img
+                    <div className="relative aspect-[4/3] bg-stone-200 w-full overflow-hidden">
+                       <Image
                         src={post.image}
                         alt={post.title}
-                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 40vw"
+                        className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
                       />
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDestinationBySlug, getAllDestinationSlugs } from '@/lib/destinations';
@@ -341,7 +342,14 @@ export default function DestinationPage({ params }: { params: { slug: string } }
 
         {/* ── HERO ── */}
         <section className="relative h-[70vh] min-h-[560px] overflow-hidden">
-          <img src={dest.image} alt={dest.heroTitle} className="absolute inset-0 h-full w-full object-cover object-center" />
+          <Image
+            src={dest.image}
+            alt={dest.heroTitle}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
           <div className="relative z-10 flex h-full items-end px-6 pb-14 md:px-12 lg:px-20">

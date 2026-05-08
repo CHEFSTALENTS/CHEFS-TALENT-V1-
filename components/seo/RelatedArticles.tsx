@@ -7,6 +7,7 @@
 //  1. Cross-linking destinations → articles (boost autorité topique)
 //  2. Garde le visiteur sur le site (lower bounce rate)
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { articles } from '@/data/articles';
 
@@ -49,12 +50,13 @@ export function RelatedArticles({
                 href={`/insights/${a.slug}`}
                 className="group block space-y-3"
               >
-                <div className="aspect-[4/3] overflow-hidden bg-stone-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="relative aspect-[4/3] overflow-hidden bg-stone-200">
+                  <Image
                     src={a.image}
                     alt={a.title}
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
                   />
                 </div>
                 <p className="text-[10px] uppercase tracking-widest text-stone-400">

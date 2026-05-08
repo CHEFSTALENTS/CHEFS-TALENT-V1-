@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { destinations } from "@/lib/destinations";
 
@@ -76,10 +77,13 @@ export default function DestinationsPage() {
       {/* HERO */}
       <section className="relative bg-stone-900 text-white min-h-[60vh] flex flex-col justify-center px-6 md:px-12 pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?q=80&w=2600&auto=format&fit=crop"
-            alt="Destinations Europe"
-            className="w-full h-full object-cover grayscale"
+            alt="Destinations Europe — chef privé Côte d'Azur, Ibiza, Mykonos"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover grayscale"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 to-transparent" />
@@ -114,11 +118,13 @@ export default function DestinationsPage() {
                 href={`/destinations/${d.slug}`}
                 className="group block"
               >
-                <div className="aspect-[4/3] overflow-hidden bg-stone-200 mb-6">
-                  <img
+                <div className="relative aspect-[4/3] overflow-hidden bg-stone-200 mb-6">
+                  <Image
                     src={d.image}
-                    alt={d.name}
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-[1.5s]"
+                    alt={`Chef privé ${d.name}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover grayscale hover:grayscale-0 transition-all duration-[1.5s]"
                   />
                 </div>
                 <div>
@@ -143,11 +149,13 @@ export default function DestinationsPage() {
       </section>
 
       {/* SÉPARATEUR IMAGE */}
-      <div className="w-full h-[40vh] overflow-hidden bg-stone-200">
-        <img
+      <div className="relative w-full h-[40vh] overflow-hidden bg-stone-200">
+        <Image
           src="https://images.unsplash.com/photo-1499678329028-101435549a4e?q=80&w=2600&auto=format&fit=crop"
-          alt="Méditerranée"
-          className="w-full h-full object-cover"
+          alt="Côte méditerranéenne — destinations chef privé"
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
       </div>
 
@@ -167,11 +175,13 @@ export default function DestinationsPage() {
                 href={`/destinations/${d.slug}`}
                 className="group block"
               >
-                <div className="aspect-[4/3] overflow-hidden bg-stone-200 mb-6">
-                  <img
+                <div className="relative aspect-[4/3] overflow-hidden bg-stone-200 mb-6">
+                  <Image
                     src={d.image}
-                    alt={d.name}
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-[1.5s]"
+                    alt={`Chef privé ${d.name}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover grayscale hover:grayscale-0 transition-all duration-[1.5s]"
                   />
                 </div>
                 <div>
