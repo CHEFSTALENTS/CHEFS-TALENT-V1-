@@ -109,6 +109,30 @@ export function BodyFR() {
           <li>le Chef garantit, le cas échéant, être titulaire des certifications requises pour ce type de mission, notamment la certification STCW Basic Safety Training, l’examen médical ENG1 (ou équivalent en cours de validité), et le respect des standards de la convention MLC 2006 ;</li>
           <li>le Chef s’engage à fournir copie de ces certifications à Chefs Talents avant l’embarquement.</li>
         </ul>
+        <h3>2.3 Responsabilité civile professionnelle et indemnisation de Chefs Talents</h3>
+        <p>
+          Le Chef étant un prestataire indépendant intervenant sous sa propre responsabilité, il est seul responsable des
+          dommages, préjudices et sinistres qu’il cause pendant l’exécution matérielle de la prestation. Il garantit
+          Chefs Talents contre toute réclamation, action ou poursuite, exercée par le Client ou par un tiers, relative
+          notamment à :
+        </p>
+        <ul>
+          <li>des dommages causés aux équipements, installations, mobilier ou biens du Client lors de l’exécution de la prestation ;</li>
+          <li>des préjudices corporels ou matériels survenus pendant la prestation du fait du Chef ;</li>
+          <li>des manquements aux règles d’hygiène, de sécurité alimentaire ou des normes professionnelles applicables à l’exécution culinaire ;</li>
+          <li>des pertes ou détériorations de matériel, équipements ou ingrédients placés sous la garde du Chef pendant la mission.</li>
+        </ul>
+        <p>
+          Le Chef s’engage à <strong>indemniser intégralement Chefs Talents</strong> de toute somme que cette dernière
+          serait amenée à supporter au titre d’une réclamation Client liée à un manquement du Chef (frais de défense,
+          indemnités versées, frais d’expertise, honoraires d’avocat), sur première demande et sans contestation
+          possible une fois la responsabilité du Chef établie.
+        </p>
+        <p>
+          Le Chef communique à Chefs Talents une copie à jour de son attestation de responsabilité civile professionnelle
+          à chaque renouvellement annuel, ainsi qu’à toute demande de Chefs Talents. Toute mission peut être suspendue
+          par Chefs Talents en l’absence d’attestation valide.
+        </p>
       </section>
 
       <section id="sec-3">
@@ -516,6 +540,28 @@ export function BodyEN() {
           <li>the Chef warrants, where applicable, holding the certifications required for this type of mission, in particular STCW Basic Safety Training, the ENG1 medical examination (or valid equivalent), and compliance with MLC 2006 standards;</li>
           <li>the Chef agrees to provide copies of these certifications to Chefs Talents prior to embarkation.</li>
         </ul>
+        <h3>2.3 Professional liability and indemnification of Chefs Talents</h3>
+        <p>
+          As an independent contractor acting under their own responsibility, the Chef is solely liable for any damages,
+          prejudice or claims caused during the material execution of the service. The Chef indemnifies Chefs Talents
+          against any claim, action or proceedings brought by the Client or a third party relating in particular to:
+        </p>
+        <ul>
+          <li>damages caused to the Client’s equipment, premises, furniture or property during the performance of the service;</li>
+          <li>bodily or material harm occurring during the service due to the Chef;</li>
+          <li>breaches of hygiene, food safety rules or professional standards applicable to culinary execution;</li>
+          <li>loss or deterioration of materials, equipment or ingredients placed under the Chef’s custody during the mission.</li>
+        </ul>
+        <p>
+          The Chef commits to <strong>fully indemnify Chefs Talents</strong> for any sum it may have to bear as a result
+          of a Client claim linked to a Chef breach (defense costs, indemnities paid, expert fees, attorney fees), upon
+          first demand and without challenge once the Chef’s liability has been established.
+        </p>
+        <p>
+          The Chef provides Chefs Talents with an up-to-date copy of their professional liability insurance certificate
+          upon each annual renewal and upon any request from Chefs Talents. Any mission may be suspended by Chefs Talents
+          in the absence of a valid certificate.
+        </p>
       </section>
 
       <section id="sec-3">
@@ -915,6 +961,30 @@ export function BodyES() {
           <li>el Chef garantiza, en su caso, poseer las certificaciones requeridas para este tipo de misión, en particular STCW Basic Safety Training, examen médico ENG1 (o equivalente vigente) y cumplimiento de los estándares del Convenio MLC 2006;</li>
           <li>el Chef se compromete a entregar copia de dichas certificaciones a Chefs Talents antes del embarque.</li>
         </ul>
+        <h3>2.3 Responsabilidad civil profesional e indemnización a Chefs Talents</h3>
+        <p>
+          El Chef, al actuar como prestador independiente bajo su propia responsabilidad, es el único responsable de los
+          daños, perjuicios y siniestros que cause durante la ejecución material de la prestación. Garantiza a
+          Chefs Talents frente a toda reclamación, acción o procedimiento ejercido por el Cliente o un tercero,
+          relativos en particular a:
+        </p>
+        <ul>
+          <li>daños causados a los equipos, instalaciones, mobiliario o bienes del Cliente durante la ejecución de la prestación;</li>
+          <li>perjuicios corporales o materiales ocurridos durante la prestación por hecho del Chef;</li>
+          <li>incumplimientos de las normas de higiene, seguridad alimentaria o estándares profesionales aplicables a la ejecución culinaria;</li>
+          <li>pérdidas o deterioros de material, equipos o ingredientes bajo la custodia del Chef durante la misión.</li>
+        </ul>
+        <p>
+          El Chef se compromete a <strong>indemnizar íntegramente a Chefs Talents</strong> por cualquier importe que esta
+          última deba soportar en virtud de una reclamación del Cliente vinculada a un incumplimiento del Chef (gastos de
+          defensa, indemnizaciones pagadas, gastos de peritaje, honorarios de abogado), a primer requerimiento y sin
+          posibilidad de impugnación una vez establecida la responsabilidad del Chef.
+        </p>
+        <p>
+          El Chef facilita a Chefs Talents una copia actualizada de su certificado de responsabilidad civil profesional
+          en cada renovación anual, así como a cualquier solicitud de Chefs Talents. Cualquier misión podrá ser
+          suspendida por Chefs Talents en ausencia de certificado válido.
+        </p>
       </section>
 
       <section id="sec-3">
