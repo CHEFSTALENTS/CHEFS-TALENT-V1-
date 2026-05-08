@@ -17,5 +17,12 @@ export default function PrivateClientsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <h1 className="sr-only">
+        Chef privé pour clients particuliers — Villas, yachts, chalets en Europe
+      </h1>
+      {children}
+    </>
+  );
 }

@@ -17,5 +17,12 @@ export default function AccompagnementLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <h1 className="sr-only">
+        Accompagnement chef privé — Sélection, coordination et suivi de mission
+      </h1>
+      {children}
+    </>
+  );
 }

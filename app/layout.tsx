@@ -17,7 +17,15 @@ export const metadata: Metadata = {
     images: [{ url: '/images/editorial/hero-chef-talents.jpg', width: 1200, height: 630, alt: 'Chef prive Chefs Talents' }],
   },
   twitter: { card: 'summary_large_image', title: 'Chef Prive a Domicile | Villas, Yachts, Residences - Chefs Talents', description: "Reseau de chefs prives selectionnes. Villas, yachts, residences UHNW en Europe.", images: ['/images/editorial/hero-chef-talents.jpg'] },
-  alternates: { canonical: 'https://chefstalents.com' },
+  alternates: {
+    canonical: 'https://chefstalents.com',
+    languages: {
+      'fr-FR': 'https://chefstalents.com',
+      'en-US': 'https://chefstalents.com/en',
+      'es-ES': 'https://chefstalents.com/es',
+      'x-default': 'https://chefstalents.com',
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

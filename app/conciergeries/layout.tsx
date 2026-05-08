@@ -17,5 +17,13 @@ export default function ConciergeriesLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      {/* H1 sémantique server-side pour les crawlers (visuellement caché). */}
+      <h1 className="sr-only">
+        Chefs Talents pour conciergeries — Chefs privés validés en Europe
+      </h1>
+      {children}
+    </>
+  );
 }
