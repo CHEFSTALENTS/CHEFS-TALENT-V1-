@@ -135,10 +135,18 @@ export async function PUT(req: Request) {
     const previousStatus = String((current as any)?.status || '').toLowerCase();
     const nowIso = new Date().toISOString();
 
-    // Détecte la transition approved → active : c'est le moment où l'on
-    // envoie l'email d'activation au chef (validation post-onboarding visio).
+    // Détecte le passage VERS active depuis un autre status (pending_validation,
+    // approved, paused...) : c'est le moment où l'on envoie l'email
+    // d'activation. On évite seulement le cas trivial active → active.
     const isActivationTransition =
-      previousStatus === 'approved' && status === 'active';
+      status === 'active' && previousStatus !== 'active';
+
+    console.log('[admin/chefs PUT]', {
+      email,
+      previousStatus,
+      newStatus: status,
+      isActivationTransition,
+    });
 
     // ✅ On écrit le status AU BON ENDROIT : profile.status
     const nextProfile = {
@@ -165,7 +173,7 @@ export async function PUT(req: Request) {
 
       if (e2) return NextResponse.json({ error: e2.message }, { status: 500 });
 
-      // Trigger l'email d'activation si transition approved → active.
+      // Trigger l'email d'activation si transition vers active.
       // Fire & forget : on ne bloque pas la réponse admin.
       if (isActivationTransition) {
         try {
@@ -174,7 +182,14 @@ export async function PUT(req: Request) {
           const rawLocale = String((current as any)?.preferredLocale || '');
           const locale: 'fr' | 'en' | 'es' =
             rawLocale === 'en' || rawLocale === 'es' ? rawLocale : 'fr';
+          console.log('[admin/chefs PUT] sending activation email', {
+            email,
+            firstName,
+            locale,
+            previousStatus,
+          });
           await sendChefActivated({ email, firstName, locale });
+          console.log('[admin/chefs PUT] activation email sent', { email });
         } catch (err: any) {
           console.error(
             '[admin/chefs PUT] activation email failed',
