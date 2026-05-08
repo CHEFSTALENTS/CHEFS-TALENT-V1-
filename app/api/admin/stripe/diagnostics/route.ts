@@ -203,13 +203,122 @@ async function diagnoseOne(p: (typeof PLANS)[number]): Promise<DiagRow> {
   }
 }
 
+/**
+ * Liste les subscriptions actives (active / past_due / trialing) avec
+ * leur cancel_at programmé. Permet de détecter d'un coup d'œil les
+ * subscriptions sans cancel_at (= billing infini, bug du webhook).
+ */
+async function listActiveSubscriptions() {
+  type SubRow = {
+    id: string;
+    customerEmail: string;
+    customerId: string;
+    planLabel: string;
+    priceId: string;
+    amountCents: number | null;
+    interval: string | null;
+    status: string;
+    createdAt: string;
+    currentPeriodEnd: string | null;
+    cancelAt: string | null;
+    cancelAtDaysFromNow: number | null;
+    cancelAtPeriodEnd: boolean;
+    hasCancelAt: boolean;
+  };
+
+  const rows: SubRow[] = [];
+  const now = Date.now();
+
+  for await (const sub of stripe.subscriptions.list({
+    status: 'all',
+    limit: 100,
+    expand: ['data.customer', 'data.items.data.price.product'],
+  })) {
+    const status = sub.status;
+    if (
+      status !== 'active' &&
+      status !== 'past_due' &&
+      status !== 'trialing'
+    ) {
+      continue;
+    }
+
+    const customer = sub.customer as any;
+    const customerEmail =
+      typeof customer === 'object' && customer && 'email' in customer
+        ? String(customer.email || '')
+        : '';
+    const customerId =
+      typeof customer === 'object' && customer && 'id' in customer
+        ? String(customer.id)
+        : typeof sub.customer === 'string'
+          ? sub.customer
+          : '';
+
+    // Plan = first item (notre cas n'a qu'un item par sub)
+    const item = sub.items.data[0];
+    const price = item?.price;
+    const product = price?.product as any;
+    const planLabel =
+      (product && typeof product === 'object' && product.name) ||
+      price?.nickname ||
+      price?.id ||
+      '—';
+
+    const cancelAtUnix = sub.cancel_at;
+    const cancelAtIso = cancelAtUnix
+      ? new Date(cancelAtUnix * 1000).toISOString()
+      : null;
+    const daysFromNow = cancelAtUnix
+      ? Math.ceil((cancelAtUnix * 1000 - now) / (24 * 3600 * 1000))
+      : null;
+
+    rows.push({
+      id: sub.id,
+      customerEmail,
+      customerId,
+      planLabel,
+      priceId: price?.id || '',
+      amountCents: price?.unit_amount ?? null,
+      interval: price?.recurring?.interval ?? null,
+      status,
+      createdAt: new Date(sub.created * 1000).toISOString(),
+      currentPeriodEnd: sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : null,
+      cancelAt: cancelAtIso,
+      cancelAtDaysFromNow: daysFromNow,
+      cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+      hasCancelAt: !!cancelAtUnix,
+    });
+  }
+
+  // Tri par cancel_at ascendant (les plus urgents en premier),
+  // puis ceux sans cancel_at à la fin (à corriger).
+  rows.sort((a, b) => {
+    if (a.cancelAt && b.cancelAt) return a.cancelAt.localeCompare(b.cancelAt);
+    if (a.cancelAt) return -1;
+    if (b.cancelAt) return 1;
+    return a.createdAt.localeCompare(b.createdAt);
+  });
+
+  return rows;
+}
+
 export async function GET(req: Request) {
   if (!isAdminRequest(req)) {
     return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
   }
 
   try {
-    const rows = await Promise.all(PLANS.map(diagnoseOne));
+    const [rows, subscriptions] = await Promise.all([
+      Promise.all(PLANS.map(diagnoseOne)),
+      listActiveSubscriptions().catch((e) => {
+        console.error('[stripe/diagnostics] subscriptions list', e?.message);
+        return [] as Awaited<ReturnType<typeof listActiveSubscriptions>>;
+      }),
+    ]);
+
     const summary = {
       total: rows.length,
       ok: rows.filter((r) => r.status === 'ok').length,
@@ -218,12 +327,20 @@ export async function GET(req: Request) {
     };
     const livemode = rows.find((r) => r.livemode != null)?.livemode ?? null;
 
+    const subsSummary = {
+      total: subscriptions.length,
+      withCancelAt: subscriptions.filter((s) => s.hasCancelAt).length,
+      withoutCancelAt: subscriptions.filter((s) => !s.hasCancelAt).length,
+    };
+
     return NextResponse.json({
       ok: true,
       generatedAt: new Date().toISOString(),
       livemode,
       summary,
       rows,
+      subscriptions,
+      subsSummary,
     });
   } catch (e: any) {
     console.error('[admin/stripe/diagnostics] error', e?.message);
