@@ -45,7 +45,7 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
 
     try {
       await resend.emails.send({
-        from: 'Thomas — Chefs Talents <thomas@chefstalents.com>',
+        from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
         to: mission.chef_email,
         subject: `Mission confirmed — ${mission.location || 'Private mission'}`,
         html: `

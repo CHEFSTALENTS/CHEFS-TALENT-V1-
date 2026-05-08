@@ -7,8 +7,8 @@ import { Resend } from 'resend';
 import { htmlToText } from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'Chefs Talents Bot <thomas@chefstalents.com>';
-const REPLY_TO = 'thomas@chefstalents.com';
+const FROM = 'Chefs Talents Bot <contact@chefstalents.com>';
+const REPLY_TO = 'contact@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const ACCENT = '#7f1d1d';
 const FONT =
@@ -60,7 +60,7 @@ export async function sendInternalUpsellNotification(input: {
   paymentMode?: string;
 }) {
   const to =
-    (process.env.INTERNAL_NOTIFY_EMAILS || 'thomas@chefstalents.com')
+    (process.env.INTERNAL_NOTIFY_EMAILS || 'contact@chefstalents.com')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);

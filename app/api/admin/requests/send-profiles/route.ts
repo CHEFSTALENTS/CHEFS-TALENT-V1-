@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
     // Envoyer l'email au client
     await resend.emails.send({
-      from: 'Thomas — Chefs Talents <thomas@chefstalents.com>',
+      from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
       to: clientEmail,
       subject: 'Chefs Talents — Sélection de profils chefs',
       html: `

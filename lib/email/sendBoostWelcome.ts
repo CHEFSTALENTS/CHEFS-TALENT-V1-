@@ -11,8 +11,8 @@ import {
 } from './_helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'Thomas Delcroix <thomas@chefstalents.com>';
-const REPLY_TO = 'thomas@chefstalents.com';
+const FROM = 'Thomas Delcroix <contact@chefstalents.com>';
+const REPLY_TO = 'contact@chefstalents.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chefstalents.com';
 const HERO_IMAGE = `${SITE_URL}/images/email/kitchen-preparation.jpg`;
 const ACCENT = '#7f1d1d';

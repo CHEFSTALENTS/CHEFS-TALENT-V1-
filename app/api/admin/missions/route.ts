@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     let emailOk = false;
     try {
       await resend.emails.send({
-        from: 'Thomas — Chefs Talents <thomas@chefstalents.com>',
+        from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
         to: chefEmail,
         subject: `New mission proposal — ${location || title || 'Private mission'}`,
         html: `
