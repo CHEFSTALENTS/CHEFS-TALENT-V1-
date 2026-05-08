@@ -13,6 +13,7 @@ import {
   BookOpen,
   Mail,
   Send,
+  CreditCard,
   LogOut,
   type LucideIcon,
 } from 'lucide-react';
@@ -78,6 +79,16 @@ export function AdminSidebar({
       items: [
         { label: 'Newsletter', href: '/admin/newsletter', icon: Mail },
         { label: 'Test délivrabilité', href: '/admin/email-test', icon: Send },
+      ],
+    },
+    {
+      label: 'Configuration',
+      items: [
+        {
+          label: 'Stripe diagnostics',
+          href: '/admin/stripe/diagnostics',
+          icon: CreditCard,
+        },
       ],
     },
   ];
