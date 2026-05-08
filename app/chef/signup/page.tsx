@@ -67,11 +67,27 @@ export default function ChefSignupPage() {
             firstName: formData.firstName.trim(),
             lastName: formData.lastName.trim(),
             preferredLocale: locale,
+            emailVerified: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
         }),
       });
+
+      // Envoie l'email de bienvenue + lien de vérification (fire-and-forget,
+      // ne bloque pas le redirect).
+      fetch('/api/auth/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email,
+          firstName: formData.firstName.trim(),
+          locale,
+        }),
+      }).catch((e) =>
+        console.error('[signup] send-verification failed', e?.message),
+      );
 
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) {
