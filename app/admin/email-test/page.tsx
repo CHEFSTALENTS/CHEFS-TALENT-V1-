@@ -159,31 +159,32 @@ export default function AdminEmailTestPage() {
           </Button>
         </div>
 
-        {result?.ok && (
-          <div className="border border-green-200 bg-green-50 p-4 flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-green-900">
-              <div className="font-semibold mb-1">Email envoyé</div>
-              <div className="text-xs">
-                Type : {result.kind} · Destinataire : {result.sent_to}
-              </div>
-              <div className="text-xs text-green-700 mt-2">
-                Vérifie l’arrivée dans la boîte cible (peut prendre 30 s à 2 min).
+        {result ? (
+          result.ok ? (
+            <div className="border border-green-200 bg-green-50 p-4 flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-green-900">
+                <div className="font-semibold mb-1">Email envoyé</div>
+                <div className="text-xs">
+                  Type : {result.kind} · Destinataire : {result.sent_to}
+                </div>
+                <div className="text-xs text-green-700 mt-2">
+                  Vérifie l’arrivée dans la boîte cible (peut prendre 30 s à 2 min).
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {result && !result.ok && (
-          <div className="border border-red-200 bg-red-50 p-4 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-red-900">
-              <div className="font-semibold mb-1">Erreur : {result.error}</div>
-              {result.detail && (
-                <div className="text-xs">{result.detail}</div>
-              )}
+          ) : (
+            <div className="border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-red-900">
+                <div className="font-semibold mb-1">Erreur : {result.error}</div>
+                {result.detail && (
+                  <div className="text-xs">{result.detail}</div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        ) : null}
       </div>
 
       <div className="text-xs text-stone-500 leading-relaxed border-l-2 border-stone-300 pl-4">
