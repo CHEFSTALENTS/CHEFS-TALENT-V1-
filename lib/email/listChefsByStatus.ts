@@ -32,6 +32,24 @@ function pickLocale(raw: any): 'fr' | 'en' | 'es' {
 }
 
 /**
+ * Normalise le status d'un profile en alignant la logique avec celle de
+ * /api/admin/chefs (pickStatus + normalizeStatus). Lit plusieurs clés
+ * possibles, traduit 'pending' → 'pending_validation', et fallback sur
+ * 'pending_validation' si rien n'est défini (cohérent avec ce qu'affiche
+ * l'admin UI).
+ */
+function pickProfileStatus(profile: any): string {
+  const raw = String(
+    profile?.status || profile?.chefStatus || profile?.state || '',
+  )
+    .trim()
+    .toLowerCase();
+  if (raw === 'pending') return 'pending_validation';
+  if (!raw) return 'pending_validation';
+  return raw;
+}
+
+/**
  * Liste les chefs dont le status est dans la liste passée. Filtre les désinscrits.
  *
  * @param statuses sous-ensemble parmi pending_validation / approved / active / paused
@@ -67,7 +85,7 @@ export async function listChefsByStatus(
       ? row.profile
       : {}) as any;
 
-    const status = String(profile.status || '').toLowerCase();
+    const status = pickProfileStatus(profile);
     if (!(wanted as string[]).includes(status)) continue;
 
     // Exclut les désinscrits marketing (pas pour les transactionnels).
