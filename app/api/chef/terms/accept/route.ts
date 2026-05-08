@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     const userId = String(body?.userId || '').trim();
     const accepted = body?.accepted === undefined ? true : Boolean(body?.accepted);
-    const version = String(body?.version || '09/01/2026').trim();
+    const version = String(body?.version || '08/05/2026').trim();
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Missing userId' }, { status: 400 });

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 
-const CURRENT_TERMS_VERSION = '09/01/2026';
+const CURRENT_TERMS_VERSION = '08/05/2026';
 const LS_TERMS_KEY = `ct_chef_terms_v_${CURRENT_TERMS_VERSION}`;
 
 export default function TermsClient() {
@@ -309,12 +309,13 @@ export default function TermsClient() {
 
   <h3>Non-contournement</h3>
   <p>
-    Le Chef s’interdit formellement, pendant toute la durée de sa collaboration avec Chef Talents et pendant une période de 12 mois après la dernière mission, de :
+    Le Chef s’interdit formellement, pendant toute la durée de sa collaboration avec Chefs Talents et pendant une période de vingt-quatre (24) mois après la dernière mission, de :
   </p>
   <ul>
-    <li>contracter directement avec un client, une conciergerie, un armateur ou toute entité présentée par Chef Talents ;</li>
-    <li>accepter une mission similaire ou équivalente avec ces mêmes parties, en dehors du cadre de Chef Talents ;</li>
-    <li>utiliser les informations obtenues via Chef Talents à des fins personnelles ou concurrentes.</li>
+    <li>contracter directement avec un client, une conciergerie, un armateur ou toute entité présentée par Chefs Talents ;</li>
+    <li>accepter une mission similaire ou équivalente avec ces mêmes parties, en dehors du cadre de Chefs Talents ;</li>
+    <li>utiliser les informations obtenues via Chefs Talents à des fins personnelles ou concurrentes ;</li>
+    <li>solliciter, transmettre ou divulguer à un tiers les coordonnées d’un client, d’une conciergerie ou d’un armateur présenté par Chefs Talents.</li>
   </ul>
   <p>
     Toute tentative de contournement, directe ou indirecte, sera considérée comme un manquement grave.
@@ -325,10 +326,13 @@ export default function TermsClient() {
     En cas de violation avérée des obligations de confidentialité ou de non-contournement :
   </p>
   <ul>
-    <li>Chef Talents se réserve le droit de suspendre ou résilier immédiatement l’accès du Chef à la plateforme ;</li>
+    <li>Chefs Talents se réserve le droit de suspendre ou résilier immédiatement l’accès du Chef à la plateforme ;</li>
     <li>toute mission en cours pourra être annulée ;</li>
-    <li>Chef Talents pourra réclamer une indemnité forfaitaire minimale équivalente aux frais de service non perçus, sans préjudice de dommages et intérêts complémentaires.</li>
+    <li>le Chef sera redevable envers Chefs Talents d’une <strong>indemnité forfaitaire égale à 30 % du montant HT total de la mission contournée ou 30 000 €, le plus élevé des deux montants</strong>, sans préjudice de tout dommage complémentaire que Chefs Talents pourrait démontrer.</li>
   </ul>
+  <p>
+    Cette indemnité est immédiatement exigible dès la constatation de la violation et payable dans un délai de quinze (15) jours à compter de la notification.
+  </p>
 
   <hr />
 
@@ -352,10 +356,14 @@ export default function TermsClient() {
 
   <hr />
 
-  <h2>12. Droit applicable</h2>
+  <h2>12. Droit applicable et juridiction</h2>
   <p>
     Les présentes Conditions sont régies par le droit français.
-    Tout litige relève des tribunaux compétents.
+  </p>
+  <p>
+    En cas de litige, et à défaut de résolution amiable dans un délai de trente (30) jours à compter de la
+    première notification écrite, les Parties conviennent de la <strong>compétence exclusive des tribunaux
+    de Bordeaux</strong>.
   </p>
 
   <hr />

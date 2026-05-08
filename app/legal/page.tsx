@@ -191,9 +191,14 @@ export default function LegalPage() {
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">4. Sanctions en cas de manquement</p>
                 <p>
-                  Tout manquement aux présentes obligations pourra donner lieu, sans mise en demeure préalable, 
-                  au versement d'une <strong>indemnité forfaitaire de 5 000€ par chef contacté ou recruté directement</strong>, 
-                  sans préjudice de tout autre recours judiciaire.
+                  Tout manquement aux présentes obligations pourra donner lieu, sans mise en demeure préalable,
+                  au versement d'une <strong>indemnité forfaitaire égale à 30 % du montant HT total de la mission concernée
+                  ou 30 000 €, le plus élevé des deux montants</strong>, sans préjudice de tout autre recours judiciaire
+                  et de tout dommage complémentaire que Chefs Talents pourrait démontrer.
+                </p>
+                <p>
+                  Cette indemnité est immédiatement exigible dès la constatation de la violation et payable dans un
+                  délai de quinze (15) jours à compter de la notification.
                 </p>
               </div>
 
