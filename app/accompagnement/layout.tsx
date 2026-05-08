@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
 
 const SITE_URL = 'https://chefstalents.com';
 
@@ -101,6 +102,10 @@ export default function AccompagnementLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       {children}
+      <DestinationsLinks
+        title="Nos destinations couvertes"
+        intro="Notre accompagnement s’étend à toutes les destinations premium européennes."
+      />
     </>
   );
 }

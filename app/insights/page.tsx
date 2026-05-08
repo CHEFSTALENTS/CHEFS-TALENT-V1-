@@ -5,6 +5,7 @@ import { Section, Reveal, Marker, Label } from '../../components/ui';
 import { articles } from '../../data/articles';
 import { ArrowRight } from 'lucide-react';
 import { Layout } from '../../components/Layout';
+import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
 
 const SITE_URL = 'https://chefstalents.com';
 
@@ -153,6 +154,11 @@ export default function InsightsPage() {
           ))}
         </div>
       </Section>
+
+      <DestinationsLinks
+        title="Nos destinations en Europe"
+        intro="Découvrez les profils de chefs privés disponibles dans chaque destination que nous couvrons."
+      />
     </Layout>
   );
 }

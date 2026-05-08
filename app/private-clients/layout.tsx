@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
 
 const SITE_URL = 'https://chefstalents.com';
 
@@ -72,6 +73,10 @@ export default function PrivateClientsLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       {children}
+      <DestinationsLinks
+        title="Choisissez votre destination"
+        intro="Trouvez votre chef privé pour villa, yacht ou chalet dans les destinations européennes les plus prisées."
+      />
     </>
   );
 }

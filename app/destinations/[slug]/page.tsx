@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getDestinationBySlug, getAllDestinationSlugs } from '@/lib/destinations';
 import { FaqItem } from '@/app/destinations/_components/FaqItem';
 import { LangSwitcher } from '@/app/destinations/_components/LangSwitcher';
+import { RelatedArticles } from '@/components/seo/RelatedArticles';
 
 export async function generateStaticParams() {
   return getAllDestinationSlugs().map((slug) => ({ slug }));
@@ -534,6 +535,12 @@ export default function DestinationPage({ params }: { params: { slug: string } }
             </div>
           </div>
         </section>
+
+        {/* Articles liés — cross-linking destination → articles pour
+            renforcer l'autorité topique et garder le visiteur sur le site. */}
+        {lang === 'fr' && (
+          <RelatedArticles title="Pour aller plus loin — Le Journal" max={3} />
+        )}
 
       </main>
     </>

@@ -6,6 +6,7 @@ import { Section, Reveal, Marker, Button, Label } from '../../../components/ui';
 import { articles } from '../../../data/articles';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Layout } from '../../../components/Layout';
+import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
 
 const SITE_URL = 'https://chefstalents.com';
 
@@ -281,6 +282,11 @@ export default function InsightPostPage({
           </Reveal>
         </section>
       </article>
+
+      <DestinationsLinks
+        title="Trouvez votre chef privé par destination"
+        intro="Chaque destination a ses spécificités. Voici les chefs privés disponibles dans les zones les plus demandées d’Europe."
+      />
     </Layout>
   );
 }

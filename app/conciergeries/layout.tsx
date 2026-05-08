@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
 
 const SITE_URL = 'https://chefstalents.com';
 
@@ -73,6 +74,10 @@ export default function ConciergeriesLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       {children}
+      <DestinationsLinks
+        title="Nos destinations couvertes"
+        intro="Chefs Talents intervient dans les destinations premium d’Europe. Voici les zones les plus demandées par nos partenaires conciergeries."
+      />
     </>
   );
 }
