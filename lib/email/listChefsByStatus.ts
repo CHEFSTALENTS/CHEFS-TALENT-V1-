@@ -32,6 +32,32 @@ function pickLocale(raw: any): 'fr' | 'en' | 'es' {
 }
 
 /**
+ * Coerce une valeur arbitraire en objet (parse JSON string si besoin).
+ * Aligné avec safeObj dans /api/admin/chefs/route.ts.
+ */
+function safeObj(v: any): any {
+  if (!v) return {};
+  if (typeof v === 'string') {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof v === 'object') return v;
+  return {};
+}
+
+/**
+ * Déballe un profile potentiellement imbriqué (profile.profile, profile.data,
+ * profile.user). Aligné avec normalizeProfile dans /api/admin/chefs/route.ts.
+ */
+function normalizeProfile(raw: any): any {
+  const p = safeObj(raw);
+  return safeObj(p.profile || p.data || p.user || p);
+}
+
+/**
  * Normalise le status d'un profile en alignant la logique avec celle de
  * /api/admin/chefs (pickStatus + normalizeStatus). Lit plusieurs clés
  * possibles, traduit 'pending' → 'pending_validation', et fallback sur
@@ -80,12 +106,15 @@ export async function listChefsByStatus(
   }
 
   const recipients: ChefRecipient[] = [];
-  for (const row of data ?? []) {
-    const profile = (row.profile && typeof row.profile === 'object'
-      ? row.profile
-      : {}) as any;
+  const statusBreakdown: Record<string, number> = {};
 
+  for (const row of data ?? []) {
+    // Déballe les profiles imbriqués (row.profile.profile.* observé en BDD).
+    const profile = normalizeProfile(row.profile);
     const status = pickProfileStatus(profile);
+
+    statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
+
     if (!(wanted as string[]).includes(status)) continue;
 
     // Exclut les désinscrits marketing (pas pour les transactionnels).
@@ -102,6 +131,13 @@ export async function listChefsByStatus(
       status,
     });
   }
+
+  console.log('[listChefsByStatus]', {
+    wanted,
+    totalRows: (data ?? []).length,
+    statusBreakdown,
+    matched: recipients.length,
+  });
 
   return recipients;
 }
