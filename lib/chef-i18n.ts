@@ -829,7 +829,7 @@ const fr: Dictionary = {
     boostActiveDesc:
       'Vous apparaissez en priorité dans les sélections des conciergeries.',
     boostInactiveDesc:
-      '7 jours de visibilité maximale · Badge "Disponible" · Priorité dans les sélections',
+      '30 jours de visibilité maximale · Badge "Disponible" · Priorité dans les sélections',
     boostCta: 'Booster',
     proposeNetwork: 'Réseau Chefs Talents',
     proposeTitle: 'Vous avez une demande à transmettre ?',
@@ -1582,7 +1582,7 @@ const en: Dictionary = {
     boostActiveDesc:
       'You appear as a priority in concierge selections.',
     boostInactiveDesc:
-      '7 days of maximum visibility · "Available" badge · Priority in selections',
+      '30 days of maximum visibility · "Available" badge · Priority in selections',
     boostCta: 'Boost',
     proposeNetwork: 'Chefs Talents Network',
     proposeTitle: 'Have a request to forward?',
@@ -2334,7 +2334,7 @@ const es: Dictionary = {
     boostActiveDesc:
       'Aparece como prioridad en las selecciones de las conciergeries.',
     boostInactiveDesc:
-      '7 días de visibilidad máxima · Insignia "Disponible" · Prioridad en las selecciones',
+      '30 días de visibilidad máxima · Insignia "Disponible" · Prioridad en las selecciones',
     boostCta: 'Potenciar',
     proposeNetwork: 'Red Chefs Talents',
     proposeTitle: '¿Tiene una solicitud para transmitir?',
