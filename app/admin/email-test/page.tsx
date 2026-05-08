@@ -28,14 +28,19 @@ export default function AdminEmailTestPage() {
   const [kind, setKind] = useState<Kind>('chef_activated');
   const [locale, setLocale] = useState<Locale>('fr');
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<
-    | null
-    | { ok: true; sent_to: string; kind: string }
-    | { ok: false; error: string; detail?: string }
+
+  // États séparés : évite le narrowing fragile des union discriminées en
+  // mode TS non-strict (Vercel le force).
+  const [success, setSuccess] = useState<
+    { sent_to: string; kind: string } | null
+  >(null);
+  const [error, setError] = useState<
+    { error: string; detail?: string } | null
   >(null);
 
   const handleSend = async () => {
-    setResult(null);
+    setSuccess(null);
+    setError(null);
     setSending(true);
     try {
       const res = await fetch('/api/admin/test-email', {
@@ -48,17 +53,15 @@ export default function AdminEmailTestPage() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.ok) {
-        setResult({
-          ok: false,
+        setError({
           error: json?.error || 'UNKNOWN_ERROR',
           detail: json?.detail || `HTTP ${res.status}`,
         });
       } else {
-        setResult({ ok: true, sent_to: json.sent_to, kind: json.kind });
+        setSuccess({ sent_to: json.sent_to, kind: json.kind });
       }
     } catch (e: any) {
-      setResult({
-        ok: false,
+      setError({
         error: 'NETWORK_ERROR',
         detail: String(e?.message ?? e),
       });
@@ -159,32 +162,31 @@ export default function AdminEmailTestPage() {
           </Button>
         </div>
 
-        {result ? (
-          result.ok ? (
-            <div className="border border-green-200 bg-green-50 p-4 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-              <div className="text-sm text-green-900">
-                <div className="font-semibold mb-1">Email envoyé</div>
-                <div className="text-xs">
-                  Type : {result.kind} · Destinataire : {result.sent_to}
-                </div>
-                <div className="text-xs text-green-700 mt-2">
-                  Vérifie l’arrivée dans la boîte cible (peut prendre 30 s à 2 min).
-                </div>
+        {success && (
+          <div className="border border-green-200 bg-green-50 p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-green-900">
+              <div className="font-semibold mb-1">Email envoyé</div>
+              <div className="text-xs">
+                Type : {success.kind} · Destinataire : {success.sent_to}
+              </div>
+              <div className="text-xs text-green-700 mt-2">
+                Vérifie l’arrivée dans la boîte cible (peut prendre 30 s à 2 min).
               </div>
             </div>
-          ) : (
-            <div className="border border-red-200 bg-red-50 p-4 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-              <div className="text-sm text-red-900">
-                <div className="font-semibold mb-1">Erreur : {result.error}</div>
-                {result.detail && (
-                  <div className="text-xs">{result.detail}</div>
-                )}
-              </div>
+          </div>
+        )}
+        {error && (
+          <div className="border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-red-900">
+              <div className="font-semibold mb-1">Erreur : {error.error}</div>
+              {error.detail && (
+                <div className="text-xs">{error.detail}</div>
+              )}
             </div>
-          )
-        ) : null}
+          </div>
+        )}
       </div>
 
       <div className="text-xs text-stone-500 leading-relaxed border-l-2 border-stone-300 pl-4">
