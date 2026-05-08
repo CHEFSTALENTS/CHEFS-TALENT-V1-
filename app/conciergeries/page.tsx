@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Briefcase, Lock } from 'lucide-react';
 import { Button, Section, Reveal, Marker, Badge, Label } from '../../components/ui';
@@ -13,11 +14,14 @@ export default function ConciergeriesPage() {
       <section className="relative bg-stone-900 text-paper min-h-[80vh] flex flex-col justify-center px-6 md:px-12 pt-32 pb-20 overflow-hidden">
         {/* Subtle Background Texture */}
         <div className="absolute inset-0 opacity-20 pointer-events-none">
-           <img 
-             src="https://images.unsplash.com/photo-1618220179428-22790b461013?q=80&w=2600&auto=format&fit=crop" 
-             alt="Texture" 
-             className="w-full h-full object-cover grayscale"
-           />
+          <Image
+            src="https://images.unsplash.com/photo-1618220179428-22790b461013?q=80&w=2600&auto=format&fit=crop"
+            alt="Conciergeries — chefs privés Europe"
+            fill
+            sizes="100vw"
+            priority
+            className="object-cover grayscale"
+          />
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto text-center space-y-12">
@@ -100,10 +104,12 @@ export default function ConciergeriesPage() {
 
       {/* Atmospheric Break - Image */}
       <div className="w-full h-[60vh] overflow-hidden bg-stone-200 relative">
-        <img 
-          src="https://images.unsplash.com/photo-1565538810643-b5bdb714032a?q=80&w=2574&auto=format&fit=crop" 
-          alt="Concierge Desk Detail" 
-          className="w-full h-full object-cover"
+        <Image
+          src="https://images.unsplash.com/photo-1565538810643-b5bdb714032a?q=80&w=2574&auto=format&fit=crop"
+          alt="Bureau de conciergerie haut de gamme"
+          fill
+          sizes="100vw"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-stone-900/10" />
       </div>

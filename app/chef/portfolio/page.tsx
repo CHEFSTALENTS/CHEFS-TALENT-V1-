@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import NextImage from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Marker, Input } from '../../../components/ui';
@@ -347,7 +348,13 @@ export default function ChefPortfolioPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {images.map((url, idx) => (
               <div key={`${url}-${idx}`} className="group relative aspect-square bg-stone-100 overflow-hidden border border-stone-200">
-                <img src={url} alt="Portfolio" className="w-full h-full object-cover" />
+                <NextImage
+                  src={url}
+                  alt="Plat du chef"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => removeImage(url)}

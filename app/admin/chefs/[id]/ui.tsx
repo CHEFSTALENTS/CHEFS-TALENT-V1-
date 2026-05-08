@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import VipAdminControl from './_components/VipAdminControl';
@@ -547,10 +548,15 @@ export default function ChefProfileClient({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="h-14 w-14 rounded-2xl border border-white/10 bg-white/5 overflow-hidden shrink-0">
+          <div className="relative h-14 w-14 rounded-2xl border border-white/10 bg-white/5 overflow-hidden shrink-0">
             {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatar} alt={name} className="h-full w-full object-cover" />
+              <Image
+                src={avatar}
+                alt={name}
+                fill
+                sizes="56px"
+                className="object-cover"
+              />
             ) : null}
           </div>
 
@@ -772,8 +778,15 @@ function PortfolioGrid({ urls, onOpen }: { urls: string[]; onOpen: (index: numbe
           className="group block rounded-xl overflow-hidden border border-white/10 bg-white/5 hover:bg-white/10 transition text-left"
           title="Ouvrir"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={`portfolio-${i}`} className="h-32 w-full object-cover group-hover:scale-[1.02] transition" />
+          <div className="relative h-32 w-full overflow-hidden">
+            <Image
+              src={src}
+              alt={`portfolio-${i}`}
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover group-hover:scale-[1.02] transition"
+            />
+          </div>
         </button>
       ))}
     </div>
@@ -810,9 +823,15 @@ function Lightbox({
           </button>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/40 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt="portfolio" className="w-full max-h-[75vh] object-contain bg-black" />
+        <div className="relative rounded-2xl border border-white/10 bg-black overflow-hidden">
+          <Image
+            src={src}
+            alt="portfolio"
+            width={1600}
+            height={1200}
+            sizes="100vw"
+            className="w-full max-h-[75vh] object-contain bg-black"
+          />
         </div>
 
         <div className="flex justify-between mt-3">

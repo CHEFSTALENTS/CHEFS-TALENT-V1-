@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
+import Image from 'next/image';
 import { Label, Button, Input, Marker } from '../../../components/ui';
 import { PhoneField } from '@/components/PhoneField';
 import { Loader2, Upload } from 'lucide-react';
@@ -310,9 +311,15 @@ async function saveChefProfilePatch(patch: any) {
               <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={(e) => onAvatarFile(e.target.files)} />
 
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-stone-100 border border-stone-200">
+                <div className="relative w-20 h-20 rounded-full overflow-hidden bg-stone-100 border border-stone-200">
                   {data.photoUrl ? (
-                    <img src={data.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    <Image
+                      src={data.photoUrl}
+                      alt="Avatar du chef"
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">—</div>
                   )}

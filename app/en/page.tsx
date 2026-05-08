@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
@@ -241,7 +242,13 @@ export default function HomeEN() {
       <section className="px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[32px]">
           <div className="relative h-[58vh] md:h-[72vh]">
-            <img src="/images/editorial/villa-service.jpg" alt="Private environment" className="h-full w-full object-cover" />
+            <Image
+              src="/images/editorial/villa-service.jpg"
+              alt="Private chef service in a villa"
+              fill
+              sizes="(max-width: 1280px) 100vw, 1200px"
+              className="object-cover"
+            />
             <div className="absolute inset-0 bg-black/18" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
             <div className="absolute inset-0 flex items-end">
@@ -312,7 +319,13 @@ export default function HomeEN() {
           <div className="rounded-[32px] border border-[#d8d1c7] bg-white overflow-hidden">
             <div className="grid lg:grid-cols-12">
               <div className="lg:col-span-4 relative h-72 lg:h-auto min-h-[320px]">
-                <img src="images/editorial/IMG_8782.JPG" alt="Thomas Delcroix — Founder Chefs Talents" className="absolute inset-0 w-full h-full object-cover object-top" />
+                <Image
+                  src="/images/editorial/IMG_8782.JPG"
+                  alt="Thomas Delcroix — Founder Chefs Talents"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 33vw"
+                  className="object-cover object-top"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-black/5" />
               </div>
               <div className="lg:col-span-8 px-8 py-10 md:px-12 md:py-14 flex flex-col justify-center">
