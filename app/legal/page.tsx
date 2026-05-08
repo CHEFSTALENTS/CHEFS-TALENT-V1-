@@ -73,7 +73,28 @@ export default function LegalPage() {
               </div>
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">7. Responsabilité</p>
-                <p>Chefs Talents engage sa responsabilité commerciale de vendeur vis-à-vis du client final pour la conformité de la prestation au cahier des charges convenu. Chefs Talents conserve un recours interne contre le chef en cas de manquement de ce dernier. La responsabilité de Chefs Talents est limitée au montant facturé pour la prestation concernée et exclut les dommages indirects, les pertes de jouissance et les cas de force majeure. Les modalités détaillées sont précisées aux Conditions Générales de Vente accessibles à <a href="/conditions" className="underline hover:text-stone-900">/conditions</a>.</p>
+                <p>
+                  Chefs Talents agit en qualité de vendeur en nom propre de la prestation. Elle engage sa responsabilité
+                  commerciale vis-à-vis du client final <strong>uniquement</strong> sur la mise à disposition d'un Chef
+                  qualifié et la conformité de la prestation au cahier des charges convenu, dans la limite du montant
+                  facturé pour la prestation concernée et à l'exclusion de tout dommage indirect ou cas de force majeure.
+                </p>
+                <p>
+                  <strong>Les Chefs sont des professionnels indépendants</strong> intervenant pour le compte de Chefs
+                  Talents sous leur propre responsabilité civile professionnelle, dont la souscription est obligatoire
+                  et vérifiée par Chefs Talents. Ils ne sont ni salariés, ni mandataires, ni préposés de Chefs Talents.
+                </p>
+                <p>
+                  <strong>Chefs Talents n'est en aucun cas garante des dommages, préjudices ou sinistres causés par le
+                  Chef pendant l'exécution matérielle de la prestation</strong> (dommages aux équipements et installations
+                  du Client, préjudices corporels ou matériels du fait du Chef, manquements aux règles d'hygiène et de
+                  sécurité alimentaire). Ces dommages relèvent de la responsabilité personnelle du Chef et de son
+                  assurance RC Pro.
+                </p>
+                <p>
+                  Les modalités détaillées sont précisées à l'article 7 des Conditions Générales de Vente accessibles
+                  à <a href="/conditions" className="underline hover:text-stone-900">/conditions</a>.
+                </p>
               </div>
             </div>
           </div>

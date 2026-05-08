@@ -264,18 +264,21 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">15. Responsabilité</p>
         <p>
-          Chefs Talents agissant en qualité de vendeur, elle engage sa propre responsabilité commerciale vis-à-vis du
-          Client pour la conformité de la prestation au cahier des charges convenu. Chefs Talents conserve un recours
-          interne contre le Chef en cas de manquement de ce dernier.
+          Chefs Talents agit en qualité de vendeur en nom propre de la prestation et engage sa responsabilité
+          commerciale vis-à-vis du Client uniquement sur la mise à disposition d’un Chef qualifié et la conformité
+          au cahier des charges convenu. Le détail (périmètre, exclusions, plafond, traitement des dommages) est
+          défini à l’article 7 des CGV.
         </p>
         <p>
-          La responsabilité de Chefs Talents est limitée au montant facturé pour la prestation concernée, à l’exclusion
-          de tout dommage indirect, perte de jouissance, préjudice moral non démontré ou perte commerciale.
-          Chefs Talents ne saurait être tenu responsable :
+          Les Chefs sont des professionnels indépendants intervenant sous leur propre responsabilité civile
+          professionnelle. <strong>Chefs Talents n’est en aucun cas garante des dommages causés par un Chef pendant
+          l’exécution matérielle de la prestation</strong>, qui relèvent de la responsabilité personnelle du Chef
+          et de son assurance.
         </p>
+        <p>Chefs Talents ne saurait par ailleurs être tenue responsable :</p>
         <ul className="list-disc pl-6 space-y-2">
           <li>des cas de force majeure tels que définis à l’article 9 des CGV ;</li>
-          <li>des conséquences liées à des informations erronées, incomplètes ou trompeuses fournies par le Client (allergies, contraintes, dates, lieu) ;</li>
+          <li>des conséquences liées à des informations erronées, incomplètes ou trompeuses fournies par le Client (allergies, contraintes médicales, dates, lieu, accès, équipements) ;</li>
           <li>des dommages causés par le Client à ses propres équipements, installations ou tiers présents pendant la prestation.</li>
         </ul>
       </section>
@@ -490,28 +493,63 @@ export default function ConditionsPage() {
                 </section>
 
                 <section className="space-y-3">
-                  <p className="text-stone-900 font-medium">7. Responsabilité de Chefs Talents</p>
+                  <p className="text-stone-900 font-medium">7. Responsabilité de Chefs Talents et du Chef</p>
+
+                  <p className="text-stone-900 font-medium">7.1 Périmètre de responsabilité de Chefs Talents</p>
                   <p>
-                    Chefs Talents agissant en qualité de vendeur, elle engage sa propre responsabilité commerciale
-                    vis-à-vis du Client pour la conformité de la prestation au cahier des charges convenu. Le Chef
-                    intervient pour le compte de Chefs Talents et n’a pas de relation contractuelle directe avec le
-                    Client.
+                    Chefs Talents agit en qualité de vendeur en nom propre de la prestation. Elle engage sa
+                    responsabilité commerciale vis-à-vis du Client <strong>uniquement</strong> sur les éléments suivants :
+                  </p>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>la mise à disposition d’un Chef qualifié, sélectionné, validé et assuré conformément aux Conditions de Collaboration ;</li>
+                    <li>la conformité de la prestation au cahier des charges convenu (format, dates, menu, périmètre, contraintes médicales et alimentaires communiquées par le Client) ;</li>
+                    <li>la coordination administrative et financière de la mission.</li>
+                  </ul>
+
+                  <p className="text-stone-900 font-medium">7.2 Statut indépendant du Chef et exclusion de garantie</p>
+                  <p>
+                    Le Chef est un <strong>professionnel indépendant</strong> intervenant pour le compte de Chefs
+                    Talents en exécution du contrat de mission qui les lie. <strong>Il n’est ni salarié, ni mandataire,
+                    ni préposé de Chefs Talents</strong>. Il agit sous sa propre responsabilité civile professionnelle,
+                    dont la souscription est une condition contractuelle obligatoire vérifiée par Chefs Talents.
                   </p>
                   <p>
-                    En cas de manquement constaté pendant ou après la mission, le Client adresse sa contestation à
-                    Chefs Talents qui pilote l’analyse et la résolution. Toute contestation doit être signalée par
-                    écrit dans un délai raisonnable et au plus tard 30 jours après la fin de la mission.
+                    <strong>Chefs Talents n’est en aucun cas garante</strong> des dommages, préjudices ou sinistres
+                    causés par le Chef pendant l’exécution matérielle de la prestation. Sont expressément exclus de la
+                    responsabilité de Chefs Talents :
+                  </p>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>les dommages causés aux équipements, installations, mobilier ou biens du Client par le fait du Chef ;</li>
+                    <li>les préjudices corporels ou matériels survenus pendant la prestation du fait du Chef ;</li>
+                    <li>les manquements aux règles d’hygiène, de sécurité alimentaire ou des normes professionnelles applicables à l’exécution culinaire ;</li>
+                    <li>les pertes ou détériorations de matériel, équipements ou ingrédients placés sous la garde du Chef pendant la mission.</li>
+                  </ul>
+                  <p>
+                    Pour ces catégories de dommages, le Client est invité à faire valoir ses droits directement auprès
+                    du Chef et de son assureur en responsabilité civile professionnelle. Chefs Talents fournira au Client,
+                    sur simple demande, les éléments d’identification du Chef et la copie de son attestation RC Pro en
+                    cours de validité.
+                  </p>
+
+                  <p className="text-stone-900 font-medium">7.3 Réclamation pour non-conformité de la prestation</p>
+                  <p>
+                    En cas de <strong>non-conformité de la prestation</strong> (Chef qui ne se présente pas, prestation
+                    matériellement différente du cahier des charges convenu, manquement structurel à l’obligation de
+                    moyens dans la mise à disposition d’un Chef qualifié), le Client adresse sa contestation par écrit
+                    à Chefs Talents dans un délai de trente (30) jours après la fin de la mission.
                   </p>
                   <p>
-                    La responsabilité de Chefs Talents est limitée au montant TTC facturé pour la prestation concernée,
-                    à l’exclusion de tout dommage indirect, perte de jouissance, préjudice moral non démontré, perte
-                    commerciale ou conséquence d’un cas de force majeure.
+                    La responsabilité de Chefs Talents au titre de la non-conformité est limitée au montant TTC facturé
+                    pour la prestation concernée, à l’exclusion de tout dommage indirect, perte de jouissance,
+                    préjudice moral non démontré, perte commerciale ou conséquence d’un cas de force majeure.
                   </p>
+
+                  <p className="text-stone-900 font-medium">7.4 Information erronée du Client</p>
                   <p>
-                    Chefs Talents ne saurait par ailleurs être tenue responsable des dommages causés par le Client à
-                    ses propres équipements ou installations, ni des préjudices résultant d’informations erronées,
+                    Chefs Talents ne peut être tenue responsable des préjudices résultant d’informations erronées,
                     incomplètes ou trompeuses fournies par le Client (notamment allergies, contraintes médicales,
-                    accès aux lieux).
+                    accès aux lieux, présence d’animaux, équipements de cuisine, conditions de sécurité). Le Client
+                    est seul garant de l’exactitude des informations transmises au moment du brief.
                   </p>
                 </section>
 
