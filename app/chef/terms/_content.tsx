@@ -41,12 +41,49 @@ export function getTocLabel(entry: TocEntry, locale: Locale): string {
 }
 
 // ============================================================
+// Styling : typographie juriste propre
+// Remplace la classe Tailwind "prose" qui empile et varie les tailles.
+// Tout le contenu des 3 bodies hérite de ce wrapper unique.
+// ============================================================
+
+const BODY_CLASS = [
+  'max-w-none text-stone-700 leading-7',
+  // Sections
+  '[&>section]:scroll-mt-24 [&>section]:mb-14 [&>section:last-child]:mb-0',
+  // H2 — titre d'article
+  '[&_h2]:text-[22px] [&_h2]:md:text-2xl [&_h2]:font-serif [&_h2]:text-stone-900 [&_h2]:tracking-tight [&_h2]:mt-0 [&_h2]:mb-5 [&_h2]:pb-3 [&_h2]:border-b [&_h2]:border-stone-200',
+  // H3 — sous-section, capitales discrètes
+  '[&_h3]:text-[11px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-[0.18em] [&_h3]:text-stone-900 [&_h3]:mt-8 [&_h3]:mb-3',
+  // Paragraphes
+  '[&_p]:text-[15px] [&_p]:md:text-base [&_p]:text-stone-600 [&_p]:leading-7 [&_p]:mb-4',
+  '[&_p:last-child]:mb-0',
+  // Listes
+  '[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_ul]:mb-4 [&_ul]:text-stone-600 [&_ul]:text-[15px] [&_ul]:md:text-base',
+  '[&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2 [&_ol]:mb-4 [&_ol]:text-stone-600 [&_ol]:text-[15px] [&_ol]:md:text-base',
+  '[&_li]:leading-7 [&_li]:pl-1',
+  // Emphases sobres
+  '[&_strong]:text-stone-900 [&_strong]:font-medium',
+  '[&_em]:italic [&_em]:text-stone-700',
+  // Liens
+  '[&_a]:text-stone-900 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-stone-300 hover:[&_a]:decoration-stone-700',
+].join(' ');
+
+// Note de traduction (apparait en tête des versions EN/ES)
+function TranslationNotice({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[11px] uppercase tracking-[0.18em] text-stone-400 border-b border-stone-200 pb-4 mb-12">
+      {children}
+    </p>
+  );
+}
+
+// ============================================================
 // FR — version contractuelle de référence
 // ============================================================
 
 export function BodyFR() {
   return (
-    <div className="prose prose-stone max-w-none">
+    <div className={BODY_CLASS}>
       <section id="sec-1">
         <h2>1. Objet et parties</h2>
         <p>
@@ -475,11 +512,10 @@ export function BodyFR() {
 
 export function BodyEN() {
   return (
-    <div className="prose prose-stone max-w-none">
-      <p className="text-xs italic text-stone-500">
+    <div className={BODY_CLASS}>
+      <TranslationNotice>
         English translation provided for convenience. In case of conflict, the French version prevails.
-      </p>
-
+      </TranslationNotice>
       <section id="sec-1">
         <h2>1. Purpose and parties</h2>
         <p>
@@ -896,11 +932,10 @@ export function BodyEN() {
 
 export function BodyES() {
   return (
-    <div className="prose prose-stone max-w-none">
-      <p className="text-xs italic text-stone-500">
+    <div className={BODY_CLASS}>
+      <TranslationNotice>
         Traducción al español por conveniencia. En caso de conflicto, prevalece la versión francesa.
-      </p>
-
+      </TranslationNotice>
       <section id="sec-1">
         <h2>1. Objeto y partes</h2>
         <p>

@@ -123,75 +123,83 @@ export default function TermsClient() {
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] text-stone-900">
-      <div className="mx-auto max-w-3xl px-6 py-16">
-        <div className="rounded-3xl border border-stone-200 bg-white shadow-sm p-8">
+      <div className="mx-auto max-w-4xl px-6 py-12 md:py-20">
+        <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
 
-          {/* Header */}
-          <div className="flex items-start justify-between gap-4 mb-2">
-            <div className="text-xs uppercase tracking-[0.25em] text-stone-400">
-              {t.eyebrow}
+          {/* ────── Header ────── */}
+          <header className="px-8 md:px-14 pt-10 md:pt-14 pb-10 border-b border-stone-200">
+            <div className="flex items-center justify-between gap-4 mb-10">
+              <div className="text-[11px] uppercase tracking-[0.25em] text-stone-400">
+                {t.eyebrow}
+              </div>
+
+              {/* Sélecteur de langue */}
+              <div className="inline-flex border border-stone-200 rounded-full overflow-hidden">
+                {localeOptions.map((opt) => {
+                  const active = locale === opt.code;
+                  return (
+                    <button
+                      key={opt.code}
+                      onClick={() => setLocale(opt.code)}
+                      className={`px-3.5 py-1.5 text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                        active
+                          ? 'bg-stone-900 text-white'
+                          : 'text-stone-500 hover:bg-stone-50'
+                      }`}
+                    >
+                      {opt.code.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Sélecteur de langue */}
-            <div className="inline-flex border border-stone-200 rounded-full overflow-hidden">
-              {localeOptions.map((opt) => {
-                const active = locale === opt.code;
-                return (
-                  <button
-                    key={opt.code}
-                    onClick={() => setLocale(opt.code)}
-                    className={`px-3 py-1.5 text-[11px] uppercase tracking-widest transition-colors ${
-                      active ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-50'
-                    }`}
-                  >
-                    {opt.code.toUpperCase()}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <h1 className="text-3xl md:text-[2.25rem] font-serif text-stone-900 leading-tight tracking-tight">
+              {t.title}
+            </h1>
 
-          <h1 className="mt-2 text-3xl md:text-4xl font-serif">
-            {t.title}
-          </h1>
+            <p className="mt-4 text-sm text-stone-500">
+              {t.lastUpdated} : <span className="text-stone-700">{CURRENT_TERMS_VERSION}</span>
+            </p>
+          </header>
 
-          <p className="mt-2 text-sm text-stone-500">
-            {t.lastUpdated} : {CURRENT_TERMS_VERSION}
-          </p>
-
-          {/* Sommaire — case en haut, articles cliquables */}
-          <nav className="mt-8 border border-stone-200 bg-stone-50 rounded-2xl p-5">
-            <p className="text-[11px] uppercase tracking-widest text-stone-500 mb-3">
+          {/* ────── Sommaire ────── */}
+          <nav className="px-8 md:px-14 py-10 border-b border-stone-200 bg-stone-50/50">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500 mb-5">
               {t.tocLabel}
             </p>
-            <ol className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-stone-700">
+            <ol className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-2.5 text-[14px]">
               {TOC.map((entry) => (
                 <li key={entry.id}>
                   <a
                     href={`#${entry.id}`}
-                    className="hover:underline decoration-stone-400 underline-offset-4"
+                    className="group flex items-baseline gap-3 text-stone-700 hover:text-stone-900 transition-colors"
                   >
-                    <span className="text-stone-400 mr-2 tabular-nums">{entry.number}.</span>
-                    {entry.label[locale]}
+                    <span className="text-stone-400 tabular-nums w-5 shrink-0">
+                      {entry.number}.
+                    </span>
+                    <span className="group-hover:underline decoration-stone-400 underline-offset-4">
+                      {entry.label[locale]}
+                    </span>
                   </a>
                 </li>
               ))}
             </ol>
           </nav>
 
-          {/* Corps des conditions */}
-          <div className="mt-8 [&_section]:scroll-mt-24">
+          {/* ────── Corps des conditions ────── */}
+          <article className="px-8 md:px-14 py-12 md:py-16">
             <Body />
-          </div>
+          </article>
 
-          {/* Acceptation */}
-          <div className="mt-10 border-t border-stone-200 pt-6 space-y-4">
-            <label className="flex items-start gap-3 text-sm text-stone-700">
+          {/* ────── Acceptation ────── */}
+          <footer className="px-8 md:px-14 py-10 border-t border-stone-200 bg-stone-50/50 rounded-b-2xl space-y-5">
+            <label className="flex items-start gap-3 text-[14px] text-stone-700 leading-6">
               <input
                 type="checkbox"
                 checked={checked}
                 onChange={(e) => setChecked(e.target.checked)}
-                className="mt-1"
+                className="mt-1 accent-stone-900"
               />
               <span>{t.acceptCheckbox}</span>
             </label>
@@ -201,15 +209,15 @@ export default function TermsClient() {
             <button
               onClick={accept}
               disabled={loading || !checked}
-              className="w-full rounded-2xl bg-stone-900 text-white py-3 font-medium hover:bg-stone-800 disabled:opacity-40"
+              className="w-full md:w-auto md:px-12 rounded-full bg-stone-900 text-white py-3 text-sm font-medium tracking-wide hover:bg-stone-800 disabled:opacity-40 transition-colors"
             >
               {loading ? t.accepting : t.acceptCta}
             </button>
 
-            <div className="text-xs text-stone-400">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-stone-400">
               {t.versionLabel} : {CURRENT_TERMS_VERSION}
             </div>
-          </div>
+          </footer>
         </div>
       </div>
     </div>
