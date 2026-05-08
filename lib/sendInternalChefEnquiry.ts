@@ -26,7 +26,7 @@ export async function sendInternalChefEnquiry({
   });
 
   await resend.emails.send({
-    from: 'Chefs Talents <noreply@chefstalents.com>',
+    from: 'Chefs Talents <contact@chefstalents.com>',
     to: 'contact@chefstalents.com',
     subject: `🍳 Nouvelle candidature programme — ${fullName ?? email}`,
     html: `

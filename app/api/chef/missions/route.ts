@@ -75,7 +75,7 @@ export async function PATCH(req: Request) {
     // Notification interne à Thomas
     try {
       await resend.emails.send({
-        from: 'Chefs Talents <noreply@chefstalents.com>',
+        from: 'Chefs Talents <contact@chefstalents.com>',
         to: 'contact@chefstalents.com',
         subject: `${action === 'accepted' ? '✅ Mission ACCEPTÉE' : '❌ Mission REFUSÉE'} — ${mission.chef_name || mission.chef_email}`,
         html: `<div style="font-family:monospace;padding:24px;">

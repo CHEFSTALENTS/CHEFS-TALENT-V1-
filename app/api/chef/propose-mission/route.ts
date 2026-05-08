@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const { chefId, chefName, destination, dates, guests, budget, notes } = body;
 
   await resend.emails.send({
-    from: 'Chefs Talents <noreply@chefstalents.com>',
+    from: 'Chefs Talents <contact@chefstalents.com>',
     to: 'contact@chefstalents.com',
     subject: `🔁 Mission proposée par ${chefName} — ${destination}`,
     html: `
