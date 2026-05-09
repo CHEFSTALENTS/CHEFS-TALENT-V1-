@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { Plus, BadgeCheck, Loader2, RotateCcw } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import NewMissionModal from './_components/NewMissionModal';
+import MarkPaidModal from './_components/MarkPaidModal';
 
 // Type Supabase row de la table missions (snake_case)
 type MissionRow = {
@@ -28,6 +29,12 @@ type MissionRow = {
   confirmed_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  // Champs paiement (migration 2026-05-mission-payment.sql)
+  payment_status: string | null;
+  paid_at: string | null;
+  paid_amount: number | null;
+  payment_method: string | null;
+  payment_reference: string | null;
 };
 
 // Vue normalisée pour l'UI (camelCase + champs dérivés)
@@ -43,6 +50,10 @@ type MissionView = {
   chefAmount: number | null;
   clientAmount: number | null;
   createdAt: string | null;
+  paymentStatus: string;
+  paidAt: string | null;
+  paidAmount: number | null;
+  paymentMethod: string | null;
 };
 
 function normalizeMission(row: MissionRow): MissionView {
@@ -58,15 +69,21 @@ function normalizeMission(row: MissionRow): MissionView {
     chefAmount: row.chef_amount,
     clientAmount: row.client_amount,
     createdAt: row.created_at,
+    paymentStatus: String(row.payment_status || 'pending').toLowerCase(),
+    paidAt: row.paid_at,
+    paidAmount: row.paid_amount,
+    paymentMethod: row.payment_method,
   };
 }
 
-// Buckets de statut. La table `missions` peut contenir des status legacy
-// (offered/declined/cancelled) ou modernes (confirmed/in_progress/completed).
-type StatusGroup = 'pending' | 'upcoming' | 'live' | 'done' | 'canceled';
+// Buckets de statut. Le bucket 'paid' croise mission.status (confirmed)
+// avec payment_status='paid' pour ne montrer que ce qui est encaissé.
+type StatusGroup = 'pending' | 'upcoming' | 'paid' | 'live' | 'done' | 'canceled';
 
-function bucket(status: string): StatusGroup {
-  const s = (status || '').toLowerCase();
+function bucket(m: MissionView): StatusGroup {
+  const s = m.status;
+  // Si la mission est confirmée ET payée, elle va dans le bucket 'paid'
+  if (s === 'confirmed' && m.paymentStatus === 'paid') return 'paid';
   if (['offered', 'pending', 'pitched'].includes(s)) return 'pending';
   if (['confirmed', 'upcoming', 'scheduled', 'accepted'].includes(s)) return 'upcoming';
   if (['live', 'in_progress'].includes(s)) return 'live';
@@ -82,6 +99,11 @@ export default function AdminMissionsPage() {
   const [q, setQ] = useState('');
   const [statusGroup, setStatusGroup] = useState<StatusGroup>('upcoming');
   const [showNewModal, setShowNewModal] = useState(false);
+
+  // Pour la modal "Marquer payée"
+  const [paidTarget, setPaidTarget] = useState<MissionView | null>(null);
+  // Pour le mark-pending (annuler le paiement)
+  const [revertingId, setRevertingId] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -105,27 +127,64 @@ export default function AdminMissionsPage() {
     refresh();
   }, []);
 
+  // Annuler le marquage payée (cas erreur de saisie)
+  const revertPaid = async (id: string) => {
+    if (!confirm('Annuler le marquage payée ?\nLa mission repassera en statut « confirmée non payée ».')) return;
+    setRevertingId(id);
+    try {
+      const r = await adminFetchRaw(
+        `/api/admin/missions/${encodeURIComponent(id)}/mark-pending`,
+        { method: 'PATCH' },
+      );
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      await refresh();
+    } catch (e: any) {
+      console.error('[admin/missions] revert paid failed', e);
+      alert(e?.message || 'Erreur serveur');
+    } finally {
+      setRevertingId(null);
+    }
+  };
+
   const counts = useMemo(() => {
     return {
-      pending: items.filter((m) => bucket(m.status) === 'pending').length,
-      upcoming: items.filter((m) => bucket(m.status) === 'upcoming').length,
-      live: items.filter((m) => bucket(m.status) === 'live').length,
-      done: items.filter((m) => bucket(m.status) === 'done').length,
-      canceled: items.filter((m) => bucket(m.status) === 'canceled').length,
+      pending: items.filter((m) => bucket(m) === 'pending').length,
+      upcoming: items.filter((m) => bucket(m) === 'upcoming').length,
+      paid: items.filter((m) => bucket(m) === 'paid').length,
+      live: items.filter((m) => bucket(m) === 'live').length,
+      done: items.filter((m) => bucket(m) === 'done').length,
+      canceled: items.filter((m) => bucket(m) === 'canceled').length,
       all: items.length,
     };
   }, [items]);
 
+  // KPI financiers du bucket courant : utile pour voir au coup d'œil
+  // le total à venir / payé / etc.
+  const bucketTotals = useMemo(() => {
+    const inBucket = items.filter((m) => bucket(m) === statusGroup);
+    const totalChef = inBucket.reduce((acc, m) => acc + (m.chefAmount || 0), 0);
+    const totalClient = inBucket.reduce((acc, m) => acc + (m.clientAmount || 0), 0);
+    const totalPaid = inBucket.reduce((acc, m) => acc + (m.paidAmount || 0), 0);
+    return { totalChef, totalClient, totalPaid, count: inBucket.length };
+  }, [items, statusGroup]);
+
   const view = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return [...items]
-      .filter((m) => bucket(m.status) === statusGroup)
+      .filter((m) => bucket(m) === statusGroup)
       .filter((m) => {
         if (!needle) return true;
         const blob = `${m.chefName} ${m.chefEmail} ${m.location} ${m.status}`.toLowerCase();
         return blob.includes(needle);
       })
       .sort((a, b) => {
+        // Pour le bucket 'paid', tri par paid_at desc
+        if (statusGroup === 'paid') {
+          const da = new Date(a.paidAt || a.createdAt || '').getTime() || 0;
+          const db = new Date(b.paidAt || b.createdAt || '').getTime() || 0;
+          return db - da;
+        }
         const da = new Date(a.startAt || a.createdAt || '').getTime() || 0;
         const db = new Date(b.startAt || b.createdAt || '').getTime() || 0;
         return db - da;
@@ -141,7 +200,8 @@ export default function AdminMissionsPage() {
           <p className="text-sm text-white/60 mt-1">
             Suivi des prestations confirmées : <span className="text-white/80 font-medium">date</span> •{' '}
             <span className="text-white/80 font-medium">lieu</span> •{' '}
-            <span className="text-white/80 font-medium">chef</span>.
+            <span className="text-white/80 font-medium">chef</span> •{' '}
+            <span className="text-white/80 font-medium">paiement</span>.
           </p>
         </div>
 
@@ -162,16 +222,17 @@ export default function AdminMissionsPage() {
         </div>
       </div>
 
-      {/* KPI quick */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* KPI quick — 6 buckets */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Kpi title="En attente" value={counts.pending} hint="offered" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} />
         <Kpi title="À venir" value={counts.upcoming} hint="confirmed" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} />
+        <Kpi title="Payées" value={counts.paid} hint="confirmed + paid" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} accent="emerald" />
         <Kpi title="En cours" value={counts.live} hint="in_progress" active={statusGroup === 'live'} onClick={() => setStatusGroup('live')} />
         <Kpi title="Terminées" value={counts.done} hint="completed" active={statusGroup === 'done'} onClick={() => setStatusGroup('done')} />
         <Kpi title="Annulées" value={counts.canceled} hint="canceled" active={statusGroup === 'canceled'} onClick={() => setStatusGroup('canceled')} />
       </div>
 
-      {/* Toolbar */}
+      {/* Toolbar + totaux du bucket sélectionné */}
       <div className="border border-white/10 rounded-2xl bg-white/5 backdrop-blur p-4 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="flex-1">
@@ -186,11 +247,28 @@ export default function AdminMissionsPage() {
           <div className="flex flex-wrap gap-2">
             <Segment label="En attente" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} badge={counts.pending} />
             <Segment label="À venir" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} badge={counts.upcoming} />
+            <Segment label="Payées" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} badge={counts.paid} />
             <Segment label="En cours" active={statusGroup === 'live'} onClick={() => setStatusGroup('live')} badge={counts.live} />
             <Segment label="Terminées" active={statusGroup === 'done'} onClick={() => setStatusGroup('done')} badge={counts.done} />
             <Segment label="Annulées" active={statusGroup === 'canceled'} onClick={() => setStatusGroup('canceled')} badge={counts.canceled} />
           </div>
         </div>
+
+        {/* Totaux du bucket courant — utile surtout pour 'paid' et 'upcoming' */}
+        {bucketTotals.count > 0 && (
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/55 pt-1 border-t border-white/5">
+            <span>{bucketTotals.count} mission{bucketTotals.count > 1 ? 's' : ''}</span>
+            {bucketTotals.totalChef > 0 && (
+              <span>· Chef : <span className="text-white/85 font-medium">{bucketTotals.totalChef.toLocaleString('fr-FR')} €</span></span>
+            )}
+            {bucketTotals.totalClient > 0 && (
+              <span>· Client : <span className="text-white/85 font-medium">{bucketTotals.totalClient.toLocaleString('fr-FR')} €</span></span>
+            )}
+            {statusGroup === 'paid' && bucketTotals.totalPaid > 0 && (
+              <span>· Encaissé chef : <span className="text-emerald-200 font-medium">{bucketTotals.totalPaid.toLocaleString('fr-FR')} €</span></span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -205,17 +283,18 @@ export default function AdminMissionsPage() {
                 <th className="text-left p-3 font-medium">Date</th>
                 <th className="text-left p-3 font-medium">Montant chef</th>
                 <th className="text-left p-3 font-medium">Statut</th>
+                <th className="text-left p-3 font-medium">Paiement</th>
                 <th className="text-right p-3 font-medium">Action</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
-                <tr><td className="p-4 text-white/60" colSpan={7}>Chargement…</td></tr>
+                <tr><td className="p-4 text-white/60" colSpan={8}>Chargement…</td></tr>
               ) : error ? (
-                <tr><td className="p-4 text-red-300" colSpan={7}>{error}</td></tr>
+                <tr><td className="p-4 text-red-300" colSpan={8}>{error}</td></tr>
               ) : view.length === 0 ? (
-                <tr><td className="p-4 text-white/60" colSpan={7}>Aucune mission dans cette catégorie.</td></tr>
+                <tr><td className="p-4 text-white/60" colSpan={8}>Aucune mission dans cette catégorie.</td></tr>
               ) : (
                 view.map((m) => (
                   <tr key={m.id} className="border-t border-white/10 hover:bg-white/5 transition">
@@ -234,13 +313,51 @@ export default function AdminMissionsPage() {
                     <td className="p-3">
                       <StatusBadge status={m.status} />
                     </td>
+                    <td className="p-3">
+                      <PaymentBadge status={m.paymentStatus} />
+                      {m.paymentStatus === 'paid' && m.paidAmount != null && (
+                        <div className="text-[10px] text-white/40 mt-0.5">
+                          {m.paidAmount.toLocaleString('fr-FR')} € · {m.paymentMethod || '—'}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-3 text-right">
-                      <Link
-                        href={`/admin/missions/${encodeURIComponent(m.id)}`}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
-                      >
-                        Ouvrir <span aria-hidden>→</span>
-                      </Link>
+                      <div className="inline-flex items-center gap-2">
+                        {/* Bouton "Marquer payée" — visible uniquement si confirmed && pending */}
+                        {m.status === 'confirmed' && m.paymentStatus === 'pending' && (
+                          <button
+                            onClick={() => setPaidTarget(m)}
+                            title="Marquer cette mission comme payée"
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-200 hover:bg-emerald-500/20 transition"
+                          >
+                            <BadgeCheck className="w-3.5 h-3.5" />
+                            Marquer payée
+                          </button>
+                        )}
+
+                        {/* Bouton "Annuler paiement" — visible si paid */}
+                        {m.paymentStatus === 'paid' && (
+                          <button
+                            onClick={() => revertPaid(m.id)}
+                            disabled={revertingId === m.id}
+                            title="Annuler le marquage payée"
+                            className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/55 hover:bg-white/10 transition disabled:opacity-50"
+                          >
+                            {revertingId === m.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3 h-3" />
+                            )}
+                          </button>
+                        )}
+
+                        <Link
+                          href={`/admin/missions/${encodeURIComponent(m.id)}`}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+                        >
+                          Ouvrir <span aria-hidden>→</span>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -264,6 +381,21 @@ export default function AdminMissionsPage() {
           }}
         />
       )}
+
+      {/* Modal marquer payée */}
+      {paidTarget && (
+        <MarkPaidModal
+          missionId={paidTarget.id}
+          defaultAmount={paidTarget.chefAmount}
+          chefName={paidTarget.chefName}
+          location={paidTarget.location}
+          onClose={() => setPaidTarget(null)}
+          onSuccess={() => {
+            setPaidTarget(null);
+            refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -276,24 +408,32 @@ function Kpi({
   hint,
   active,
   onClick,
+  accent,
 }: {
   title: string;
   value: number;
   hint?: string;
   active?: boolean;
   onClick?: () => void;
+  accent?: 'emerald';
 }) {
+  const ring = active
+    ? accent === 'emerald'
+      ? 'ring-2 ring-emerald-500/40'
+      : 'ring-2 ring-white/10'
+    : '';
+  const valueCls = accent === 'emerald' ? 'text-emerald-200' : 'text-white';
   return (
     <button
       onClick={onClick}
       className={[
         'text-left border rounded-2xl p-4 transition w-full',
         'border-white/10 bg-white/5 hover:bg-white/10',
-        active ? 'ring-2 ring-white/10' : '',
+        ring,
       ].join(' ')}
     >
       <div className="text-sm text-white/70">{title}</div>
-      <div className="text-3xl font-semibold text-white mt-1">{value}</div>
+      <div className={`text-3xl font-semibold mt-1 ${valueCls}`}>{value}</div>
       {hint ? <div className="text-xs text-white/40 mt-1">{hint}</div> : null}
     </button>
   );
@@ -356,6 +496,34 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
       {s || '—'}
+    </span>
+  );
+}
+
+function PaymentBadge({ status }: { status: string }) {
+  const s = (status || 'pending').toLowerCase();
+
+  const cls =
+    s === 'paid'
+      ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30'
+      : s === 'partial'
+      ? 'bg-amber-500/15 text-amber-200 border-amber-500/20'
+      : s === 'refunded'
+      ? 'bg-red-500/10 text-red-200 border-red-500/20'
+      : 'bg-white/5 text-white/55 border-white/10';
+
+  const label =
+    s === 'paid'
+      ? '✓ Payée'
+      : s === 'partial'
+      ? 'Partielle'
+      : s === 'refunded'
+      ? 'Remboursée'
+      : 'Pending';
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
+      {label}
     </span>
   );
 }

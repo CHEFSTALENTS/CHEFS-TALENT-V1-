@@ -24,6 +24,14 @@ type RevenueData = {
     commissionMonthEur: number;
     confirmedYtd: number;
     commissionYtdEur: number;
+    // Champs paiement (migration 2026-05-mission-payment.sql)
+    // Optionnels pour compat si la migration n'est pas encore faite.
+    paidMonth?: number;
+    paidAmountMonthEur?: number;
+    paidCommissionMonthEur?: number;
+    paidYtd?: number;
+    paidAmountYtdEur?: number;
+    paidCommissionYtdEur?: number;
   };
   totals: { monthEur: number; ytdEur: number };
 };
@@ -348,7 +356,7 @@ export default function AdminDashboardPage() {
                 </span>
               }
             >
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <RevSubKpi
                   label="MRR"
                   value={money(revenue.stripe.mrrEur)}
@@ -362,10 +370,20 @@ export default function AdminDashboardPage() {
                   tone="blue"
                 />
                 <RevSubKpi
-                  label="Missions / mois"
+                  label="Missions confirmées"
                   value={money(revenue.missions.commissionMonthEur)}
-                  subtitle={`${revenue.missions.confirmedMonth} confirmée${revenue.missions.confirmedMonth > 1 ? 's' : ''}`}
+                  subtitle={`${revenue.missions.confirmedMonth} confirmée${revenue.missions.confirmedMonth > 1 ? 's' : ''} ce mois`}
                   tone="violet"
+                />
+                <RevSubKpi
+                  label="Missions payées"
+                  value={money(revenue.missions.paidCommissionMonthEur ?? 0)}
+                  subtitle={
+                    (revenue.missions.paidMonth ?? 0) > 0
+                      ? `${revenue.missions.paidMonth} payée${(revenue.missions.paidMonth ?? 0) > 1 ? 's' : ''} · ${money(revenue.missions.paidAmountMonthEur ?? 0)} chef`
+                      : 'Aucune payée ce mois'
+                  }
+                  tone="green"
                 />
                 <RevSubKpi
                   label="Total YTD"

@@ -121,6 +121,58 @@ async function sumMissionsCommission(sinceIso: string): Promise<{
   return { commissionEur: Math.round(commission * 100) / 100, count };
 }
 
+/**
+ * Somme les missions PAYÉES sur une fenêtre (paid_at >= sinceISO et
+ * payment_status='paid'). Retourne le count, le total payé chef
+ * (paid_amount) et la commission encaissée.
+ *
+ * Si la colonne payment_status n'existe pas encore (migration pas
+ * appliquée), retourne 0 partout sans crasher.
+ */
+async function sumMissionsPaid(sinceIso: string): Promise<{
+  count: number;
+  paidAmountEur: number;
+  commissionEur: number;
+}> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('missions')
+    .select('paid_amount, commission_amount, paid_at, payment_status')
+    .gte('paid_at', sinceIso)
+    .eq('payment_status', 'paid')
+    .limit(2000);
+
+  if (error) {
+    // Si la colonne n'existe pas (migration pas faite), on ne casse pas
+    // l'endpoint — on retourne 0.
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('column') || msg.includes('does not exist')) {
+      console.warn(
+        '[admin/revenue] payment_status column not yet migrated, returning 0',
+      );
+      return { count: 0, paidAmountEur: 0, commissionEur: 0 };
+    }
+    console.error('[admin/revenue] missions paid read', error);
+    return { count: 0, paidAmountEur: 0, commissionEur: 0 };
+  }
+
+  let paidAmount = 0;
+  let commission = 0;
+  let count = 0;
+  for (const row of data ?? []) {
+    const a = Number(row.paid_amount || 0);
+    const c = Number(row.commission_amount || 0);
+    if (Number.isFinite(a) && a > 0) paidAmount += a;
+    if (Number.isFinite(c) && c > 0) commission += c;
+    count++;
+  }
+  return {
+    count,
+    paidAmountEur: Math.round(paidAmount * 100) / 100,
+    commissionEur: Math.round(commission * 100) / 100,
+  };
+}
+
 export async function GET(req: Request) {
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
@@ -129,14 +181,23 @@ export async function GET(req: Request) {
   const yearStartMs = startOfYear().getTime();
 
   try {
-    const [mrr, chargesMonth, chargesYtd, missionsMonth, missionsYtd] =
-      await Promise.all([
-        computeStripeMrr(),
-        sumStripeCharges(monthStartMs),
-        sumStripeCharges(yearStartMs),
-        sumMissionsCommission(new Date(monthStartMs).toISOString()),
-        sumMissionsCommission(new Date(yearStartMs).toISOString()),
-      ]);
+    const [
+      mrr,
+      chargesMonth,
+      chargesYtd,
+      missionsMonth,
+      missionsYtd,
+      missionsPaidMonth,
+      missionsPaidYtd,
+    ] = await Promise.all([
+      computeStripeMrr(),
+      sumStripeCharges(monthStartMs),
+      sumStripeCharges(yearStartMs),
+      sumMissionsCommission(new Date(monthStartMs).toISOString()),
+      sumMissionsCommission(new Date(yearStartMs).toISOString()),
+      sumMissionsPaid(new Date(monthStartMs).toISOString()),
+      sumMissionsPaid(new Date(yearStartMs).toISOString()),
+    ]);
 
     const totalMonth = chargesMonth.totalEur + missionsMonth.commissionEur;
     const totalYtd = chargesYtd.totalEur + missionsYtd.commissionEur;
@@ -153,10 +214,18 @@ export async function GET(req: Request) {
         chargesYtdCount: chargesYtd.count,
       },
       missions: {
+        // Confirmées (facturées, pas forcément encaissées)
         confirmedMonth: missionsMonth.count,
         commissionMonthEur: missionsMonth.commissionEur,
         confirmedYtd: missionsYtd.count,
         commissionYtdEur: missionsYtd.commissionEur,
+        // Payées (encaissées chef) — basé sur paid_at + payment_status='paid'
+        paidMonth: missionsPaidMonth.count,
+        paidAmountMonthEur: missionsPaidMonth.paidAmountEur,
+        paidCommissionMonthEur: missionsPaidMonth.commissionEur,
+        paidYtd: missionsPaidYtd.count,
+        paidAmountYtdEur: missionsPaidYtd.paidAmountEur,
+        paidCommissionYtdEur: missionsPaidYtd.commissionEur,
       },
       totals: {
         monthEur: Math.round(totalMonth * 100) / 100,
