@@ -10,17 +10,11 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isAdminEmail } from './adminEmails';
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Allowlist d'admins. Pour ajouter un admin, ajouter son email ici.
-// Idéalement à externaliser en env var ADMIN_EMAILS=email1,email2 plus tard.
-const ADMIN_EMAILS = new Set<string>([
-  'contact@chefstalents.com',
-  'thomasdelcroix2108@gmail.com',
-]);
 
 export type AdminAuthOk = {
   ok: true;
@@ -78,7 +72,7 @@ export async function requireAdmin(req: Request): Promise<AdminAuthOk | AdminAut
   }
 
   const email = (data.user.email || '').toLowerCase().trim();
-  if (!email || !ADMIN_EMAILS.has(email)) {
+  if (!isAdminEmail(email)) {
     return { ok: false, status: 403, error: 'NOT_AN_ADMIN' };
   }
 

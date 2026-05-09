@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { AdminSidebar } from './_components/AdminSidebar';
+import { AdminGate } from './_components/AdminGate';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -12,7 +13,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <div className="flex">
         <AdminSidebar />
         <main className="flex-1 p-6">
-          <div className="mx-auto max-w-6xl">{children}</div>
+          <div className="mx-auto max-w-6xl">
+            <AdminGate>{children}</AdminGate>
+          </div>
         </main>
       </div>
     </div>
