@@ -45,6 +45,10 @@ function getChefBaseCity(profile: any) {
     clean(profile?.location?.city) ||
     clean(profile?.city) ||
     clean(profile?.ville) ||
+    // Fallbacks supplémentaires si la structure du profile diffère
+    clean(profile?.address?.city) ||
+    clean(profile?.location?.address) ||
+    clean(profile?.address) ||
     null
   );
 }
@@ -53,6 +57,8 @@ function getChefCountry(profile: any) {
   return (
     clean(profile?.location?.country) ||
     clean(profile?.country) ||
+    clean(profile?.pays) ||
+    clean(profile?.address?.country) ||
     null
   );
 }
@@ -91,17 +97,29 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // 2) On ne garde que les chefs actifs avec une ville renseignée
+    const totalChefs = (chefs || []).length;
+
+    // 2) On ne garde que les chefs actifs (ou approved) avec une ville
+    // renseignée. On accepte aussi 'approved' au cas où certains chefs
+    // sont validés mais pas encore basculés en 'active'.
+    const ALLOWED_STATUSES = new Set(['active', 'approved']);
+
+    let activeCount = 0;
+    let activeWithCityCount = 0;
+
     const rows = (chefs || [])
       .map((row: any) => {
         const profile = row?.profile ?? {};
         const status = getChefStatus(row);
 
-        if (status !== 'active') return null;
+        if (!ALLOWED_STATUSES.has(status)) return null;
+        activeCount++;
 
         const baseCity = getChefBaseCity(profile);
         const country = getChefCountry(profile);
         const query = normalizeQuery(baseCity, country);
+
+        if (query) activeWithCityCount++;
 
         return {
           id: profile?.id || row.id || row.user_id,
@@ -116,6 +134,14 @@ export async function GET(req: Request) {
       })
       .filter(Boolean)
       .filter((x: any) => !!x.query);
+
+    // Logs sans PII (juste les compteurs) pour debug Vercel
+    console.log('[admin/chefs/map] counts', {
+      totalChefs,
+      activeOrApproved: activeCount,
+      withCityDetected: activeWithCityCount,
+      uniqueQueries: rows.length,
+    });
 
     const queries = Array.from(new Set(rows.map((r: any) => r.query))) as string[];
 
