@@ -7,15 +7,9 @@ import {
 } from '@/lib/chef-plans';
 import { sendVipWelcome } from '@/lib/email/sendVipWelcome';
 import { sendInternalUpsellNotification } from '@/lib/email/sendInternalUpsellNotification';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 const MONTHS_TO_PLANKEY: Record<number, PlanKey> = {
   3: 'vip_3m',
@@ -71,7 +65,7 @@ async function patchProfile(userId: string, patch: Record<string, any>) {
 /**
  * POST /api/admin/chefs/[id]/grant-vip
  * Body: { months: 3 | 6 | 12 }
- * Auth: x-admin-email
+ * Auth: Supabase Bearer token (admin allowlist).
  *
  * Active gratuitement un statut VIP "Offert par Chefs Talents" pour ce chef.
  * - plan = 'pro', planStatus = 'active', planKey = vip_Xm
@@ -83,9 +77,8 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await req.json().catch(() => null);
@@ -159,7 +152,7 @@ export async function POST(
 
 /**
  * DELETE /api/admin/chefs/[id]/grant-vip
- * Auth: x-admin-email
+ * Auth: Supabase Bearer token (admin allowlist).
  *
  * Révoque le VIP offert. Ne touche pas aux abonnements payants Stripe.
  * Refuse de révoquer un VIP payant (utiliser le Billing Portal pour ça).
@@ -168,9 +161,8 @@ export async function DELETE(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     // Lecture pour vérifier que c'est bien un complimentary

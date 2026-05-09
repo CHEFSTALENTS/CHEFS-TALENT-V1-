@@ -14,8 +14,7 @@ import {
   TestTube2,
   X,
 } from 'lucide-react';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type Status = 'pending_validation' | 'approved' | 'active' | 'paused';
 
@@ -88,7 +87,7 @@ export default function AdminNewsletterPage() {
     }
     setRecipientsLoading(true);
     const url = `/api/admin/newsletter?segments=${activeSegments.join(',')}`;
-    fetch(url, { headers: { 'x-admin-email': ADMIN_EMAIL } })
+    adminFetchRaw(url)
       .then((res) => res.json())
       .then((json) => {
         if (!alive) return;
@@ -124,12 +123,8 @@ export default function AdminNewsletterPage() {
     setError(null);
     setTestSending(true);
     try {
-      const res = await fetch('/api/admin/newsletter', {
+      const res = await adminFetchRaw('/api/admin/newsletter', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
         body: JSON.stringify({
           test: true,
           to: 'contact@chefstalents.com',
@@ -174,9 +169,7 @@ export default function AdminNewsletterPage() {
       const exclude = excludeEmails.trim();
       if (exclude) params.set('exclude', exclude);
 
-      const recRes = await fetch(`/api/admin/newsletter/recipients?${params.toString()}`, {
-        headers: { 'x-admin-email': ADMIN_EMAIL },
-      });
+      const recRes = await adminFetchRaw(`/api/admin/newsletter/recipients?${params.toString()}`);
       const recJson = await recRes.json();
       if (!recRes.ok || !recJson?.ok) {
         throw new Error(
@@ -210,12 +203,8 @@ export default function AdminNewsletterPage() {
       for (let i = 0; i < list.length; i++) {
         const r = list[i];
         try {
-          const res = await fetch('/api/admin/newsletter', {
+          const res = await adminFetchRaw('/api/admin/newsletter', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-admin-email': ADMIN_EMAIL,
-            },
             body: JSON.stringify({
               single: {
                 email: r.email,
@@ -281,9 +270,7 @@ export default function AdminNewsletterPage() {
     // Récupérer les recipients pour avoir firstName/locale
     try {
       const params = new URLSearchParams({ segments: activeSegments.join(',') });
-      const recRes = await fetch(`/api/admin/newsletter/recipients?${params.toString()}`, {
-        headers: { 'x-admin-email': ADMIN_EMAIL },
-      });
+      const recRes = await adminFetchRaw(`/api/admin/newsletter/recipients?${params.toString()}`);
       const recJson = await recRes.json();
       if (!recRes.ok || !recJson?.ok) {
         throw new Error(recJson?.detail || `HTTP ${recRes.status}`);
@@ -314,12 +301,8 @@ export default function AdminNewsletterPage() {
       for (let i = 0; i < retryList.length; i++) {
         const r = retryList[i];
         try {
-          const res = await fetch('/api/admin/newsletter', {
+          const res = await adminFetchRaw('/api/admin/newsletter', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-admin-email': ADMIN_EMAIL,
-            },
             body: JSON.stringify({
               single: { email: r.email, firstName: r.firstName, locale: r.locale },
               subject,

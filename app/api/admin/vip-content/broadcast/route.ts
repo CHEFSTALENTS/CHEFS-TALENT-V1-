@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sendVipBroadcast } from '@/lib/email/sendVipBroadcast';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 /**
  * POST /api/admin/vip-content/broadcast
@@ -18,9 +12,8 @@ function isAdminRequest(req: Request) {
  * Envoie un email custom à tous les chefs VIP actifs.
  */
 export async function POST(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await req.json().catch(() => null);

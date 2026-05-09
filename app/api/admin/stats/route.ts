@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
+
   // 1) Demandes (client_requests)
   const { count: todoCount } = await supabase
     .from('client_requests')

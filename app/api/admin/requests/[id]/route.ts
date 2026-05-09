@@ -4,12 +4,16 @@ export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: { id: string } }
 ) {
   try {
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
+
     const id = decodeURIComponent(ctx.params.id || '').trim();
 
     if (!id) {

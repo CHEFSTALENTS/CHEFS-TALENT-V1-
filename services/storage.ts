@@ -23,8 +23,13 @@ import { matchChefsForFastRequest, buildFastMatchProposals } from './fastMatch';
 ========================================================= */
 
 export const ADMIN_EMAIL = 'thomas@chef-talents.com';
-// ⚠️ MVP uniquement : à sortir du repo plus tard (env var)
-const ADMIN_PASSWORD = 'Cantine33?';
+// Seed mot de passe admin (legacy localStorage, dev uniquement).
+// En production, l'auth admin passe par Supabase Auth + Bearer token côté API.
+// La constante hardcodée a été supprimée (anti-pattern + risque de fuite via bundle client).
+// Pour seed un admin local en dev, définir NEXT_PUBLIC_DEV_ADMIN_SEED_PASSWORD dans .env.local
+// (cette variable n'est jamais set en production).
+const ADMIN_PASSWORD =
+  process.env.NEXT_PUBLIC_DEV_ADMIN_SEED_PASSWORD || '';
 
 export function isAdminUser(user: { email?: string } | null | undefined) {
   return !!user?.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -139,12 +144,17 @@ const clearSessionUser = () => {
 };
 
 /**
- * Seed admin (MVP)
- * NOTE: role = 'chef' car ton type n’accepte pas 'admin'
- * => l’admin est détecté via l’email (isAdminUser)
+ * Seed admin (legacy localStorage, dev uniquement).
+ * En production, l'auth admin passe par Supabase Auth + Bearer token côté API ;
+ * cette fonction ne fait rien si NEXT_PUBLIC_DEV_ADMIN_SEED_PASSWORD n'est pas défini
+ * (= comportement par défaut en production).
+ *
+ * NOTE: role = 'chef' car le type n'accepte pas 'admin'
+ * => l'admin est détecté via l'email (isAdminUser)
  */
 function ensureAdminSeed() {
   if (typeof window === 'undefined') return;
+  if (!ADMIN_PASSWORD) return; // pas de seed sans password explicite (prod safe)
 
   const db = getChefDb();
   const exists = db.find(u => (u.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase());

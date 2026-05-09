@@ -3,8 +3,8 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendChefReminder, type MissingField } from '@/lib/sendChefReminder';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 const TABLE = 'chef_profiles';
 
 // ── Copié exactement de /api/admin/chefs/route.ts ─────────────
@@ -74,10 +74,8 @@ function detectMissingFields(p: any): MissingField[] {
 }
 
 export async function POST(req: NextRequest) {
-  const adminEmail = req.headers.get('x-admin-email');
-  if (adminEmail?.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -4,8 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type VipChef = {
   userId: string;
@@ -75,10 +74,7 @@ export default function AdminVipPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/vip-chefs', {
-        headers: { 'x-admin-email': ADMIN_EMAIL },
-        cache: 'no-store',
-      });
+      const res = await adminFetchRaw('/api/admin/vip-chefs');
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.ok) {
         setError(json?.detail || json?.error || `HTTP ${res.status}`);

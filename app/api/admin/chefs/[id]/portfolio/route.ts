@@ -2,8 +2,8 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 const TABLE = 'chef_profiles';
 
 function safeObj(v: any) {
@@ -33,10 +33,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const adminEmail = req.headers.get('x-admin-email');
-  if (adminEmail?.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   const chefEmail = decodeURIComponent(params.id);
 

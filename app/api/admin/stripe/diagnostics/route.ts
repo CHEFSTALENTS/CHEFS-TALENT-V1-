@@ -4,20 +4,14 @@
 // interval, status. Permet de vérifier d'un coup d'œil que les abonnements
 // vont bien biller mensuellement.
 //
-// Auth : x-admin-email
+// Auth : Supabase Bearer token (admin allowlist).
 
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 type Expected =
   | { type: 'recurring'; interval: 'month' }
@@ -306,9 +300,8 @@ async function listActiveSubscriptions() {
 }
 
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const [rows, subscriptions] = await Promise.all([

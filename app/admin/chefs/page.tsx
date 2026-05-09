@@ -6,6 +6,7 @@ import type { ChefUser } from '@/types';
 import { computeChefScore, type ChefProfile } from '@/lib/chefScore';
 import { PageTitle, GhostButton, Card, Segment, StatusBadge } from '@/app/admin/_components/ui';
 import { normalizeProfile, getNormalizedChef } from '@/app/admin/chefs/utils/normalizeProfile';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
@@ -23,10 +24,7 @@ type ApiChef = ChefUser & {
 };
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(path, {
-    ...init,
-    headers: { ...(init.headers || {}), 'x-admin-email': ADMIN_EMAIL },
-  });
+  const res = await adminFetchRaw(path, init);
   const text = await res.text().catch(() => '');
   if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
   return (text ? JSON.parse(text) : null) as T;
@@ -278,9 +276,8 @@ export default function AdminChefsPage() {
     setReminding(true);
     setRemindResult(null);
     try {
-      const r = await fetch('/api/admin/remind-chefs', {
+      const r = await adminFetchRaw('/api/admin/remind-chefs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-email': ADMIN_EMAIL },
         body: JSON.stringify({ dryRun }),
       });
       const json = await r.json();
@@ -624,9 +621,8 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
     if (!email) return;
     setPortfolioLoading(true);
     try {
-      const res = await fetch(
+      const res = await adminFetchRaw(
         `/api/admin/chefs/${encodeURIComponent(email)}/portfolio`,
-        { headers: { 'x-admin-email': ADMIN_EMAIL } }
       );
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const html = await res.text();

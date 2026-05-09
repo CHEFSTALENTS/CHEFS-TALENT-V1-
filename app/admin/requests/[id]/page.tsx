@@ -8,6 +8,7 @@ import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { matchChefsForRequestV2, chefIsEligibleForRequest } from '@/services/matching';
 import { buildWhatsappBriefForChef, buildInternalBrief, openWhatsappWithText, calcTarif } from '@/lib/whatsappBrief';
 import AssignMissionModal from '@/components/AssignMissionModal';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
 
@@ -133,11 +134,8 @@ export default function AdminRequestDetailPage() {
     setLoading(true);
     try {
       const [rReq, rChefsJson, rMissions] = await Promise.all([
-        fetch(`/api/admin/requests/${encodeURIComponent(id)}`, { cache: 'no-store' }),
-        fetch(`/api/admin/chefs`, {
-          cache: 'no-store',
-          headers: { 'x-admin-email': 'thomas@chef-talents.com' },
-        }).then(async (r) => {
+        adminFetchRaw(`/api/admin/requests/${encodeURIComponent(id)}`),
+        adminFetchRaw(`/api/admin/chefs`).then(async (r) => {
           const j = await r.json().catch(() => ({}));
           if (!r.ok) { console.error('ADMIN CHEFS API ERROR', r.status, j); return { chefs: [] }; }
           return j;

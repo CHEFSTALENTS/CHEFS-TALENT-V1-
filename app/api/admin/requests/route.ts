@@ -1,6 +1,7 @@
 // app/api/admin/requests/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,8 +15,11 @@ const supabaseAdmin = createClient(
   }
 );
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
+
     // ✅ On lit TOUTES les demandes (B2B + B2C) depuis client_requests
     // Si tu avais un .eq('client_type','concierge') ou autre => c'était la cause.
     const { data, error } = await supabaseAdmin

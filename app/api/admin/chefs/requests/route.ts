@@ -2,9 +2,13 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!

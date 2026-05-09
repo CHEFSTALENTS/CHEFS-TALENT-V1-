@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,9 @@ function norm(q: string) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
+
     const body = await req.json();
     const qRaw = String(body?.query || '').trim();
     if (!qRaw) return NextResponse.json({ error: 'Missing query' }, { status: 400 });

@@ -1,6 +1,6 @@
 // app/api/admin/newsletter/recipients/route.ts
 // GET → renvoie la liste complète des destinataires d'un broadcast.
-// Auth : x-admin-email
+// Auth : Supabase Bearer token (admin allowlist).
 //
 // Le front utilise cette route pour récupérer la liste, puis itère
 // localement en appelant POST /api/admin/newsletter { single: ... }
@@ -13,17 +13,12 @@ import {
   listChefsByStatus,
   type ChefStatus,
 } from '@/lib/email/listChefsByStatus';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 const VALID: ChefStatus[] = ['pending_validation', 'approved', 'active', 'paused'];
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 function parseSegments(raw: string | null): ChefStatus[] {
   if (!raw) return [];
@@ -44,9 +39,8 @@ function parseExclude(raw: string | null): Set<string> {
 }
 
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const url = new URL(req.url);
