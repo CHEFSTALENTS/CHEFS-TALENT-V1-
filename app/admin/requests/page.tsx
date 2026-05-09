@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { RequestEntity } from '@/types';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type TypeFilter = 'all' | 'b2b' | 'b2c';
 type StatusGroup = 'todo' | 'active' | 'closed';
@@ -18,7 +19,7 @@ export default function AdminRequestsPage() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/admin/requests', { cache: 'no-store' });
+      const r = await adminFetchRaw('/api/admin/requests');
       if (!r.ok) throw new Error(`GET /api/admin/requests failed: ${r.status}`);
 
       const json = await r.json();
