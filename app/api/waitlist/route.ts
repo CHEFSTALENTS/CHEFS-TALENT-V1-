@@ -1,6 +1,7 @@
 // app/api/waitlist/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs'; // important (emails + supabase server)
 
@@ -153,6 +154,13 @@ async function sendWithResendHTTP(args: {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, {
+    identifier: 'waitlist',
+    windowMs: 5 * 60_000,
+    max: 5,
+  });
+  if (!rl.ok) return rateLimitResponse(rl);
+
   try {
     const body = await req.json().catch(() => null);
 

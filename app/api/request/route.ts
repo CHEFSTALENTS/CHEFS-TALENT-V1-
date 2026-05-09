@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendClientConfirmation } from '@/lib/sendClientConfirmation';
 import { sendInternalNewRequest } from '@/lib/sendInternalNewRequest';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 const strOrNull = (v: any): string | null => {
   const s = String(v ?? '').trim();
@@ -47,6 +48,14 @@ const dateOrNull = (v: any): string | null => {
 };
 
 export async function POST(req: Request) {
+  // Rate limit : 5 demandes par 5 minutes par IP
+  const rl = rateLimit(req, {
+    identifier: 'request-form',
+    windowMs: 5 * 60_000,
+    max: 5,
+  });
+  if (!rl.ok) return rateLimitResponse(rl);
+
   try {
     const body = await req.json();
 

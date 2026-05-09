@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,13 @@ function norm(q: string) {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, {
+    identifier: 'admin-geocode',
+    windowMs: 60_000,
+    max: 30,
+  });
+  if (!rl.ok) return rateLimitResponse(rl);
+
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;

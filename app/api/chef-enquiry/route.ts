@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendChefEnquiryConfirmation } from '@/lib/sendChefEnquiryConfirmation';
 import { sendInternalChefEnquiry } from '@/lib/sendInternalChefEnquiry';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 const strOrNull = (v: any): string | null => {
   const s = String(v ?? '').trim();
@@ -11,6 +12,13 @@ const strOrNull = (v: any): string | null => {
 };
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, {
+    identifier: 'chef-enquiry',
+    windowMs: 5 * 60_000,
+    max: 3,
+  });
+  if (!rl.ok) return rateLimitResponse(rl);
+
   try {
     const body = await req.json();
 
