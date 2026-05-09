@@ -14,7 +14,7 @@
 ## Sprint 1 — Comparatifs (autorité topique anti-Take-a-Chef)
 
 - [x] [comparatif] Chefs Talents vs Take a Chef — placement UHNW vs marketplace (PR ouverte 2026-05-08)
-- [ ] [comparatif] Chefs Talents vs Montclair Chef — réseau Europe vs Monaco
+- [x] [comparatif] Chefs Talents vs Montclair Chef — réseau Europe vs Monaco (PR ouverte 2026-05-09)
 - [ ] [comparatif] Chefs Talents vs Amandine International
 - [ ] [comparatif] Chefs Talents vs MiumMium — UHNW vs grand public
 - [ ] [comparatif] Chefs Talents vs ChefMaison
