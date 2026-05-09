@@ -102,9 +102,12 @@ export async function GET(req: Request) {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
+    // ⚠️ La table chef_profiles N'A PAS de colonne `id` : la PK est user_id.
+    // Les colonnes plates email/status/first_name/last_name/city/country
+    // n'existent pas non plus toujours — toutes les infos sont dans `profile` JSON.
     const { data, error } = await supabaseAdmin
       .from('chef_profiles')
-      .select('id, email, status, first_name, last_name, city, country, profile')
+      .select('user_id, email, profile')
       .limit(2000);
 
     if (error) throw error;
@@ -116,7 +119,7 @@ export async function GET(req: Request) {
       const query = normalizeQuery(baseCity, country);
 
       return {
-        id: row?.profile?.id || row.id,
+        id: row?.profile?.id || row.user_id,
         name: getChefName(row),
         email: row?.email || row?.profile?.email || '',
         avatarUrl: getChefAvatar(row),

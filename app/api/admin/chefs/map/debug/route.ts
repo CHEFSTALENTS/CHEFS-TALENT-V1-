@@ -71,9 +71,10 @@ export async function GET(req: Request) {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
+    // ⚠️ La table chef_profiles N'A PAS de colonne `id` : la PK est user_id.
     const { data: chefs, error } = await supabase
       .from('chef_profiles')
-      .select('id, user_id, email, profile, created_at, updated_at');
+      .select('user_id, email, profile, created_at, updated_at');
 
     if (error) {
       return NextResponse.json(
@@ -177,7 +178,7 @@ export async function GET(req: Request) {
       delete safe.email;
       // Garder seulement les clés top-level + location pour la lisibilité
       return {
-        id: row?.id,
+        userId: row?.user_id,
         emailMasked: maskEmail(row?.email || ''),
         statusRow: row?.status ?? null,
         statusInProfile: profile?.status ?? null,

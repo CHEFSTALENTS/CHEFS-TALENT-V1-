@@ -88,9 +88,10 @@ export async function GET(req: Request) {
     if (auth instanceof NextResponse) return auth;
 
     // 1) Lecture des chefs (on lit le JSON profile)
+    // ⚠️ La table chef_profiles N'A PAS de colonne `id` : la PK est user_id.
     const { data: chefs, error } = await supabase
       .from('chef_profiles')
-      .select('id, user_id, email, profile');
+      .select('user_id, email, profile');
 
     if (error) {
       console.error('[admin/chefs/map] select error', error.message);
@@ -122,7 +123,9 @@ export async function GET(req: Request) {
         if (query) activeWithCityCount++;
 
         return {
-          id: profile?.id || row.id || row.user_id,
+          // user_id est la PK de chef_profiles ; profile.id n'existe pas
+          // toujours dans le JSON, on tombe sur user_id par défaut.
+          id: profile?.id || row.user_id,
           name: getChefName(profile),
           email: row?.email || profile?.email || '',
           avatarUrl: profile?.avatarUrl || profile?.photoUrl || null,
