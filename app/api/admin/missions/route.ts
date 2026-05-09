@@ -29,6 +29,11 @@ export async function POST(req: Request) {
       chefAmount,
       clientAmount,
       contractUrl,
+      // Si false : pas d'email Resend au chef ni de notif interne (cas
+      // « mission spontanée » où le deal est déjà closer hors-app, on
+      // veut juste tracker dans le tableau de bord). Default true pour
+      // conserver le comportement existant.
+      notifyChef = true,
     } = body;
 
     if (!chefId || !chefEmail) {
@@ -95,6 +100,17 @@ export async function POST(req: Request) {
     const respondUrl = `${process.env.NEXT_PUBLIC_APP_URL}/chef/missions`;
 
     let emailOk = false;
+
+    // Skip email + notif interne si notifyChef=false (mission spontanée)
+    if (!notifyChef) {
+      return NextResponse.json({
+        ok: true,
+        missionId,
+        emailSent: false,
+        notified: false,
+      });
+    }
+
     try {
       await resend.emails.send({
         from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
