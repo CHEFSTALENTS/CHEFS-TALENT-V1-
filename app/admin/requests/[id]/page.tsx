@@ -9,6 +9,7 @@ import { matchChefsForRequestV2, chefIsEligibleForRequest } from '@/services/mat
 import { buildWhatsappBriefForChef, buildInternalBrief, openWhatsappWithText, calcTarif } from '@/lib/whatsappBrief';
 import AssignMissionModal from '@/components/AssignMissionModal';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import ProposalsList from './_components/ProposalsList';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
 
@@ -125,6 +126,11 @@ export default function AdminRequestDetailPage() {
     id: string; email: string; name: string; phone?: string | null;
   } | null>(null);
 
+  // Compteur incrémenté à chaque création/modif de proposal pour forcer
+  // le refresh du composant ProposalsList (passé en `key`).
+  const [proposalsBump, setProposalsBump] = useState(0);
+  const bumpProposals = () => setProposalsBump((n) => n + 1);
+
   const onViewChefProfile = (chef: ChefUser) => {
     const profileId = (chef as any)?.profile?.id || chef.id;
     router.push(`/admin/chefs/${profileId}`);
@@ -227,8 +233,11 @@ export default function AdminRequestDetailPage() {
           chefName={selectedChef.name}
           chefPhone={selectedChef.phone}
           onClose={() => setSelectedChef(null)}
-          onSuccess={(_missionId) => {
+          onSuccess={(_proposalId) => {
             setSelectedChef(null);
+            // Refresh la liste des proposals + le statut de la request
+            // (qui passe à in_review au premier pitch).
+            bumpProposals();
             refresh();
           }}
         />
@@ -270,6 +279,23 @@ export default function AdminRequestDetailPage() {
         </Panel>
 
         <div className="xl:col-span-2 space-y-4">
+          {/* Suivi pré-confirmation : qui a été présenté, statut, canal */}
+          <Panel
+            title="Chefs présentés"
+            subtitle="Suivi des propositions envoyées à cette demande (avant confirmation de la mission)"
+          >
+            <ProposalsList
+              key={proposalsBump}
+              requestId={id}
+              onChanged={() => {
+                // Une action interne (status update / promote / delete)
+                // peut changer le status de la client_request → on
+                // refresh aussi les données globales.
+                refresh();
+              }}
+            />
+          </Panel>
+
           <Panel
             title="Chefs matchables"
             subtitle="Cliquez Sélectionner pour proposer la mission via WhatsApp ou email"
