@@ -7,11 +7,19 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { generateEmailVerifyToken } from '@/lib/auth/emailVerifyToken';
 import { sendChefWelcomeAndVerify } from '@/lib/email/sendChefWelcomeAndVerify';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, {
+    identifier: 'send-verification',
+    windowMs: 10 * 60_000,
+    max: 3,
+  });
+  if (!rl.ok) return rateLimitResponse(rl);
+
   try {
     const body = await req.json().catch(() => null);
     const userId = String(body?.userId || '').trim();
