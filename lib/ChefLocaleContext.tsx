@@ -16,6 +16,7 @@ import {
   dictionaries,
   isLocale,
 } from './chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 type Ctx = {
   locale: Locale;
@@ -52,9 +53,8 @@ export function ChefLocaleProvider({
       /* ignore */
     }
     // Sync vers Supabase (profile.preferredLocale) — fire & forget
-    fetch('/api/chef/me/locale', {
+    chefFetchRaw('/api/chef/me/locale', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ locale: next }),
     }).catch(() => {
       /* offline ou pas auth, on garde juste localStorage */

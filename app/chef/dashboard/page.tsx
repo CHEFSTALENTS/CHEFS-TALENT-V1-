@@ -8,6 +8,7 @@ import { Label, Button } from '../../../components/ui';
 import { computeChefScore } from '@/lib/chefScore';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 import {
   CheckCircle2, Clock, ArrowRight, User, ChefHat, Image as ImageIcon,
   Map, Calendar, AlertTriangle, Crown, Sparkles, Lock, DollarSign,
@@ -160,10 +161,9 @@ function ProposeMissionCard({ chefId, chefName }: { chefId: string; chefName: st
     if (!form.destination || !form.dates) return;
     setSending(true);
     try {
-      await fetch('/api/chef/propose-mission', {
+      await chefFetchRaw('/api/chef/propose-mission', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, chefId, chefName }),
+        body: JSON.stringify({ ...form, chefName }),
       });
       setSent(true);
     } catch {}
@@ -303,7 +303,7 @@ export default function ChefDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
         const json = await res.json();
         if (!cancelled) setSettingsProfile(json?.profile ?? null);
       } catch { if (!cancelled) setSettingsProfile(null); }

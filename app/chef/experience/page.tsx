@@ -6,6 +6,7 @@ import { supabase } from '@/services/supabaseClient';
 import { Label, Button, Input, Textarea, Marker } from '../../../components/ui';
 import { Loader2 } from 'lucide-react';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 type CertificationKey =
   | 'HACCP'
@@ -107,7 +108,7 @@ export default function ChefExperiencePage() {
       if (!sbUser?.id) return;
 
       try {
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
         const json = await res.json();
         const prof: any = json?.profile ?? {};
 
@@ -140,7 +141,7 @@ export default function ChefExperiencePage() {
   async function saveChefProfilePatch(patch: any) {
     if (!sbUser?.id) throw new Error('No user');
 
-    const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+    const resGet = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
     const json = await resGet.json();
     const current = json?.profile ?? {};
 
@@ -152,10 +153,9 @@ export default function ChefExperiencePage() {
       updatedAt: new Date().toISOString(),
     };
 
-    const resPut = await fetch('/api/chef/profile', {
+    const resPut = await chefFetchRaw('/api/chef/profile', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: sbUser.id, profile: merged }),
+      body: JSON.stringify({ profile: merged }),
     });
 
     if (!resPut.ok) throw new Error(await resPut.text());

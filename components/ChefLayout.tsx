@@ -12,6 +12,7 @@ import {
   format,
   type Locale,
 } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 import {
   LogOut,
@@ -162,7 +163,7 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
         setUser(pseudo);
 
         try {
-          const res = await fetch(`/api/chef/me?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+          const res = await chefFetchRaw('/api/chef/me', { cache: 'no-store' });
           const json = await res.json();
 
           if (!alive) return;
@@ -265,11 +266,10 @@ export const ChefLayout = ({ children }: ChefLayoutProps) => {
     setTermsError(null);
 
     try {
-      const res = await fetch('/api/chef/terms/accept', {
+      const res = await chefFetchRaw('/api/chef/terms/accept', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
-        body: JSON.stringify({ userId: user.id, version: CURRENT_TERMS_VERSION }),
+        body: JSON.stringify({ version: CURRENT_TERMS_VERSION }),
       });
 
       const json = await res.json().catch(() => null);

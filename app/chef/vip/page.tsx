@@ -23,6 +23,7 @@ import {
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
 import { CHEF_PLANS, type PlanKey } from '@/lib/chef-plans';
+import { chefFetchRaw } from '@/lib/chefFetch';
 import type { VipContent, VipTip } from '@/lib/vip-content';
 import {
   getGuide,
@@ -72,7 +73,7 @@ export default function ChefVipPage() {
       // Fetch profile + vip content en parallèle
       try {
         const [profileRes, vipRes] = await Promise.all([
-          fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, {
+          chefFetchRaw('/api/chef/profile', {
             cache: 'no-store',
           }),
           fetch('/api/chef/vip-content', { cache: 'no-store' }),

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/services/supabaseClient';
 import { TOC, BodyFR, BodyEN, BodyES, type Locale } from './_content';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 const CURRENT_TERMS_VERSION = '08/05/2026';
 const LS_TERMS_KEY = `ct_chef_terms_v_${CURRENT_TERMS_VERSION}`;
@@ -86,12 +87,10 @@ export default function TermsClient() {
         return;
       }
 
-      const res = await fetch('/api/chef/terms/accept', {
+      const res = await chefFetchRaw('/api/chef/terms/accept', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
-          userId,
           version: CURRENT_TERMS_VERSION,
           accepted: true,
         }),

@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { htmlToText } from '@/lib/email/_helpers';
+import { requireChefOr401 } from '@/lib/auth/requireChef';
 
 export const runtime = 'nodejs';
 
@@ -74,9 +75,12 @@ async function getChefContact(chefId: string): Promise<{
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireChefOr401(req);
+    if (auth instanceof NextResponse) return auth;
+    const chefId = auth.user.id; // SOURCE DE VÉRITÉ — jamais issu du body
+
     const body = await req.json();
     const {
-      chefId,
       chefName,
       destination,
       dates,

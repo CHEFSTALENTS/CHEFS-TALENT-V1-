@@ -10,6 +10,7 @@ import { Loader2, Upload } from 'lucide-react';
 import { ChefProfileType, ChefSeniority } from '../../../types';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 export default function ChefProfilePage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ useEffect(() => {
     }));
 
     try {
-      const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+      const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
       const json = await res.json();
       const p = json?.profile ?? {};
       if (!alive) return;
@@ -73,7 +74,7 @@ async function saveChefProfilePatch(patch: any) {
   const sbUser = data.session?.user ?? null;
   if (!sbUser?.id) throw new Error('No user');
 
-  const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+  const resGet = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
   const json = await resGet.json();
   const current = json?.profile ?? {};
 
@@ -85,10 +86,9 @@ async function saveChefProfilePatch(patch: any) {
     updatedAt: new Date().toISOString(),
   };
 
-  const resPut = await fetch('/api/chef/profile', {
+  const resPut = await chefFetchRaw('/api/chef/profile', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: sbUser.id, profile: merged }),
+    body: JSON.stringify({ profile: merged }),
   });
 
   if (!resPut.ok) throw new Error(await resPut.text());
@@ -96,13 +96,12 @@ async function saveChefProfilePatch(patch: any) {
   return merged;
 }
 
-  async function uploadAvatar(file: File, userId: string) {
+  async function uploadAvatar(file: File, _userId?: string) {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('userId', userId);
     fd.append('kind', 'avatar');
 
-    const res = await fetch('/api/chef/upload', { method: 'POST', body: fd });
+    const res = await chefFetchRaw('/api/chef/upload', { method: 'POST', body: fd });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json?.error || 'Upload failed');
     if (!json?.url) throw new Error('Upload ok mais url manquante');

@@ -8,6 +8,7 @@ import { Loader2, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { LOCALES, LOCALE_LABELS, LOCALE_FULL_LABELS } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 export default function ChefSignupPage() {
   const router = useRouter();
@@ -56,23 +57,29 @@ export default function ChefSignupPage() {
         return;
       }
 
-      await fetch('/api/chef/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: userId,
-          profile: {
-            id: userId,
-            email,
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
-            preferredLocale: locale,
-            emailVerified: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        }),
-      });
+      // Si Supabase a immédiatement créé une session (email confirmation off),
+      // on peut attacher un Bearer pour persister le profil. Sinon le profil
+      // sera créé au premier login.
+      try {
+        await chefFetchRaw('/api/chef/profile', {
+          method: 'PUT',
+          body: JSON.stringify({
+            profile: {
+              id: userId,
+              email,
+              firstName: formData.firstName.trim(),
+              lastName: formData.lastName.trim(),
+              preferredLocale: locale,
+              emailVerified: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        });
+      } catch (e) {
+        // Pas de session encore (email confirmation requise). On ignore —
+        // le profil sera créé au premier appel authentifié.
+      }
 
       // Envoie l'email de bienvenue + lien de vérification (fire-and-forget,
       // ne bloque pas le redirect).

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format, type Dictionary } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 type Tab = 'offered' | 'active' | 'history';
 
@@ -64,7 +65,7 @@ export default function ChefMissionsPage() {
     if (!userId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await fetch(`/api/chef/missions?chefId=${encodeURIComponent(userId)}`, {
+      const res = await chefFetchRaw('/api/chef/missions', {
         cache: 'no-store',
       });
       const json = await res.json();
@@ -84,10 +85,9 @@ export default function ChefMissionsPage() {
     if (!userId) return;
     setActionLoading(missionId);
     try {
-      await fetch('/api/chef/missions', {
+      await chefFetchRaw('/api/chef/missions', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ missionId, chefId: userId, action }),
+        body: JSON.stringify({ missionId, action }),
       });
       await fetchMissions();
     } catch (e) {

@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
+import { requireChefOr401 } from '@/lib/auth/requireChef';
 
 /**
- * GET /api/chef/profile?id=UUID
+ * GET /api/chef/profile
  * -> { profile: object | null }
+ *
+ * Auth: Bearer token Supabase. L'`id` query éventuel est ignoré — la
+ * source de vérité est `auth.user.id`.
  */
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const auth = await requireChefOr401(req);
+  if (auth instanceof NextResponse) return auth;
+  const id = auth.user.id;
 
   const supabase = getSupabaseAdmin();
 
@@ -25,6 +29,10 @@ export async function GET(req: Request) {
 }
 
 async function upsertProfile(req: Request) {
+  const auth = await requireChefOr401(req);
+  if (auth instanceof NextResponse) return auth;
+  const id = auth.user.id; // SOURCE DE VÉRITÉ — jamais issu du body
+
   const supabase = getSupabaseAdmin();
   const body = await req.json();
 
@@ -32,7 +40,8 @@ async function upsertProfile(req: Request) {
   // 1) { id, email?, profile }
   // 2) { profile: { id, email, ... } }
   // 3) directement { id, email, ... } (profil brut)
-  const id = body?.id ?? body?.profile?.id ?? body?.user_id ?? body?.profile?.user_id;
+  // Note : tout `id` / `user_id` reçu via le body est ignoré ; on utilise
+  // exclusivement `auth.user.id` issu du token Supabase.
   const email = body?.email ?? body?.profile?.email ?? null;
   const profile = body?.profile ?? body;
 // ✅ auto-transition draft -> pending_validation si profil éligible
@@ -46,7 +55,6 @@ const profileForDb =
   profile && typeof profile === 'object'
     ? { ...profile, status: nextStatus, updatedAt: new Date().toISOString() }
     : { status: nextStatus, updatedAt: new Date().toISOString() };
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const payload = {
     user_id: id,

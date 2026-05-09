@@ -11,6 +11,7 @@ import { Crown, Sparkles, Zap, Loader2, CheckCircle2, Lock } from 'lucide-react'
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
 import { CHEF_PLANS, type PlanKey, type PaymentMode } from '@/lib/chef-plans';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 type ChefProfile = {
   plan?: 'free' | 'pro';
@@ -61,8 +62,8 @@ export default function ChefUpgradePage() {
       setSbUserId(u.id);
 
       try {
-        const res = await fetch(
-          `/api/chef/profile?id=${encodeURIComponent(u.id)}`,
+        const res = await chefFetchRaw(
+          '/api/chef/profile',
           { cache: 'no-store' },
         );
         const json = await res.json();

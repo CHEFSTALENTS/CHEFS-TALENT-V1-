@@ -7,6 +7,7 @@ import { Label, Marker, Button, Input } from '../../../components/ui';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 type ChefProfile = {
   id?: string;
@@ -137,7 +138,7 @@ export default function ChefAvailabilityPage() {
 
       setLoading(true);
       try {
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+        const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
         const json = await res.json();
         const fromDb: ChefProfile | null = json?.profile ?? null;
 
@@ -196,7 +197,7 @@ export default function ChefAvailabilityPage() {
     setSuccess(false);
 
     try {
-      const resGet = await fetch(`/api/chef/profile?id=${encodeURIComponent(sbUser.id)}`, { cache: 'no-store' });
+      const resGet = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
       const jsonGet = await resGet.json();
       const current = jsonGet?.profile ?? {};
 
@@ -221,10 +222,9 @@ export default function ChefAvailabilityPage() {
         updatedAt: new Date().toISOString(),
       };
 
-      const resPut = await fetch('/api/chef/profile', {
+      const resPut = await chefFetchRaw('/api/chef/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: sbUser.id, profile: merged }),
+        body: JSON.stringify({ profile: merged }),
       });
       if (!resPut.ok) throw new Error(await resPut.text());
 
