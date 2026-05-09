@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 
 type ChefPoint = {
@@ -67,7 +68,7 @@ export default function AdminMapPage() {
     async function load() {
       setLoading(true);
       try {
-        const r = await fetch('/api/admin/chefs/map', { cache: 'no-store' });
+        const r = await adminFetchRaw('/api/admin/chefs/map');
         const json = await r.json();
         if (cancelled) return;
 
