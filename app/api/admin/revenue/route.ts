@@ -3,21 +3,15 @@
 // et Supabase (missions confirmées).
 //
 // GET /api/admin/revenue → renvoie un breakdown complet.
-// Auth : x-admin-email
+// Auth : Supabase Bearer token (admin allowlist).
 
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 function startOfMonth(d = new Date()): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
@@ -128,9 +122,8 @@ async function sumMissionsCommission(sinceIso: string): Promise<{
 }
 
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   const monthStartMs = startOfMonth().getTime();
   const yearStartMs = startOfYear().getTime();

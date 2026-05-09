@@ -22,8 +22,7 @@ import {
   Mail,
   Link2,
 } from 'lucide-react';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 export default function AdminVipContentPage() {
   const [content, setContent] = useState<VipContent | null>(null);
@@ -38,10 +37,7 @@ export default function AdminVipContentPage() {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch('/api/admin/vip-content', {
-          headers: { 'x-admin-email': ADMIN_EMAIL },
-          cache: 'no-store',
-        });
+        const res = await adminFetchRaw('/api/admin/vip-content');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (alive) setContent(json.content ?? null);
@@ -111,12 +107,8 @@ export default function AdminVipContentPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/vip-content', {
+      const res = await adminFetchRaw('/api/admin/vip-content', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
         body: JSON.stringify({ content }),
       });
       const json = await res.json();
@@ -489,12 +481,8 @@ function BroadcastSection() {
     setResult(null);
 
     try {
-      const res = await fetch('/api/admin/vip-content/broadcast', {
+      const res = await adminFetchRaw('/api/admin/vip-content/broadcast', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
         body: JSON.stringify({ subject: subject.trim(), body: body.trim() }),
       });
       const json = await res.json();

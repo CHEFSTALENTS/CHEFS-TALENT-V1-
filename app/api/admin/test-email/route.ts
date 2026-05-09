@@ -3,7 +3,7 @@
 // Utile pour les tests délivrabilité (mail-tester, glockapps, etc.) sans
 // avoir à modifier un profil chef.
 //
-// Auth: x-admin-email
+// Auth: Supabase Bearer token (admin allowlist).
 // Body: { to: string, kind: 'vip_welcome' | 'boost_welcome' | 'vip_new_tip' }
 
 import { NextResponse } from 'next/server';
@@ -11,15 +11,9 @@ import { sendVipWelcome } from '@/lib/email/sendVipWelcome';
 import { sendBoostWelcome } from '@/lib/email/sendBoostWelcome';
 import { sendBoostEndingSoon } from '@/lib/email/sendBoostEndingSoon';
 import { sendChefActivated } from '@/lib/email/sendChefActivated';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 type TestKind =
   | 'vip_welcome'
@@ -35,9 +29,8 @@ const VALID_KINDS: TestKind[] = [
 ];
 
 export async function POST(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await req.json().catch(() => null);

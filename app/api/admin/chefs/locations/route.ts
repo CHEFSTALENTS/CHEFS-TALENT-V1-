@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -96,8 +97,11 @@ async function geocodeMapbox(query: string) {
   return { lat, lng };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
+
     const { data, error } = await supabaseAdmin
       .from('chef_profiles')
       .select('id, email, status, first_name, last_name, city, country, profile')

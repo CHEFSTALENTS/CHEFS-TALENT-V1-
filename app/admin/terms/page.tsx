@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type Acceptance = {
   user_id: string;
@@ -35,10 +34,7 @@ export default function AdminTermsPage() {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch('/api/admin/terms/audit', {
-          cache: 'no-store',
-          headers: { 'x-admin-email': ADMIN_EMAIL },
-        });
+        const res = await adminFetchRaw('/api/admin/terms/audit');
         const json = (await res.json()) as ApiResponse;
         if (!alive) return;
         if (!res.ok || !json.ok) {

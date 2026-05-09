@@ -7,8 +7,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { api, auth } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type StatusKey = 'new' | 'in_review' | 'assigned' | 'closed';
 
@@ -146,11 +145,8 @@ export default function AdminDashboardPage() {
     setLoading(true);
     try {
       const [reqJson, revJson] = await Promise.all([
-        fetch('/api/admin/requests', { cache: 'no-store' }).then((r) => r.json()),
-        fetch('/api/admin/revenue', {
-          headers: { 'x-admin-email': ADMIN_EMAIL },
-          cache: 'no-store',
-        })
+        adminFetchRaw('/api/admin/requests').then((r) => r.json()),
+        adminFetchRaw('/api/admin/revenue')
           .then((r) => r.json())
           .catch(() => null),
       ]);

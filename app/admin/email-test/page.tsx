@@ -5,8 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from 'react';
 import { Marker, Label, Button, Input } from '@/components/ui';
 import { Send, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type Kind =
   | 'vip_welcome'
@@ -43,12 +42,8 @@ export default function AdminEmailTestPage() {
     setError(null);
     setSending(true);
     try {
-      const res = await fetch('/api/admin/test-email', {
+      const res = await adminFetchRaw('/api/admin/test-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
         body: JSON.stringify({ to, firstName, kind, locale }),
       });
       const json = await res.json().catch(() => null);

@@ -3,8 +3,8 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendChefActivated } from '@/lib/email/sendChefActivated';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 const TABLE = 'chef_profiles';
 
 function supabaseAdmin() {
@@ -16,11 +16,6 @@ function supabaseAdmin() {
 
   const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
   return { supabase, missing: null as any };
-}
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
 }
 
 function safeObj(v: any) {
@@ -65,9 +60,8 @@ function pickStatus(p: any) {
 
 export async function GET(req: Request) {
   try {
-    if (!isAdminRequest(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
 
     const { supabase, missing } = supabaseAdmin();
     if (!supabase) return NextResponse.json({ error: 'Missing env', missing }, { status: 500 });
@@ -108,9 +102,8 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    if (!isAdminRequest(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
 
     const body = await req.json().catch(() => ({}));
     const email = String(body?.email || '').trim().toLowerCase();
@@ -233,9 +226,8 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    if (!isAdminRequest(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAdminOr401(req);
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
     const email = String(searchParams.get('email') || '').trim().toLowerCase();

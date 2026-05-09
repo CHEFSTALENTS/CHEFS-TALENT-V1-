@@ -1,26 +1,20 @@
 // app/api/admin/terms/audit/route.ts
 // GET → renvoie la liste des acceptations CGU chef + stats agrégées.
-// Auth : x-admin-email
+// Auth : Supabase Bearer token (admin allowlist).
 // Lecture-seule : aucune écriture en DB.
 
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 // La constante CURRENT_TERMS_VERSION est dupliquée ici pour éviter l'import
 // d'un client component depuis un endpoint serveur. Doit être maintenue en
 // cohérence avec app/chef/terms/terms-client.tsx (CURRENT_TERMS_VERSION) et
 // app/api/chef/terms/accept/route.ts (default).
 const CURRENT_TERMS_VERSION = '08/05/2026';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 function safeProfile(v: any) {
   if (!v) return {};
@@ -36,9 +30,8 @@ function safeProfile(v: any) {
 }
 
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ ok: false, error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const supabase = getSupabaseAdmin();

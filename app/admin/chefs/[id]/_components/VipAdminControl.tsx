@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { Crown, Loader2, X } from 'lucide-react';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type Props = {
   chefId: string;
@@ -45,12 +44,8 @@ export default function VipAdminControl({ chefId, initialProfile }: Props) {
     setBusy(`grant-${months}` as any);
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/chefs/${chefId}/grant-vip`, {
+      const res = await adminFetchRaw(`/api/admin/chefs/${chefId}/grant-vip`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
         body: JSON.stringify({ months }),
       });
       const json = await res.json();
@@ -77,9 +72,8 @@ export default function VipAdminControl({ chefId, initialProfile }: Props) {
     setBusy('revoke');
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/chefs/${chefId}/grant-vip`, {
+      const res = await adminFetchRaw(`/api/admin/chefs/${chefId}/grant-vip`, {
         method: 'DELETE',
-        headers: { 'x-admin-email': ADMIN_EMAIL },
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.detail || json?.error || 'Erreur');

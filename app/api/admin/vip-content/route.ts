@@ -1,24 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getVipContent, setVipContent, type VipTip } from '@/lib/vip-content';
 import { sendVipNewTipToAll } from '@/lib/email/sendVipNewTip';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 /**
  * GET /api/admin/vip-content
  * → { content: VipContent }
  */
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const content = await getVipContent();
@@ -41,9 +34,8 @@ export async function GET(req: Request) {
  * nouveau tip — sauf si notifyVips === false (édition silencieuse).
  */
 export async function PUT(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await req.json().catch(() => null);

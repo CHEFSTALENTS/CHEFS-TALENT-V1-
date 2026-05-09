@@ -1,20 +1,14 @@
 // app/api/admin/vip-chefs/route.ts
 // Liste les chefs VIP (plan='pro') depuis Supabase pour la vue admin VIP.
 // Inclut les chefs payants (Stripe) et complimentary (offerts).
-// Auth : x-admin-email
+// Auth : Supabase Bearer token (admin allowlist).
 
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 function safeObj(v: any): any {
   if (!v) return {};
@@ -53,9 +47,8 @@ export type AdminVipChef = {
 };
 
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const admin = getSupabaseAdmin();

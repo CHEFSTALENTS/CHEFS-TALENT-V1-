@@ -4,7 +4,7 @@
 // - POST { subject, body, cta?, segments }   → envoie la newsletter
 // - POST { test: true, to, subject, body, cta? }   → envoie un email de test
 //
-// Auth : x-admin-email
+// Auth : Supabase Bearer token (admin allowlist).
 
 import { NextResponse } from 'next/server';
 import {
@@ -15,11 +15,10 @@ import {
   sendNewsletterToList,
   sendNewsletterTest,
 } from '@/lib/email/sendNewsletter';
+import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
 
 const VALID: ChefStatus[] = [
   'pending_validation',
@@ -27,11 +26,6 @@ const VALID: ChefStatus[] = [
   'active',
   'paused',
 ];
-
-function isAdminRequest(req: Request) {
-  const email = (req.headers.get('x-admin-email') || '').toLowerCase().trim();
-  return email === ADMIN_EMAIL.toLowerCase();
-}
 
 function parseSegments(raw: unknown): ChefStatus[] {
   const arr = Array.isArray(raw)
@@ -49,9 +43,8 @@ function parseSegments(raw: unknown): ChefStatus[] {
  * Renvoie le compte de destinataires + breakdown par segment.
  */
 export async function GET(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
   try {
     const url = new URL(req.url);
     const segments = parseSegments(url.searchParams.get('segments'));
@@ -84,9 +77,8 @@ export async function GET(req: Request) {
  *   - { subject, body, cta?, segments: [...] }  → envoi en masse
  */
 export async function POST(req: Request) {
-  if (!isAdminRequest(req)) {
-    return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
-  }
+  const auth = await requireAdminOr401(req);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await req.json().catch(() => null);

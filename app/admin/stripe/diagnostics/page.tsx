@@ -10,8 +10,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
-
-const ADMIN_EMAIL = 'thomas@chef-talents.com';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type Expected =
   | { type: 'recurring'; interval: 'month' }
@@ -103,10 +102,7 @@ export default function StripeDiagnosticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/stripe/diagnostics', {
-        headers: { 'x-admin-email': ADMIN_EMAIL },
-        cache: 'no-store',
-      });
+      const res = await adminFetchRaw('/api/admin/stripe/diagnostics');
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.ok) {
         setError(json?.detail || json?.error || `HTTP ${res.status}`);
