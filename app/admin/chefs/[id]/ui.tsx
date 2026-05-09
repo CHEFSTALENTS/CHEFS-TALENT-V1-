@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import VipAdminControl from './_components/VipAdminControl';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 type MissionRow = {
   id: string;
@@ -99,17 +100,23 @@ function AdminActions({
   async function saveStatus(s: string) {
     setSaving(true);
     try {
-      const r = await fetch(`/api/admin/chefs/${encodeURIComponent(chefId)}/status`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: s }),
-      });
-      if (!r.ok) throw new Error(`status update failed: ${r.status}`);
+      // adminFetchRaw injecte le Bearer Supabase admin (cf. PR #1 sécurité)
+      const r = await adminFetchRaw(
+        `/api/admin/chefs/${encodeURIComponent(chefId)}/status`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ status: s }),
+        },
+      );
+      if (!r.ok) {
+        const json = await r.json().catch(() => ({}));
+        throw new Error(json?.error || `status update failed: ${r.status}`);
+      }
       setOpen(false);
       onStatusSaved?.(s);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Impossible de mettre à jour le statut (endpoint à brancher ?).");
+      alert(e?.message || 'Impossible de mettre à jour le statut.');
     } finally {
       setSaving(false);
     }
@@ -292,25 +299,30 @@ function AdminProfileEditor({
   async function handleSave() {
     setSaving(true);
     try {
-      const r = await fetch(`/api/admin/chefs/${encodeURIComponent(chefId)}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          baseCity: form.baseCity,
-          phone: form.phone,
-          languages: form.languages,
-          specialties: form.specialties,
-          cuisines: form.cuisines,
-          coverageZones: form.coverageZones,
-          travelRadiusKm: form.travelRadiusKm,
-          internationalMobility: form.internationalMobility,
-          lat: form.lat,
-          lng: form.lng,
-          bio: form.bio,
-          availableNow: form.availableNow,
-          nextAvailableFrom: form.nextAvailableFrom || null,
-        }),
-      });
+      // adminFetchRaw injecte le Bearer Supabase admin (cf. PR #1 sécurité).
+      // Sans Bearer → l'API renvoyait MISSING_BEARER_TOKEN, impossible de
+      // modifier le profil chef (notamment baseCity).
+      const r = await adminFetchRaw(
+        `/api/admin/chefs/${encodeURIComponent(chefId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            baseCity: form.baseCity,
+            phone: form.phone,
+            languages: form.languages,
+            specialties: form.specialties,
+            cuisines: form.cuisines,
+            coverageZones: form.coverageZones,
+            travelRadiusKm: form.travelRadiusKm,
+            internationalMobility: form.internationalMobility,
+            lat: form.lat,
+            lng: form.lng,
+            bio: form.bio,
+            availableNow: form.availableNow,
+            nextAvailableFrom: form.nextAvailableFrom || null,
+          }),
+        },
+      );
 
       const json = await r.json().catch(() => ({}));
 
