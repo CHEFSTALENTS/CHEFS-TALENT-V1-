@@ -130,6 +130,10 @@ export default function NewMissionModal({ onClose, onSuccess }: Props) {
           chefAmount: form.chefAmount ? Number(form.chefAmount) : null,
           clientAmount: form.clientAmount ? Number(form.clientAmount) : null,
           contractUrl: form.contractUrl || null,
+          // Mission spontanée : le deal est déjà closer hors-app, on ne
+          // notifie pas le chef. Si tu veux l'option d'envoyer un mail,
+          // utilise plutôt le flow proposals depuis /admin/requests.
+          notifyChef: false,
         }),
       });
 
@@ -165,8 +169,11 @@ export default function NewMissionModal({ onClose, onSuccess }: Props) {
               </h2>
             </div>
             <p className="text-xs text-white/50 mt-0.5">
-              Sans demande client préalable. La mission sera créée en
-              statut <span className="text-white/80">offered</span>.
+              Tracking d'une mission déjà négociée hors-app.
+              <br />
+              <span className="text-amber-200/80">
+                Le chef ne sera pas notifié automatiquement.
+              </span>
             </p>
           </div>
           <button
@@ -391,12 +398,14 @@ export default function NewMissionModal({ onClose, onSuccess }: Props) {
               ) : (
                 <Sparkles className="w-4 h-4" />
               )}
-              {submitting ? 'Création…' : 'Créer la mission + envoyer email chef'}
+              {submitting ? 'Création…' : 'Ajouter au tableau de bord'}
             </button>
 
             <p className="text-[10px] text-white/40 text-center leading-relaxed">
-              Le chef recevra un email avec les détails de la mission.
               La mission sera créée en statut <strong>offered</strong>.
+              Aucun email automatique au chef — c'est juste pour le suivi
+              interne. Tu pourras la passer en <strong>confirmed</strong>{' '}
+              depuis la page mission.
             </p>
 
             <button
