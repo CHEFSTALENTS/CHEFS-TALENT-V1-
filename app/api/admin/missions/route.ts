@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { escapeHtml } from '@/lib/escapeHtml';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -106,19 +107,19 @@ export async function POST(req: Request) {
 <body style="margin:0;padding:0;background:#f4efe8;font-family:Georgia,serif;">
   <div style="max-width:580px;margin:0 auto;padding:48px 32px;">
     <p style="font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:#8a7f73;margin:0 0 40px;">CHEFS TALENTS — MISSION PROPOSAL</p>
-    <h1 style="font-size:28px;font-weight:normal;color:#161616;margin:0 0 8px;">Hi ${firstName},</h1>
+    <h1 style="font-size:28px;font-weight:normal;color:#161616;margin:0 0 8px;">Hi ${escapeHtml(firstName)},</h1>
     <p style="font-size:16px;line-height:1.8;color:#59544d;margin:0 0 32px;">We have a new mission that matches your profile. Please review the details below and let us know if you're available.</p>
 
     <div style="background:#161616;border-radius:16px;padding:28px 32px;margin:0 0 28px;">
       <p style="color:#8a7f73;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;margin:0 0 20px;">Mission details</p>
       <table style="width:100%;border-collapse:collapse;">
-        ${location ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;width:140px;">Location</td><td style="color:#fff;font-size:14px;padding:6px 0;">${location}</td></tr>` : ''}
-        ${startDate ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Start date</td><td style="color:#fff;font-size:14px;padding:6px 0;">${startFormatted}</td></tr>` : ''}
-        ${endDate ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">End date</td><td style="color:#fff;font-size:14px;padding:6px 0;">${endFormatted}</td></tr>` : ''}
-        ${guestCount ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Guests</td><td style="color:#fff;font-size:14px;padding:6px 0;">${guestCount} guests</td></tr>` : ''}
-        ${serviceLevel ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Service</td><td style="color:#fff;font-size:14px;padding:6px 0;">${serviceLevel}</td></tr>` : ''}
+        ${location ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;width:140px;">Location</td><td style="color:#fff;font-size:14px;padding:6px 0;">${escapeHtml(location)}</td></tr>` : ''}
+        ${startDate ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Start date</td><td style="color:#fff;font-size:14px;padding:6px 0;">${escapeHtml(startFormatted)}</td></tr>` : ''}
+        ${endDate ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">End date</td><td style="color:#fff;font-size:14px;padding:6px 0;">${escapeHtml(endFormatted)}</td></tr>` : ''}
+        ${guestCount ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Guests</td><td style="color:#fff;font-size:14px;padding:6px 0;">${escapeHtml(guestCount)} guests</td></tr>` : ''}
+        ${serviceLevel ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Service</td><td style="color:#fff;font-size:14px;padding:6px 0;">${escapeHtml(serviceLevel)}</td></tr>` : ''}
         ${chefAmount ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;">Your fee</td><td style="color:#B08D57;font-size:16px;font-weight:bold;padding:6px 0;">${Number(chefAmount).toLocaleString('en-GB')} €</td></tr>` : ''}
-        ${notes ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;vertical-align:top;">Notes</td><td style="color:#fff;font-size:14px;padding:6px 0;">${notes}</td></tr>` : ''}
+        ${notes ? `<tr><td style="color:#8a7f73;font-size:13px;padding:6px 0;vertical-align:top;">Notes</td><td style="color:#fff;font-size:14px;padding:6px 0;">${escapeHtml(notes)}</td></tr>` : ''}
       </table>
     </div>
 
@@ -166,12 +167,12 @@ export async function POST(req: Request) {
         subject: `✅ Mission assignée — ${chefName || chefEmail} · ${location || ''}`,
         html: `<div style="font-family:monospace;padding:24px;">
           <h2>Mission créée</h2>
-          <p><strong>Chef :</strong> ${chefName || '—'} (${chefEmail})</p>
-          <p><strong>Lieu :</strong> ${location || '—'}</p>
-          <p><strong>Dates :</strong> ${startFormatted}${endFormatted ? ` → ${endFormatted}` : ''}</p>
-          <p><strong>Convives :</strong> ${guestCount || '—'}</p>
-          <p><strong>Rémunération chef :</strong> ${chefAmount ? `${chefAmount}€` : '—'}</p>
-          <p><strong>Mission ID :</strong> ${missionId}</p>
+          <p><strong>Chef :</strong> ${escapeHtml(chefName || '—')} (${escapeHtml(chefEmail)})</p>
+          <p><strong>Lieu :</strong> ${escapeHtml(location || '—')}</p>
+          <p><strong>Dates :</strong> ${escapeHtml(startFormatted)}${endFormatted ? ` → ${escapeHtml(endFormatted)}` : ''}</p>
+          <p><strong>Convives :</strong> ${escapeHtml(guestCount || '—')}</p>
+          <p><strong>Rémunération chef :</strong> ${chefAmount ? `${escapeHtml(String(chefAmount))}€` : '—'}</p>
+          <p><strong>Mission ID :</strong> ${escapeHtml(missionId)}</p>
           <p><strong>Email envoyé au chef :</strong> ${emailOk ? 'Oui ✅' : 'Non ❌'}</p>
         </div>`,
       });

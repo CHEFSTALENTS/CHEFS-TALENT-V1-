@@ -135,8 +135,8 @@ export async function PUT(req: Request) {
     const isActivationTransition =
       status === 'active' && previousStatus !== 'active';
 
+    // Log : pas l'email entier (RGPD). On garde juste la transition.
     console.log('[admin/chefs PUT]', {
-      email,
       previousStatus,
       newStatus: status,
       isActivationTransition,
@@ -176,14 +176,13 @@ export async function PUT(req: Request) {
           const rawLocale = String((current as any)?.preferredLocale || '');
           const locale: 'fr' | 'en' | 'es' =
             rawLocale === 'en' || rawLocale === 'es' ? rawLocale : 'fr';
+          // Pas de log de l'email ni du firstName (RGPD).
           console.log('[admin/chefs PUT] sending activation email', {
-            email,
-            firstName,
             locale,
             previousStatus,
           });
           await sendChefActivated({ email, firstName, locale });
-          console.log('[admin/chefs PUT] activation email sent', { email });
+          console.log('[admin/chefs PUT] activation email sent');
         } catch (err: any) {
           console.error(
             '[admin/chefs PUT] activation email failed',
