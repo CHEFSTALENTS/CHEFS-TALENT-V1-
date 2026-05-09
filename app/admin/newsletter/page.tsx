@@ -35,12 +35,26 @@ type SendResult =
   | { ok: true; sent: number; failed: number; total: number }
   | null;
 
+type SendProgress = {
+  current: number;
+  total: number;
+  sent: number;
+  failed: number;
+  errors: { email: string; error: string }[];
+} | null;
+
+// Throttling : 600 ms entre chaque email (~1,66 req/s, sous la limite
+// Resend Free 2 req/s). Pour Resend Pro (10 req/s) on pourrait baisser
+// à 150 ms, mais 600 ms reste conservateur et lisible pour l'utilisateur.
+const SEND_INTERVAL_MS = 600;
+
 export default function AdminNewsletterPage() {
   // Form state
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [ctaLabel, setCtaLabel] = useState('');
   const [ctaUrl, setCtaUrl] = useState('');
+  const [excludeEmails, setExcludeEmails] = useState('');
   const [segments, setSegments] = useState<Record<Status, boolean>>({
     pending_validation: false,
     approved: false,
@@ -53,6 +67,7 @@ export default function AdminNewsletterPage() {
   const [recipientsLoading, setRecipientsLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState<SendProgress>(null);
   const [testSending, setTestSending] = useState(false);
   const [result, setResult] = useState<SendResult>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,39 +157,205 @@ export default function AdminNewsletterPage() {
     }
   };
 
+  // Boucle d'envoi côté front : 1 email = 1 requête API.
+  // Évite le timeout serverless Vercel (10 s sur Hobby) qui tuait les
+  // broadcasts > 30 destinataires en mode legacy. Throttling 600 ms entre
+  // chaque envoi pour rester sous la limite Resend Free (2 req/s).
   const handleSend = async () => {
     setError(null);
     setSending(true);
     setResult(null);
+    setProgress(null);
     setConfirming(false);
+
     try {
-      const res = await fetch('/api/admin/newsletter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-email': ADMIN_EMAIL,
-        },
-        body: JSON.stringify({
-          subject,
-          body,
-          cta:
-            ctaLabel.trim() && ctaUrl.trim()
-              ? { label: ctaLabel.trim(), url: ctaUrl.trim() }
-              : undefined,
-          segments: activeSegments,
-        }),
+      // 1) Récupérer la liste complète des destinataires (avec exclusions)
+      const params = new URLSearchParams({ segments: activeSegments.join(',') });
+      const exclude = excludeEmails.trim();
+      if (exclude) params.set('exclude', exclude);
+
+      const recRes = await fetch(`/api/admin/newsletter/recipients?${params.toString()}`, {
+        headers: { 'x-admin-email': ADMIN_EMAIL },
       });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.ok) {
-        setError(json?.detail || json?.error || `HTTP ${res.status}`);
-      } else {
-        setResult({
-          ok: true,
-          sent: Number(json.sent || 0),
-          failed: Number(json.failed || 0),
-          total: Number(json.total || 0),
-        });
+      const recJson = await recRes.json();
+      if (!recRes.ok || !recJson?.ok) {
+        throw new Error(
+          recJson?.detail || recJson?.error || `HTTP ${recRes.status}`,
+        );
       }
+
+      const list: Array<{
+        email: string;
+        firstName: string | null;
+        locale: 'fr' | 'en' | 'es';
+      }> = recJson.recipients || [];
+
+      if (list.length === 0) {
+        setError('Aucun destinataire après exclusion. Vérifie tes segments et la liste exclue.');
+        return;
+      }
+
+      const ctaPayload =
+        ctaLabel.trim() && ctaUrl.trim()
+          ? { label: ctaLabel.trim(), url: ctaUrl.trim() }
+          : undefined;
+
+      let sent = 0;
+      let failed = 0;
+      const errors: { email: string; error: string }[] = [];
+
+      setProgress({ current: 0, total: list.length, sent: 0, failed: 0, errors: [] });
+
+      // 2) Envoi un par un avec throttling
+      for (let i = 0; i < list.length; i++) {
+        const r = list[i];
+        try {
+          const res = await fetch('/api/admin/newsletter', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-email': ADMIN_EMAIL,
+            },
+            body: JSON.stringify({
+              single: {
+                email: r.email,
+                firstName: r.firstName,
+                locale: r.locale,
+              },
+              subject,
+              body,
+              cta: ctaPayload,
+            }),
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json?.ok) {
+            failed++;
+            errors.push({
+              email: r.email,
+              error: json?.detail || json?.error || `HTTP ${res.status}`,
+            });
+          } else {
+            sent++;
+          }
+        } catch (e: any) {
+          failed++;
+          errors.push({ email: r.email, error: String(e?.message ?? e) });
+        }
+
+        setProgress({
+          current: i + 1,
+          total: list.length,
+          sent,
+          failed,
+          errors: [...errors],
+        });
+
+        // Throttling : pause entre chaque email (sauf après le dernier)
+        if (i < list.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, SEND_INTERVAL_MS));
+        }
+      }
+
+      setResult({ ok: true, sent, failed, total: list.length });
+    } catch (e: any) {
+      setError(String(e?.message ?? e));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Réessaie uniquement les emails en erreur
+  const handleRetryFailed = async () => {
+    if (!progress?.errors.length) return;
+
+    setError(null);
+    setSending(true);
+    setResult(null);
+
+    const failedEmails = progress.errors.map((e) => e.email);
+    const ctaPayload =
+      ctaLabel.trim() && ctaUrl.trim()
+        ? { label: ctaLabel.trim(), url: ctaUrl.trim() }
+        : undefined;
+
+    // Récupérer les recipients pour avoir firstName/locale
+    try {
+      const params = new URLSearchParams({ segments: activeSegments.join(',') });
+      const recRes = await fetch(`/api/admin/newsletter/recipients?${params.toString()}`, {
+        headers: { 'x-admin-email': ADMIN_EMAIL },
+      });
+      const recJson = await recRes.json();
+      if (!recRes.ok || !recJson?.ok) {
+        throw new Error(recJson?.detail || `HTTP ${recRes.status}`);
+      }
+
+      const allMap = new Map<
+        string,
+        { email: string; firstName: string | null; locale: 'fr' | 'en' | 'es' }
+      >(
+        (recJson.recipients || []).map((r: any) => [r.email.toLowerCase(), r]),
+      );
+
+      const retryList = failedEmails
+        .map((e) => allMap.get(e.toLowerCase()))
+        .filter((r): r is NonNullable<typeof r> => Boolean(r));
+
+      if (retryList.length === 0) {
+        setError('Aucun destinataire à réessayer (les emails ne sont plus dans le segment).');
+        return;
+      }
+
+      let sent = 0;
+      let failed = 0;
+      const errors: { email: string; error: string }[] = [];
+
+      setProgress({ current: 0, total: retryList.length, sent: 0, failed: 0, errors: [] });
+
+      for (let i = 0; i < retryList.length; i++) {
+        const r = retryList[i];
+        try {
+          const res = await fetch('/api/admin/newsletter', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-email': ADMIN_EMAIL,
+            },
+            body: JSON.stringify({
+              single: { email: r.email, firstName: r.firstName, locale: r.locale },
+              subject,
+              body,
+              cta: ctaPayload,
+            }),
+          });
+          const json = await res.json().catch(() => null);
+          if (!res.ok || !json?.ok) {
+            failed++;
+            errors.push({
+              email: r.email,
+              error: json?.detail || json?.error || `HTTP ${res.status}`,
+            });
+          } else {
+            sent++;
+          }
+        } catch (e: any) {
+          failed++;
+          errors.push({ email: r.email, error: String(e?.message ?? e) });
+        }
+
+        setProgress({
+          current: i + 1,
+          total: retryList.length,
+          sent,
+          failed,
+          errors: [...errors],
+        });
+
+        if (i < retryList.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, SEND_INTERVAL_MS));
+        }
+      }
+
+      setResult({ ok: true, sent, failed, total: retryList.length });
     } catch (e: any) {
       setError(String(e?.message ?? e));
     } finally {
@@ -263,6 +444,26 @@ export default function AdminNewsletterPage() {
                 <code className="mx-1">https://</code>.
               </p>
             )}
+
+            <div className="space-y-2 pt-4 border-t border-stone-100">
+              <Label>
+                Emails à exclure{' '}
+                <span className="text-stone-400 font-normal normal-case">
+                  (optionnel — déjà destinataires d’un envoi précédent)
+                </span>
+              </Label>
+              <Textarea
+                value={excludeEmails}
+                onChange={(e) => setExcludeEmails(e.target.value)}
+                placeholder="email1@exemple.com, email2@exemple.com&#10;email3@exemple.com"
+                className="min-h-[80px] text-xs font-mono"
+              />
+              <p className="text-xs text-stone-400">
+                Sépare par virgules, points-virgules ou retours à la ligne.
+                Utile pour relancer un broadcast sans renvoyer aux chefs déjà
+                contactés.
+              </p>
+            </div>
           </div>
 
           {/* Actions */}
@@ -312,17 +513,99 @@ export default function AdminNewsletterPage() {
             </div>
           )}
 
-          {result && (
-            <div className="border border-green-200 bg-green-50 p-4 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-              <div className="text-sm text-green-900">
-                <div className="font-semibold mb-1">Newsletter envoyée</div>
-                <div className="text-xs">
-                  {result.sent} envoyé{result.sent > 1 ? 's' : ''} ·{' '}
-                  {result.failed} échec{result.failed > 1 ? 's' : ''} ·{' '}
-                  {result.total} ciblé{result.total > 1 ? 's' : ''}
+          {/* Progress bar pendant l'envoi */}
+          {sending && progress && (
+            <div className="border border-stone-200 bg-stone-50 p-5 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs uppercase tracking-widest text-stone-500">
+                  Envoi en cours
+                </span>
+                <span className="text-2xl font-serif text-stone-900 tabular-nums">
+                  {progress.current} / {progress.total}
+                </span>
+              </div>
+              <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-stone-900 transition-all duration-200 ease-out"
+                  style={{
+                    width: `${progress.total === 0 ? 0 : (progress.current / progress.total) * 100}%`,
+                  }}
+                />
+              </div>
+              <div className="flex items-center gap-4 text-xs text-stone-600">
+                <span>
+                  <span className="text-green-700 font-semibold">{progress.sent}</span>{' '}
+                  envoyé{progress.sent > 1 ? 's' : ''}
+                </span>
+                {progress.failed > 0 && (
+                  <span>
+                    <span className="text-red-700 font-semibold">{progress.failed}</span>{' '}
+                    échec{progress.failed > 1 ? 's' : ''}
+                  </span>
+                )}
+                <span className="text-stone-400">
+                  ETA ~{Math.ceil(((progress.total - progress.current) * SEND_INTERVAL_MS) / 1000)} s
+                </span>
+              </div>
+              <p className="text-xs text-stone-400 italic">
+                Garde cet onglet ouvert. L'envoi se fait un par un avec une pause
+                de {SEND_INTERVAL_MS} ms entre chaque pour respecter les limites de Resend.
+              </p>
+            </div>
+          )}
+
+          {/* Résultat final */}
+          {result && !sending && (
+            <div className="border border-stone-200 bg-white p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                {result.failed === 0 ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                )}
+                <div className="text-sm text-stone-900 flex-1">
+                  <div className="font-semibold mb-1">
+                    {result.failed === 0 ? 'Broadcast terminé' : 'Broadcast terminé avec échecs'}
+                  </div>
+                  <div className="text-xs text-stone-600">
+                    <span className="text-green-700 font-semibold">{result.sent}</span> envoyé{result.sent > 1 ? 's' : ''}
+                    {' · '}
+                    <span className={result.failed > 0 ? 'text-red-700 font-semibold' : ''}>
+                      {result.failed}
+                    </span>{' '}
+                    échec{result.failed > 1 ? 's' : ''}
+                    {' · '}
+                    {result.total} ciblé{result.total > 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
+
+              {progress?.errors && progress.errors.length > 0 && (
+                <div className="border-t border-stone-100 pt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs uppercase tracking-widest text-stone-500">
+                      Détail des échecs
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleRetryFailed}
+                      disabled={sending}
+                      className="text-xs"
+                    >
+                      Réessayer les échecs
+                    </Button>
+                  </div>
+                  <ul className="text-xs text-stone-600 space-y-1 max-h-48 overflow-auto bg-stone-50 p-3 font-mono">
+                    {progress.errors.map((e, i) => (
+                      <li key={`${e.email}-${i}`} className="flex gap-2">
+                        <span className="text-stone-900">{e.email}</span>
+                        <span className="text-red-700">→ {e.error}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>

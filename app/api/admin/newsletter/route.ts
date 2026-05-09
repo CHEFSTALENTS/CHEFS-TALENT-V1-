@@ -132,7 +132,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, mode: 'test', sent_to: to });
     }
 
-    // Mode broadcast réel.
+    // Mode single : envoie 1 email à un destinataire connu.
+    // Utilisé par le front pour boucler côté client avec throttling et
+    // éviter le timeout serverless Vercel (10 s sur Hobby) sur les
+    // broadcasts massifs.
+    if (body?.single && typeof body.single === 'object') {
+      const single = body.single as {
+        email?: string;
+        firstName?: string | null;
+        locale?: string;
+      };
+      const to = String(single.email || '').trim().toLowerCase();
+      if (!to.includes('@')) {
+        return NextResponse.json(
+          { error: 'INVALID_RECIPIENT_EMAIL' },
+          { status: 400 },
+        );
+      }
+      const firstName = String(single.firstName || '').trim() || 'Chef';
+      const locale =
+        single.locale === 'en' || single.locale === 'es' ? single.locale : 'fr';
+      try {
+        await sendNewsletterTest({
+          to,
+          subject,
+          body: text,
+          cta,
+          firstName,
+          locale,
+        });
+        return NextResponse.json({ ok: true, mode: 'single', sent_to: to });
+      } catch (e: any) {
+        console.error('[admin/newsletter POST single] send error', to, e?.message);
+        return NextResponse.json(
+          {
+            ok: false,
+            mode: 'single',
+            sent_to: to,
+            error: 'SEND_FAIL',
+            detail: String(e?.message ?? e),
+          },
+          { status: 502 },
+        );
+      }
+    }
+
+    // Mode broadcast réel (legacy : envoi en masse côté serveur).
+    // ⚠️ À éviter pour > 30 destinataires sur plan Vercel Hobby (timeout 10 s).
+    // Préférer le mode { single } appelé en boucle côté front.
     const segments = parseSegments(body?.segments);
     if (segments.length === 0) {
       return NextResponse.json(
