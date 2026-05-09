@@ -67,6 +67,11 @@ const T = {
     s7popular: "Le plus demandé",
     s7note: "Hors matières premières · NDA disponible sur demande",
     s7estimate: "Estimation pour votre mission",
+    s7custom: "Définir mon budget",
+    s7customsub: "Vous avez un montant précis en tête",
+    s7customplaceholder: "Ex. 8000",
+    s7customunit: "€ (budget total estimé)",
+    s7customhint: "Hors matières premières et frais de coordination",
     s8title: "Des restrictions alimentaires ?",
     s8sub: "Allergies, régimes, préférences — le chef s'adapte.",
     s8no: "Aucune", s8nosub: "Pas de contrainte particulière",
@@ -90,7 +95,7 @@ const T = {
 s10nccLink: "En savoir plus sur notre NDA",
 s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
     missionLabels: { single_service: "Prestation ponctuelle", single_replacement: "Remplacement", residence: "Séjour / résidence", yacht: "Mission yacht" },
-    budgetLabels: { essential: "Essentiel", premium: "Premium", exclusive: "Exclusif" },
+    budgetLabels: { essential: "Essentiel", premium: "Premium", exclusive: "Exclusif", custom: "Budget personnalisé" },
     successTitle: "Votre dossier est entre de bonnes mains.",
     successSub: "Un membre de notre équipe analyse votre brief et vous recontacte dans les 6 heures.",
     successRef: "Réf.",
@@ -152,6 +157,11 @@ s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
     s7popular: "Most popular",
     s7note: "Excluding ingredients · NDA available on request",
     s7estimate: "Estimate for your mission",
+    s7custom: "Set my own budget",
+    s7customsub: "You have a specific amount in mind",
+    s7customplaceholder: "e.g. 8000",
+    s7customunit: "€ (estimated total budget)",
+    s7customhint: "Excluding ingredients and coordination fees",
     s8title: "Any dietary restrictions?",
     s8sub: "Allergies, diets, preferences — the chef adapts.",
     s8no: "None", s8nosub: "No particular constraint",
@@ -175,7 +185,7 @@ s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
 s10nccLink: "Learn more about our NDA",
 s10nccRequired: "Please accept the confidentiality terms to continue.",
     missionLabels: { single_service: "One-time service", single_replacement: "Replacement", residence: "Stay / residence", yacht: "Yacht mission" },
-    budgetLabels: { essential: "Essential", premium: "Premium", exclusive: "Exclusive" },
+    budgetLabels: { essential: "Essential", premium: "Premium", exclusive: "Exclusive", custom: "Custom budget" },
     successTitle: "Your file is in good hands.",
     successSub: "A member of our team will analyse your brief and contact you within 6 hours.",
     successRef: "Ref.",
@@ -237,6 +247,11 @@ s10nccRequired: "Please accept the confidentiality terms to continue.",
     s7popular: "El más popular",
     s7note: "Sin ingredientes · NDA disponible bajo petición",
     s7estimate: "Estimación para su misión",
+    s7custom: "Definir mi presupuesto",
+    s7customsub: "Tiene un importe específico en mente",
+    s7customplaceholder: "Ej. 8000",
+    s7customunit: "€ (presupuesto total estimado)",
+    s7customhint: "Sin ingredientes ni gastos de coordinación",
     s8title: "¿Restricciones alimentarias?",
     s8sub: "Alergias, dietas, preferencias — el chef se adapta.",
     s8no: "Ninguna", s8nosub: "Sin restricción particular",
@@ -260,7 +275,7 @@ s10nccRequired: "Please accept the confidentiality terms to continue.",
 s10nccLink: "Más información sobre nuestro NDA",
 s10nccRequired: "Por favor acepte los términos de confidencialidad.",
     missionLabels: { single_service: "Servicio puntual", single_replacement: "Sustitución", residence: "Estancia / residencia", yacht: "Misión yate" },
-    budgetLabels: { essential: "Esencial", premium: "Premium", exclusive: "Exclusivo" },
+    budgetLabels: { essential: "Esencial", premium: "Premium", exclusive: "Exclusivo", custom: "Presupuesto personalizado" },
     successTitle: "Su expediente está en buenas manos.",
     successSub: "Un miembro de nuestro equipo analizará su brief y le contactará en 6 horas.",
     successRef: "Ref.",
@@ -521,7 +536,8 @@ function calcEstimate(
 // ─────────────────────────────────────────────
 type WizardState = RequestForm & {
   endDate?: string;
-  budgetLevel?: "essential" | "premium" | "exclusive";
+  budgetLevel?: "essential" | "premium" | "exclusive" | "custom";
+  customBudgetAmount?: number | null;
   missionCategory?: "single_service" | "single_replacement" | "residence" | "yacht";
   mealPlan?: "breakfast" | "lunch" | "dinner" | "breakfast_lunch" | "lunch_dinner" | "full_time";
   hasDietaryRestrictions?: boolean;
@@ -548,28 +564,44 @@ function makeEmpty(): WizardState {
     companyName: "", serviceRhythm: "daily", accommodationProvided: "yes", sailingArea: "",
     crewSize: 0, budgetAmount: null, budgetUnit: "total", missionCategory: undefined,
     mealPlan: undefined, replacementNeeded: "no", adults: 2, children: 0,
-    hasDietaryRestrictions: false, budgetLevel: undefined, selectedLanguages: [],
-    selectedDestination: undefined, nccAccepted: false,
+    hasDietaryRestrictions: false, budgetLevel: undefined, customBudgetAmount: null,
+    selectedLanguages: [], selectedDestination: undefined, nccAccepted: false,
   };
 }
 
 function buildPayload(s: WizardState) {
   const dm = deriveDateMode(s.missionCategory);
   const totalGuests = (s.adults ?? 0) + (s.children ?? 0);
-  const budgetMap = { essential: "2500", premium: "5000", exclusive: "10000" };
+  // budgetMap : utilisé seulement pour les niveaux pré-cochés (essential/premium/exclusive).
+  // Pour le budget custom, on envoie le montant exact via budgetAmount + budgetUnit.
+  const budgetMap: Record<string, string> = {
+    essential: "2500",
+    premium: "5000",
+    exclusive: "10000",
+  };
+  const isCustomBudget = s.budgetLevel === "custom";
+  const customAmount = s.customBudgetAmount ?? null;
+
+  const budgetSummary = isCustomBudget
+    ? (customAmount ? `${customAmount}€ (custom)` : "custom (—)")
+    : (s.budgetLevel ?? "—");
+
   const notes = [
     `Type: ${s.missionCategory ?? "—"}`,
     `Service: ${s.mealPlan ?? "—"}`,
     `Dates: ${s.startDate}${dm === "multi" ? ` → ${s.endDate ?? "—"}` : ""}`,
     `Adultes: ${s.adults ?? 0}, Enfants: ${s.children ?? 0}`,
-    `Budget: ${s.budgetLevel ?? "—"}`,
+    `Budget: ${budgetSummary}`,
     `Langues: ${(s.selectedLanguages ?? []).join(", ") || "—"}`,
     `Restrictions: ${s.hasDietaryRestrictions ? s.dietaryRestrictions || "Oui" : "Non"}`,
     s.notes ? `Notes: ${s.notes}` : "",
   ].filter(Boolean).join("\n");
   return {
     ...s, dateMode: dm, guestCount: totalGuests || 2,
-    budgetRange: s.budgetLevel ? budgetMap[s.budgetLevel] : "",
+    // Custom : on n'envoie pas de range pré-cochée mais le montant exact dans budgetAmount.
+    budgetRange: isCustomBudget ? "" : (s.budgetLevel ? budgetMap[s.budgetLevel] : ""),
+    budgetAmount: isCustomBudget ? customAmount : (s.budgetAmount ?? null),
+    budgetUnit: isCustomBudget ? "total" : (s.budgetUnit ?? "total"),
     assignmentType: s.missionCategory === "yacht" ? "yacht" : s.missionCategory === "residence" ? "daily" : "event",
     serviceRhythm: "daily",
     serviceExpectations: s.mealPlan === "full_time" ? "full_team" : "chef_only",
@@ -765,7 +797,11 @@ function WizardContent() {
   const totalGuests = (data.adults ?? 0) + (data.children ?? 0);
 
   // Estimation budget
-const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, data.budgetLevel ?? "premium", data.mealPlan);
+// Pour le budget custom, l'estimation par niveau n'a pas de sens : on n'affiche pas la fourchette générée.
+const estimateLevel = data.budgetLevel && data.budgetLevel !== "custom" ? data.budgetLevel : "premium";
+const estimate = data.budgetLevel === "custom"
+  ? null
+  : calcEstimate(data.selectedDestination, numDays, totalGuests, estimateLevel, data.mealPlan);
   // Filtrage villes
   const filteredCities = citySearch.length >= 1
   ? (() => {
@@ -792,7 +828,12 @@ const estimate = calcEstimate(data.selectedDestination, numDays, totalGuests, da
       case 4: return !!data.mealPlan;
       case 5: return totalGuests > 0;
       case 6: return true; // langues optionnelles
-      case 7: return !!data.budgetLevel;
+      case 7:
+        // Custom : valide seulement si un montant > 0 a été saisi.
+        if (data.budgetLevel === "custom") {
+          return !!(data.customBudgetAmount && data.customBudgetAmount > 0);
+        }
+        return !!data.budgetLevel;
       case 8: return data.hasDietaryRestrictions !== undefined;
       case 9: return true;
 case 10: return !!data.fullName?.trim() && !!data.email?.includes("@") && (data.phone?.trim().length ?? 0) >= 6 && data.nccAccepted === true;
@@ -813,12 +854,23 @@ case 10: return !!data.fullName?.trim() && !!data.email?.includes("@") && (data.
 
 if (response?.success) {
   if (typeof window !== 'undefined') {
+    // Pour custom, on utilise le montant exact saisi par le client.
+    // Sinon on utilise les valeurs par défaut des 3 niveaux.
+    const conversionValue =
+      data.budgetLevel === 'custom'
+        ? (data.customBudgetAmount && data.customBudgetAmount > 0 ? data.customBudgetAmount : 5000)
+        : data.budgetLevel === 'exclusive'
+          ? 8000
+          : data.budgetLevel === 'premium'
+            ? 5000
+            : 2500;
+
     // Meta Pixel
     if ((window as any).fbq) {
       (window as any).fbq('track', 'Lead', {
         content_name: data.missionCategory ?? 'request',
         content_category: data.budgetLevel ?? 'unknown',
-        value: data.budgetLevel === 'exclusive' ? 8000 : data.budgetLevel === 'premium' ? 5000 : 2500,
+        value: conversionValue,
         currency: 'EUR',
       });
     }
@@ -826,7 +878,7 @@ if (response?.success) {
     if ((window as any).gtag) {
       (window as any).gtag('event', 'conversion', {
         send_to: 'AW-18111694917/3qwtCLrz1qAcEMWQqrxD',
-        value: data.budgetLevel === 'exclusive' ? 8000 : data.budgetLevel === 'premium' ? 5000 : 2500,
+        value: conversionValue,
         currency: 'EUR',
       });
     }
@@ -1134,7 +1186,7 @@ if (response?.success) {
                 ]).map(([val, stars, title, sub]) => {
 const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, data.mealPlan);
               return (
-                    <button key={val} type="button" onClick={() => set({ budgetLevel: val })}
+                    <button key={val} type="button" onClick={() => set({ budgetLevel: val, customBudgetAmount: null })}
                       className={`relative w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
                         data.budgetLevel === val ? "border-stone-900 bg-stone-900 text-white shadow-xl scale-[1.02]" : "border-stone-200 bg-white hover:border-stone-400 hover:shadow-md"
                       }`}>
@@ -1159,6 +1211,60 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
                   );
                 })}
               </div>
+
+              {/* Option « Définir mon budget » — full width sous les 3 niveaux */}
+              <button
+                type="button"
+                onClick={() => set({ budgetLevel: "custom" })}
+                className={`w-full text-left rounded-2xl border-2 p-4 mt-4 transition-all duration-200 ${
+                  data.budgetLevel === "custom"
+                    ? "border-stone-900 bg-stone-900 text-white shadow-xl"
+                    : "border-stone-200 bg-white hover:border-stone-400 hover:shadow-md"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={`font-semibold text-base mb-0.5 ${data.budgetLevel === "custom" ? "text-white" : "text-stone-900"}`}>
+                      {t.s7custom}
+                    </p>
+                    <p className={`text-xs font-light ${data.budgetLevel === "custom" ? "text-stone-300" : "text-stone-500"}`}>
+                      {t.s7customsub}
+                    </p>
+                  </div>
+                  <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    data.budgetLevel === "custom" ? "border-white bg-white" : "border-stone-300"
+                  }`}>
+                    {data.budgetLevel === "custom" && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-stone-900" />
+                    )}
+                  </div>
+                </div>
+
+                {data.budgetLevel === "custom" && (
+                  <div className="mt-4 pt-4 border-t border-stone-700">
+                    <div className="flex items-center gap-2 bg-white rounded-xl px-4 py-3">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={100}
+                        autoFocus
+                        value={data.customBudgetAmount ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          set({ customBudgetAmount: v === "" ? null : Math.max(0, Number(v)) });
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder={t.s7customplaceholder}
+                        className="flex-1 bg-transparent border-0 outline-none text-stone-900 placeholder-stone-300 text-2xl font-medium"
+                      />
+                      <span className="text-stone-400 text-sm whitespace-nowrap">{t.s7customunit}</span>
+                    </div>
+                    <p className="text-stone-400 text-xs mt-2">{t.s7customhint}</p>
+                  </div>
+                )}
+              </button>
+
               <p className="text-center text-xs text-stone-400 mt-4">{t.s7note}</p>
             </div>
           )}
@@ -1220,7 +1326,12 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
                       data.location && ["Lieu", `${data.selectedDestination?.flag ?? ""} ${data.location}`],
                       data.startDate && ["Dates", `${data.startDate}${data.endDate ? ` → ${data.endDate}` : ""}${numDays > 1 ? ` (${numDays}j)` : ""}`],
                       totalGuests > 0 && [t.s5people, `${totalGuests}`],
-                      data.budgetLevel && ["Budget", (t.budgetLabels as any)[data.budgetLevel]],
+                      data.budgetLevel && [
+                        "Budget",
+                        data.budgetLevel === "custom"
+                          ? (data.customBudgetAmount ? `${data.customBudgetAmount.toLocaleString("fr-FR")}€` : (t.budgetLabels as any).custom)
+                          : (t.budgetLabels as any)[data.budgetLevel],
+                      ],
                       (data.selectedLanguages?.length ?? 0) > 0 && ["Langues", data.selectedLanguages!.join(", ")],
                     ].filter(Boolean).map((item, i) => (
                       <div key={i} className="flex justify-between">
