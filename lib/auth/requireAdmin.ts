@@ -18,8 +18,6 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 // Allowlist d'admins. Pour ajouter un admin, ajouter son email ici.
 // Idéalement à externaliser en env var ADMIN_EMAILS=email1,email2 plus tard.
 const ADMIN_EMAILS = new Set<string>([
-  'thomas@chef-talents.com',
-  'thomas@chefstalents.com',
   'contact@chefstalents.com',
   'thomasdelcroix2108@gmail.com',
 ]);
