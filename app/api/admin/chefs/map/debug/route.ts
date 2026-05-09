@@ -55,6 +55,25 @@ function getChefStatus(row: any) {
   return String(row?.status ?? row?.profile?.status ?? '').toLowerCase();
 }
 
+// Mêmes statuts qu'on accepte sur la map (active + approved)
+const MAP_VISIBLE_STATUSES = new Set(['active', 'approved']);
+
+// Détecte si une ville renseignée par le chef est trop ambiguë pour être
+// géocodée correctement par Mapbox (multi-villes, descriptions, etc.)
+function isAmbiguousCity(city: string | null): boolean {
+  if (!city) return false;
+  const c = city.toLowerCase();
+  // Plus de 3 mots non-séparés par tirets ?
+  const wordCount = c.split(/\s+/).length;
+  if (wordCount > 6) return true;
+  // Contient plusieurs villes séparées par virgules / slashes
+  if (/,.*,/.test(city)) return true;
+  if (/\/.*\//.test(city)) return true;
+  // Description floue
+  if (/résident|international|europe$|world|mediterranean/i.test(city)) return true;
+  return false;
+}
+
 // Masque partiellement un email pour le rendre identifiable sans
 // exposer la PII en clair. ex: thomas@example.com → t***@e***.com
 function maskEmail(email: string): string {
@@ -191,6 +210,71 @@ export async function GET(req: Request) {
       };
     });
 
+    // ================================================================
+    // Listes diagnostic exploitables : chefs à corriger pour qu'ils
+    // apparaissent sur la map. On expose 3 catégories :
+    //
+    //   1. Chefs visibles sur la map mais sans status valide (drafts /
+    //      empty status) — il suffit de les valider depuis /admin/chefs
+    //      pour qu'ils apparaissent.
+    //   2. Chefs active/approved sans ville renseignée — il faut leur
+    //      ajouter une ville (ils nous contactent ou tu corriges en DB).
+    //   3. Chefs active/approved avec ville ambiguë (plusieurs villes,
+    //      description floue) — Mapbox ne peut pas géocoder, à clarifier.
+    // ================================================================
+    const chefsAwaitingValidation: any[] = [];
+    const chefsActiveWithoutCity: any[] = [];
+    const chefsAmbiguousCity: any[] = [];
+
+    (chefs || []).forEach((row: any) => {
+      const profile = row?.profile ?? {};
+      const status = getChefStatus(row);
+      const userId = row?.user_id;
+      const baseCity = getChefBaseCityPaths(profile);
+      const detectedCity =
+        baseCity['profile.location.baseCity'] ||
+        baseCity['profile.baseCity'] ||
+        baseCity['profile.location.city'] ||
+        baseCity['profile.city'] ||
+        baseCity['profile.ville'] ||
+        null;
+      const firstName = profile?.firstName || '';
+      const lastName = profile?.lastName || '';
+
+      const baseInfo = {
+        userId,
+        adminUrl: userId ? `/admin/chefs/${userId}` : null,
+        emailMasked: maskEmail(row?.email || ''),
+        name: `${firstName} ${lastName}`.trim() || 'Chef',
+        status: status || '(empty)',
+        cityRaw: detectedCity,
+      };
+
+      // Cas 1 : status non visible (draft, empty…) — informatif seulement
+      if (!MAP_VISIBLE_STATUSES.has(status)) {
+        if (chefsAwaitingValidation.length < 50) {
+          chefsAwaitingValidation.push(baseInfo);
+        }
+        return;
+      }
+
+      // Cas 2 : visible mais pas de ville
+      if (!detectedCity) {
+        if (chefsActiveWithoutCity.length < 50) {
+          chefsActiveWithoutCity.push(baseInfo);
+        }
+        return;
+      }
+
+      // Cas 3 : visible + ville ambiguë
+      if (isAmbiguousCity(detectedCity)) {
+        if (chefsAmbiguousCity.length < 50) {
+          chefsAmbiguousCity.push(baseInfo);
+        }
+        return;
+      }
+    });
+
     return NextResponse.json({
       summary: {
         totalChefsInDB: total,
@@ -201,6 +285,10 @@ export async function GET(req: Request) {
         cachedQueriesCount: cachedQueries.length,
         missingQueriesCount: missingQueries.length,
         geoCacheTotalRows: geoCacheTotal,
+        // Compteurs des listes de diagnostic
+        chefsAwaitingValidationCount: chefsAwaitingValidation.length,
+        chefsActiveWithoutCityCount: chefsActiveWithoutCity.length,
+        chefsAmbiguousCityCount: chefsAmbiguousCity.length,
       },
       env: {
         MAPBOX_SECRET_TOKEN_present: mapboxSecretPresent,
@@ -211,6 +299,12 @@ export async function GET(req: Request) {
       queries,
       cachedQueries,
       missingQueries,
+      // Listes exploitables (limit 50 chacune pour ne pas exploser la réponse)
+      diagnostics: {
+        chefsAwaitingValidation,
+        chefsActiveWithoutCity,
+        chefsAmbiguousCity,
+      },
       sampleProfiles,
       // Détail par chef (limit 30 pour pas explosé la réponse)
       chefAnalysisFirst30: chefAnalysis.slice(0, 30),

@@ -182,6 +182,34 @@ export default function MapDebugPage() {
         </div>
       )}
 
+      {/* ================================================================
+          Diagnostic chefs : 3 listes exploitables avec liens directs vers
+          les fiches admin pour corriger les profils.
+          ================================================================ */}
+      {data?.diagnostics && (
+        <div className="space-y-3">
+          <DiagnosticList
+            title="Chefs visibles sur la map sans ville"
+            description="Chefs avec status active/approved mais aucune ville renseignée dans leur profil. Ils ne peuvent pas apparaître sur la map. Clique sur un chef pour aller corriger sa fiche."
+            tone="red"
+            items={data.diagnostics.chefsActiveWithoutCity || []}
+          />
+          <DiagnosticList
+            title="Chefs avec ville ambiguë"
+            description="Plusieurs villes dans le champ baseCity ou description floue (« Europe », « International »). Mapbox ne peut pas géocoder précisément, le chef apparaît avec un point approximatif. À clarifier en mettant une seule ville principale."
+            tone="amber"
+            items={data.diagnostics.chefsAmbiguousCity || []}
+          />
+          <DiagnosticList
+            title="Chefs en attente de validation (draft / empty)"
+            description="Pas affichés sur la map tant qu'ils ne sont pas en status active/approved. À valider depuis /admin/chefs si tu veux qu'ils apparaissent."
+            tone="muted"
+            items={data.diagnostics.chefsAwaitingValidation || []}
+            collapsedByDefault
+          />
+        </div>
+      )}
+
       {/* JSON brut */}
       <div className="rounded-2xl border border-white/10 bg-black/40 overflow-hidden">
         <div className="px-4 py-2 border-b border-white/10 text-xs text-white/50 flex items-center justify-between">
@@ -206,6 +234,139 @@ export default function MapDebugPage() {
           </pre>
         )}
       </div>
+    </div>
+  );
+}
+
+function DiagnosticList({
+  title,
+  description,
+  tone,
+  items,
+  collapsedByDefault,
+}: {
+  title: string;
+  description: string;
+  tone: 'red' | 'amber' | 'muted';
+  items: Array<{
+    userId: string;
+    adminUrl: string | null;
+    emailMasked: string;
+    name: string;
+    status: string;
+    cityRaw: string | null;
+  }>;
+  collapsedByDefault?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(!collapsedByDefault);
+
+  if (!items || items.length === 0) {
+    // On affiche quand même la card pour montrer que c'est OK (0 chef)
+    return (
+      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-emerald-200">
+            ✓ {title}
+          </div>
+          <span className="text-xs text-emerald-200/60">0 chef</span>
+        </div>
+      </div>
+    );
+  }
+
+  const headerCls =
+    tone === 'red'
+      ? 'border-red-500/30 bg-red-500/10'
+      : tone === 'amber'
+        ? 'border-amber-500/30 bg-amber-500/10'
+        : 'border-white/10 bg-white/5';
+  const titleCls =
+    tone === 'red'
+      ? 'text-red-200'
+      : tone === 'amber'
+        ? 'text-amber-200'
+        : 'text-white/80';
+  const countCls =
+    tone === 'red'
+      ? 'bg-red-500/20 text-red-100'
+      : tone === 'amber'
+        ? 'bg-amber-500/20 text-amber-100'
+        : 'bg-white/10 text-white/70';
+
+  return (
+    <div className={`rounded-2xl border ${headerCls} overflow-hidden`}>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-white/5 transition"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-semibold ${titleCls}`}>{title}</span>
+            <span
+              className={`text-xs font-bold px-2 py-0.5 rounded-full ${countCls}`}
+            >
+              {items.length}
+            </span>
+          </div>
+          <div className="text-xs text-white/55 mt-1.5 leading-relaxed">
+            {description}
+          </div>
+        </div>
+        <div className="text-white/45 text-xs whitespace-nowrap">
+          {expanded ? 'Masquer' : 'Afficher'}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-white/10 max-h-[500px] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-black/20 sticky top-0">
+              <tr className="text-white/55">
+                <th className="text-left px-4 py-2 font-medium">Chef</th>
+                <th className="text-left px-4 py-2 font-medium">Email</th>
+                <th className="text-left px-4 py-2 font-medium">Status</th>
+                <th className="text-left px-4 py-2 font-medium">Ville actuelle</th>
+                <th className="text-right px-4 py-2 font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((c) => (
+                <tr
+                  key={c.userId}
+                  className="border-t border-white/10 hover:bg-white/5"
+                >
+                  <td className="px-4 py-2 text-white">{c.name}</td>
+                  <td className="px-4 py-2 text-white/55 text-xs">
+                    {c.emailMasked}
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border border-white/10 bg-white/5 text-white/70">
+                      {c.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-white/65 text-xs italic">
+                    {c.cityRaw ? `"${c.cityRaw}"` : '— vide —'}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    {c.adminUrl ? (
+                      <a
+                        href={c.adminUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-white/10 bg-white/10 text-xs text-white hover:bg-white/15"
+                      >
+                        Voir fiche →
+                      </a>
+                    ) : (
+                      <span className="text-white/30 text-xs">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

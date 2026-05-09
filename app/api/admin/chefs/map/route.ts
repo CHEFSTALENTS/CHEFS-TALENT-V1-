@@ -23,6 +23,32 @@ function normalizeQuery(city?: string | null, country?: string | null) {
   return co ? `${c}, ${co}` : c;
 }
 
+/**
+ * Clé canonique pour le cache geo_cache : permet à toutes les variantes
+ * d'écriture d'une même ville (« Saint Tropez », « SAINT TROPEZ »,
+ * « Saint-Tropez ») de partager la même entrée cache, donc les mêmes
+ * coordonnées, donc le même cluster sur la map.
+ *
+ * Transformations :
+ *  - lowercase
+ *  - retire les accents
+ *  - remplace ponctuation par espaces
+ *  - collapse espaces multiples
+ *  - "st" / "st." → "saint" (au début d'un mot)
+ */
+function canonicalizeQuery(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[.,;:!?]/g, ' ')
+    .replace(/\bst\b/g, 'saint')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function getChefName(profile: any) {
   const fullName = clean(profile?.name);
   if (fullName) return fullName;
@@ -118,9 +144,14 @@ export async function GET(req: Request) {
 
         const baseCity = getChefBaseCity(profile);
         const country = getChefCountry(profile);
-        const query = normalizeQuery(baseCity, country);
+        const rawQuery = normalizeQuery(baseCity, country);
 
-        if (query) activeWithCityCount++;
+        if (rawQuery) activeWithCityCount++;
+
+        // cacheKey : version canonique pour grouper toutes les variantes
+        // d'écriture (« Saint Tropez », « SAINT TROPEZ », « St Tropez »)
+        // sous la même entrée cache → mêmes coords → même cluster.
+        const cacheKey = rawQuery ? canonicalizeQuery(rawQuery) : null;
 
         return {
           // user_id est la PK de chef_profiles ; profile.id n'existe pas
@@ -132,73 +163,106 @@ export async function GET(req: Request) {
           baseCity: baseCity || '',
           country: country || '',
           status,
-          query,
+          rawQuery,
+          cacheKey,
         };
       })
       .filter(Boolean)
-      .filter((x: any) => !!x.query);
+      .filter((x: any) => !!x.cacheKey);
 
     // Logs sans PII (juste les compteurs) pour debug Vercel
     console.log('[admin/chefs/map] counts', {
       totalChefs,
       activeOrApproved: activeCount,
       withCityDetected: activeWithCityCount,
-      uniqueQueries: rows.length,
+      uniqueCacheKeys: new Set(rows.map((r: any) => r.cacheKey)).size,
     });
 
-    const queries = Array.from(new Set(rows.map((r: any) => r.query))) as string[];
+    // Les cacheKeys uniques (versions canoniques)
+    const cacheKeys = Array.from(new Set(rows.map((r: any) => r.cacheKey))) as string[];
 
-    // 3) Lecture du cache geo_cache
+    // Pour chaque cacheKey, on garde la première rawQuery rencontrée.
+    // C'est la requête la plus représentative qu'on enverra à Mapbox.
+    const rawQueryByKey = new Map<string, string>();
+    for (const r of rows) {
+      if (!rawQueryByKey.has(r.cacheKey)) {
+        rawQueryByKey.set(r.cacheKey, r.rawQuery);
+      }
+    }
+
+    // 3) Lecture du cache geo_cache (par cacheKey ET par rawQuery legacy)
+    // On lookup les 2 variantes : les nouvelles entries seront stockées
+    // par cacheKey, mais l'historique a des entries par rawQuery.
     const cacheMap = new Map<string, { lat: number; lng: number }>();
+    const allLookupQueries = Array.from(
+      new Set([...cacheKeys, ...rows.map((r: any) => r.rawQuery)]),
+    );
 
-    if (queries.length) {
+    if (allLookupQueries.length) {
       const { data: cached, error: cacheError } = await supabase
         .from('geo_cache')
         .select('query, lat, lng')
-        .in('query', queries);
+        .in('query', allLookupQueries);
 
       if (cacheError) {
         console.error('[admin/chefs/map] geo_cache read error', cacheError.message);
       }
 
+      // On indexe par cacheKey canonique : si on trouve l'entrée legacy
+      // (rawQuery), on la canonicalise pour la map en mémoire. Comme ça
+      // toutes les variantes de la même ville convergent vers les mêmes
+      // coords (les premières trouvées en cache).
       (cached || []).forEach((x: any) => {
         if (
-          typeof x?.lat === 'number' &&
-          !Number.isNaN(x.lat) &&
-          typeof x?.lng === 'number' &&
-          !Number.isNaN(x.lng)
+          typeof x?.lat !== 'number' ||
+          Number.isNaN(x.lat) ||
+          typeof x?.lng !== 'number' ||
+          Number.isNaN(x.lng)
         ) {
-          cacheMap.set(x.query, { lat: x.lat, lng: x.lng });
+          return;
+        }
+        const key = canonicalizeQuery(x.query);
+        // On ne remplace pas une entrée déjà présente (premier gagne)
+        if (!cacheMap.has(key)) {
+          cacheMap.set(key, { lat: x.lat, lng: x.lng });
         }
       });
     }
 
-    // 4) Géocodage Mapbox des queries manquantes (avec upsert dans le cache)
-    const missing = queries.filter((q) => !cacheMap.has(q));
+    // 4) Géocodage Mapbox des cacheKeys manquantes
+    const missingKeys = cacheKeys.filter((k) => !cacheMap.has(k));
+    const failedQueries: string[] = [];
 
-    for (const q of missing) {
+    for (const key of missingKeys) {
+      const rawQuery = rawQueryByKey.get(key) || key;
       try {
-        const coords = await geocodeMapbox(q);
-        if (!coords) continue;
+        const coords = await geocodeMapbox(rawQuery);
+        if (!coords) {
+          failedQueries.push(rawQuery);
+          continue;
+        }
 
-        cacheMap.set(q, coords);
+        cacheMap.set(key, coords);
 
+        // On stocke avec la cacheKey canonique → toutes les futures
+        // variantes pointeront vers la même entrée.
         await supabase
           .from('geo_cache')
           .upsert(
-            { query: q, lat: coords.lat, lng: coords.lng },
+            { query: key, lat: coords.lat, lng: coords.lng },
             { onConflict: 'query' }
           );
       } catch (e: any) {
-        // Pas de PII : on ne logge que la query (ville, pas d'identifiant chef).
-        console.error('[admin/chefs/map] mapbox geocode failed', q, e?.message);
+        failedQueries.push(rawQuery);
+        console.error('[admin/chefs/map] mapbox geocode failed', rawQuery, e?.message);
       }
     }
 
-    // 5) Construction des points
+    // 5) Construction des points : tous les chefs avec la même cacheKey
+    // partagent la même paire (lat, lng) → cluster naturel.
     const points = rows
       .map((r: any) => {
-        const coords = cacheMap.get(r.query);
+        const coords = cacheMap.get(r.cacheKey);
         if (!coords) return null;
 
         return {
@@ -212,6 +276,11 @@ export async function GET(req: Request) {
         };
       })
       .filter(Boolean);
+
+    console.log('[admin/chefs/map] result', {
+      rendered: points.length,
+      failed: failedQueries.length,
+    });
 
     return NextResponse.json({ items: points });
   } catch (e: any) {
