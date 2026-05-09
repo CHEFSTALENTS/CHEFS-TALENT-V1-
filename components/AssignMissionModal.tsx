@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Send, MessageCircle, Loader2 } from 'lucide-react';
+import { X, Send, MessageCircle, Loader2, BookmarkPlus } from 'lucide-react';
 import type { RequestEntity } from '@/types';
 import { buildWhatsappBriefForChef, openWhatsappWithText, calcTarif } from '@/lib/whatsappBrief';
+import { adminFetchRaw } from '@/lib/adminFetch';
 
 interface AssignMissionModalProps {
   request: RequestEntity;
@@ -12,7 +13,10 @@ interface AssignMissionModalProps {
   chefName: string;
   chefPhone?: string | null;
   onClose: () => void;
-  onSuccess: (missionId: string) => void;
+  // Renommé `proposalId` (au lieu de missionId) : on crée toujours une
+  // proposal d'abord, jamais une mission directe. La promotion en mission
+  // confirmée se fait depuis la liste « Chefs présentés ».
+  onSuccess: (proposalId: string) => void;
 }
 
 export default function AssignMissionModal({
@@ -27,7 +31,10 @@ export default function AssignMissionModal({
   const tarif = calcTarif(request);
   const firstName = chefName.split(' ')[0] || chefName;
 
-  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<
+    null | 'shortlist' | 'whatsapp' | 'email'
+  >(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
     chefAmount: String(tarif.chefTotalMin),
     clientAmount: String(tarif.clientTotalMin),
@@ -45,10 +52,10 @@ export default function AssignMissionModal({
   const buildPersonalizedBrief = () => {
     const baseBrief = buildWhatsappBriefForChef(request);
     const greeting = `Bonjour ${firstName} 👋\n\nNous avons une mission qui correspond à votre profil :\n\n`;
-    // Remplace le montant calculé automatiquement par le montant saisi si différent
     let brief = greeting + baseBrief;
     if (form.chefAmount && Number(form.chefAmount) !== tarif.chefTotalMin) {
-      const fmt = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+      const fmt = (n: number) =>
+        new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
       brief = brief.replace(
         /💰 Rémunération proposée[\s\S]*?\(Base.*?\)/,
         `💰 Rémunération proposée :\n   ${fmt(Number(form.chefAmount))} net${tarif.days > 1 ? ` pour ${tarif.days} jours` : ''}`
@@ -57,50 +64,103 @@ export default function AssignMissionModal({
     return brief;
   };
 
-  const handleWhatsApp = () => {
-    const brief = buildPersonalizedBrief();
-    openWhatsappWithText(brief, chefPhone);
+  // Construit le payload commun à toutes les actions
+  function buildPayload(opts: {
+    pitched: boolean;
+    channel?: 'email' | 'whatsapp' | 'manual';
+    sendEmail?: boolean;
+  }) {
+    return {
+      requestId: request.id,
+      chefId,
+      chefEmail,
+      chefName,
+      title: `Mission — ${request.location || ''}`,
+      location: request.location,
+      startDate: request.dates?.start,
+      endDate: request.dates?.end,
+      guestCount: request.guestCount,
+      serviceLevel: request.serviceLevel,
+      notes: form.notes,
+      chefAmount: form.chefAmount ? Number(form.chefAmount) : tarif.chefTotalMin,
+      clientAmount: form.clientAmount ? Number(form.clientAmount) : tarif.clientTotalMin,
+      contractUrl: form.contractUrl || null,
+      pitched: opts.pitched,
+      channel: opts.channel || null,
+      sendEmail: !!opts.sendEmail,
+    };
+  }
+
+  async function postProposal(payload: ReturnType<typeof buildPayload>) {
+    const res = await adminFetchRaw('/api/admin/proposals', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      throw new Error(json.error || `HTTP ${res.status}`);
+    }
+    return json.proposalId as string;
+  }
+
+  // Action 1 : Présélectionner (sans contacter le chef)
+  const handleShortlist = async () => {
+    setErrorMsg(null);
+    setLoadingAction('shortlist');
+    try {
+      const proposalId = await postProposal(
+        buildPayload({ pitched: false }),
+      );
+      onSuccess(proposalId);
+    } catch (e: any) {
+      console.error(e);
+      setErrorMsg(e?.message || 'Erreur serveur');
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
-  const handleEmail = async () => {
-    setLoading(true);
+  // Action 2 : Envoyer brief WhatsApp + tracker
+  const handleWhatsApp = async () => {
+    setErrorMsg(null);
+    setLoadingAction('whatsapp');
     try {
-      const res = await fetch('/api/admin/missions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requestId: request.id,
-          chefId,
-          chefEmail,
-          chefName,
-          title: `Mission — ${request.location || ''}`,
-          location: request.location,
-          startDate: request.dates?.start,
-          endDate: request.dates?.end,
-          guestCount: request.guestCount,
-          serviceLevel: request.serviceLevel,
-          notes: form.notes,
-          chefAmount: form.chefAmount ? Number(form.chefAmount) : tarif.chefTotalMin,
-          clientAmount: form.clientAmount ? Number(form.clientAmount) : tarif.clientTotalMin,
-          contractUrl: form.contractUrl || null,
-        }),
-      });
-      const json = await res.json();
-      if (json.ok) {
-        onSuccess(json.missionId);
-      } else {
-        alert(json.error || 'Erreur');
-      }
-    } catch (e) {
+      const proposalId = await postProposal(
+        buildPayload({ pitched: true, channel: 'whatsapp', sendEmail: false }),
+      );
+      // On ouvre WhatsApp APRÈS l'enregistrement réussi (sinon
+      // si l'API échoue, on a un message envoyé sans trace).
+      openWhatsappWithText(buildPersonalizedBrief(), chefPhone);
+      onSuccess(proposalId);
+    } catch (e: any) {
       console.error(e);
-      alert('Erreur serveur');
+      setErrorMsg(e?.message || 'Erreur serveur');
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
+    }
+  };
+
+  // Action 3 : Envoyer brief par email (Resend) + tracker
+  const handleEmail = async () => {
+    setErrorMsg(null);
+    setLoadingAction('email');
+    try {
+      const proposalId = await postProposal(
+        buildPayload({ pitched: true, channel: 'email', sendEmail: true }),
+      );
+      onSuccess(proposalId);
+    } catch (e: any) {
+      console.error(e);
+      setErrorMsg(e?.message || 'Erreur serveur');
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const inputCls = "w-full px-4 py-3 border border-white/10 bg-white/5 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:border-white/30 transition";
   const labelCls = "text-xs text-white/50 uppercase tracking-widest mb-1.5 block";
+
+  const anyLoading = loadingAction !== null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -109,7 +169,7 @@ export default function AssignMissionModal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10">
           <div>
-            <h2 className="text-base font-semibold text-white">Proposer la mission</h2>
+            <h2 className="text-base font-semibold text-white">Présenter ce chef</h2>
             <p className="text-xs text-white/50 mt-0.5">
               {chefName} · {chefEmail}
             </p>
@@ -210,37 +270,71 @@ export default function AssignMissionModal({
             />
           </div>
 
-          {/* Actions */}
+          {/* Erreur API */}
+          {errorMsg && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* Actions — 3 niveaux d'engagement */}
           <div className="flex flex-col gap-2 pt-2">
-            {/* WhatsApp — envoie le brief sans créer la mission en DB */}
+
+            {/* Action 1 — Présélectionner sans contacter */}
+            <button
+              type="button"
+              onClick={handleShortlist}
+              disabled={anyLoading}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-white/10 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition disabled:opacity-40"
+            >
+              {loadingAction === 'shortlist' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <BookmarkPlus className="w-4 h-4" />
+              )}
+              {loadingAction === 'shortlist' ? 'Enregistrement…' : 'Présélectionner (sans contacter)'}
+            </button>
+
+            {/* Action 2 — WhatsApp */}
             <button
               type="button"
               onClick={handleWhatsApp}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] hover:bg-[#1fb85a] text-white text-sm font-semibold transition"
+              disabled={anyLoading}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] hover:bg-[#1fb85a] text-white text-sm font-semibold transition disabled:opacity-40"
             >
-              <MessageCircle className="w-4 h-4" />
-              Envoyer via WhatsApp
+              {loadingAction === 'whatsapp' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4" />
+              )}
+              {loadingAction === 'whatsapp' ? 'Enregistrement…' : 'Envoyer brief via WhatsApp'}
             </button>
 
-            {/* Email — crée la mission en Supabase + envoie email Resend */}
+            {/* Action 3 — Email Resend */}
             <button
               type="button"
               onClick={handleEmail}
-              disabled={loading}
+              disabled={anyLoading}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-[#161616] text-sm font-semibold hover:bg-white/90 transition disabled:opacity-40"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              {loading ? 'Envoi...' : 'Envoyer par email + enregistrer'}
+              {loadingAction === 'email' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              {loadingAction === 'email' ? 'Envoi…' : 'Envoyer brief par email'}
             </button>
 
-            <p className="text-[10px] text-white/30 text-center">
-              WhatsApp = message direct · Email = enregistré dans Supabase + notification chef
+            <p className="text-[10px] text-white/40 text-center leading-relaxed mt-1">
+              Les 3 actions enregistrent une <strong>proposition</strong>.<br />
+              Pour confirmer la mission après accord du chef, utilise « Promouvoir en mission » dans la liste « Chefs présentés ».
             </p>
 
             <button
               type="button"
               onClick={onClose}
-              className="w-full px-5 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:bg-white/5 transition"
+              disabled={anyLoading}
+              className="w-full px-5 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:bg-white/5 transition disabled:opacity-40"
             >
               Annuler
             </button>
