@@ -21,6 +21,7 @@ const ADMIN_EMAILS = new Set<string>([
   'thomas@chef-talents.com',
   'thomas@chefstalents.com',
   'contact@chefstalents.com',
+  'thomasdelcroix2108@gmail.com',
 ]);
 
 export type AdminAuthOk = {
