@@ -1,11 +1,12 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-const supabaseAdmin = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -15,48 +16,177 @@ function clean(v: any) {
   return s || null;
 }
 
+function normalizeQuery(city?: string | null, country?: string | null) {
+  const c = clean(city);
+  const co = clean(country);
+  if (!c) return null;
+  return co ? `${c}, ${co}` : c;
+}
+
+function getChefName(profile: any) {
+  const fullName = clean(profile?.name);
+  if (fullName) return fullName;
+
+  const first = clean(profile?.firstName) || '';
+  const last = clean(profile?.lastName) || '';
+  const merged = `${first} ${last}`.trim();
+
+  return merged || 'Chef';
+}
+
+function getChefStatus(row: any) {
+  return String(row?.status ?? row?.profile?.status ?? '').toLowerCase();
+}
+
+function getChefBaseCity(profile: any) {
+  return (
+    clean(profile?.location?.baseCity) ||
+    clean(profile?.baseCity) ||
+    clean(profile?.location?.city) ||
+    clean(profile?.city) ||
+    clean(profile?.ville) ||
+    null
+  );
+}
+
+function getChefCountry(profile: any) {
+  return (
+    clean(profile?.location?.country) ||
+    clean(profile?.country) ||
+    null
+  );
+}
+
+async function geocodeMapbox(q: string) {
+  const token = process.env.MAPBOX_SECRET_TOKEN || process.env.MAPBOX_TOKEN;
+  if (!token) throw new Error('Missing MAPBOX token (MAPBOX_SECRET_TOKEN recommended)');
+
+  const url =
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+    `${encodeURIComponent(q)}.json?access_token=${token}&limit=1&types=place,locality,region,address`;
+
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`Mapbox geocoding failed ${r.status}`);
+
+  const json = await r.json();
+  const feat = json?.features?.[0];
+  if (!feat?.center?.length) return null;
+
+  const [lng, lat] = feat.center;
+  return { lat, lng };
+}
+
 export async function GET(req: Request) {
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
-    const { data, error } = await supabaseAdmin
+    // 1) Lecture des chefs (on lit le JSON profile)
+    const { data: chefs, error } = await supabase
       .from('chef_profiles')
-      .select('*')
-      .limit(20);
+      .select('id, user_id, email, profile');
 
-    if (error) throw error;
+    if (error) {
+      console.error('[admin/chefs/map] select error', error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
-    const sample = (data || []).map((row: any) => ({
-      id: row?.id ?? null,
-      email: row?.email ?? null,
-      status_column: row?.status ?? null,
-      city_column: row?.city ?? null,
-      country_column: row?.country ?? null,
-      first_name_column: row?.first_name ?? null,
-      last_name_column: row?.last_name ?? null,
+    // 2) On ne garde que les chefs actifs avec une ville renseignée
+    const rows = (chefs || [])
+      .map((row: any) => {
+        const profile = row?.profile ?? {};
+        const status = getChefStatus(row);
 
-      has_profile: !!row?.profile,
-      profile_id: row?.profile?.id ?? null,
-      profile_status: row?.profile?.status ?? null,
-      profile_name: row?.profile?.name ?? null,
-      profile_firstName: row?.profile?.firstName ?? null,
-      profile_lastName: row?.profile?.lastName ?? null,
-      profile_baseCity: row?.profile?.baseCity ?? null,
-      profile_country: row?.profile?.country ?? null,
-      profile_location_baseCity: row?.profile?.location?.baseCity ?? null,
-      profile_location_country: row?.profile?.location?.country ?? null,
-      profile_avatarUrl: row?.profile?.avatarUrl ?? null,
-      profile_photoUrl: row?.profile?.photoUrl ?? null,
-    }));
+        if (status !== 'active') return null;
 
-    return NextResponse.json({
-      ok: true,
-      count: (data || []).length,
-      sample,
-    });
+        const baseCity = getChefBaseCity(profile);
+        const country = getChefCountry(profile);
+        const query = normalizeQuery(baseCity, country);
+
+        return {
+          id: profile?.id || row.id || row.user_id,
+          name: getChefName(profile),
+          email: row?.email || profile?.email || '',
+          avatarUrl: profile?.avatarUrl || profile?.photoUrl || null,
+          baseCity: baseCity || '',
+          country: country || '',
+          status,
+          query,
+        };
+      })
+      .filter(Boolean)
+      .filter((x: any) => !!x.query);
+
+    const queries = Array.from(new Set(rows.map((r: any) => r.query))) as string[];
+
+    // 3) Lecture du cache geo_cache
+    const cacheMap = new Map<string, { lat: number; lng: number }>();
+
+    if (queries.length) {
+      const { data: cached, error: cacheError } = await supabase
+        .from('geo_cache')
+        .select('query, lat, lng')
+        .in('query', queries);
+
+      if (cacheError) {
+        console.error('[admin/chefs/map] geo_cache read error', cacheError.message);
+      }
+
+      (cached || []).forEach((x: any) => {
+        if (
+          typeof x?.lat === 'number' &&
+          !Number.isNaN(x.lat) &&
+          typeof x?.lng === 'number' &&
+          !Number.isNaN(x.lng)
+        ) {
+          cacheMap.set(x.query, { lat: x.lat, lng: x.lng });
+        }
+      });
+    }
+
+    // 4) Géocodage Mapbox des queries manquantes (avec upsert dans le cache)
+    const missing = queries.filter((q) => !cacheMap.has(q));
+
+    for (const q of missing) {
+      try {
+        const coords = await geocodeMapbox(q);
+        if (!coords) continue;
+
+        cacheMap.set(q, coords);
+
+        await supabase
+          .from('geo_cache')
+          .upsert(
+            { query: q, lat: coords.lat, lng: coords.lng },
+            { onConflict: 'query' }
+          );
+      } catch (e: any) {
+        // Pas de PII : on ne logge que la query (ville, pas d'identifiant chef).
+        console.error('[admin/chefs/map] mapbox geocode failed', q, e?.message);
+      }
+    }
+
+    // 5) Construction des points
+    const points = rows
+      .map((r: any) => {
+        const coords = cacheMap.get(r.query);
+        if (!coords) return null;
+
+        return {
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          avatarUrl: r.avatarUrl,
+          baseCity: r.baseCity,
+          lat: coords.lat,
+          lng: coords.lng,
+        };
+      })
+      .filter(Boolean);
+
+    return NextResponse.json({ items: points });
   } catch (e: any) {
-    console.error('DEBUG /api/admin/chefs/map error', e);
+    console.error('[admin/chefs/map] error', e?.message);
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
   }
 }
