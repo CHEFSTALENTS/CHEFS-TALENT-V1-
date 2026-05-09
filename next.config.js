@@ -39,12 +39,16 @@ const nextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
-      // Surcharges pour /admin/* : non indexable + cache court
+      // Surcharges pour /admin/* : non indexable.
+      // Note : on NE met PAS Cache-Control ici. Next.js 14.2 plante au
+      // prerender si un Cache-Control de config conflicte avec le
+      // `revalidate` de la page. Le contrôle de cache se fait via les
+      // exports `dynamic = 'force-dynamic'` et `revalidate = 0` dans les
+      // pages elles-mêmes.
       {
         source: '/admin/:path*',
         headers: [
           { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
-          { key: 'Cache-Control', value: 'no-store, max-age=0' },
         ],
       },
       // Surcharges pour /chef/* : non indexable (espaces privés)
@@ -54,12 +58,12 @@ const nextConfig = {
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
-      // Surcharges pour /api/* : pas de cache + non indexable
+      // Surcharges pour /api/* : non indexable. Cache contrôlé par les
+      // routes elles-mêmes via `export const dynamic = 'force-dynamic'`.
       {
         source: '/api/:path*',
         headers: [
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
-          { key: 'Cache-Control', value: 'no-store, max-age=0' },
         ],
       },
     ];

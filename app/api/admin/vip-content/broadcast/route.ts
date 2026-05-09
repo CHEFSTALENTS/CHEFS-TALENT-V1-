@@ -3,6 +3,7 @@ import { sendVipBroadcast } from '@/lib/email/sendVipBroadcast';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/admin/vip-content/broadcast

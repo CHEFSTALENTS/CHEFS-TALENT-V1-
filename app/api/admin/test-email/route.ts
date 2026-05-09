@@ -14,6 +14,7 @@ import { sendChefActivated } from '@/lib/email/sendChefActivated';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 type TestKind =
   | 'vip_welcome'
