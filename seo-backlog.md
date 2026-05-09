@@ -15,9 +15,9 @@
 
 - [x] [comparatif] Chefs Talents vs Take a Chef — placement UHNW vs marketplace (PR ouverte 2026-05-08)
 - [x] [comparatif] Chefs Talents vs Montclair Chef — réseau Europe vs Monaco (PR ouverte 2026-05-09)
-- [ ] [comparatif] Chefs Talents vs Amandine International
-- [ ] [comparatif] Chefs Talents vs MiumMium — UHNW vs grand public
-- [ ] [comparatif] Chefs Talents vs ChefMaison
+- [x] [comparatif] Chefs Talents vs Amandine International (PR ouverte 2026-05-09)
+- [x] [comparatif] Chefs Talents vs MiumMium — UHNW vs grand public (PR ouverte 2026-05-09)
+- [x] [comparatif] Chefs Talents vs ChefMaison (PR ouverte 2026-05-09)
 
 ## Sprint 2 — Piliers definitive guide (3 langues)
 
