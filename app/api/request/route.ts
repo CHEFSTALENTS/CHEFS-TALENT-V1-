@@ -183,12 +183,13 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
+      // Log seulement les infos techniques, JAMAIS la row insertRow qui contient
+      // email/téléphone/adresse du client (RGPD).
       console.error('[client_requests insert error]', {
         message: error.message,
         details: (error as any).details,
         hint: (error as any).hint,
         code: (error as any).code,
-        insertRow,
       });
 
       return NextResponse.json({ error: error.message }, { status: 500 });
