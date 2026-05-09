@@ -3,8 +3,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Plus, X as XIcon, Loader2 } from 'lucide-react';
 import type { RequestEntity } from '@/types';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import NewRequestModal from './_components/NewRequestModal';
 
 type TypeFilter = 'all' | 'b2b' | 'b2c';
 type StatusGroup = 'todo' | 'active' | 'closed';
@@ -15,6 +17,9 @@ export default function AdminRequestsPage() {
   const [q, setQ] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusGroup, setStatusGroup] = useState<StatusGroup>('todo');
+  const [showNewModal, setShowNewModal] = useState(false);
+  // Id de la ligne en cours d'update (pour disabler le bouton Refuser)
+  const [refusingId, setRefusingId] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -68,10 +73,35 @@ export default function AdminRequestsPage() {
     refresh();
   }, []);
 
+  // Refuser une demande : passe le status à 'declined' (la ligne sera
+  // déplacée dans le bucket "Clos").
+  const refuseRequest = async (id: string) => {
+    if (!confirm('Refuser cette demande ?\nElle sera marquée comme « declined » et déplacée dans le bucket Clos.')) {
+      return;
+    }
+    setRefusingId(id);
+    try {
+      const r = await adminFetchRaw(`/api/admin/requests/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'declined' }),
+      });
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      await refresh();
+    } catch (e: any) {
+      console.error('[admin/requests] refuse failed', e);
+      alert(e?.message || 'Erreur serveur');
+    } finally {
+      setRefusingId(null);
+    }
+  };
+
   const counts = useMemo(() => {
     const isTodo = (r: RequestEntity) => r.status === 'new' || r.status === 'in_review';
     const isActive = (r: RequestEntity) => r.status === 'assigned';
-    const isClosed = (r: RequestEntity) => r.status === 'closed';
+    // Le bucket "Clos" inclut maintenant aussi les demandes refusées.
+    const isClosed = (r: RequestEntity) =>
+      r.status === 'closed' || (r.status as string) === 'declined';
 
     const filteredType = (r: RequestEntity) => {
       if (typeFilter === 'b2b') return r.userType === 'b2b';
@@ -101,7 +131,8 @@ export default function AdminRequestsPage() {
     const matchStatusGroup = (r: RequestEntity) => {
       if (statusGroup === 'todo') return r.status === 'new' || r.status === 'in_review';
       if (statusGroup === 'active') return r.status === 'assigned';
-      return r.status === 'closed';
+      // Clos : closed + declined
+      return r.status === 'closed' || (r.status as string) === 'declined';
     };
 
     const matchSearch = (r: RequestEntity) => {
@@ -159,6 +190,13 @@ export default function AdminRequestsPage() {
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
           >
             Rafraîchir
+          </button>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-[#161616] text-sm font-semibold hover:bg-white/90 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Nouvelle demande
           </button>
         </div>
       </div>
@@ -243,12 +281,31 @@ export default function AdminRequestsPage() {
                     <td className="p-3"><StatusBadge status={String(r.status || '')} /></td>
 
                     <td className="p-3 text-right">
-                      <Link
-                        href={`/admin/requests/${encodeURIComponent(r.id)}`}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
-                      >
-                        Ouvrir & matcher <span aria-hidden>→</span>
-                      </Link>
+                      <div className="inline-flex items-center gap-2">
+                        {/* Bouton Refuser : visible seulement sur les demandes pas encore traitées */}
+                        {(r.status === 'new' || r.status === 'in_review') && (
+                          <button
+                            onClick={() => refuseRequest(r.id)}
+                            disabled={refusingId === r.id}
+                            title="Refuser cette demande"
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-200 hover:bg-red-500/10 transition disabled:opacity-50"
+                          >
+                            {refusingId === r.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <XIcon className="w-3.5 h-3.5" />
+                            )}
+                            Refuser
+                          </button>
+                        )}
+
+                        <Link
+                          href={`/admin/requests/${encodeURIComponent(r.id)}`}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+                        >
+                          Ouvrir & matcher <span aria-hidden>→</span>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -261,6 +318,17 @@ export default function AdminRequestsPage() {
           {view.length} résultat(s) • source : Supabase
         </div>
       </div>
+
+      {/* Modal nouvelle demande manuelle */}
+      {showNewModal && (
+        <NewRequestModal
+          onClose={() => setShowNewModal(false)}
+          onSuccess={() => {
+            setShowNewModal(false);
+            refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -329,6 +397,8 @@ function StatusBadge({ status }: { status: string }) {
       ? 'bg-sky-500/15 text-sky-200 border-sky-500/20'
       : s === 'assigned'
       ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20'
+      : s === 'declined'
+      ? 'bg-red-500/10 text-red-200 border-red-500/20'
       : s === 'closed'
       ? 'bg-white/10 text-white/60 border-white/10'
       : 'bg-white/10 text-white/60 border-white/10';
