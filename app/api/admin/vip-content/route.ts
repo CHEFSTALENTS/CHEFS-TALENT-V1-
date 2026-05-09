@@ -4,6 +4,7 @@ import { sendVipNewTipToAll } from '@/lib/email/sendVipNewTip';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/admin/vip-content

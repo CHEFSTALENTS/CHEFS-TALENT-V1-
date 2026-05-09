@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 type ChefPoint = {
   id: string;
