@@ -650,9 +650,13 @@ export const auth = {
     if (!user) return { success: false, error: 'Identifiants invalides' };
 
     // ✅ RESYNC status depuis Supabase (non bloquant)
+    // Note : la route /api/chef/profile exige désormais un Bearer Supabase
+    // (cf. lib/auth/requireChef.ts). Cette branche legacy ne possède pas de
+    // session Supabase active, donc on tente sans auth et on ignore l'échec.
     try {
       if (user.id) {
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(user.id)}`, { cache: 'no-store' });
+        const { chefFetchRaw } = await import('@/lib/chefFetch');
+        const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
           const profile = json?.profile ?? null;

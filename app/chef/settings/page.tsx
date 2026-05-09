@@ -27,6 +27,7 @@ import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 import { supabase } from '@/services/supabaseClient';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format } from '@/lib/chef-i18n';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 /* ----------------- Password Section (Supabase) ----------------- */
 
@@ -223,7 +224,7 @@ export default function ChefSettingsPage() {
 
         if (!cancelled) setSbUser(u);
 
-        const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(u.id)}`, { cache: 'no-store' });
+        const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
         const json = await res.json();
         const fromDb = json?.profile ?? null;
 
@@ -385,10 +386,9 @@ export default function ChefSettingsPage() {
 
       safeWriteLS(STORAGE_KEY, merged);
 
-      const res = await fetch('/api/chef/profile', {
+      const res = await chefFetchRaw('/api/chef/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: sbUser.id, profile: merged }),
+        body: JSON.stringify({ profile: merged }),
       });
 
       if (!res.ok) throw new Error(await res.text());

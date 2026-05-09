@@ -1,4 +1,5 @@
 import { supabase } from '@/services/supabaseClient';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 export async function requireSbUser() {
   const { data } = await supabase.auth.getSession();
@@ -7,8 +8,9 @@ export async function requireSbUser() {
   return sbUser;
 }
 
-export async function getChefProfile(userId: string) {
-  const res = await fetch(`/api/chef/profile?id=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+export async function getChefProfile(_userId?: string) {
+  // _userId est ignoré — la route déduit l'identité du Bearer token.
+  const res = await chefFetchRaw('/api/chef/profile', { cache: 'no-store' });
   const json = await res.json();
   return json?.profile ?? {};
 }
@@ -26,10 +28,9 @@ export async function saveChefProfilePatch(patch: Record<string, any>) {
     updatedAt: new Date().toISOString(),
   };
 
-  const resPut = await fetch('/api/chef/profile', {
+  const resPut = await chefFetchRaw('/api/chef/profile', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: sbUser.id, profile: merged }),
+    body: JSON.stringify({ profile: merged }),
   });
 
   if (!resPut.ok) {

@@ -2,16 +2,16 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { requireChefOr401 } from '@/lib/auth/requireChef';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // GET — missions du chef connecté
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const chefId = url.searchParams.get('chefId');
-
-    if (!chefId) return NextResponse.json({ error: 'Missing chefId' }, { status: 400 });
+    const auth = await requireChefOr401(req);
+    if (auth instanceof NextResponse) return auth;
+    const chefId = auth.user.id;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,10 +35,14 @@ export async function GET(req: Request) {
 // PATCH — chef accepte ou refuse une mission
 export async function PATCH(req: Request) {
   try {
-    const body = await req.json();
-    const { missionId, chefId, action } = body; // action: 'accepted' | 'declined'
+    const auth = await requireChefOr401(req);
+    if (auth instanceof NextResponse) return auth;
+    const chefId = auth.user.id;
 
-    if (!missionId || !chefId || !['accepted', 'declined'].includes(action)) {
+    const body = await req.json();
+    const { missionId, action } = body; // action: 'accepted' | 'declined'
+
+    if (!missionId || !['accepted', 'declined'].includes(action)) {
       return NextResponse.json({ error: 'Invalid params' }, { status: 400 });
     }
 

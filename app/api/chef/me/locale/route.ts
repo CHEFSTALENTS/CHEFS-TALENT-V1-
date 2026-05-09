@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requireChefOr401 } from '@/lib/auth/requireChef';
 
 const ALLOWED = new Set(['fr', 'en', 'es']);
 
@@ -13,6 +14,10 @@ const ALLOWED = new Set(['fr', 'en', 'es']);
  */
 export async function POST(req: Request) {
   try {
+    const auth = await requireChefOr401(req);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.user.id;
+
     const body = await req.json().catch(() => null);
     const locale = body?.locale;
 
@@ -23,32 +28,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const auth = req.headers.get('authorization') ?? '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-
     const admin = getSupabaseAdmin();
-
-    // Récupère l'utilisateur depuis le token. Si pas de token, on accepte
-    // tout de même un userId explicite dans le body (cas edge).
-    let userId: string | null = null;
-
-    if (token) {
-      const { data, error } = await admin.auth.getUser(token);
-      if (error || !data?.user?.id) {
-        return NextResponse.json(
-          { error: 'UNAUTHENTICATED' },
-          { status: 401 },
-        );
-      }
-      userId = data.user.id;
-    } else if (typeof body?.userId === 'string') {
-      userId = body.userId;
-    } else {
-      return NextResponse.json(
-        { error: 'UNAUTHENTICATED' },
-        { status: 401 },
-      );
-    }
 
     // Lecture du profil actuel pour merge (évite d'écraser les autres champs)
     const { data: existing, error: readErr } = await admin

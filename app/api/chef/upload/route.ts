@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireChefOr401 } from '@/lib/auth/requireChef';
 
 const BUCKET = 'chef-uploads';
 
@@ -18,16 +19,18 @@ function safeFileName(name: string) {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireChefOr401(req);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.user.id; // SOURCE DE VÉRITÉ — jamais issu du form
+
     const supabase = supabaseAdmin();
     if (!supabase) return NextResponse.json({ error: 'Missing env' }, { status: 500 });
 
     const form = await req.formData();
     const file = form.get('file') as File | null;
-    const userId = String(form.get('userId') || '');
     const kind = String(form.get('kind') || 'portfolio'); // 'avatar' | 'portfolio'
 
     if (!file) return NextResponse.json({ error: 'Missing file' }, { status: 400 });
-    if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
     // garde-fous
     if (!file.type.startsWith('image/')) {

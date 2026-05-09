@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requireChefOr401 } from '@/lib/auth/requireChef';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/chef/terms/accept
- * Body: { userId, version, accepted }
+ * Body: { version, accepted }
+ * Auth: Bearer token Supabase. `userId` est dérivé du token, jamais du body.
  *
  * Effets :
  * 1. Patch chef_profiles.profile (rétrocompatible : termsAccepted, termsAcceptedAt, termsAcceptedVersion)
@@ -19,15 +21,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   try {
+    const auth = await requireChefOr401(req);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.user.id; // SOURCE DE VÉRITÉ
+
     const body = await req.json().catch(() => ({}));
 
-    const userId = String(body?.userId || '').trim();
     const accepted = body?.accepted === undefined ? true : Boolean(body?.accepted);
     const version = String(body?.version || '08/05/2026').trim();
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'Missing userId' }, { status: 400 });
-    }
 
     if (!accepted) {
       return NextResponse.json({ success: false, error: 'accepted=false not supported' }, { status: 400 });

@@ -25,6 +25,7 @@ import {
   PILLAR_LABELS,
   type GuideBlock,
 } from '@/lib/vip-guides';
+import { chefFetchRaw } from '@/lib/chefFetch';
 
 type ChefProfile = {
   plan?: 'free' | 'pro';
@@ -54,8 +55,8 @@ export default function VipGuidePage() {
         return;
       }
       try {
-        const res = await fetch(
-          `/api/chef/profile?id=${encodeURIComponent(u.id)}`,
+        const res = await chefFetchRaw(
+          '/api/chef/profile',
           { cache: 'no-store' },
         );
         const json = await res.json().catch(() => null);
