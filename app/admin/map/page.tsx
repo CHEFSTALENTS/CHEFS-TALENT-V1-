@@ -14,21 +14,62 @@ type ChefPoint = {
   lng: number;
 };
 
-const SOURCE_ID = 'chefs-source';
+type CityGroup = {
+  key: string;
+  lat: number;
+  lng: number;
+  city: string;
+  chefs: ChefPoint[];
+};
 
-// Couches Mapbox natives pour les clusters (gérées automatiquement
-// par cluster: true sur la source GeoJSON).
-const CLUSTERS_LAYER_ID = 'chefs-clusters';
-const CLUSTER_COUNT_LAYER_ID = 'chefs-cluster-count';
+/**
+ * Groupe les chefs par coordonnées EXACTES (= même ville après
+ * canonicalisation côté API). La PR #37 fait converger toutes les
+ * variantes (« Saint Tropez », « SAINT TROPEZ », « St Tropez ») vers
+ * les mêmes coords, donc ce groupement produit 1 marker par ville
+ * avec un badge contenant le count exact.
+ */
+function groupByExactCoords(items: ChefPoint[]): CityGroup[] {
+  const map = new Map<string, CityGroup>();
+
+  for (const item of items) {
+    if (
+      typeof item.lat !== 'number' ||
+      typeof item.lng !== 'number' ||
+      Number.isNaN(item.lat) ||
+      Number.isNaN(item.lng)
+    ) {
+      continue;
+    }
+
+    // Arrondi à 5 décimales pour éviter les flottants quasi-égaux
+    const key = `${item.lat.toFixed(5)}_${item.lng.toFixed(5)}`;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        lat: item.lat,
+        lng: item.lng,
+        city: item.baseCity || '',
+        chefs: [],
+      });
+    }
+
+    map.get(key)!.chefs.push(item);
+  }
+
+  // Tri des chefs par nom dans chaque groupe pour un affichage prévisible
+  for (const g of map.values()) {
+    g.chefs.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return Array.from(map.values());
+}
 
 export default function AdminMapPage() {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const sourceLoadedRef = useRef(false);
-  // Map des markers HTML actuellement rendus, indexés par chef id.
-  // Permet de re-synchroniser à chaque render Mapbox sans recréer
-  // tous les éléments DOM (perf + animations stables).
-  const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ChefPoint[]>([]);
@@ -72,7 +113,7 @@ export default function AdminMapPage() {
   }, []);
 
   // ============================================================
-  // Initialisation de la map (une seule fois)
+  // Initialisation map
   // ============================================================
   useEffect(() => {
     if (!mapDivRef.current) return;
@@ -88,224 +129,60 @@ export default function AdminMapPage() {
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     mapRef.current = map;
 
-    map.on('load', () => {
-      // Source GeoJSON vide au départ — sera alimentée par setData()
-      // dès que les items sont fetchés. cluster: true active le
-      // clustering natif Mapbox.
-      map.addSource(SOURCE_ID, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-        cluster: true,
-        clusterMaxZoom: 12, // arrête de clusteriser au zoom > 12
-        clusterRadius: 60, // pixels — distance max pour être groupés
-      });
-
-      // Layer 1 : les clusters (cercles bleus dégradés selon le count)
-      map.addLayer({
-        id: CLUSTERS_LAYER_ID,
-        type: 'circle',
-        source: SOURCE_ID,
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': [
-            'step',
-            ['get', 'point_count'],
-            '#3b82f6', // blue-500 pour < 10
-            10,
-            '#2563eb', // blue-600 pour < 25
-            25,
-            '#1d4ed8', // blue-700 pour 25+
-          ],
-          'circle-radius': [
-            'step',
-            ['get', 'point_count'],
-            18, // < 10
-            10,
-            24, // < 25
-            25,
-            32, // 25+
-          ],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
-          'circle-opacity': 0.85,
-        },
-      });
-
-      // Layer 2 : compteur du cluster (chiffre blanc au centre)
-      map.addLayer({
-        id: CLUSTER_COUNT_LAYER_ID,
-        type: 'symbol',
-        source: SOURCE_ID,
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': ['get', 'point_count_abbreviated'],
-          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-          'text-size': 13,
-        },
-        paint: {
-          'text-color': '#ffffff',
-        },
-      });
-
-      // ⚠️ On NE met PAS de layer pour les unclustered-points : on les
-      // rend en HTML via les Marker custom (pour avoir les avatars).
-      // Mais on place quand même un layer "fantôme" invisible pour
-      // que l'event 'render' ait bien quelque chose à query.
-
-      sourceLoadedRef.current = true;
-
-      // Click cluster → zoom progressif
-      map.on('click', CLUSTERS_LAYER_ID, (e) => {
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: [CLUSTERS_LAYER_ID],
-        });
-        const clusterId = features[0]?.properties?.cluster_id;
-        if (clusterId == null) return;
-        const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource;
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err) return;
-          const geom = features[0].geometry;
-          if (geom.type !== 'Point') return;
-          map.easeTo({
-            center: geom.coordinates as [number, number],
-            zoom: zoom ?? map.getZoom() + 2,
-          });
-        });
-      });
-
-      // Curseur pointer sur cluster
-      map.on('mouseenter', CLUSTERS_LAYER_ID, () => {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-      map.on('mouseleave', CLUSTERS_LAYER_ID, () => {
-        map.getCanvas().style.cursor = '';
-      });
-
-      // Sync des markers HTML quand la source change ou que l'utilisateur
-      // bouge la map → on regarde les features non-clusterisées et on
-      // place / retire des Marker HTML en fonction.
-      map.on('render', () => {
-        if (!map.isSourceLoaded(SOURCE_ID)) return;
-        syncHtmlMarkers(map);
-      });
-    });
-
     return () => {
-      // Cleanup à l'unmount
+      // Cleanup markers + map
       markersRef.current.forEach((m) => m.remove());
-      markersRef.current.clear();
+      markersRef.current = [];
       map.remove();
       mapRef.current = null;
-      sourceLoadedRef.current = false;
     };
   }, []);
 
   // ============================================================
-  // Synchronise les Marker HTML custom avec les features non-clusterisées.
-  // Appelé sur chaque render (donc à chaque pan/zoom).
-  // ============================================================
-  function syncHtmlMarkers(map: mapboxgl.Map) {
-    const features = map.querySourceFeatures(SOURCE_ID);
-    const newMarkers = new Map<string, mapboxgl.Marker>();
-
-    for (const feature of features) {
-      // On ignore les clusters (gérés par les layers Mapbox)
-      if (feature.properties?.cluster) continue;
-      if (feature.geometry?.type !== 'Point') continue;
-
-      const props = feature.properties || {};
-      const id = String(props.chefId || '');
-      if (!id) continue;
-
-      const coords = feature.geometry.coordinates as [number, number];
-
-      // Si le marker existe déjà, on le réutilise (évite le flash)
-      const existing = markersRef.current.get(id);
-      if (existing) {
-        newMarkers.set(id, existing);
-        continue;
-      }
-
-      const el = createMarkerEl(props);
-
-      const popup = new mapboxgl.Popup({ offset: 18 }).setHTML(
-        buildPopupHtml(props),
-      );
-
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat(coords)
-        .setPopup(popup)
-        .addTo(map);
-
-      newMarkers.set(id, marker);
-    }
-
-    // Retirer les markers qui ne sont plus visibles (clusterisés ou hors champ)
-    markersRef.current.forEach((marker, id) => {
-      if (!newMarkers.has(id)) marker.remove();
-    });
-
-    markersRef.current = newMarkers;
-  }
-
-  // ============================================================
-  // Mise à jour de la source GeoJSON quand items change
+  // Render markers : 1 marker par ville (groupé par coords exacts)
+  // Click → popup avec la liste de TOUS les chefs de la ville (scroll
+  // si beaucoup, plus de limite à 5 comme avec Mapbox cluster).
   // ============================================================
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const updateSource = () => {
-      const source = map.getSource(SOURCE_ID) as
-        | mapboxgl.GeoJSONSource
-        | undefined;
-      if (!source) return;
+    // Reset markers existants
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
 
-      const validItems = items.filter(
-        (chef) =>
-          typeof chef.lat === 'number' &&
-          typeof chef.lng === 'number' &&
-          !Number.isNaN(chef.lat) &&
-          !Number.isNaN(chef.lng),
-      );
+    const groups = groupByExactCoords(items);
+    if (!groups.length) return;
 
-      const featureCollection = {
-        type: 'FeatureCollection' as const,
-        features: validItems.map((chef) => ({
-          type: 'Feature' as const,
-          geometry: {
-            type: 'Point' as const,
-            coordinates: [chef.lng, chef.lat] as [number, number],
-          },
-          properties: {
-            chefId: chef.id,
-            chefName: chef.name,
-            chefEmail: chef.email,
-            baseCity: chef.baseCity,
-            avatarUrl: chef.avatarUrl || '',
-          },
-        })),
-      };
+    const bounds = new mapboxgl.LngLatBounds();
 
-      source.setData(featureCollection);
+    for (const group of groups) {
+      bounds.extend([group.lng, group.lat]);
 
-      // Fit bounds sur l'ensemble des chefs
-      if (validItems.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        validItems.forEach((c) => bounds.extend([c.lng, c.lat]));
-        map.fitBounds(bounds, { padding: 70, maxZoom: 7, duration: 800 });
-      }
-    };
+      const popup = new mapboxgl.Popup({
+        offset: 18,
+        maxWidth: '360px',
+      }).setHTML(buildPopupHtml(group));
 
-    if (sourceLoadedRef.current) {
-      updateSource();
+      const marker = new mapboxgl.Marker({
+        element: createMarkerEl(group),
+      })
+        .setLngLat([group.lng, group.lat])
+        .setPopup(popup)
+        .addTo(map);
+
+      markersRef.current.push(marker);
+    }
+
+    // Fit bounds
+    if (groups.length >= 2) {
+      map.fitBounds(bounds, {
+        padding: 70,
+        maxZoom: 7,
+        duration: 800,
+      });
     } else {
-      // La map n'est pas encore chargée — on attend l'event 'load'
-      const handler = () => updateSource();
-      map.once('load', handler);
-      return () => {
-        map.off('load', handler);
-      };
+      map.flyTo({ center: [groups[0].lng, groups[0].lat], zoom: 7 });
     }
   }, [items]);
 
@@ -317,7 +194,7 @@ export default function AdminMapPage() {
           <p className="text-sm text-white/50 mt-1">
             {loading
               ? 'Chargement…'
-              : `${items.length} chef(s) géolocalisé(s)`}
+              : `${items.length} chef(s) géolocalisé(s) · ${groupByExactCoords(items).length} ville(s)`}
           </p>
         </div>
       </div>
@@ -334,7 +211,7 @@ export default function AdminMapPage() {
 
       <div className="flex items-center justify-between text-xs text-white/40">
         <span>
-          Source : chef_profiles + geo_cache (Mapbox geocoding) · Clustering natif
+          Source : chef_profiles + geo_cache (Mapbox geocoding) · 1 point par ville
         </span>
         <a
           href="/admin/map-debug"
@@ -348,48 +225,127 @@ export default function AdminMapPage() {
 }
 
 // ============================================================
-// HELPERS DOM (Marker HTML custom + popup)
+// HELPERS DOM
 // ============================================================
 
-/** Crée l'élément DOM d'un marker chef (avatar rond avec bordure). */
-function createMarkerEl(props: any): HTMLDivElement {
+/** Élément DOM du marker : avatar du 1er chef + badge count si > 1 */
+function createMarkerEl(group: CityGroup): HTMLDivElement {
+  const firstChef = group.chefs[0];
+  const count = group.chefs.length;
+
   const el = document.createElement('div');
-  el.style.width = '36px';
-  el.style.height = '36px';
+  el.style.width = '40px';
+  el.style.height = '40px';
   el.style.borderRadius = '999px';
-  el.style.border = '2px solid rgba(255,255,255,0.9)';
-  el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+  el.style.border = '2px solid rgba(255,255,255,0.95)';
+  el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.35)';
   el.style.cursor = 'pointer';
   el.style.position = 'relative';
-  el.style.overflow = 'hidden';
-  el.style.background = props.avatarUrl
-    ? `url(${props.avatarUrl}) center/cover no-repeat, rgba(255,255,255,0.12)`
+  el.style.overflow = 'visible';
+
+  // Conteneur de l'avatar (overflow hidden pour le rond)
+  const inner = document.createElement('div');
+  inner.style.position = 'absolute';
+  inner.style.inset = '0';
+  inner.style.borderRadius = '999px';
+  inner.style.overflow = 'hidden';
+  inner.style.background = firstChef?.avatarUrl
+    ? `url(${firstChef.avatarUrl}) center/cover no-repeat, rgba(255,255,255,0.12)`
     : 'rgba(255,255,255,0.12)';
+  el.appendChild(inner);
+
+  if (count > 1) {
+    const badge = document.createElement('div');
+    badge.innerText = String(count);
+    badge.style.position = 'absolute';
+    badge.style.right = '-6px';
+    badge.style.top = '-6px';
+    badge.style.minWidth = '22px';
+    badge.style.height = '22px';
+    badge.style.padding = '0 6px';
+    badge.style.borderRadius = '999px';
+    badge.style.background = '#3b82f6'; // blue-500
+    badge.style.color = '#ffffff';
+    badge.style.fontSize = '11px';
+    badge.style.fontWeight = '700';
+    badge.style.display = 'flex';
+    badge.style.alignItems = 'center';
+    badge.style.justifyContent = 'center';
+    badge.style.border = '2px solid #ffffff';
+    badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    badge.style.lineHeight = '1';
+    el.appendChild(badge);
+  }
+
   return el;
 }
 
-function buildPopupHtml(props: any): string {
-  const name = escapeHtml(props.chefName || 'Chef');
-  const city = escapeHtml(props.baseCity || '');
-  const email = escapeHtml(props.chefEmail || '');
-  const id = encodeURIComponent(props.chefId || '');
-  const avatar = props.avatarUrl
-    ? `<img src="${escapeHtmlAttr(props.avatarUrl)}" style="width:48px;height:48px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);" />`
-    : `<div style="width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,0.1);"></div>`;
+/**
+ * Popup contenant la liste de TOUS les chefs de la ville. Pas de
+ * limitation à 5 — affichage scrollable au-delà. Ça résout le bug
+ * « plus de 5 chefs → aucun ne s'affiche » du clustering Mapbox.
+ */
+function buildPopupHtml(group: CityGroup): string {
+  const count = group.chefs.length;
+  const cityLabel = group.city
+    ? escapeHtml(group.city)
+    : 'Ville non précisée';
+
+  const chefRows = group.chefs
+    .map((chef) => {
+      const safeId = encodeURIComponent(chef.id);
+      const avatar = chef.avatarUrl
+        ? `<img src="${escapeHtmlAttr(chef.avatarUrl)}" alt="" style="width:36px;height:36px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);flex:none;" />`
+        : `<div style="width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,0.1);flex:none;"></div>`;
+
+      return `
+        <a
+          href="/admin/chefs/${safeId}"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:8px 4px;
+            text-decoration:none;
+            color:inherit;
+            border-top:1px solid rgba(255,255,255,0.08);
+            transition:background .15s;
+          "
+          onmouseover="this.style.background='rgba(255,255,255,0.05)'"
+          onmouseout="this.style.background='transparent'"
+        >
+          ${avatar}
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${escapeHtml(chef.name)}
+            </div>
+            ${
+              chef.email
+                ? `<div style="font-size:10px;opacity:0.55;color:#cfcfcf;line-height:1.2;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(chef.email)}</div>`
+                : ''
+            }
+          </div>
+          <span style="font-size:11px;opacity:0.5;flex:none;color:#cfcfcf;">→</span>
+        </a>
+      `;
+    })
+    .join('');
 
   return `
-    <div style="min-width:240px;font-family:Inter,system-ui,sans-serif;">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
-        ${avatar}
-        <div style="min-width:0;">
-          <div style="font-size:14px;font-weight:700;color:#fff;line-height:1.2;">${name}</div>
-          ${city ? `<div style="font-size:11px;opacity:0.7;color:#cfcfcf;margin-top:3px;">${city}</div>` : ''}
+    <div style="font-family:Inter,system-ui,sans-serif;width:320px;">
+      <div style="padding:4px 4px 10px;">
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#8a7f73;font-weight:600;margin-bottom:2px;">
+          ${count} chef${count > 1 ? 's' : ''} dans cette ville
+        </div>
+        <div style="font-size:15px;font-weight:700;color:#fff;line-height:1.2;">
+          ${cityLabel}
         </div>
       </div>
-      ${email ? `<div style="font-size:11px;opacity:0.55;color:#cfcfcf;margin-bottom:10px;word-break:break-all;">${email}</div>` : ''}
-      <a href="/admin/chefs/${id}" style="display:inline-block;background:rgba(255,255,255,0.95);color:#161616;text-decoration:none;font-size:11px;font-weight:600;padding:8px 14px;border-radius:8px;letter-spacing:0.05em;">
-        Voir la fiche →
-      </a>
+      <div style="max-height:320px;overflow-y:auto;padding-right:4px;">
+        ${chefRows}
+      </div>
     </div>
   `;
 }
