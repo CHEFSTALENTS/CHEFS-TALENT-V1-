@@ -189,7 +189,7 @@ async function sumManualEntries(sinceIso: string): Promise<{
   const sinceDate = sinceIso.slice(0, 10);
   const { data, error } = await supabase
     .from('revenue_entries')
-    .select('amount_ht_cents, amount_ttc_cents, category, occurred_at')
+    .select('amount_ht_cents,amount_ttc_cents,category,occurred_at')
     .gte('occurred_at', sinceDate)
     .limit(5000);
 
