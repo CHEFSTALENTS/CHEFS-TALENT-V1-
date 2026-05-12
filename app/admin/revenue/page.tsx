@@ -43,13 +43,102 @@ function fmtDate(iso: string) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function fmtDateShort(d: Date) {
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function startOfMonthIso() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+function toIsoDate(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    .toISOString()
+    .slice(0, 10);
+}
+
+function parseIsoDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map((s) => Number(s));
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+// ISO 8601 week (Monday-based). Returns { year, week }.
+function isoWeek(d: Date): { year: number; week: number } {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return { year: date.getUTCFullYear(), week };
+}
+
+function weekRange(year: number, week: number): { from: Date; to: Date } {
+  // ISO week 1 contains the first Thursday of the year.
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const dayOfWeek = jan4.getUTCDay() || 7;
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - dayOfWeek + 1);
+  const monday = new Date(week1Monday);
+  monday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return {
+    from: new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate()),
+    to: new Date(sunday.getUTCFullYear(), sunday.getUTCMonth(), sunday.getUTCDate()),
+  };
+}
+
+const MONTH_LABEL = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+];
+
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function parseMonthKey(k: string): { year: number; month: number } {
+  const [y, m] = k.split('-').map((s) => Number(s));
+  return { year: y, month: (m || 1) - 1 };
+}
+
+// "Last 12 months" including current — for the dropdown.
+function last12MonthOptions(): { key: string; label: string }[] {
+  const now = new Date();
+  const opts: { key: string; label: string }[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    opts.push({
+      key: monthKey(d),
+      label: `${MONTH_LABEL[d.getMonth()]} ${d.getFullYear()}`,
+    });
+  }
+  return opts;
+}
+
+type PeriodKind =
+  | { kind: '30d' }
+  | { kind: 'month'; year: number; month: number }
+  | { kind: 'custom'; from: string; to: string };
+
+function periodToRange(p: PeriodKind): { from: Date; to: Date; label: string } {
+  const now = new Date();
+  if (p.kind === '30d') {
+    const to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const from = new Date(to);
+    from.setDate(from.getDate() - 29);
+    return { from, to, label: '30 derniers jours' };
+  }
+  if (p.kind === 'month') {
+    const from = new Date(p.year, p.month, 1);
+    const to = new Date(p.year, p.month + 1, 0);
+    return { from, to, label: `${MONTH_LABEL[p.month]} ${p.year}` };
+  }
+  return {
+    from: parseIsoDate(p.from),
+    to: parseIsoDate(p.to),
+    label: 'Personnalisé',
+  };
 }
 
 export default function AdminRevenuePage() {
@@ -58,19 +147,22 @@ export default function AdminRevenuePage() {
   const [error, setError] = useState<string | null>(null);
 
   const [filterCategory, setFilterCategory] = useState<Category | ''>('');
-  const [filterFrom, setFilterFrom] = useState<string>(startOfMonthIso());
-  const [filterTo, setFilterTo] = useState<string>('');
+  const [period, setPeriod] = useState<PeriodKind>({ kind: '30d' });
 
+  // We always fetch the last 13 months so the "Par mois" breakdown and
+  // any month selection in the dropdown work without re-fetching.
   async function load() {
     setLoading(true);
     setError(null);
     try {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth() - 12, 1);
       const qs = new URLSearchParams();
+      qs.set('from', toIsoDate(from));
       if (filterCategory) qs.set('category', filterCategory);
-      if (filterFrom) qs.set('from', filterFrom);
-      if (filterTo) qs.set('to', filterTo);
-      const url = `/api/admin/revenue/entries${qs.toString() ? `?${qs}` : ''}`;
-      const json = await adminFetch<{ entries: Entry[] }>(url);
+      const json = await adminFetch<{ entries: Entry[] }>(
+        `/api/admin/revenue/entries?${qs}`,
+      );
       setEntries(json.entries || []);
     } catch (e: any) {
       setError(e?.message || 'Erreur de chargement');
@@ -82,7 +174,16 @@ export default function AdminRevenuePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterCategory, filterFrom, filterTo]);
+  }, [filterCategory]);
+
+  // Entries restricted to the selected period (for KPI + table + weekly).
+  const range = useMemo(() => periodToRange(period), [period]);
+
+  const filteredEntries = useMemo(() => {
+    const fromIso = toIsoDate(range.from);
+    const toIso = toIsoDate(range.to);
+    return entries.filter((e) => e.occurred_at >= fromIso && e.occurred_at <= toIso);
+  }, [entries, range]);
 
   const totals = useMemo(() => {
     let ht = 0;
@@ -92,7 +193,7 @@ export default function AdminRevenuePage() {
       formation: { ht: 0, count: 0 },
       autre: { ht: 0, count: 0 },
     };
-    for (const e of entries) {
+    for (const e of filteredEntries) {
       ht += e.amount_ht_cents;
       ttc += e.amount_ttc_cents;
       const cat = (e.category in byCat ? e.category : 'autre') as Category;
@@ -103,10 +204,85 @@ export default function AdminRevenuePage() {
       htEur: ht / 100,
       vatEur: (ttc - ht) / 100,
       ttcEur: ttc / 100,
-      count: entries.length,
+      count: filteredEntries.length,
       byCategory: byCat,
     };
+  }, [filteredEntries]);
+
+  // Weekly breakdown over the selected period (ISO weeks).
+  const weeklyBreakdown = useMemo(() => {
+    const map = new Map<string, { year: number; week: number; htCents: number; count: number }>();
+    for (const e of filteredEntries) {
+      const d = parseIsoDate(e.occurred_at);
+      const { year, week } = isoWeek(d);
+      const k = `${year}-W${String(week).padStart(2, '0')}`;
+      const cur = map.get(k) ?? { year, week, htCents: 0, count: 0 };
+      cur.htCents += e.amount_ht_cents;
+      cur.count++;
+      map.set(k, cur);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+      .map(([key, v]) => {
+        const wr = weekRange(v.year, v.week);
+        return {
+          key,
+          label: `Sem. ${v.week}`,
+          rangeLabel: `${fmtDateShort(wr.from)} – ${fmtDateShort(wr.to)}`,
+          htEur: v.htCents / 100,
+          count: v.count,
+        };
+      });
+  }, [filteredEntries]);
+
+  // Monthly breakdown over the last 12 months (independent of period filter).
+  const monthlyBreakdown = useMemo(() => {
+    const map = new Map<string, { year: number; month: number; htCents: number; count: number }>();
+    const now = new Date();
+    // Seed last 12 months so empty months show up.
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const k = monthKey(d);
+      map.set(k, { year: d.getFullYear(), month: d.getMonth(), htCents: 0, count: 0 });
+    }
+    for (const e of entries) {
+      const d = parseIsoDate(e.occurred_at);
+      const k = monthKey(d);
+      const cur = map.get(k);
+      if (!cur) continue;
+      cur.htCents += e.amount_ht_cents;
+      cur.count++;
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+      .map(([key, v]) => ({
+        key,
+        label: `${MONTH_LABEL[v.month]} ${v.year}`,
+        htEur: v.htCents / 100,
+        count: v.count,
+      }));
   }, [entries]);
+
+  const monthOptions = useMemo(() => last12MonthOptions(), []);
+
+  // Map period state ↔ <select> value.
+  const periodSelectValue = useMemo(() => {
+    if (period.kind === '30d') return '30d';
+    if (period.kind === 'custom') return 'custom';
+    return monthKey(new Date(period.year, period.month, 1));
+  }, [period]);
+
+  function handlePeriodChange(v: string) {
+    if (v === '30d') return setPeriod({ kind: '30d' });
+    if (v === 'custom') {
+      const today = todayIso();
+      const from = new Date();
+      from.setDate(from.getDate() - 29);
+      return setPeriod({ kind: 'custom', from: toIsoDate(from), to: today });
+    }
+    const { year, month } = parseMonthKey(v);
+    setPeriod({ kind: 'month', year, month });
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -126,20 +302,49 @@ export default function AdminRevenuePage() {
         </Link>
       </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Kpi title="Total HT (filtré)" value={money(totals.htEur)} subtitle={`${totals.count} entrée${totals.count > 1 ? 's' : ''}`} />
-        <Kpi title="TVA collectée" value={money(totals.vatEur)} subtitle="État" />
-        <Kpi title="Intégration" value={money(totals.byCategory.integration.ht / 100)} subtitle={`${totals.byCategory.integration.count} entrée${totals.byCategory.integration.count > 1 ? 's' : ''}`} />
-        <Kpi title="Formation" value={money(totals.byCategory.formation.ht / 100)} subtitle={`${totals.byCategory.formation.count} entrée${totals.byCategory.formation.count > 1 ? 's' : ''}`} />
-      </div>
-
-      {/* Saisie */}
-      <EntryForm onSaved={load} />
-
-      {/* Filtres + liste */}
+      {/* Période + filtre catégorie */}
       <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
-        <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <div className="text-xs text-white/45 mb-1">Période</div>
+            <select
+              value={periodSelectValue}
+              onChange={(e) => handlePeriodChange(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
+            >
+              <option value="30d">30 derniers jours (par défaut)</option>
+              <optgroup label="Par mois">
+                {monthOptions.map((o) => (
+                  <option key={o.key} value={o.key}>{o.label}</option>
+                ))}
+              </optgroup>
+              <option value="custom">Personnalisé…</option>
+            </select>
+          </div>
+
+          {period.kind === 'custom' ? (
+            <>
+              <div>
+                <div className="text-xs text-white/45 mb-1">Depuis</div>
+                <input
+                  type="date"
+                  value={period.from}
+                  onChange={(e) => setPeriod({ ...period, from: e.target.value })}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-white/45 mb-1">Jusqu'à</div>
+                <input
+                  type="date"
+                  value={period.to}
+                  onChange={(e) => setPeriod({ ...period, to: e.target.value })}
+                  className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
+                />
+              </div>
+            </>
+          ) : null}
+
           <div>
             <div className="text-xs text-white/45 mb-1">Catégorie</div>
             <select
@@ -153,37 +358,107 @@ export default function AdminRevenuePage() {
               <option value="autre">Autre</option>
             </select>
           </div>
-          <div>
-            <div className="text-xs text-white/45 mb-1">Depuis</div>
-            <input
-              type="date"
-              value={filterFrom}
-              onChange={(e) => setFilterFrom(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
-            />
-          </div>
-          <div>
-            <div className="text-xs text-white/45 mb-1">Jusqu'à</div>
-            <input
-              type="date"
-              value={filterTo}
-              onChange={(e) => setFilterTo(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
-            />
-          </div>
-          <button
-            onClick={() => { setFilterCategory(''); setFilterFrom(''); setFilterTo(''); }}
-            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/70 hover:bg-white/10 transition"
-          >
-            Reset filtres
-          </button>
-        </div>
 
+          <div className="text-xs text-white/45 ml-auto">
+            {fmtDate(toIsoDate(range.from))} → {fmtDate(toIsoDate(range.to))}
+          </div>
+        </div>
+      </div>
+
+      {/* KPI principaux (sur la période) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Kpi
+          title={`Total HT — ${range.label}`}
+          value={money(totals.htEur)}
+          subtitle={`${totals.count} entrée${totals.count > 1 ? 's' : ''}`}
+        />
+        <Kpi title="TVA collectée" value={money(totals.vatEur)} subtitle="État" />
+        <Kpi
+          title="Intégration"
+          value={money(totals.byCategory.integration.ht / 100)}
+          subtitle={`${totals.byCategory.integration.count} entrée${totals.byCategory.integration.count > 1 ? 's' : ''}`}
+        />
+        <Kpi
+          title="Formation"
+          value={money(totals.byCategory.formation.ht / 100)}
+          subtitle={`${totals.byCategory.formation.count} entrée${totals.byCategory.formation.count > 1 ? 's' : ''}`}
+        />
+      </div>
+
+      {/* Saisie */}
+      <EntryForm onSaved={load} />
+
+      {/* Breakdown par semaine + par mois */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Panel title="Par semaine" subtitle={`Sur la période : ${range.label}`}>
+          {weeklyBreakdown.length === 0 ? (
+            <div className="text-sm text-white/50">Aucune entrée sur la période.</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-white/45 border-b border-white/10">
+                  <th className="p-2">Semaine</th>
+                  <th className="p-2">Plage</th>
+                  <th className="p-2 text-right">HT</th>
+                  <th className="p-2 text-right">Nb</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weeklyBreakdown.map((w) => (
+                  <tr key={w.key} className="border-b border-white/5">
+                    <td className="p-2 text-white/85 font-medium">{w.label}</td>
+                    <td className="p-2 text-white/60">{w.rangeLabel}</td>
+                    <td className="p-2 text-right text-white font-medium">{money(w.htEur)}</td>
+                    <td className="p-2 text-right text-white/60">{w.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Panel>
+
+        <Panel title="Par mois" subtitle="12 derniers mois (indépendant du filtre)">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-white/45 border-b border-white/10">
+                <th className="p-2">Mois</th>
+                <th className="p-2 text-right">HT</th>
+                <th className="p-2 text-right">Nb</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlyBreakdown.map((m) => (
+                <tr
+                  key={m.key}
+                  className={`border-b border-white/5 cursor-pointer hover:bg-white/5 transition ${
+                    period.kind === 'month' &&
+                    monthKey(new Date(period.year, period.month, 1)) === m.key
+                      ? 'bg-white/10'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    const { year, month } = parseMonthKey(m.key);
+                    setPeriod({ kind: 'month', year, month });
+                  }}
+                  title="Cliquer pour filtrer sur ce mois"
+                >
+                  <td className="p-2 text-white/85 font-medium">{m.label}</td>
+                  <td className="p-2 text-right text-white font-medium">{money(m.htEur)}</td>
+                  <td className="p-2 text-right text-white/60">{m.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      </div>
+
+      {/* Liste détaillée sur la période */}
+      <Panel title="Détail des entrées" subtitle={`${range.label} — ${totals.count} entrée${totals.count > 1 ? 's' : ''}`}>
         {error ? (
           <div className="text-sm text-rose-300">{error}</div>
         ) : loading ? (
           <div className="text-sm text-white/50">Chargement…</div>
-        ) : entries.length === 0 ? (
+        ) : filteredEntries.length === 0 ? (
           <div className="text-sm text-white/50">Aucune entrée sur la période.</div>
         ) : (
           <div className="overflow-x-auto">
@@ -202,7 +477,7 @@ export default function AdminRevenuePage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e) => (
+                {filteredEntries.map((e) => (
                   <tr key={e.id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="p-2 text-white/75">{fmtDate(e.occurred_at)}</td>
                     <td className="p-2"><CategoryBadge category={e.category} /></td>
@@ -221,7 +496,84 @@ export default function AdminRevenuePage() {
             </table>
           </div>
         )}
+      </Panel>
+
+      <DiagnosticPanel />
+    </div>
+  );
+}
+
+function DiagnosticPanel() {
+  const [open, setOpen] = useState(false);
+  const [payload, setPayload] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function run() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const json = await adminFetch<any>('/api/admin/revenue');
+      setPayload(json);
+    } catch (e: any) {
+      setErr(e?.message || 'Erreur');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-white">Diagnostic dashboard</div>
+          <div className="text-xs text-white/45 mt-0.5">
+            Vérifie ce que voit le panel Revenus du /admin (utile si une vente n'apparaît pas)
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setOpen((o) => !o);
+            if (!open && !payload) run();
+          }}
+          className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+        >
+          {open ? 'Fermer' : 'Diagnostiquer'}
+        </button>
       </div>
+
+      {open ? (
+        <div className="mt-4">
+          {loading ? (
+            <div className="text-sm text-white/50">Chargement…</div>
+          ) : err ? (
+            <div className="text-sm text-rose-300">{err}</div>
+          ) : payload ? (
+            <pre className="text-xs text-white/80 bg-black/30 p-3 rounded-xl overflow-x-auto whitespace-pre-wrap">
+{JSON.stringify(payload?.manualEntries, null, 2)}
+            </pre>
+          ) : null}
+          <button
+            onClick={run}
+            disabled={loading}
+            className="mt-3 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/70 hover:bg-white/10 transition disabled:opacity-50"
+          >
+            Re-fetcher
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
+      <div className="mb-3">
+        <div className="text-sm font-semibold text-white">{title}</div>
+        {subtitle ? <div className="text-xs text-white/45 mt-0.5">{subtitle}</div> : null}
+      </div>
+      {children}
     </div>
   );
 }
