@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api, auth } from '@/services/storage';
 import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import MissionsPipelinePanel from './_components/MissionsPipelinePanel';
 
 type StatusKey = 'new' | 'in_review' | 'assigned' | 'closed';
 
@@ -394,6 +395,9 @@ export default function AdminDashboardPage() {
               </div>
             </Panel>
           )}
+
+          {/* Pipeline missions : suivi validées + payées + à encaisser */}
+          <MissionsPipelinePanel />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             <Panel title="Demandes / jour (14j)" subtitle="Volume entrant">
