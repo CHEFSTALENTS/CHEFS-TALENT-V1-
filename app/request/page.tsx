@@ -61,13 +61,15 @@ const T = {
     s6sub: "Sélectionnez une ou plusieurs langues.",
     s6skip: "Pas de préférence particulière",
     s7title: "Quel est votre budget ?",
-    s7sub: "Estimation basée sur votre destination, vos dates et vos convives.",
+    s7sub: "Indicatif — nous vous envoyons un devis personnalisé sous 6h.",
     s7essential: "Essentiel", s7essentialsub: "Chef expérimenté, cuisine de qualité",
     s7premium: "Premium", s7premiumsub: "Chef gastronomique, profil senior",
-    s7exclusive: "Exclusif", s7exclusivesub: "Profil d'exception, standards UHNW",
+    s7exclusive: "Exception", s7exclusivesub: "Profil d'exception, standards UHNW",
     s7popular: "Le plus demandé",
-    s7note: "Hors matières premières · NDA disponible sur demande",
+    s7note: "Devis personnalisé · Hors matières premières · NDA disponible",
     s7estimate: "Estimation pour votre mission",
+    s7priceFrom: "À partir de",
+    s7priceOnQuote: "Sur devis",
     s7custom: "Définir mon budget",
     s7customsub: "Vous avez un montant précis en tête",
     s7customplaceholder: "Ex. 8000",
@@ -96,7 +98,7 @@ const T = {
 s10nccLink: "En savoir plus sur notre NDA",
 s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
     missionLabels: { single_service: "Prestation ponctuelle", single_replacement: "Remplacement", residence: "Séjour / résidence", yacht: "Mission yacht" },
-    budgetLabels: { essential: "Essentiel", premium: "Premium", exclusive: "Exclusif", custom: "Budget personnalisé" },
+    budgetLabels: { essential: "Essentiel", premium: "Premium", exclusive: "Exception", custom: "Budget personnalisé" },
     successTitle: "Votre dossier est entre de bonnes mains.",
     successSub: "Un membre de notre équipe analyse votre brief et vous recontacte dans les 6 heures.",
     successRef: "Réf.",
@@ -151,13 +153,15 @@ s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
     s6sub: "Select one or more languages.",
     s6skip: "No particular preference",
     s7title: "What is your budget?",
-    s7sub: "Estimate based on your destination, dates and guests.",
+    s7sub: "Indicative — we send you a personalised quote within 6h.",
     s7essential: "Essential", s7essentialsub: "Experienced chef, quality cuisine",
     s7premium: "Premium", s7premiumsub: "Gastronomic chef, senior profile",
-    s7exclusive: "Exclusive", s7exclusivesub: "Exceptional profile, UHNW standards",
+    s7exclusive: "Exception", s7exclusivesub: "Exceptional profile, UHNW standards",
     s7popular: "Most popular",
-    s7note: "Excluding ingredients · NDA available on request",
+    s7note: "Personalised quote · Excluding ingredients · NDA available",
     s7estimate: "Estimate for your mission",
+    s7priceFrom: "From",
+    s7priceOnQuote: "On request",
     s7custom: "Set my own budget",
     s7customsub: "You have a specific amount in mind",
     s7customplaceholder: "e.g. 8000",
@@ -186,7 +190,7 @@ s10nccRequired: "Veuillez accepter les conditions de confidentialité.",
 s10nccLink: "Learn more about our NDA",
 s10nccRequired: "Please accept the confidentiality terms to continue.",
     missionLabels: { single_service: "One-time service", single_replacement: "Replacement", residence: "Stay / residence", yacht: "Yacht mission" },
-    budgetLabels: { essential: "Essential", premium: "Premium", exclusive: "Exclusive", custom: "Custom budget" },
+    budgetLabels: { essential: "Essential", premium: "Premium", exclusive: "Exception", custom: "Custom budget" },
     successTitle: "Your file is in good hands.",
     successSub: "A member of our team will analyse your brief and contact you within 6 hours.",
     successRef: "Ref.",
@@ -241,12 +245,14 @@ s10nccRequired: "Please accept the confidentiality terms to continue.",
     s6sub: "Seleccione uno o varios idiomas.",
     s6skip: "Sin preferencia particular",
     s7title: "¿Cuál es su presupuesto?",
-    s7sub: "Estimación basada en su destino, fechas y comensales.",
+    s7sub: "Indicativo — le enviamos un presupuesto personalizado en 6h.",
     s7essential: "Esencial", s7essentialsub: "Chef experimentado, cocina de calidad",
     s7premium: "Premium", s7premiumsub: "Chef gastronómico, perfil senior",
-    s7exclusive: "Exclusivo", s7exclusivesub: "Perfil excepcional, estándares UHNW",
+    s7exclusive: "Excepción", s7exclusivesub: "Perfil excepcional, estándares UHNW",
     s7popular: "El más popular",
-    s7note: "Sin ingredientes · NDA disponible bajo petición",
+    s7note: "Presupuesto personalizado · Sin ingredientes · NDA disponible",
+    s7priceFrom: "Desde",
+    s7priceOnQuote: "Bajo petición",
     s7estimate: "Estimación para su misión",
     s7custom: "Definir mi presupuesto",
     s7customsub: "Tiene un importe específico en mente",
@@ -276,7 +282,7 @@ s10nccRequired: "Please accept the confidentiality terms to continue.",
 s10nccLink: "Más información sobre nuestro NDA",
 s10nccRequired: "Por favor acepte los términos de confidencialidad.",
     missionLabels: { single_service: "Servicio puntual", single_replacement: "Sustitución", residence: "Estancia / residencia", yacht: "Misión yate" },
-    budgetLabels: { essential: "Esencial", premium: "Premium", exclusive: "Exclusivo", custom: "Presupuesto personalizado" },
+    budgetLabels: { essential: "Esencial", premium: "Premium", exclusive: "Excepción", custom: "Presupuesto personalizado" },
     successTitle: "Su expediente está en buenas manos.",
     successSub: "Un miembro de nuestro equipo analizará su brief y le contactará en 6 horas.",
     successRef: "Ref.",
@@ -819,12 +825,12 @@ function WizardContent() {
 
   const totalGuests = (data.adults ?? 0) + (data.children ?? 0);
 
-  // Estimation budget
-// Pour le budget custom, l'estimation par niveau n'a pas de sens : on n'affiche pas la fourchette générée.
-const estimateLevel = data.budgetLevel && data.budgetLevel !== "custom" ? data.budgetLevel : "premium";
-const estimate = data.budgetLevel === "custom"
-  ? null
-  : calcEstimate(data.selectedDestination, numDays, totalGuests, estimateLevel, data.mealPlan);
+  // Note : le calcul d'estimation chiffré (calcEstimate) a été retiré
+  // du step 7 le 12 mai 2026. On ne montre plus de fourchette générée
+  // automatiquement — le client choisit un tier indicatif (Essentiel /
+  // Premium / Exception) et reçoit un devis personnalisé sous 6h.
+  // La fonction calcEstimate est conservée dans le fichier au cas où
+  // on voudrait la réutiliser plus tard.
   // Filtrage villes
   const filteredCities = citySearch.length >= 1
   ? (() => {
@@ -1207,61 +1213,57 @@ if (response?.success) {
             </div>
           )}
 
-          {/* ÉTAPE 7 — Budget adaptatif */}
+          {/* ÉTAPE 7 — Budget indicatif (devis personnalisé envoyé après) */}
           {step === 7 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 7 {t.of} {TOTAL_STEPS}</p>
               <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s7title}</h2>
-              <p className="text-stone-500 font-light text-center mb-6">{t.s7sub}</p>
+              <p className="text-stone-500 font-light text-center mb-8">{t.s7sub}</p>
 
-              {/* Estimation contextuelle */}
-              {data.selectedDestination && numDays > 0 && totalGuests > 0 && (
-                <div className="bg-stone-900 rounded-2xl p-4 mb-6 text-center">
-                  <p className="text-xs uppercase tracking-[0.15em] text-stone-500 mb-2">{t.s7estimate}</p>
-                  <p className="text-stone-400 text-xs mb-1">{data.selectedDestination.flag} {data.selectedDestination.name} · {numDays} {t.s3days} · {totalGuests} {t.s5people}</p>
-                  {estimate ? (
-                    <p className="text-white text-xl font-serif">
-                      {estimate.min.toLocaleString("fr-FR")}€ — {estimate.max.toLocaleString("fr-FR")}€
-                    </p>
-                  ) : (
-                    <p className="text-stone-500 text-sm">Sélectionnez un niveau pour voir l'estimation</p>
-                  )}
-                  <p className="text-stone-600 text-xs mt-1">Hors matières premières et frais de coordination</p>
-                </div>
-              )}
-
+              {/* 3 fourchettes indicatives — pas de calcul automatique.
+                  Le devis final sera personnalisé selon contexte / chef. */}
               <div className="grid md:grid-cols-3 gap-4">
                 {([
-                  ["essential", "✦", t.s7essential, t.s7essentialsub] as const,
-                  ["premium", "✦✦", t.s7premium, t.s7premiumsub] as const,
-                  ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub] as const,
-                ]).map(([val, stars, title, sub]) => {
-const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, data.mealPlan);
-              return (
-                    <button key={val} type="button" onClick={() => set({ budgetLevel: val, customBudgetAmount: null })}
-                      className={`relative w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
-                        data.budgetLevel === val ? "border-stone-900 bg-stone-900 text-white shadow-xl scale-[1.02]" : "border-stone-200 bg-white hover:border-stone-400 hover:shadow-md"
-                      }`}>
-                      {val === "premium" && (
-                        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.1em] px-3 py-1 rounded-full font-semibold whitespace-nowrap ${data.budgetLevel === "premium" ? "bg-white text-stone-900" : "bg-stone-900 text-white"}`}>
-                          {t.s7popular}
-                        </div>
-                      )}
-                      <p className={`text-xs mb-2 ${data.budgetLevel === val ? "text-stone-400" : "text-stone-300"}`}>{stars}</p>
-                      <p className={`font-semibold text-base mb-1 ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>{title}</p>
-                      <p className={`text-xs font-light mb-3 ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
-                      {est ? (
-                        <p className={`text-sm font-medium border-t pt-3 ${data.budgetLevel === val ? "border-stone-700 text-stone-200" : "border-stone-100 text-stone-700"}`}>
-                          {est.min.toLocaleString("fr-FR")}€ — {est.max.toLocaleString("fr-FR")}€
+                  ["essential", "✦", t.s7essential, t.s7essentialsub, "2 500€", false] as const,
+                  ["premium", "✦✦", t.s7premium, t.s7premiumsub, "4 500€", false] as const,
+                  ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub, "", true] as const,
+                ]).map(([val, stars, title, sub, priceLabel, isQuote]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => set({ budgetLevel: val, customBudgetAmount: null })}
+                    className={`relative w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
+                      data.budgetLevel === val
+                        ? "border-stone-900 bg-stone-900 text-white shadow-xl scale-[1.02]"
+                        : "border-stone-200 bg-white hover:border-stone-400 hover:shadow-md"
+                    }`}
+                  >
+                    {val === "premium" && (
+                      <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.1em] px-3 py-1 rounded-full font-semibold whitespace-nowrap ${data.budgetLevel === "premium" ? "bg-white text-stone-900" : "bg-stone-900 text-white"}`}>
+                        {t.s7popular}
+                      </div>
+                    )}
+                    <p className={`text-xs mb-2 ${data.budgetLevel === val ? "text-stone-400" : "text-stone-300"}`}>{stars}</p>
+                    <p className={`font-semibold text-base mb-1 ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>{title}</p>
+                    <p className={`text-xs font-light mb-3 ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
+                    <div className={`border-t pt-3 ${data.budgetLevel === val ? "border-stone-700" : "border-stone-100"}`}>
+                      {isQuote ? (
+                        <p className={`text-sm font-medium ${data.budgetLevel === val ? "text-stone-200" : "text-stone-700"}`}>
+                          {t.s7priceOnQuote}
                         </p>
                       ) : (
-                        <p className={`text-xs border-t pt-3 ${data.budgetLevel === val ? "border-stone-700 text-stone-400" : "border-stone-100 text-stone-400"}`}>
-                          {val === "exclusive" ? "Sur devis" : val === "premium" ? "À partir de 5 000€" : "À partir de 2 500€"}
-                        </p>
+                        <>
+                          <p className={`text-[10px] uppercase tracking-widest ${data.budgetLevel === val ? "text-stone-500" : "text-stone-400"}`}>
+                            {t.s7priceFrom}
+                          </p>
+                          <p className={`text-base font-semibold ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>
+                            {priceLabel}
+                          </p>
+                        </>
                       )}
-                    </button>
-                  );
-                })}
+                    </div>
+                  </button>
+                ))}
               </div>
 
               {/* Option « Définir mon budget » — full width sous les 3 niveaux */}
@@ -1391,12 +1393,8 @@ const est = calcEstimate(data.selectedDestination, numDays, totalGuests, val, da
                         <span className="text-white font-medium">{(item as string[])[1]}</span>
                       </div>
                     ))}
-                    {estimate && data.budgetLevel && (
-                      <div className="flex justify-between pt-1.5 border-t border-stone-800 mt-1.5">
-                        <span className="text-stone-500">Estimation</span>
-                        <span className="text-stone-300 font-medium">{estimate.min.toLocaleString("fr-FR")}€ — {estimate.max.toLocaleString("fr-FR")}€</span>
-                      </div>
-                    )}
+                    {/* Pas d'estimation chiffrée — devis personnalisé envoyé sous 6h.
+                        Le récap montre juste le tier choisi ou le budget custom saisi. */}
                   </div>
                 </div>
               </div>{/* Case confidentialité NCC */}
