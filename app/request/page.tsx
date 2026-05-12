@@ -2,10 +2,19 @@
 
 import React, { Suspense, useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Loader2, CheckCircle2, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Loader2, CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, BookmarkPlus } from "lucide-react";
 import { submitRequest } from "../../services/actions";
 import type { RequestForm } from "../../types";
 import { trackEvent, identifyUser, REQUEST_EVENTS } from "@/lib/analytics/posthog";
+import SaveDraftModal from "./_components/SaveDraftModal";
+
+// Constantes pour la sauvegarde locale
+const LOCAL_DRAFT_KEY = "chef_talents_request_draft_v1";
+const LOCAL_DRAFT_TTL_MS = 7 * 24 * 3600 * 1000; // 7 jours
+
+// Délai après lequel l'exit intent peut s'afficher (1 fois max par session)
+const EXIT_INTENT_SESSION_KEY = "chef_talents_exit_intent_shown_v1";
 
 // ─────────────────────────────────────────────
 // TRADUCTIONS
@@ -756,6 +765,9 @@ function MiniCalendar({ startDate, endDate, onSelect, multi }: {
 const TOTAL_STEPS = 10;
 
 function WizardContent() {
+  const searchParams = useSearchParams();
+  const draftTokenFromUrl = searchParams.get('draft');
+
   const [lang, setLang] = useState<Lang>("fr");
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardState>(makeEmpty);
@@ -765,6 +777,13 @@ function WizardContent() {
   const [citySearch, setCitySearch] = useState("");
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const cityRef = useRef<HTMLInputElement>(null);
+
+  // Sauvegarde brouillon
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalTrigger, setSaveModalTrigger] = useState<'exit-intent' | 'manual'>('manual');
+  const [restoreBanner, setRestoreBanner] = useState<null | { source: 'local' | 'token' }>(null);
+  // Empêche l'auto-save de tourner avant le premier mount + restore
+  const isHydratedRef = useRef(false);
 
   const t = T[lang];
 
@@ -789,6 +808,127 @@ function WizardContent() {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [step, result, data]);
+
+  // ========================================================
+  // Sauvegarde brouillon : restore au mount + auto-save localStorage
+  // + exit intent modal dès l'étape 2
+  // ========================================================
+
+  // 1. Restore au mount : priorité au token URL, sinon localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const restore = async () => {
+      // Priorité 1 : token dans l'URL (lien de reprise par email)
+      if (draftTokenFromUrl) {
+        try {
+          const r = await fetch(`/api/request/draft/${encodeURIComponent(draftTokenFromUrl)}`);
+          const json = await r.json();
+          if (r.ok && json.ok && json.state) {
+            setData((prev) => ({ ...prev, ...json.state, email: json.email || prev.email }));
+            if (json.lastStep && json.lastStep > 1) setStep(json.lastStep);
+            if (json.lang) setLang(json.lang as Lang);
+            setRestoreBanner({ source: 'token' });
+            trackEvent(REQUEST_EVENTS.STEP_VIEWED, {
+              step: json.lastStep || 1,
+              source: 'draft_token',
+            });
+            isHydratedRef.current = true;
+            return;
+          }
+        } catch (e) {
+          console.error('[request] draft token restore failed', e);
+        }
+      }
+
+      // Priorité 2 : localStorage (si récent)
+      try {
+        const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const isFresh =
+            parsed?.ts &&
+            Date.now() - parsed.ts < LOCAL_DRAFT_TTL_MS;
+          if (isFresh && parsed?.state && parsed?.step > 1) {
+            // On NE restore PAS automatiquement : on affiche juste un
+            // banner « Reprendre votre demande ? » que l'utilisateur
+            // peut accepter ou refuser.
+            setRestoreBanner({ source: 'local' });
+          }
+        }
+      } catch {}
+
+      isHydratedRef.current = true;
+    };
+
+    restore();
+    // Pas de deps : on ne restore qu'au premier mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 2. Auto-save localStorage à chaque change de data ou step
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    if (typeof window === 'undefined') return;
+    if (result) {
+      // Soumis avec succès → on clear le brouillon local
+      try { localStorage.removeItem(LOCAL_DRAFT_KEY); } catch {}
+      return;
+    }
+    try {
+      localStorage.setItem(
+        LOCAL_DRAFT_KEY,
+        JSON.stringify({ state: data, step, lang, ts: Date.now() }),
+      );
+    } catch {}
+  }, [data, step, lang, result]);
+
+  // Accepter la reprise via banner localStorage
+  const restoreLocalDraft = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+      if (!raw) {
+        setRestoreBanner(null);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (parsed?.state) setData((prev) => ({ ...prev, ...parsed.state }));
+      if (parsed?.step) setStep(parsed.step);
+      if (parsed?.lang) setLang(parsed.lang as Lang);
+      setRestoreBanner(null);
+      trackEvent(REQUEST_EVENTS.STEP_VIEWED, {
+        step: parsed.step || 1,
+        source: 'localstorage',
+      });
+    } catch {}
+  }, []);
+
+  // Refuser la reprise (clear localStorage)
+  const dismissLocalDraft = useCallback(() => {
+    try { localStorage.removeItem(LOCAL_DRAFT_KEY); } catch {}
+    setRestoreBanner(null);
+  }, []);
+
+  // 3. Exit intent modal : trigger sur mouseleave par le haut, après step 2,
+  // une seule fois par session.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (step < 2 || result) return;
+    if (sessionStorage.getItem(EXIT_INTENT_SESSION_KEY)) return;
+
+    const handler = (e: MouseEvent) => {
+      // mouseleave par le haut (curseur va vers la barre d'URL/onglet)
+      if (e.clientY <= 0) {
+        try { sessionStorage.setItem(EXIT_INTENT_SESSION_KEY, '1'); } catch {}
+        setSaveModalTrigger('exit-intent');
+        setShowSaveModal(true);
+        trackEvent('request_exit_intent_triggered', { step });
+      }
+    };
+
+    document.addEventListener('mouseleave', handler);
+    return () => document.removeEventListener('mouseleave', handler);
+  }, [step, result]);
 
   // Détection langue + pays au chargement
   useEffect(() => {
@@ -1002,6 +1142,49 @@ if (response?.success) {
       <div className="h-0.5 bg-stone-200 shrink-0">
         <div className="h-full bg-stone-900 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
       </div>
+
+      {/* BANNER restore brouillon (localStorage) */}
+      {restoreBanner && (
+        <div className="bg-stone-900 text-white px-5 md:px-10 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+          <div className="text-sm">
+            <span className="font-medium">
+              {lang === 'en'
+                ? 'Welcome back — would you like to resume your request?'
+                : lang === 'es'
+                  ? 'Bienvenido de nuevo — ¿desea retomar su solicitud?'
+                  : 'Bon retour — souhaitez-vous reprendre votre demande ?'}
+            </span>
+            {restoreBanner.source === 'token' && (
+              <span className="ml-2 text-stone-400 text-xs">
+                {lang === 'en' ? '(restored from email)' : lang === 'es' ? '(restaurado por email)' : '(repris depuis votre email)'}
+              </span>
+            )}
+          </div>
+          {restoreBanner.source === 'local' ? (
+            <div className="flex gap-2">
+              <button
+                onClick={restoreLocalDraft}
+                className="px-4 py-1.5 rounded-full bg-white text-stone-900 text-xs uppercase tracking-widest font-semibold hover:bg-stone-100 transition"
+              >
+                {lang === 'en' ? 'Resume' : lang === 'es' ? 'Retomar' : 'Reprendre'}
+              </button>
+              <button
+                onClick={dismissLocalDraft}
+                className="px-3 py-1.5 text-xs text-stone-400 hover:text-white transition"
+              >
+                {lang === 'en' ? 'Start fresh' : lang === 'es' ? 'Empezar de nuevo' : 'Recommencer'}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setRestoreBanner(null)}
+              className="text-xs text-stone-400 hover:text-white transition"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
 
       {/* CONTENT */}
       <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-6 py-10">
@@ -1444,6 +1627,23 @@ if (response?.success) {
             </button>
           ) : <div />}
           <div className="flex items-center gap-3">
+            {/* Bouton « Sauvegarder ma demande » — apparaît à partir
+                de l'étape 5 (le client est engagé, ça ne fait pas peur) */}
+            {step >= 5 && step < TOTAL_STEPS && !result && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveModalTrigger('manual');
+                  setShowSaveModal(true);
+                  trackEvent(REQUEST_EVENTS.DRAFT_SAVED, { trigger: 'manual-button', step });
+                }}
+                title={lang === 'en' ? 'Save and finish later' : lang === 'es' ? 'Guardar y continuar más tarde' : 'Sauvegarder et reprendre plus tard'}
+                className="hidden md:flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-900 border border-stone-200 hover:border-stone-400 rounded-xl px-3 py-2 transition-all"
+              >
+                <BookmarkPlus className="w-3.5 h-3.5" />
+                {lang === 'en' ? 'Save' : lang === 'es' ? 'Guardar' : 'Sauvegarder'}
+              </button>
+            )}
             <span className="text-xs text-stone-400">{step} / {TOTAL_STEPS}</span>
             {step < TOTAL_STEPS ? (
               <button type="button" onClick={handleNext}
@@ -1463,6 +1663,16 @@ if (response?.success) {
           </div>
         </div>
       </footer>
+
+      {/* Modal Sauvegarde brouillon — utilisée pour exit intent ET bouton manuel */}
+      <SaveDraftModal
+        open={showSaveModal && !result}
+        trigger={saveModalTrigger}
+        lang={lang}
+        state={data}
+        lastStep={step}
+        onClose={() => setShowSaveModal(false)}
+      />
 
       {/* WHATSAPP FLOTTANT */}
       <a
