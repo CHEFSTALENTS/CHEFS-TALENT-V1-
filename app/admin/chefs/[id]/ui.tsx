@@ -224,7 +224,6 @@ function AdminActions({
                 <option value="approved">approved</option>
                 <option value="active">active</option>
                 <option value="paused">paused</option>
-                <option value="rejected">rejected</option>
               </select>
 
               <button
