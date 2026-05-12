@@ -173,6 +173,69 @@ async function sumMissionsPaid(sinceIso: string): Promise<{
   };
 }
 
+/**
+ * Somme les revenue_entries (ventes hors Stripe saisies manuellement :
+ * intégrations, formations, autres) sur une fenêtre, en HT. Retourne
+ * aussi un breakdown par catégorie pour le dashboard.
+ */
+async function sumManualEntries(sinceIso: string): Promise<{
+  htEur: number;
+  vatEur: number;
+  count: number;
+  byCategory: Record<string, { htEur: number; count: number }>;
+}> {
+  const supabase = getSupabaseAdmin();
+  const sinceDate = sinceIso.slice(0, 10);
+  const { data, error } = await supabase
+    .from('revenue_entries')
+    .select('amount_ht_cents, amount_ttc_cents, category, occurred_at')
+    .gte('occurred_at', sinceDate)
+    .limit(5000);
+
+  if (error) {
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('does not exist') || msg.includes('relation')) {
+      console.warn('[admin/revenue] revenue_entries table not migrated yet, returning 0');
+      return { htEur: 0, vatEur: 0, count: 0, byCategory: {} };
+    }
+    console.error('[admin/revenue] revenue_entries read', error);
+    return { htEur: 0, vatEur: 0, count: 0, byCategory: {} };
+  }
+
+  let htCents = 0;
+  let ttcCents = 0;
+  let count = 0;
+  const byCategory: Record<string, { htCents: number; count: number }> = {};
+
+  for (const row of data ?? []) {
+    const ht = Number(row.amount_ht_cents || 0);
+    const ttc = Number(row.amount_ttc_cents || 0);
+    if (!Number.isFinite(ht) || ht < 0) continue;
+    htCents += ht;
+    ttcCents += ttc;
+    count++;
+    const cat = String(row.category || 'autre');
+    if (!byCategory[cat]) byCategory[cat] = { htCents: 0, count: 0 };
+    byCategory[cat].htCents += ht;
+    byCategory[cat].count++;
+  }
+
+  const byCategoryEur: Record<string, { htEur: number; count: number }> = {};
+  for (const [k, v] of Object.entries(byCategory)) {
+    byCategoryEur[k] = {
+      htEur: Math.round(v.htCents) / 100,
+      count: v.count,
+    };
+  }
+
+  return {
+    htEur: Math.round(htCents) / 100,
+    vatEur: Math.round(ttcCents - htCents) / 100,
+    count,
+    byCategory: byCategoryEur,
+  };
+}
+
 export async function GET(req: Request) {
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
@@ -189,6 +252,8 @@ export async function GET(req: Request) {
       missionsYtd,
       missionsPaidMonth,
       missionsPaidYtd,
+      manualMonth,
+      manualYtd,
     ] = await Promise.all([
       computeStripeMrr(),
       sumStripeCharges(monthStartMs),
@@ -197,10 +262,14 @@ export async function GET(req: Request) {
       sumMissionsCommission(new Date(yearStartMs).toISOString()),
       sumMissionsPaid(new Date(monthStartMs).toISOString()),
       sumMissionsPaid(new Date(yearStartMs).toISOString()),
+      sumManualEntries(new Date(monthStartMs).toISOString()),
+      sumManualEntries(new Date(yearStartMs).toISOString()),
     ]);
 
-    const totalMonth = chargesMonth.totalEur + missionsMonth.commissionEur;
-    const totalYtd = chargesYtd.totalEur + missionsYtd.commissionEur;
+    const totalMonth =
+      chargesMonth.totalEur + missionsMonth.commissionEur + manualMonth.htEur;
+    const totalYtd =
+      chargesYtd.totalEur + missionsYtd.commissionEur + manualYtd.htEur;
 
     return NextResponse.json({
       ok: true,
@@ -226,6 +295,15 @@ export async function GET(req: Request) {
         paidYtd: missionsPaidYtd.count,
         paidAmountYtdEur: missionsPaidYtd.paidAmountEur,
         paidCommissionYtdEur: missionsPaidYtd.commissionEur,
+      },
+      manualEntries: {
+        monthHtEur: manualMonth.htEur,
+        monthVatEur: manualMonth.vatEur,
+        monthCount: manualMonth.count,
+        monthByCategory: manualMonth.byCategory,
+        ytdHtEur: manualYtd.htEur,
+        ytdVatEur: manualYtd.vatEur,
+        ytdCount: manualYtd.count,
       },
       totals: {
         monthEur: Math.round(totalMonth * 100) / 100,
