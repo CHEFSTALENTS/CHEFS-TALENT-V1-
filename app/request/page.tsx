@@ -8,6 +8,10 @@ import { submitRequest } from "../../services/actions";
 import type { RequestForm } from "../../types";
 import { trackEvent, identifyUser, REQUEST_EVENTS } from "@/lib/analytics/posthog";
 import SaveDraftModal from "./_components/SaveDraftModal";
+// lib/pricing.ts est utilisé côté admin/backend pour générer les devis
+// personnalisés. Côté client (/request) on n'affiche AUCUN prix : le
+// step 7 sert juste à récupérer une gamme cible (Essentiel/Premium/
+// Exception) pour orienter le devis.
 
 // Constantes pour la sauvegarde locale
 const LOCAL_DRAFT_KEY = "chef_talents_request_draft_v1";
@@ -909,25 +913,53 @@ function WizardContent() {
     setRestoreBanner(null);
   }, []);
 
-  // 3. Exit intent modal : trigger sur mouseleave par le haut, après step 2,
-  // une seule fois par session.
+  // 3. Exit intent modal : trigger sur mouseleave (desktop) OU
+  // visibilitychange (mobile : changement d'onglet/app). Une seule fois
+  // par session, après step 2.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (step < 2 || result) return;
     if (sessionStorage.getItem(EXIT_INTENT_SESSION_KEY)) return;
 
-    const handler = (e: MouseEvent) => {
-      // mouseleave par le haut (curseur va vers la barre d'URL/onglet)
-      if (e.clientY <= 0) {
-        try { sessionStorage.setItem(EXIT_INTENT_SESSION_KEY, '1'); } catch {}
-        setSaveModalTrigger('exit-intent');
-        setShowSaveModal(true);
-        trackEvent('request_exit_intent_triggered', { step });
+    const triggerExitIntent = (source: 'mouseleave' | 'visibilitychange') => {
+      try { sessionStorage.setItem(EXIT_INTENT_SESSION_KEY, '1'); } catch {}
+      setSaveModalTrigger('exit-intent');
+      setShowSaveModal(true);
+      trackEvent('request_exit_intent_triggered', { step, source });
+    };
+
+    // Desktop : mouseleave par le haut (curseur va vers barre URL/onglet)
+    const mouseHandler = (e: MouseEvent) => {
+      if (e.clientY <= 0) triggerExitIntent('mouseleave');
+    };
+
+    // Mobile : changement d'onglet / passage en arrière-plan
+    // (l'utilisateur quitte l'app). On déclenche aussi pour les sessions
+    // longues sur desktop où l'utilisateur switch d'onglet.
+    let visibilityTimeout: ReturnType<typeof setTimeout> | null = null;
+    const visibilityHandler = () => {
+      if (document.visibilityState === 'hidden') {
+        // Petit délai pour ne pas déclencher sur un switch ultra-bref
+        // (genre changement de fenêtre rapide), et aussi pour que le
+        // sessionStorage check soit fiable.
+        visibilityTimeout = setTimeout(() => {
+          if (document.visibilityState === 'hidden' &&
+              !sessionStorage.getItem(EXIT_INTENT_SESSION_KEY)) {
+            triggerExitIntent('visibilitychange');
+          }
+        }, 500);
+      } else if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout);
       }
     };
 
-    document.addEventListener('mouseleave', handler);
-    return () => document.removeEventListener('mouseleave', handler);
+    document.addEventListener('mouseleave', mouseHandler);
+    document.addEventListener('visibilitychange', visibilityHandler);
+    return () => {
+      document.removeEventListener('mouseleave', mouseHandler);
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      if (visibilityTimeout) clearTimeout(visibilityTimeout);
+    };
   }, [step, result]);
 
   // Détection langue + pays au chargement
@@ -1396,21 +1428,22 @@ if (response?.success) {
             </div>
           )}
 
-          {/* ÉTAPE 7 — Budget indicatif (devis personnalisé envoyé après) */}
+          {/* ÉTAPE 7 — Gamme indicative (aucun prix affiché au client).
+              Sert juste à connaître la gamme cible pour orienter le devis.
+              Les vrais prix (lib/pricing.ts) sont utilisés côté admin
+              uniquement pour générer le devis personnalisé. */}
           {step === 7 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 7 {t.of} {TOTAL_STEPS}</p>
               <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s7title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s7sub}</p>
 
-              {/* 3 fourchettes indicatives — pas de calcul automatique.
-                  Le devis final sera personnalisé selon contexte / chef. */}
               <div className="grid md:grid-cols-3 gap-4">
                 {([
-                  ["essential", "✦", t.s7essential, t.s7essentialsub, "2 500€", false] as const,
-                  ["premium", "✦✦", t.s7premium, t.s7premiumsub, "4 500€", false] as const,
-                  ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub, "", true] as const,
-                ]).map(([val, stars, title, sub, priceLabel, isQuote]) => (
+                  ["essential", "✦", t.s7essential, t.s7essentialsub] as const,
+                  ["premium", "✦✦", t.s7premium, t.s7premiumsub] as const,
+                  ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub] as const,
+                ]).map(([val, stars, title, sub]) => (
                   <button
                     key={val}
                     type="button"
@@ -1428,23 +1461,7 @@ if (response?.success) {
                     )}
                     <p className={`text-xs mb-2 ${data.budgetLevel === val ? "text-stone-400" : "text-stone-300"}`}>{stars}</p>
                     <p className={`font-semibold text-base mb-1 ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>{title}</p>
-                    <p className={`text-xs font-light mb-3 ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
-                    <div className={`border-t pt-3 ${data.budgetLevel === val ? "border-stone-700" : "border-stone-100"}`}>
-                      {isQuote ? (
-                        <p className={`text-sm font-medium ${data.budgetLevel === val ? "text-stone-200" : "text-stone-700"}`}>
-                          {t.s7priceOnQuote}
-                        </p>
-                      ) : (
-                        <>
-                          <p className={`text-[10px] uppercase tracking-widest ${data.budgetLevel === val ? "text-stone-500" : "text-stone-400"}`}>
-                            {t.s7priceFrom}
-                          </p>
-                          <p className={`text-base font-semibold ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>
-                            {priceLabel}
-                          </p>
-                        </>
-                      )}
-                    </div>
+                    <p className={`text-xs font-light ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
                   </button>
                 ))}
               </div>
@@ -1569,6 +1586,8 @@ if (response?.success) {
                           ? (data.customBudgetAmount ? `${data.customBudgetAmount.toLocaleString("fr-FR")}€` : (t.budgetLabels as any).custom)
                           : (t.budgetLabels as any)[data.budgetLevel],
                       ],
+                      // Pas d'estimation chiffrée affichée au client.
+                      // Le devis personnalisé est envoyé séparément.
                       (data.selectedLanguages?.length ?? 0) > 0 && ["Langues", data.selectedLanguages!.join(", ")],
                     ].filter(Boolean).map((item, i) => (
                       <div key={i} className="flex justify-between">
@@ -1638,7 +1657,7 @@ if (response?.success) {
                   trackEvent(REQUEST_EVENTS.DRAFT_SAVED, { trigger: 'manual-button', step });
                 }}
                 title={lang === 'en' ? 'Save and finish later' : lang === 'es' ? 'Guardar y continuar más tarde' : 'Sauvegarder et reprendre plus tard'}
-                className="hidden md:flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-900 border border-stone-200 hover:border-stone-400 rounded-xl px-3 py-2 transition-all"
+                className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-900 border border-stone-200 hover:border-stone-400 rounded-xl px-3 py-2 transition-all"
               >
                 <BookmarkPlus className="w-3.5 h-3.5" />
                 {lang === 'en' ? 'Save' : lang === 'es' ? 'Guardar' : 'Sauvegarder'}
