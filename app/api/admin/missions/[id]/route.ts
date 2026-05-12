@@ -5,6 +5,7 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { signChefUrl } from '@/lib/storage';
 
 function supabaseAdmin() {
   return createClient(
@@ -70,7 +71,11 @@ export async function GET(
           phone: profile.phone || profile.phoneNumber || null,
           baseCity:
             profile?.location?.baseCity || profile?.baseCity || null,
-          avatarUrl: profile?.avatarUrl || profile?.photoUrl || null,
+          // Bucket chef-uploads privé → on signe l'URL avant retour
+          avatarUrl: await signChefUrl(
+            profile?.avatarUrl || profile?.photoUrl || null,
+            3600,
+          ),
           status: profile?.status || null,
         };
       }

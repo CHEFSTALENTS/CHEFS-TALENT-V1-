@@ -54,10 +54,38 @@ export async function POST(req: Request) {
 
     if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
-    // bucket public => URL directe
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    // ⚠️ Bucket chef-uploads PRIVÉ : on retourne une signed URL pour
+    // l'affichage immédiat (preview après upload), TTL 1h.
+    // On retourne aussi `publicUrl` (= URL publique reconstruite) car
+    // c'est ce format qui sera persisté en DB par l'upsert profile.
+    // À la lecture, le helper signChefUrl() resigne automatiquement.
+    const { data: signedData, error: signErr } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(path, 3600);
 
-    return NextResponse.json({ url: data.publicUrl, path });
+    if (signErr || !signedData?.signedUrl) {
+      console.error('[chef/upload] sign error', signErr?.message);
+      return NextResponse.json(
+        { error: signErr?.message || 'Failed to sign URL' },
+        { status: 500 },
+      );
+    }
+
+    // URL publique legacy (stockage canonique en DB — non fonctionnelle
+    // mais reconnue par signChefUrl pour resigner à la lecture)
+    const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+    return NextResponse.json({
+      // `url` = signed URL pour usage immédiat (preview après upload).
+      // C'est ce que le client doit afficher tout de suite.
+      url: signedData.signedUrl,
+      // `path` = chemin canonique dans le bucket (utilisable plus tard
+      // par toute API qui veut resigner ou supprimer).
+      path,
+      // `publicUrl` = format de stockage DB (legacy). Le client peut
+      // choisir d'envoyer celui-ci au backend pour persistance.
+      publicUrl: publicData.publicUrl,
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Upload failed' }, { status: 500 });
   }
