@@ -17,6 +17,8 @@ import {
   Sparkles,
   ArrowRight,
   FileText,
+  BadgeCheck,
+  Hourglass,
 } from 'lucide-react';
 import { useChefLocale } from '@/lib/ChefLocaleContext';
 import { format, type Dictionary } from '@/lib/chef-i18n';
@@ -41,6 +43,12 @@ function rowToMission(m: any): Mission {
     clientPhone: null,
     notes: m.notes || '',
     contractUrl: m.contract_url || null,
+    // Champs paiement (migration PR #34 : 2026-05-mission-payment.sql).
+    // L'API /api/chef/missions retourne déjà SELECT *, on les récupère.
+    paymentStatus: String(m.payment_status || 'pending').toLowerCase(),
+    paidAt: m.paid_at || null,
+    paidAmount: m.paid_amount != null ? Number(m.paid_amount) : null,
+    paymentMethod: m.payment_method || null,
   } as any;
 }
 
@@ -294,6 +302,18 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
             </div>
           )}
 
+          {/* Badge de paiement : visible seulement quand la mission est
+              confirmée. Avant ça, parler de paiement n'a pas de sens. */}
+          {isConfirmed && (
+            <PaymentBadge
+              status={(mission as any).paymentStatus || 'pending'}
+              paidAmount={(mission as any).paidAmount}
+              paidAt={(mission as any).paidAt}
+              method={(mission as any).paymentMethod}
+              dateLocale={dateLocale}
+            />
+          )}
+
           {isOffer && (
             <div className="flex flex-col gap-2 w-full">
               <Button
@@ -373,6 +393,112 @@ const MissionStatusBadge = ({ status, t }: { status: string; t: Dictionary }) =>
     </span>
   );
 };
+
+/* ── PaymentBadge ─────────────────────────────────────────────
+   Badge dédié au statut de paiement chef. Affiché uniquement sur
+   les missions confirmed. 4 cas :
+     - paid     : montant encaissé + date + méthode (vert)
+     - partial  : paiement partiel (orange)
+     - refunded : remboursement (rouge)
+     - pending  : en attente de paiement (ambre, default)
+   ─────────────────────────────────────────────────────────── */
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  sepa: 'Virement SEPA',
+  wire: 'Virement bancaire',
+  stripe: 'Stripe',
+  cash: 'Espèces',
+  check: 'Chèque',
+  other: 'Autre',
+};
+
+function PaymentBadge({
+  status,
+  paidAmount,
+  paidAt,
+  method,
+  dateLocale,
+}: {
+  status: string;
+  paidAmount: number | null;
+  paidAt: string | null;
+  method: string | null;
+  dateLocale: string;
+}) {
+  const s = (status || 'pending').toLowerCase();
+  const formattedDate = paidAt
+    ? new Date(paidAt).toLocaleDateString(dateLocale, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+  const methodLabel = method ? PAYMENT_METHOD_LABELS[method] || method : null;
+  const formattedAmount =
+    paidAmount != null
+      ? `${Number(paidAmount).toLocaleString(dateLocale)} €`
+      : null;
+
+  if (s === 'paid') {
+    return (
+      <div className="md:text-right">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <BadgeCheck className="w-3 h-3" />
+          Payée
+        </div>
+        {(formattedAmount || formattedDate) && (
+          <div className="text-[11px] text-stone-500 mt-1.5 leading-relaxed">
+            {formattedAmount && (
+              <div className="text-emerald-700 font-medium">
+                {formattedAmount} reçu
+              </div>
+            )}
+            {formattedDate && (
+              <div>
+                {formattedDate}
+                {methodLabel ? ` · ${methodLabel}` : ''}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (s === 'partial') {
+    return (
+      <div className="md:text-right">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+          Paiement partiel
+        </div>
+        {formattedAmount && (
+          <div className="text-[11px] text-amber-700 mt-1.5 font-medium">
+            {formattedAmount} reçu
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (s === 'refunded') {
+    return (
+      <div className="md:text-right">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+          Remboursée
+        </div>
+      </div>
+    );
+  }
+
+  // pending (default)
+  return (
+    <div className="md:text-right">
+      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+        <Hourglass className="w-3 h-3" />
+        Paiement en attente
+      </div>
+    </div>
+  );
+}
 
 /* ── EmptyState ── */
 const EmptyState = ({ tab, t }: { tab: Tab; t: Dictionary }) => {
