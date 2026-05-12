@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
+import AnalyticsProvider from '@/lib/analytics/AnalyticsProvider';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chefstalents.com'),
@@ -50,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
       </head>
       <body>
-        {children}
+        <AnalyticsProvider>{children}</AnalyticsProvider>
 
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18111694917"
