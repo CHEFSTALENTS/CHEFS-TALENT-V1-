@@ -8,6 +8,7 @@ import { submitRequest } from "../../services/actions";
 import type { RequestForm } from "../../types";
 import { trackEvent, identifyUser, REQUEST_EVENTS } from "@/lib/analytics/posthog";
 import SaveDraftModal from "./_components/SaveDraftModal";
+import { calcMissionPrice, formatEur, type Tier } from "@/lib/pricing";
 
 // Constantes pour la sauvegarde locale
 const LOCAL_DRAFT_KEY = "chef_talents_request_draft_v1";
@@ -909,25 +910,53 @@ function WizardContent() {
     setRestoreBanner(null);
   }, []);
 
-  // 3. Exit intent modal : trigger sur mouseleave par le haut, après step 2,
-  // une seule fois par session.
+  // 3. Exit intent modal : trigger sur mouseleave (desktop) OU
+  // visibilitychange (mobile : changement d'onglet/app). Une seule fois
+  // par session, après step 2.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (step < 2 || result) return;
     if (sessionStorage.getItem(EXIT_INTENT_SESSION_KEY)) return;
 
-    const handler = (e: MouseEvent) => {
-      // mouseleave par le haut (curseur va vers la barre d'URL/onglet)
-      if (e.clientY <= 0) {
-        try { sessionStorage.setItem(EXIT_INTENT_SESSION_KEY, '1'); } catch {}
-        setSaveModalTrigger('exit-intent');
-        setShowSaveModal(true);
-        trackEvent('request_exit_intent_triggered', { step });
+    const triggerExitIntent = (source: 'mouseleave' | 'visibilitychange') => {
+      try { sessionStorage.setItem(EXIT_INTENT_SESSION_KEY, '1'); } catch {}
+      setSaveModalTrigger('exit-intent');
+      setShowSaveModal(true);
+      trackEvent('request_exit_intent_triggered', { step, source });
+    };
+
+    // Desktop : mouseleave par le haut (curseur va vers barre URL/onglet)
+    const mouseHandler = (e: MouseEvent) => {
+      if (e.clientY <= 0) triggerExitIntent('mouseleave');
+    };
+
+    // Mobile : changement d'onglet / passage en arrière-plan
+    // (l'utilisateur quitte l'app). On déclenche aussi pour les sessions
+    // longues sur desktop où l'utilisateur switch d'onglet.
+    let visibilityTimeout: ReturnType<typeof setTimeout> | null = null;
+    const visibilityHandler = () => {
+      if (document.visibilityState === 'hidden') {
+        // Petit délai pour ne pas déclencher sur un switch ultra-bref
+        // (genre changement de fenêtre rapide), et aussi pour que le
+        // sessionStorage check soit fiable.
+        visibilityTimeout = setTimeout(() => {
+          if (document.visibilityState === 'hidden' &&
+              !sessionStorage.getItem(EXIT_INTENT_SESSION_KEY)) {
+            triggerExitIntent('visibilitychange');
+          }
+        }, 500);
+      } else if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout);
       }
     };
 
-    document.addEventListener('mouseleave', handler);
-    return () => document.removeEventListener('mouseleave', handler);
+    document.addEventListener('mouseleave', mouseHandler);
+    document.addEventListener('visibilitychange', visibilityHandler);
+    return () => {
+      document.removeEventListener('mouseleave', mouseHandler);
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      if (visibilityTimeout) clearTimeout(visibilityTimeout);
+    };
   }, [step, result]);
 
   // Détection langue + pays au chargement
@@ -1396,21 +1425,36 @@ if (response?.success) {
             </div>
           )}
 
-          {/* ÉTAPE 7 — Budget indicatif (devis personnalisé envoyé après) */}
+          {/* ÉTAPE 7 — Budget indicatif (devis personnalisé envoyé après).
+              Les prix affichés sont calculés dynamiquement avec la grille
+              tarifaire officielle (lib/pricing.ts) selon le type de mission,
+              le mealplan et la durée déjà saisis dans les étapes précédentes. */}
           {step === 7 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 7 {t.of} {TOTAL_STEPS}</p>
               <h2 className="text-3xl md:text-4xl font-serif text-stone-900 text-center mb-2">{t.s7title}</h2>
               <p className="text-stone-500 font-light text-center mb-8">{t.s7sub}</p>
 
-              {/* 3 fourchettes indicatives — pas de calcul automatique.
-                  Le devis final sera personnalisé selon contexte / chef. */}
               <div className="grid md:grid-cols-3 gap-4">
                 {([
-                  ["essential", "✦", t.s7essential, t.s7essentialsub, "2 500€", false] as const,
-                  ["premium", "✦✦", t.s7premium, t.s7premiumsub, "4 500€", false] as const,
-                  ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub, "", true] as const,
-                ]).map(([val, stars, title, sub, priceLabel, isQuote]) => (
+                  ["essential", "✦", t.s7essential, t.s7essentialsub] as const,
+                  ["premium", "✦✦", t.s7premium, t.s7premiumsub] as const,
+                  ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub] as const,
+                ]).map(([val, stars, title, sub]) => {
+                  // Calcul dynamique du prix selon contexte mission
+                  const estimate = calcMissionPrice({
+                    missionCategory: data.missionCategory,
+                    mealPlan: data.mealPlan,
+                    days: numDays || 1,
+                    guestCount: totalGuests,
+                    tier: val as Tier,
+                  });
+                  const priceUnit =
+                    estimate.unit === 'per_week'
+                      ? lang === 'en' ? '/week' : lang === 'es' ? '/semana' : '/semaine'
+                      : lang === 'en' ? '/day' : lang === 'es' ? '/día' : '/jour';
+
+                  return (
                   <button
                     key={val}
                     type="button"
@@ -1430,7 +1474,7 @@ if (response?.success) {
                     <p className={`font-semibold text-base mb-1 ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>{title}</p>
                     <p className={`text-xs font-light mb-3 ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
                     <div className={`border-t pt-3 ${data.budgetLevel === val ? "border-stone-700" : "border-stone-100"}`}>
-                      {isQuote ? (
+                      {estimate.isQuote || estimate.perUnitEur == null ? (
                         <p className={`text-sm font-medium ${data.budgetLevel === val ? "text-stone-200" : "text-stone-700"}`}>
                           {t.s7priceOnQuote}
                         </p>
@@ -1440,13 +1484,23 @@ if (response?.success) {
                             {t.s7priceFrom}
                           </p>
                           <p className={`text-base font-semibold ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>
-                            {priceLabel}
+                            {formatEur(estimate.perUnitEur)}
+                            <span className={`text-xs font-normal ${data.budgetLevel === val ? "text-stone-400" : "text-stone-500"}`}>
+                              {' '}{priceUnit}
+                            </span>
                           </p>
+                          {/* Total estimé si on a déjà la durée */}
+                          {estimate.totalEur != null && numDays > 1 && (
+                            <p className={`text-[10px] mt-1 ${data.budgetLevel === val ? "text-stone-400" : "text-stone-400"}`}>
+                              {lang === 'en' ? 'Total est.' : lang === 'es' ? 'Total est.' : 'Total est.'} {formatEur(estimate.totalEur)}
+                            </p>
+                          )}
                         </>
                       )}
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Option « Définir mon budget » — full width sous les 3 niveaux */}
@@ -1569,6 +1623,21 @@ if (response?.success) {
                           ? (data.customBudgetAmount ? `${data.customBudgetAmount.toLocaleString("fr-FR")}€` : (t.budgetLabels as any).custom)
                           : (t.budgetLabels as any)[data.budgetLevel],
                       ],
+                      // Estimation totale calculée via la grille tarifaire
+                      // officielle (lib/pricing.ts) — affichée seulement
+                      // si tier non-custom et non-sur-devis
+                      (() => {
+                        if (!data.budgetLevel || data.budgetLevel === "custom") return null;
+                        const est = calcMissionPrice({
+                          missionCategory: data.missionCategory,
+                          mealPlan: data.mealPlan,
+                          days: numDays || 1,
+                          guestCount: totalGuests,
+                          tier: data.budgetLevel as Tier,
+                        });
+                        if (est.isQuote || est.totalEur == null) return ["Estimation", "Sur devis"];
+                        return ["Estimation", formatEur(est.totalEur)];
+                      })(),
                       (data.selectedLanguages?.length ?? 0) > 0 && ["Langues", data.selectedLanguages!.join(", ")],
                     ].filter(Boolean).map((item, i) => (
                       <div key={i} className="flex justify-between">
@@ -1638,7 +1707,7 @@ if (response?.success) {
                   trackEvent(REQUEST_EVENTS.DRAFT_SAVED, { trigger: 'manual-button', step });
                 }}
                 title={lang === 'en' ? 'Save and finish later' : lang === 'es' ? 'Guardar y continuar más tarde' : 'Sauvegarder et reprendre plus tard'}
-                className="hidden md:flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-900 border border-stone-200 hover:border-stone-400 rounded-xl px-3 py-2 transition-all"
+                className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-900 border border-stone-200 hover:border-stone-400 rounded-xl px-3 py-2 transition-all"
               >
                 <BookmarkPlus className="w-3.5 h-3.5" />
                 {lang === 'en' ? 'Save' : lang === 'es' ? 'Guardar' : 'Sauvegarder'}
