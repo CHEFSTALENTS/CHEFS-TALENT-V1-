@@ -871,9 +871,14 @@ function WizardContent() {
   }, []);
 
   // 2. Auto-save localStorage à chaque change de data ou step
+  // ⚠️ ne pas écraser le draft tant que restoreBanner est affiché : entre
+  // le mount et le clic « Reprendre », detectLang() + fetch ipapi peuvent
+  // déclencher des setLang/setData qui sauveraient un state vide PAR-
+  // DESSUS le vrai brouillon → le « Reprendre » donnerait un form vide.
   useEffect(() => {
     if (!isHydratedRef.current) return;
     if (typeof window === 'undefined') return;
+    if (restoreBanner) return; // bail out tant que pas de décision
     if (result) {
       // Soumis avec succès → on clear le brouillon local
       try { localStorage.removeItem(LOCAL_DRAFT_KEY); } catch {}
@@ -885,7 +890,7 @@ function WizardContent() {
         JSON.stringify({ state: data, step, lang, ts: Date.now() }),
       );
     } catch {}
-  }, [data, step, lang, result]);
+  }, [data, step, lang, result, restoreBanner]);
 
   // Accepter la reprise via banner localStorage
   const restoreLocalDraft = useCallback(() => {
@@ -1167,7 +1172,32 @@ if (response?.success) {
             ))}
           </div>
         </div>
-        <Link href="/" className="text-stone-400 hover:text-stone-900 transition-colors text-xl leading-none">×</Link>
+        {/* Close × — intercepte si l'utilisateur a commencé le form
+            (step ≥ 2) pour proposer la sauvegarde avant de partir.
+            Sinon navigue direct. */}
+        <button
+          type="button"
+          onClick={() => {
+            if (result) {
+              window.location.assign('/');
+              return;
+            }
+            if (step >= 2) {
+              setSaveModalTrigger('exit-intent');
+              setShowSaveModal(true);
+              trackEvent('request_exit_intent_triggered', {
+                step,
+                source: 'close-button',
+              });
+            } else {
+              window.location.assign('/');
+            }
+          }}
+          aria-label="Fermer"
+          className="text-stone-400 hover:text-stone-900 transition-colors text-xl leading-none"
+        >
+          ×
+        </button>
       </header>
 
       {/* PROGRESS */}
