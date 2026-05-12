@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2, CheckCircle2, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { submitRequest } from "../../services/actions";
 import type { RequestForm } from "../../types";
+import { trackEvent, identifyUser, REQUEST_EVENTS } from "@/lib/analytics/posthog";
 
 // ─────────────────────────────────────────────
 // TRADUCTIONS
@@ -761,6 +762,28 @@ function WizardContent() {
 
   const t = T[lang];
 
+  // Tracker chaque vue d'étape pour funnel PostHog (drop-off par étape)
+  useEffect(() => {
+    trackEvent(REQUEST_EVENTS.STEP_VIEWED, { step });
+  }, [step]);
+
+  // Détection abandon : si l'utilisateur quitte avant submit, on log
+  // l'étape à laquelle il en était (permet de voir les drop-offs).
+  useEffect(() => {
+    if (result) return; // déjà soumis, plus rien à tracker
+    const handler = () => {
+      trackEvent(REQUEST_EVENTS.ABANDONED, {
+        lastStep: step,
+        missionCategory: data.missionCategory,
+        location: data.location,
+        hasDates: !!data.startDate,
+        budgetLevel: data.budgetLevel,
+      });
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [step, result, data]);
+
   // Détection langue + pays au chargement
   useEffect(() => {
     setLang(detectLang());
@@ -843,6 +866,19 @@ case 10: return !!data.fullName?.trim() && !!data.email?.includes("@") && (data.
 
   const handleNext = () => {
     if (!canContinue()) { setError(t.required); return; }
+    // Track la completion de l'étape (avant le set, donc on capture la
+    // step terminée pas la nouvelle step).
+    trackEvent(REQUEST_EVENTS.STEP_COMPLETED, {
+      step,
+      lang,
+      // Quelques propriétés utiles pour les funnels (sans PII)
+      missionCategory: step >= 1 ? data.missionCategory : undefined,
+      location: step >= 2 ? data.location : undefined,
+      hasDates: step >= 3 ? !!data.startDate : undefined,
+      mealPlan: step >= 4 ? data.mealPlan : undefined,
+      guestCount: step >= 5 ? (data.adults ?? 0) + (data.children ?? 0) : undefined,
+      budgetLevel: step >= 7 ? data.budgetLevel : undefined,
+    });
     setError(""); setStep(s => Math.min(s + 1, TOTAL_STEPS));
   };
 
@@ -882,6 +918,22 @@ if (response?.success) {
         currency: 'EUR',
       });
     }
+    // PostHog : conversion = funnel terminé
+    if (data.email) {
+      identifyUser(data.email.toLowerCase().trim(), {
+        fullName: data.fullName || undefined,
+        lang,
+      });
+    }
+    trackEvent(REQUEST_EVENTS.SUBMITTED, {
+      missionCategory: data.missionCategory,
+      budgetLevel: data.budgetLevel,
+      conversionValueEur: conversionValue,
+      location: data.location,
+      guestCount: (data.adults ?? 0) + (data.children ?? 0),
+      hasDietaryRestrictions: data.hasDietaryRestrictions,
+      lang,
+    });
   }
   setResult(response);
 }
