@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isProfileCompleteForValidation } from '@/lib/profileCompletion';
 import { requireChefOr401 } from '@/lib/auth/requireChef';
+import { signChefProfileUrls, unsignChefProfileUrls } from '@/lib/storage';
 
 /**
  * GET /api/chef/profile
@@ -25,7 +26,12 @@ export async function GET(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ profile: data?.profile ?? null });
+  // Bucket chef-uploads privé : signer les URLs avatar/photo/images
+  // avant retour. TTL 1h, suffit pour une session admin/chef typique.
+  const profile = data?.profile ?? null;
+  if (profile) await signChefProfileUrls(profile, 3600);
+
+  return NextResponse.json({ profile });
 }
 
 async function upsertProfile(req: Request) {
@@ -56,6 +62,11 @@ const profileForDb =
     ? { ...profile, status: nextStatus, updatedAt: new Date().toISOString() }
     : { status: nextStatus, updatedAt: new Date().toISOString() };
 
+// Bucket chef-uploads privé : si le frontend renvoie des signed URLs
+// (qu'il a reçues du GET), les normaliser en URL publique avant
+// stockage pour éviter de persister une URL qui expire dans 1h.
+unsignChefProfileUrls(profileForDb);
+
   const payload = {
     user_id: id,
     email,
@@ -71,7 +82,11 @@ profile: profileForDb,
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ profile: data?.profile ?? null });
+  // Re-signer pour le retour (cohérent avec le GET)
+  const returnedProfile = data?.profile ?? null;
+  if (returnedProfile) await signChefProfileUrls(returnedProfile, 3600);
+
+  return NextResponse.json({ profile: returnedProfile });
 }
 
 export async function POST(req: Request) {

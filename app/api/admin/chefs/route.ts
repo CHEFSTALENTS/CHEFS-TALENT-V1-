@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendChefActivated } from '@/lib/email/sendChefActivated';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { signChefProfileUrls } from '@/lib/storage';
 
 const TABLE = 'chef_profiles';
 
@@ -94,6 +95,10 @@ export async function GET(req: Request) {
         createdAt: row.created_at || row.createdAt || null,
       };
     });
+
+    // Bucket chef-uploads privé : signer les URLs avatar/photo/images
+    // de chaque profile avant de retourner au client (TTL 1h).
+    await Promise.all(data.map((c: any) => signChefProfileUrls(c.profile)));
 
     return NextResponse.json({ chefs: data });
   } catch (e: any) {

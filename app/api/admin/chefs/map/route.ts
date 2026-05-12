@@ -5,6 +5,7 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { signChefUrls } from '@/lib/storage';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -260,7 +261,7 @@ export async function GET(req: Request) {
 
     // 5) Construction des points : tous les chefs avec la même cacheKey
     // partagent la même paire (lat, lng) → cluster naturel.
-    const points = rows
+    const rawPoints = rows
       .map((r: any) => {
         const coords = cacheMap.get(r.cacheKey);
         if (!coords) return null;
@@ -275,7 +276,18 @@ export async function GET(req: Request) {
           lng: coords.lng,
         };
       })
-      .filter(Boolean);
+      .filter(Boolean) as any[];
+
+    // 6) Bucket chef-uploads en privé : signer les URLs avatar avant
+    // de les renvoyer au client (TTL 1h, suffit pour une session admin).
+    const signed = await signChefUrls(
+      rawPoints.map((p) => p.avatarUrl),
+      3600,
+    );
+    const points = rawPoints.map((p, i) => ({
+      ...p,
+      avatarUrl: signed[i],
+    }));
 
     console.log('[admin/chefs/map] result', {
       rendered: points.length,

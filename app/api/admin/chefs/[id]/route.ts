@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { signChefProfileUrls } from '@/lib/storage';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,10 +45,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: 'Chef introuvable' }, { status: 404 });
     }
 
+    // Bucket chef-uploads privé : signer les URLs avatar/images
+    const profile = data.profile ?? {};
+    await signChefProfileUrls(profile, 3600);
+
     return NextResponse.json({
       ok: true,
       email: data.email ?? null,
-      profile: data.profile ?? {},
+      profile,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
