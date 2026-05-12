@@ -82,7 +82,8 @@ type StatusGroup = 'pending' | 'upcoming' | 'paid' | 'live' | 'done' | 'canceled
 
 function bucket(m: MissionView): StatusGroup {
   const s = m.status;
-  // Si la mission est confirmée ET payée, elle va dans le bucket 'paid'
+  // Si la mission est confirmée ET encaissée (= client a payé Chefs Talents),
+  // elle va dans le bucket 'paid' (= « Encaissées »).
   if (s === 'confirmed' && m.paymentStatus === 'paid') return 'paid';
   if (['offered', 'pending', 'pitched'].includes(s)) return 'pending';
   if (['confirmed', 'upcoming', 'scheduled', 'accepted'].includes(s)) return 'upcoming';
@@ -100,7 +101,7 @@ export default function AdminMissionsPage() {
   const [statusGroup, setStatusGroup] = useState<StatusGroup>('upcoming');
   const [showNewModal, setShowNewModal] = useState(false);
 
-  // Pour la modal "Marquer payée"
+  // Pour la modal "Marquer encaissée"
   const [paidTarget, setPaidTarget] = useState<MissionView | null>(null);
   // Pour le mark-pending (annuler le paiement)
   const [revertingId, setRevertingId] = useState<string | null>(null);
@@ -127,9 +128,9 @@ export default function AdminMissionsPage() {
     refresh();
   }, []);
 
-  // Annuler le marquage payée (cas erreur de saisie)
+  // Annuler le marquage encaissée (cas erreur de saisie / chargeback client)
   const revertPaid = async (id: string) => {
-    if (!confirm('Annuler le marquage payée ?\nLa mission repassera en statut « confirmée non payée ».')) return;
+    if (!confirm('Annuler le marquage encaissée ?\nLa mission repassera en statut « confirmée non encaissée ».')) return;
     setRevertingId(id);
     try {
       const r = await adminFetchRaw(
@@ -226,7 +227,7 @@ export default function AdminMissionsPage() {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Kpi title="En attente" value={counts.pending} hint="offered" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} />
         <Kpi title="À venir" value={counts.upcoming} hint="confirmed" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} />
-        <Kpi title="Payées" value={counts.paid} hint="confirmed + paid" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} accent="emerald" />
+        <Kpi title="Encaissées" value={counts.paid} hint="client a payé" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} accent="emerald" />
         <Kpi title="En cours" value={counts.live} hint="in_progress" active={statusGroup === 'live'} onClick={() => setStatusGroup('live')} />
         <Kpi title="Terminées" value={counts.done} hint="completed" active={statusGroup === 'done'} onClick={() => setStatusGroup('done')} />
         <Kpi title="Annulées" value={counts.canceled} hint="canceled" active={statusGroup === 'canceled'} onClick={() => setStatusGroup('canceled')} />
@@ -247,7 +248,7 @@ export default function AdminMissionsPage() {
           <div className="flex flex-wrap gap-2">
             <Segment label="En attente" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} badge={counts.pending} />
             <Segment label="À venir" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} badge={counts.upcoming} />
-            <Segment label="Payées" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} badge={counts.paid} />
+            <Segment label="Encaissées" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} badge={counts.paid} />
             <Segment label="En cours" active={statusGroup === 'live'} onClick={() => setStatusGroup('live')} badge={counts.live} />
             <Segment label="Terminées" active={statusGroup === 'done'} onClick={() => setStatusGroup('done')} badge={counts.done} />
             <Segment label="Annulées" active={statusGroup === 'canceled'} onClick={() => setStatusGroup('canceled')} badge={counts.canceled} />
@@ -265,7 +266,7 @@ export default function AdminMissionsPage() {
               <span>· Client : <span className="text-white/85 font-medium">{bucketTotals.totalClient.toLocaleString('fr-FR')} €</span></span>
             )}
             {statusGroup === 'paid' && bucketTotals.totalPaid > 0 && (
-              <span>· Encaissé chef : <span className="text-emerald-200 font-medium">{bucketTotals.totalPaid.toLocaleString('fr-FR')} €</span></span>
+              <span>· Encaissé client : <span className="text-emerald-200 font-medium">{bucketTotals.totalPaid.toLocaleString('fr-FR')} €</span></span>
             )}
           </div>
         )}
@@ -323,24 +324,24 @@ export default function AdminMissionsPage() {
                     </td>
                     <td className="p-3 text-right">
                       <div className="inline-flex items-center gap-2">
-                        {/* Bouton "Marquer payée" — visible uniquement si confirmed && pending */}
+                        {/* Bouton "Marquer encaissée" — visible si confirmed && pending */}
                         {m.status === 'confirmed' && m.paymentStatus === 'pending' && (
                           <button
                             onClick={() => setPaidTarget(m)}
-                            title="Marquer cette mission comme payée"
+                            title="Marquer comme encaissée (client a réglé)"
                             className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-200 hover:bg-emerald-500/20 transition"
                           >
                             <BadgeCheck className="w-3.5 h-3.5" />
-                            Marquer payée
+                            Marquer encaissée
                           </button>
                         )}
 
-                        {/* Bouton "Annuler paiement" — visible si paid */}
+                        {/* Bouton "Annuler encaissement" — visible si paid */}
                         {m.paymentStatus === 'paid' && (
                           <button
                             onClick={() => revertPaid(m.id)}
                             disabled={revertingId === m.id}
-                            title="Annuler le marquage payée"
+                            title="Annuler le marquage encaissée"
                             className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/55 hover:bg-white/10 transition disabled:opacity-50"
                           >
                             {revertingId === m.id ? (
@@ -382,11 +383,11 @@ export default function AdminMissionsPage() {
         />
       )}
 
-      {/* Modal marquer payée */}
+      {/* Modal marquer encaissée — montant pré-rempli = prix client */}
       {paidTarget && (
         <MarkPaidModal
           missionId={paidTarget.id}
-          defaultAmount={paidTarget.chefAmount}
+          defaultAmount={paidTarget.clientAmount ?? paidTarget.chefAmount}
           chefName={paidTarget.chefName}
           location={paidTarget.location}
           onClose={() => setPaidTarget(null)}
@@ -514,7 +515,7 @@ function PaymentBadge({ status }: { status: string }) {
 
   const label =
     s === 'paid'
-      ? '✓ Payée'
+      ? '✓ Encaissée'
       : s === 'partial'
       ? 'Partielle'
       : s === 'refunded'

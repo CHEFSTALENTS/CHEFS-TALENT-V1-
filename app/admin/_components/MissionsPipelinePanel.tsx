@@ -52,10 +52,14 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 /**
  * Panel « Pipeline missions » sur le dashboard /admin.
  * Affiche en un coup d'œil :
- *   - Entonnoir : confirmées ce mois → payées ce mois → en attente paiement
+ *   - Entonnoir : confirmées ce mois → encaissées ce mois → en attente
+ *     encaissement
  *   - Delta vs mois précédent (TrendingUp/Down)
- *   - 5 dernières payées (paid_at desc)
+ *   - 5 dernières encaissées (paid_at desc)
  *   - 5 prochaines à encaisser (confirmed + pending, start_date asc)
+ *
+ * Sémantique : « Encaissée » = le client a réglé Chefs Talents. Le
+ * versement au chef est géré séparément hors-app.
  */
 export default function MissionsPipelinePanel() {
   const [data, setData] = useState<Pipeline | null>(null);
@@ -152,28 +156,31 @@ export default function MissionsPipelinePanel() {
           tone="amber"
           count={data.confirmedMonth.count}
           totalEur={data.confirmedMonth.chefTotalEur}
+          totalLabel="à verser au chef"
           subtitle={`${money(data.confirmedMonth.commissionEur)} commission`}
         />
 
-        {/* Payées ce mois (avec delta MoM) */}
+        {/* Encaissées ce mois (avec delta MoM) */}
         <StageCard
-          label="Payées ce mois"
+          label="Encaissées ce mois"
           icon={<BadgeCheck className="w-3.5 h-3.5" />}
           tone="emerald"
           count={data.paidMonth.count}
           totalEur={data.paidMonth.chefTotalEur}
+          totalLabel="encaissé du client"
           subtitle={`${money(data.paidMonth.commissionEur)} commission`}
           delta={commissionDelta}
           deltaLabel="vs mois précédent"
         />
 
-        {/* En attente de paiement (toutes périodes) */}
+        {/* En attente encaissement (toutes périodes) */}
         <StageCard
-          label="En attente paiement"
+          label="En attente encaissement"
           icon={<Hourglass className="w-3.5 h-3.5" />}
           tone="sky"
           count={data.pendingPayment.count}
           totalEur={data.pendingPayment.chefTotalEur}
+          totalLabel="à verser au chef"
           subtitle={`${money(data.pendingPayment.commissionEur)} commission à venir`}
           subtitleAccent
         />
@@ -187,14 +194,14 @@ export default function MissionsPipelinePanel() {
         </div>
       )}
 
-      {/* 2 listes : dernières payées + prochaines à encaisser */}
+      {/* 2 listes : dernières encaissées + prochaines à encaisser */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-white/5">
         <MissionList
-          title="Dernières payées"
-          subtitle="Triées par date de paiement"
+          title="Dernières encaissées"
+          subtitle="Triées par date d'encaissement"
           tone="emerald"
           items={data.latestPaid}
-          empty="Aucune mission payée pour l'instant."
+          empty="Aucune mission encaissée pour l'instant."
           variant="paid"
         />
         <MissionList
@@ -218,6 +225,7 @@ function StageCard({
   tone,
   count,
   totalEur,
+  totalLabel = 'net chef',
   subtitle,
   subtitleAccent,
   delta,
@@ -228,6 +236,7 @@ function StageCard({
   tone: 'amber' | 'emerald' | 'sky';
   count: number;
   totalEur: number;
+  totalLabel?: string;
   subtitle?: string;
   subtitleAccent?: boolean;
   delta?: { pct: number | null; sign: 'up' | 'down' | 'flat'; raw: number } | null;
@@ -289,7 +298,7 @@ function StageCard({
 
       <div className="text-sm text-white/80 font-medium">
         {money(totalEur)}{' '}
-        <span className="text-xs text-white/45">net chef</span>
+        <span className="text-xs text-white/45">{totalLabel}</span>
       </div>
 
       {subtitle && (
@@ -390,8 +399,10 @@ function MissionList({
                     >
                       {money(
                         variant === 'paid'
-                          ? Number(m.paid_amount || m.chef_amount || 0)
-                          : Number(m.chef_amount || 0),
+                          ? // Pour les encaissées : montant client encaissé
+                            Number(m.paid_amount || m.client_amount || 0)
+                          : // Pour les à encaisser : prix client (à recevoir)
+                            Number(m.client_amount || m.chef_amount || 0),
                       )}
                     </div>
                     {m.commission_amount != null &&

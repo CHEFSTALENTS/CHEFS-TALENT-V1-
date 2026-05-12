@@ -23,9 +23,13 @@ const PAYMENT_METHODS: Array<{ value: string; label: string }> = [
 ];
 
 /**
- * Modal admin : marquer une mission confirmée comme payée.
- * Permet de saisir le montant exact (peut différer de chef_amount en
- * cas de remise / acompte) et la méthode de paiement.
+ * Modal admin : marquer une mission confirmée comme ENCAISSÉE.
+ * « Payée » dans cette UI = le CLIENT a réglé Chefs Talents. Le
+ * paiement chef (sortie de cash) est géré séparément hors-app pour
+ * l'instant — on n'enregistre ici que l'encaissement.
+ *
+ * Le montant pré-rempli est donc le prix client (client_amount), pas
+ * le chef_amount. L'admin peut le modifier si acompte / écart.
  */
 export default function MarkPaidModal({
   missionId,
@@ -97,11 +101,11 @@ export default function MarkPaidModal({
             <div className="flex items-center gap-2">
               <BadgeCheck className="w-4 h-4 text-emerald-300" />
               <h2 className="text-base font-semibold text-white">
-                Marquer la mission payée
+                Marquer la mission encaissée
               </h2>
             </div>
             <p className="text-xs text-white/50 mt-0.5 truncate">
-              {chefName}{location ? ` · ${location}` : ''}
+              Le client a réglé · {chefName}{location ? ` · ${location}` : ''}
             </p>
           </div>
           <button
@@ -115,7 +119,7 @@ export default function MarkPaidModal({
         <div className="p-5 space-y-4">
 
           <div>
-            <label className={labelCls}>Montant payé chef (€) *</label>
+            <label className={labelCls}>Montant encaissé du client (€) *</label>
             <input
               type="number"
               min={0}
@@ -124,11 +128,11 @@ export default function MarkPaidModal({
               value={form.paidAmount}
               onChange={(e) => set({ paidAmount: e.target.value })}
               className={inputCls}
-              placeholder="Ex. 1500"
+              placeholder="Ex. 2400"
             />
             {defaultAmount != null && (
               <p className="text-[10px] text-white/30 mt-1">
-                Montant initial mission : {defaultAmount.toLocaleString('fr-FR')} €
+                Prix client initial : {defaultAmount.toLocaleString('fr-FR')} €
               </p>
             )}
           </div>
@@ -178,12 +182,13 @@ export default function MarkPaidModal({
               ) : (
                 <BadgeCheck className="w-4 h-4" />
               )}
-              {submitting ? 'Enregistrement…' : 'Confirmer le paiement'}
+              {submitting ? 'Enregistrement…' : 'Confirmer l\'encaissement'}
             </button>
 
             <p className="text-[10px] text-white/40 text-center leading-relaxed">
-              La mission passera en statut <strong>payée</strong> et sera
-              comptabilisée dans le KPI « Payées ce mois ».
+              La mission passera en statut <strong>encaissée</strong> et sera
+              comptabilisée dans le KPI « Encaissées ce mois ». Le paiement
+              au chef se gère séparément hors-app.
             </p>
 
             <button
