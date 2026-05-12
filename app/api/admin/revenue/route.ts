@@ -19,6 +19,58 @@ function startOfMonth(d = new Date()): Date {
 function startOfYear(d = new Date()): Date {
   return new Date(d.getFullYear(), 0, 1, 0, 0, 0, 0);
 }
+function startOfIsoWeek(d = new Date()): Date {
+  const day = d.getDay() || 7; // dimanche = 7
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  monday.setDate(monday.getDate() - (day - 1));
+  return monday;
+}
+function startOfQuarter(d = new Date()): Date {
+  const q = Math.floor(d.getMonth() / 3); // 0..3
+  return new Date(d.getFullYear(), q * 3, 1, 0, 0, 0, 0);
+}
+function nDaysAgo(d: Date, n: number): Date {
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  r.setDate(r.getDate() - n);
+  return r;
+}
+
+type PeriodKey =
+  | 'current_week'
+  | 'last_30d'
+  | 'current_month'
+  | 'current_quarter'
+  | 'current_year';
+
+const PERIOD_LABEL: Record<PeriodKey, string> = {
+  current_week: 'Semaine en cours',
+  last_30d: '30 derniers jours',
+  current_month: 'Mois en cours',
+  current_quarter: 'Trimestre en cours',
+  current_year: 'Année en cours',
+};
+
+function getPeriodRange(key: PeriodKey, now = new Date()): { from: Date; to: Date } {
+  const to = now;
+  switch (key) {
+    case 'current_week':
+      return { from: startOfIsoWeek(now), to };
+    case 'last_30d':
+      return { from: nDaysAgo(now, 29), to };
+    case 'current_quarter':
+      return { from: startOfQuarter(now), to };
+    case 'current_year':
+      return { from: startOfYear(now), to };
+    case 'current_month':
+    default:
+      return { from: startOfMonth(now), to };
+  }
+}
+
+function isPeriodKey(v: any): v is PeriodKey {
+  return v === 'current_week' || v === 'last_30d' || v === 'current_month'
+    || v === 'current_quarter' || v === 'current_year';
+}
 
 /** Calcule le MRR depuis Stripe (abonnements actifs). En cents → euros. */
 async function computeStripeMrr(): Promise<{
@@ -249,77 +301,89 @@ export async function GET(req: Request) {
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
 
-  const monthStartMs = startOfMonth().getTime();
-  const yearStartMs = startOfYear().getTime();
+  const { searchParams } = new URL(req.url);
+  const rawPeriod = searchParams.get('period');
+  const periodKey: PeriodKey = isPeriodKey(rawPeriod) ? rawPeriod : 'current_month';
+
+  const now = new Date();
+  const { from: periodFrom, to: periodTo } = getPeriodRange(periodKey, now);
+  const periodStartMs = periodFrom.getTime();
+  const yearStartMs = startOfYear(now).getTime();
 
   try {
     const [
       mrr,
-      chargesMonth,
+      chargesPeriod,
       chargesYtd,
-      missionsMonth,
+      missionsPeriod,
       missionsYtd,
-      missionsPaidMonth,
+      missionsPaidPeriod,
       missionsPaidYtd,
-      manualMonth,
+      manualPeriod,
       manualYtd,
     ] = await Promise.all([
       computeStripeMrr(),
-      sumStripeCharges(monthStartMs),
+      sumStripeCharges(periodStartMs),
       sumStripeCharges(yearStartMs),
-      sumMissionsCommission(new Date(monthStartMs).toISOString()),
+      sumMissionsCommission(new Date(periodStartMs).toISOString()),
       sumMissionsCommission(new Date(yearStartMs).toISOString()),
-      sumMissionsPaid(new Date(monthStartMs).toISOString()),
+      sumMissionsPaid(new Date(periodStartMs).toISOString()),
       sumMissionsPaid(new Date(yearStartMs).toISOString()),
-      sumManualEntries(new Date(monthStartMs).toISOString()),
+      sumManualEntries(new Date(periodStartMs).toISOString()),
       sumManualEntries(new Date(yearStartMs).toISOString()),
     ]);
 
-    const totalMonth =
-      chargesMonth.totalEur + missionsMonth.commissionEur + manualMonth.htEur;
+    const totalPeriod =
+      chargesPeriod.totalEur + missionsPeriod.commissionEur + manualPeriod.htEur;
     const totalYtd =
       chargesYtd.totalEur + missionsYtd.commissionEur + manualYtd.htEur;
 
     return NextResponse.json({
       ok: true,
       generatedAt: new Date().toISOString(),
+      period: {
+        key: periodKey,
+        label: PERIOD_LABEL[periodKey],
+        from: periodFrom.toISOString(),
+        to: periodTo.toISOString(),
+      },
       stripe: {
         mrrEur: mrr.mrrEur,
         activeSubscriptions: mrr.activeCount,
-        chargesMonthEur: chargesMonth.totalEur,
-        chargesMonthCount: chargesMonth.count,
+        chargesPeriodEur: chargesPeriod.totalEur,
+        chargesPeriodCount: chargesPeriod.count,
         chargesYtdEur: chargesYtd.totalEur,
         chargesYtdCount: chargesYtd.count,
       },
       missions: {
-        // Confirmées (facturées, pas forcément encaissées)
-        confirmedMonth: missionsMonth.count,
-        commissionMonthEur: missionsMonth.commissionEur,
+        // Confirmées (facturées, pas forcément encaissées) sur la période
+        confirmedPeriod: missionsPeriod.count,
+        commissionPeriodEur: missionsPeriod.commissionEur,
         confirmedYtd: missionsYtd.count,
         commissionYtdEur: missionsYtd.commissionEur,
         // Payées (encaissées chef) — basé sur paid_at + payment_status='paid'
-        paidMonth: missionsPaidMonth.count,
-        paidAmountMonthEur: missionsPaidMonth.paidAmountEur,
-        paidCommissionMonthEur: missionsPaidMonth.commissionEur,
+        paidPeriod: missionsPaidPeriod.count,
+        paidAmountPeriodEur: missionsPaidPeriod.paidAmountEur,
+        paidCommissionPeriodEur: missionsPaidPeriod.commissionEur,
         paidYtd: missionsPaidYtd.count,
         paidAmountYtdEur: missionsPaidYtd.paidAmountEur,
         paidCommissionYtdEur: missionsPaidYtd.commissionEur,
       },
       manualEntries: {
-        monthHtEur: manualMonth.htEur,
-        monthVatEur: manualMonth.vatEur,
-        monthCount: manualMonth.count,
-        monthByCategory: manualMonth.byCategory,
+        periodHtEur: manualPeriod.htEur,
+        periodVatEur: manualPeriod.vatEur,
+        periodCount: manualPeriod.count,
+        periodByCategory: manualPeriod.byCategory,
         ytdHtEur: manualYtd.htEur,
         ytdVatEur: manualYtd.vatEur,
         ytdCount: manualYtd.count,
         _debug: {
-          monthQuery: manualMonth._debug,
+          periodQuery: manualPeriod._debug,
           ytdQuery: manualYtd._debug,
         },
       },
       totals: {
-        monthEur: Math.round(totalMonth * 100) / 100,
+        periodEur: Math.round(totalPeriod * 100) / 100,
         ytdEur: Math.round(totalYtd * 100) / 100,
       },
     });
