@@ -235,7 +235,6 @@ async function sumManualEntries(sinceIso: string): Promise<{
   vatEur: number;
   count: number;
   byCategory: Record<string, { htEur: number; count: number }>;
-  _debug: { sinceDate: string; rawCount: number; errorMsg: string | null; firstRow: any };
 }> {
   const supabase = getSupabaseAdmin();
   const sinceDate = sinceIso.slice(0, 10);
@@ -245,21 +244,14 @@ async function sumManualEntries(sinceIso: string): Promise<{
     .gte('occurred_at', sinceDate)
     .limit(5000);
 
-  const baseDebug = {
-    sinceDate,
-    rawCount: data?.length ?? 0,
-    errorMsg: error?.message ?? null,
-    firstRow: data?.[0] ?? null,
-  };
-
   if (error) {
     const msg = String(error.message || '').toLowerCase();
     if (msg.includes('does not exist') || msg.includes('relation')) {
       console.warn('[admin/revenue] revenue_entries table not migrated yet, returning 0');
-      return { htEur: 0, vatEur: 0, count: 0, byCategory: {}, _debug: baseDebug };
+      return { htEur: 0, vatEur: 0, count: 0, byCategory: {} };
     }
     console.error('[admin/revenue] revenue_entries read', error);
-    return { htEur: 0, vatEur: 0, count: 0, byCategory: {}, _debug: baseDebug };
+    return { htEur: 0, vatEur: 0, count: 0, byCategory: {} };
   }
 
   let htCents = 0;
@@ -293,7 +285,6 @@ async function sumManualEntries(sinceIso: string): Promise<{
     vatEur: Math.round(ttcCents - htCents) / 100,
     count,
     byCategory: byCategoryEur,
-    _debug: baseDebug,
   };
 }
 
@@ -377,10 +368,6 @@ export async function GET(req: Request) {
         ytdHtEur: manualYtd.htEur,
         ytdVatEur: manualYtd.vatEur,
         ytdCount: manualYtd.count,
-        _debug: {
-          periodQuery: manualPeriod._debug,
-          ytdQuery: manualYtd._debug,
-        },
       },
       totals: {
         periodEur: Math.round(totalPeriod * 100) / 100,
