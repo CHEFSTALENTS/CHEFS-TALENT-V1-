@@ -8,7 +8,10 @@ import { submitRequest } from "../../services/actions";
 import type { RequestForm } from "../../types";
 import { trackEvent, identifyUser, REQUEST_EVENTS } from "@/lib/analytics/posthog";
 import SaveDraftModal from "./_components/SaveDraftModal";
-import { calcMissionPrice, formatEur, type Tier } from "@/lib/pricing";
+// lib/pricing.ts est utilisé côté admin/backend pour générer les devis
+// personnalisés. Côté client (/request) on n'affiche AUCUN prix : le
+// step 7 sert juste à récupérer une gamme cible (Essentiel/Premium/
+// Exception) pour orienter le devis.
 
 // Constantes pour la sauvegarde locale
 const LOCAL_DRAFT_KEY = "chef_talents_request_draft_v1";
@@ -1425,10 +1428,10 @@ if (response?.success) {
             </div>
           )}
 
-          {/* ÉTAPE 7 — Budget indicatif (devis personnalisé envoyé après).
-              Les prix affichés sont calculés dynamiquement avec la grille
-              tarifaire officielle (lib/pricing.ts) selon le type de mission,
-              le mealplan et la durée déjà saisis dans les étapes précédentes. */}
+          {/* ÉTAPE 7 — Gamme indicative (aucun prix affiché au client).
+              Sert juste à connaître la gamme cible pour orienter le devis.
+              Les vrais prix (lib/pricing.ts) sont utilisés côté admin
+              uniquement pour générer le devis personnalisé. */}
           {step === 7 && (
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-stone-400 text-center mb-3">{t.step} 7 {t.of} {TOTAL_STEPS}</p>
@@ -1440,21 +1443,7 @@ if (response?.success) {
                   ["essential", "✦", t.s7essential, t.s7essentialsub] as const,
                   ["premium", "✦✦", t.s7premium, t.s7premiumsub] as const,
                   ["exclusive", "✦✦✦", t.s7exclusive, t.s7exclusivesub] as const,
-                ]).map(([val, stars, title, sub]) => {
-                  // Calcul dynamique du prix selon contexte mission
-                  const estimate = calcMissionPrice({
-                    missionCategory: data.missionCategory,
-                    mealPlan: data.mealPlan,
-                    days: numDays || 1,
-                    guestCount: totalGuests,
-                    tier: val as Tier,
-                  });
-                  const priceUnit =
-                    estimate.unit === 'per_week'
-                      ? lang === 'en' ? '/week' : lang === 'es' ? '/semana' : '/semaine'
-                      : lang === 'en' ? '/day' : lang === 'es' ? '/día' : '/jour';
-
-                  return (
+                ]).map(([val, stars, title, sub]) => (
                   <button
                     key={val}
                     type="button"
@@ -1472,35 +1461,9 @@ if (response?.success) {
                     )}
                     <p className={`text-xs mb-2 ${data.budgetLevel === val ? "text-stone-400" : "text-stone-300"}`}>{stars}</p>
                     <p className={`font-semibold text-base mb-1 ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>{title}</p>
-                    <p className={`text-xs font-light mb-3 ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
-                    <div className={`border-t pt-3 ${data.budgetLevel === val ? "border-stone-700" : "border-stone-100"}`}>
-                      {estimate.isQuote || estimate.perUnitEur == null ? (
-                        <p className={`text-sm font-medium ${data.budgetLevel === val ? "text-stone-200" : "text-stone-700"}`}>
-                          {t.s7priceOnQuote}
-                        </p>
-                      ) : (
-                        <>
-                          <p className={`text-[10px] uppercase tracking-widest ${data.budgetLevel === val ? "text-stone-500" : "text-stone-400"}`}>
-                            {t.s7priceFrom}
-                          </p>
-                          <p className={`text-base font-semibold ${data.budgetLevel === val ? "text-white" : "text-stone-900"}`}>
-                            {formatEur(estimate.perUnitEur)}
-                            <span className={`text-xs font-normal ${data.budgetLevel === val ? "text-stone-400" : "text-stone-500"}`}>
-                              {' '}{priceUnit}
-                            </span>
-                          </p>
-                          {/* Total estimé si on a déjà la durée */}
-                          {estimate.totalEur != null && numDays > 1 && (
-                            <p className={`text-[10px] mt-1 ${data.budgetLevel === val ? "text-stone-400" : "text-stone-400"}`}>
-                              {lang === 'en' ? 'Total est.' : lang === 'es' ? 'Total est.' : 'Total est.'} {formatEur(estimate.totalEur)}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
+                    <p className={`text-xs font-light ${data.budgetLevel === val ? "text-stone-300" : "text-stone-500"}`}>{sub}</p>
                   </button>
-                  );
-                })}
+                ))}
               </div>
 
               {/* Option « Définir mon budget » — full width sous les 3 niveaux */}
@@ -1623,21 +1586,8 @@ if (response?.success) {
                           ? (data.customBudgetAmount ? `${data.customBudgetAmount.toLocaleString("fr-FR")}€` : (t.budgetLabels as any).custom)
                           : (t.budgetLabels as any)[data.budgetLevel],
                       ],
-                      // Estimation totale calculée via la grille tarifaire
-                      // officielle (lib/pricing.ts) — affichée seulement
-                      // si tier non-custom et non-sur-devis
-                      (() => {
-                        if (!data.budgetLevel || data.budgetLevel === "custom") return null;
-                        const est = calcMissionPrice({
-                          missionCategory: data.missionCategory,
-                          mealPlan: data.mealPlan,
-                          days: numDays || 1,
-                          guestCount: totalGuests,
-                          tier: data.budgetLevel as Tier,
-                        });
-                        if (est.isQuote || est.totalEur == null) return ["Estimation", "Sur devis"];
-                        return ["Estimation", formatEur(est.totalEur)];
-                      })(),
+                      // Pas d'estimation chiffrée affichée au client.
+                      // Le devis personnalisé est envoyé séparément.
                       (data.selectedLanguages?.length ?? 0) > 0 && ["Langues", data.selectedLanguages!.join(", ")],
                     ].filter(Boolean).map((item, i) => (
                       <div key={i} className="flex justify-between">
