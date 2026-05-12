@@ -377,12 +377,12 @@ export default function AdminDashboardPage() {
                   tone="violet"
                 />
                 <RevSubKpi
-                  label="Missions payées"
+                  label="Missions encaissées"
                   value={money(revenue.missions.paidCommissionMonthEur ?? 0)}
                   subtitle={
                     (revenue.missions.paidMonth ?? 0) > 0
-                      ? `${revenue.missions.paidMonth} payée${(revenue.missions.paidMonth ?? 0) > 1 ? 's' : ''} · ${money(revenue.missions.paidAmountMonthEur ?? 0)} chef`
-                      : 'Aucune payée ce mois'
+                      ? `${revenue.missions.paidMonth} encaissée${(revenue.missions.paidMonth ?? 0) > 1 ? 's' : ''} · ${money(revenue.missions.paidAmountMonthEur ?? 0)} reçu client`
+                      : 'Aucune encaissée ce mois'
                   }
                   tone="green"
                 />

@@ -25,17 +25,23 @@ const ALLOWED_STATUSES = new Set(['paid', 'partial', 'refunded']);
 
 // =============================================================
 // PATCH /api/admin/missions/[id]/mark-paid
+//
+// ⚠️ SÉMANTIQUE : « payée » ici = le CLIENT a réglé Chefs Talents.
+// Le versement au chef est géré séparément hors-app pour l'instant.
+// Donc paidAmount correspond au MONTANT ENCAISSÉ DU CLIENT (généralement
+// = client_amount).
+//
 // Body :
 //   {
 //     paymentStatus?: 'paid' | 'partial' | 'refunded',  // default 'paid'
-//     paidAmount?: number,        // default = mission.chef_amount
+//     paidAmount?: number,        // default = mission.chef_amount (sera
+//                                  //  recalculé côté UI sur client_amount)
 //     paymentMethod?: 'sepa' | 'stripe' | 'cash' | 'wire' | 'check' | 'other',
 //     paymentReference?: string,
 //   }
 //
-// La mission doit être en status='confirmed' (sinon 400) pour être
-// marquée payée. Il est inutile de marquer payée une mission qui n'a
-// pas été confirmée.
+// La mission doit être en status='confirmed' (sinon 400). Il est inutile
+// de marquer encaissée une mission qui n'a pas été confirmée.
 // =============================================================
 export async function PATCH(
   req: Request,
@@ -102,10 +108,14 @@ export async function PATCH(
     }
 
     // 2) Update payment fields
+    // Default = client_amount (= ce qu'on facture au client, donc le
+    // montant attendu pour l'encaissement). Fallback sur chef_amount
+    // si client_amount est null pour ne pas crasher sur les vieilles
+    // missions sans prix client renseigné.
     const finalAmount =
       paidAmount !== undefined && paidAmount !== null
         ? Number(paidAmount)
-        : Number(mission.chef_amount || 0);
+        : Number(mission.client_amount ?? mission.chef_amount ?? 0);
 
     const nowIso = new Date().toISOString();
 

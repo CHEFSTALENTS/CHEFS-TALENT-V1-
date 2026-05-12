@@ -178,7 +178,7 @@ export default function AdminMissionDetailPage() {
   };
 
   const revertPayment = async () => {
-    if (!confirm('Annuler le marquage payée ?')) return;
+    if (!confirm('Annuler le marquage encaissée ?')) return;
     setActionLoading('revert-paid');
     try {
       const r = await adminFetchRaw(
@@ -292,7 +292,7 @@ export default function AdminMissionDetailPage() {
           {canMarkPaid && (
             <ActionBtn
               icon={<BadgeCheck className="w-3.5 h-3.5" />}
-              label="Marquer payée"
+              label="Marquer encaissée"
               variant="success"
               loading={actionLoading === 'mark-paid'}
               onClick={() => setShowPaidModal(true)}
@@ -301,7 +301,7 @@ export default function AdminMissionDetailPage() {
           {canRevertPaid && (
             <ActionBtn
               icon={<RotateCcw className="w-3.5 h-3.5" />}
-              label="Annuler paiement"
+              label="Annuler encaissement"
               variant="muted"
               loading={actionLoading === 'revert-paid'}
               onClick={revertPayment}
@@ -386,7 +386,7 @@ export default function AdminMissionDetailPage() {
                 tone="amber"
               />
               <Stat
-                label="Encaissé chef"
+                label="Encaissé du client"
                 value={
                   paymentStatus === 'paid'
                     ? money(mission.paid_amount)
@@ -398,7 +398,7 @@ export default function AdminMissionDetailPage() {
 
             {paymentStatus === 'paid' && (
               <div className="mt-4 pt-4 border-t border-white/10 text-sm space-y-1.5">
-                <Row label="Date paiement">
+                <Row label="Date encaissement">
                   {fmtDateLong(mission.paid_at)}
                 </Row>
                 {mission.payment_method && (
@@ -650,11 +650,11 @@ export default function AdminMissionDetailPage() {
         </div>
       </div>
 
-      {/* Modal Marquer payée */}
+      {/* Modal Marquer encaissée — montant pré-rempli = prix client */}
       {showPaidModal && (
         <MarkPaidModal
           missionId={mission.id}
-          defaultAmount={mission.chef_amount}
+          defaultAmount={mission.client_amount ?? mission.chef_amount}
           chefName={mission.chef_name || mission.chef_email}
           location={mission.location || ''}
           onClose={() => setShowPaidModal(false)}
@@ -845,7 +845,7 @@ function PaymentBadge({ status }: { status: string }) {
   if (status === 'paid')
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest bg-emerald-500/15 text-emerald-200 border border-emerald-500/30">
-        <BadgeCheck className="w-3 h-3" /> Payée
+        <BadgeCheck className="w-3 h-3" /> Encaissée
       </span>
     );
   if (status === 'partial')
@@ -862,7 +862,7 @@ function PaymentBadge({ status }: { status: string }) {
     );
   return (
     <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest bg-white/5 text-white/55 border border-white/10">
-      Paiement en attente
+      En attente encaissement
     </span>
   );
 }
@@ -929,7 +929,7 @@ function buildTimeline(m: MissionRow): TimelineEvent[] {
       done: !!m.contract_signed_at,
     },
     {
-      label: m.paid_at ? 'Paiement chef effectué' : 'En attente paiement',
+      label: m.paid_at ? 'Encaissement client' : 'En attente encaissement',
       date: m.paid_at,
       done: !!m.paid_at,
     },
