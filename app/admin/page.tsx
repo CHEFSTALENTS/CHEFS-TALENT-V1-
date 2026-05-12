@@ -34,6 +34,15 @@ type RevenueData = {
     paidAmountYtdEur?: number;
     paidCommissionYtdEur?: number;
   };
+  manualEntries?: {
+    monthHtEur: number;
+    monthVatEur: number;
+    monthCount: number;
+    monthByCategory: Record<string, { htEur: number; count: number }>;
+    ytdHtEur: number;
+    ytdVatEur: number;
+    ytdCount: number;
+  };
   totals: { monthEur: number; ytdEur: number };
 };
 
@@ -340,24 +349,33 @@ export default function AdminDashboardPage() {
             <KpiCard
               title="CA mois"
               value={money(revenue?.totals.monthEur ?? kpi.revenueMonth)}
-              subtitle={revenue ? 'Stripe + missions' : 'missions (local)'}
+              subtitle={
+                revenue
+                  ? (revenue.manualEntries?.monthCount ?? 0) > 0
+                    ? 'Stripe + missions + ventes'
+                    : 'Stripe + missions'
+                  : 'missions (local)'
+              }
               tone="green"
-              href="/admin/vip"
+              href="/admin/revenue"
             />
           </div>
 
-          {/* ✅ NEW — Détail des revenus (Stripe + commissions missions) */}
+          {/* ✅ NEW — Détail des revenus (Stripe + commissions missions + ventes manuelles) */}
           {revenue && (
             <Panel
               title="Revenus"
-              subtitle="Mensualités VIP + paiements Stripe + commissions missions"
+              subtitle="VIP + Stripe + commissions missions + ventes manuelles (intégrations, formations)"
               right={
-                <span className="text-[11px] text-white/40">
-                  Source : Stripe live + Supabase
-                </span>
+                <Link
+                  href="/admin/revenue"
+                  className="text-[11px] text-white/60 hover:text-white underline underline-offset-2"
+                >
+                  Gérer ventes manuelles →
+                </Link>
               }
             >
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <RevSubKpi
                   label="MRR"
                   value={money(revenue.stripe.mrrEur)}
@@ -387,9 +405,19 @@ export default function AdminDashboardPage() {
                   tone="green"
                 />
                 <RevSubKpi
+                  label="Ventes manuelles"
+                  value={money(revenue.manualEntries?.monthHtEur ?? 0)}
+                  subtitle={
+                    (revenue.manualEntries?.monthCount ?? 0) > 0
+                      ? `${revenue.manualEntries?.monthCount} entrée${(revenue.manualEntries?.monthCount ?? 0) > 1 ? 's' : ''} HT · ${money(revenue.manualEntries?.monthVatEur ?? 0)} TVA`
+                      : 'Aucune ce mois (HT)'
+                  }
+                  tone="amber"
+                />
+                <RevSubKpi
                   label="Total YTD"
                   value={money(revenue.totals.ytdEur)}
-                  subtitle={`${revenue.stripe.chargesYtdCount + revenue.missions.confirmedYtd} entrées année`}
+                  subtitle={`${revenue.stripe.chargesYtdCount + revenue.missions.confirmedYtd + (revenue.manualEntries?.ytdCount ?? 0)} entrées année`}
                   tone="amber"
                 />
               </div>
