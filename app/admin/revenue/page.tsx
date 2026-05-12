@@ -497,6 +497,71 @@ export default function AdminRevenuePage() {
           </div>
         )}
       </Panel>
+
+      <DiagnosticPanel />
+    </div>
+  );
+}
+
+function DiagnosticPanel() {
+  const [open, setOpen] = useState(false);
+  const [payload, setPayload] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function run() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const json = await adminFetch<any>('/api/admin/revenue');
+      setPayload(json);
+    } catch (e: any) {
+      setErr(e?.message || 'Erreur');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-white">Diagnostic dashboard</div>
+          <div className="text-xs text-white/45 mt-0.5">
+            Vérifie ce que voit le panel Revenus du /admin (utile si une vente n'apparaît pas)
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setOpen((o) => !o);
+            if (!open && !payload) run();
+          }}
+          className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
+        >
+          {open ? 'Fermer' : 'Diagnostiquer'}
+        </button>
+      </div>
+
+      {open ? (
+        <div className="mt-4">
+          {loading ? (
+            <div className="text-sm text-white/50">Chargement…</div>
+          ) : err ? (
+            <div className="text-sm text-rose-300">{err}</div>
+          ) : payload ? (
+            <pre className="text-xs text-white/80 bg-black/30 p-3 rounded-xl overflow-x-auto whitespace-pre-wrap">
+{JSON.stringify(payload?.manualEntries, null, 2)}
+            </pre>
+          ) : null}
+          <button
+            onClick={run}
+            disabled={loading}
+            className="mt-3 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/70 hover:bg-white/10 transition disabled:opacity-50"
+          >
+            Re-fetcher
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
