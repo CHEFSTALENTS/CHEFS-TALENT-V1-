@@ -1491,5 +1491,72 @@ export const articles: Article[] = [
       { question: "Quelle est la différence sur la coordination de la mission ?", answer: "ChefMaison fonctionne en marketplace : la coordination se fait directement entre le client et le chef après réservation, avec support plateforme en cas de problème. Chefs Talents reste présent tout au long de la mission. Sur une mission UHNW à fort enjeu, ce niveau d'accompagnement est la justification principale du modèle curated, et ce n'est pas pour rien que les agences classiques (Amandine, Montclair, Chefs Talents) le proposent par défaut." },
       { question: "Que se passe-t-il en cas de litige ?", answer: "Côté ChefMaison, le recours est plateforme avec médiation standardisée selon CGU. Côté Chefs Talents, le contrat est de droit français avec juridiction exclusive de Bordeaux, et notre modèle vendeur fait que le client a un seul interlocuteur contractuel : nous. Sur un budget mission à 15 000 € ou plus, ce cadre contractuel solide est la justification principale de passer par une agence curated plutôt qu'une marketplace." }
     ]
+  },
+  {
+    id: '43',
+    slug: 'chef-prive-saint-tropez-villas-yachts-ete-2026',
+    title: "Chef privé Saint-Tropez villas et yachts été 2026 : profils, calendrier, tarifs",
+    subtitle: "Saison 2026 à Saint-Tropez : anticipation, profils villa contre yacht, tarifs détaillés et fenêtres encore ouvertes.",
+    date: "Mai 2026",
+    publishedAt: "2026-05-13",
+    category: "Côte d'Azur",
+    image: "https://images.unsplash.com/photo-1568084680786-a84f91d1153c?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/destinations/chef-prive-saint-tropez",
+    relatedLinkText: "Voir la page Saint-Tropez",
+    blocks: [
+      { type: 'paragraph', content: "Saint-Tropez en été 2026 reste l'un des marchés les plus tendus d'Europe pour le placement de chefs privés. La demande UHNW dépasse largement l'offre disponible de mi-juin à fin août, et les meilleurs profils sont engagés dès mars. Cet article fait le point sur les profils villa contre yacht, les tarifs réels pratiqués cette saison, et les fenêtres encore ouvertes à la date de mai 2026." },
+      { type: 'h2', content: "Pourquoi Saint-Tropez crée un marché à part" },
+      { type: 'paragraph', content: "Le golfe de Saint-Tropez concentre une densité unique de villas premium, de yachts en charter ou en propriété privée, et d'une clientèle internationale habituée aux meilleures tables du monde. Cette concentration crée trois pressions simultanées : une exigence gastronomique élevée, une attente de discrétion absolue, et une logistique d'approvisionnement complexe sur un territoire fermé." },
+      { type: 'paragraph', content: "Conséquence directe : un chef qui sort bien sa carte à Paris ou Bordeaux n'est pas automatiquement adapté à Saint-Tropez. Le chef qui tient une mission sur la péninsule combine technique, autonomie logistique, et capacité à gérer un client souvent présent en cuisine, qui pose des questions, et dont les attentes évoluent au fil de la semaine." },
+      { type: 'h2', content: "Villa contre yacht : deux profils différents" },
+      { type: 'paragraph', content: "La confusion classique consiste à demander un chef villa pour une mission yacht ou inversement. Les contraintes opérationnelles sont distinctes et les profils ne se chevauchent qu'en partie." },
+      { type: 'list', content: [
+        "Chef villa Saint-Tropez : autonomie sur l'approvisionnement (marchés de Cogolin, Ramatuelle, Saint-Tropez centre), gestion de la cuisine de la villa (équipement souvent inégal), service en intérieur ou terrasse, brigade généralement absente sauf grosses villas avec house manager.",
+        "Chef yacht (12 à 60 mètres) : certification STCW recommandée, espace cuisine restreint, contraintes énergétiques et stockage, repas servis en plage avant ou intérieur selon la mer, équipe deck restreinte qui peut aider au service.",
+        "Chef de superyacht (60 mètres et plus) : profil quasi hôtelier, brigade en place, contraintes du bord (sécurité, calendrier de navigation, escales), souvent contrat saisonnier complet plutôt que mission courte."
+      ] },
+      { type: 'h2', content: "Calendrier réel de la saison 2026" },
+      { type: 'paragraph', content: "À mi-mai 2026, voici ce qu'on observe sur le marché en termes de disponibilités. Cette photographie évolue chaque semaine et reflète notre réseau de chefs au moment de la rédaction." },
+      { type: 'list', content: [
+        "Fin mai à mi-juin : encore quelques chefs villa disponibles, surtout sur des missions courtes (3 à 7 jours).",
+        "Mi-juin à mi-juillet : les profils confirmés se raréfient. Reste possible avec une demande déposée avant fin mai.",
+        "Mi-juillet à mi-août : saturation des meilleurs chefs villa. Les yachts ont encore des disponibilités ponctuelles via les agences charter.",
+        "Mi-août à fin août : marché extrêmement tendu, presque uniquement remplaçable par des chefs venant de Paris ou Bordeaux en mission courte.",
+        "Septembre : se libère sensiblement, profils confirmés à nouveau accessibles, idéal pour les séjours d'arrière-saison."
+      ] },
+      { type: 'h2', content: "Tarifs Saint-Tropez été 2026" },
+      { type: 'paragraph', content: "Les tarifs ci-dessous concernent le chef seul, hors fonds courses, hors hébergement quand celui-ci doit être pris à la charge du client. Ils reflètent la fourchette des profils placés par Chefs Talents sur la saison 2026." },
+      { type: 'list', content: [
+        "Mission courte villa (3 à 7 jours) : 700 à 1 400 € par jour selon le profil, avec une médiane autour de 900 € pour un confirmé.",
+        "Mission semaine villa : 5 000 à 9 000 € pour le chef seul, hors per diem et fonds courses.",
+        "Mission mensuelle saisonnière villa : 9 000 à 16 000 € par mois pour un chef confirmé, jusqu'à 22 000 € pour un profil ex-étoilé avec track record UHNW vérifiable.",
+        "Chef yacht en mission charter : 800 à 1 200 € par jour, hors STCW et hors logement bord.",
+        "Période 14 juillet et 15 août : majoration de 20 à 40 % sur les tarifs courts.",
+        "Fonds courses standard : 200 à 350 € par personne par semaine. Sourcing produits exigeants (truffe, caviar, vins rares) : 500 à 900 €."
+      ] },
+      { type: 'h2', content: "Logistique : ce qui se gagne ou se perd en amont" },
+      { type: 'paragraph', content: "À Saint-Tropez en haute saison, la logistique d'approvisionnement est aussi structurante que le talent du chef. Les meilleurs producteurs de la péninsule fonctionnent sur réservation préalable. Les bouchers, poissonniers et fromagers de Cogolin ou Saint-Tropez centre privilégient les chefs avec qui ils ont déjà travaillé. Un chef qui débarque sans réseau local perd 30 % de son temps à trouver des produits qu'un confirmé règle en deux appels." },
+      { type: 'paragraph', content: "Notre rôle dans la coordination consiste à valider, avant la mission, que le chef proposé a déjà opéré dans la zone ou qu'il a un plan d'approvisionnement crédible. Cette validation se fait en visio ou par téléphone, avec questions précises sur les fournisseurs prévus." },
+      { type: 'h2', content: "Fenêtres encore ouvertes à mi-mai 2026" },
+      { type: 'paragraph', content: "Pour les clients qui consultent cet article au moment de la publication, il reste raisonnablement possible de placer un chef confirmé sur les fenêtres suivantes, à condition de soumettre la demande sous 7 à 14 jours." },
+      { type: 'list', content: [
+        "Mission courte 3 à 5 jours en juin, hors weekend Pentecôte.",
+        "Mission semaine en première moitié de juin ou première semaine de juillet.",
+        "Mission septembre, idéale pour la quasi-totalité des budgets.",
+        "Mission yacht charter sur des fenêtres ponctuelles, à coordonner avec l'agence de charter."
+      ] },
+      { type: 'paragraph', content: "Au-delà du 1er juin, les fenêtres juillet-août se ferment vite. À partir de mi-juin, nous ne pouvons plus garantir un profil confirmé pour la haute saison sans flexibilité sur les dates." },
+      { type: 'h2', content: "Comment soumettre une demande" },
+      { type: 'paragraph', content: "Une demande Saint-Tropez se traite plus vite avec quelques informations clés en amont : dates fermes ou flexibles, format (villa ou yacht, nombre de couverts, présence d'invités), niveau de service attendu, contraintes alimentaires éventuelles, budget cadre. Avec ces éléments, nous présentons en général 2 à 3 profils sous 48 à 72 heures." },
+      { type: 'quote', content: "À Saint-Tropez en juillet-août, les bons profils ne se trouvent pas, ils se réservent. La différence entre une mission qui se passe bien et une qui se complique se joue en amont, dans la sélection et la coordination." }
+    ],
+    faqs: [
+      { question: "Quand soumettre une demande de chef privé pour Saint-Tropez en été 2026 ?", answer: "Pour juillet-août 2026, les meilleurs profils sont déjà engagés à mi-mai. Vous pouvez encore espérer un chef confirmé sur la première moitié de juin, début juillet, ou tout septembre. Pour la haute saison stricte (14 juillet au 20 août), nous ne garantissons plus de profil confirmé sans flexibilité de dates ou ajustement du brief." },
+      { question: "Quel est le tarif d'un chef privé à Saint-Tropez pour une semaine en villa ?", answer: "Comptez 5 000 à 9 000 € pour le chef seul sur 7 jours, hors fonds courses et hors per diem. Le tarif jour médian pour un confirmé est de 900 € à Saint-Tropez en saison. Le fonds courses standard s'ajoute, soit 200 à 350 € par personne par semaine, jusqu'à 700-900 € en sourcing UHNW (truffe, caviar, vins rares)." },
+      { question: "Un chef villa Saint-Tropez peut-il aussi cuisiner sur un yacht ?", answer: "Pas automatiquement. Travailler sur un yacht impose des contraintes spécifiques (espace cuisine restreint, gestion du roulis, certification STCW recommandée, intégration à l'équipe deck). Un chef villa expérimenté peut basculer ponctuellement sur un yacht à quai ou en mouillage proche, mais pas pour une mission de navigation. Nous validons la compatibilité du profil avec le format avant chaque mission." },
+      { question: "Faut-il prévoir l'hébergement du chef pendant la mission ?", answer: "Selon la mission. Sur villa avec dépendance dédiée, le logement est inclus par défaut. Sur villa sans logement dédié, le client prend en charge un hébergement à proximité, généralement 80 à 150 € par nuit en haute saison. Sur yacht, le chef est logé à bord. Sur mission courte avec déplacement depuis Paris ou Bordeaux, prévoir aussi le trajet (TGV première ou vol)." },
+      { question: "Combien de couverts peut tenir un chef seul à Saint-Tropez ?", answer: "Un chef privé seul peut tenir des repas à l'assiette jusqu'à 12 à 15 couverts. Au-delà, il faut un commis dédié au dressage. À 25 couverts ou plus, l'équipe nominale passe à 2 personnes en cuisine plus 1 en salle. Pour les dîners événementiels supérieurs à 50 couverts (mariage UHNW, cocktail prestige), la coordination passe en mode brigade de 4 à 6 personnes." },
+      { question: "Quelle différence entre un chef proposé par Chefs Talents et un chef trouvé en direct via une connaissance locale ?", answer: "Avec Chefs Talents, le profil est validé en amont sur son expérience UHNW, ses références joignables, et son aisance à coordonner avec le personnel de maison. Le contrat est cadré, la facturation se fait sur Chefs Talents (vendeur en nom propre, TVA française), et nous restons présents en cas d'imprévu. Sur un séjour à fort enjeu en haute saison, ce cadre est la différence entre une mission qui se passe bien et une mission où chaque imprévu se règle dans la panique." }
+    ]
   }
 ];
