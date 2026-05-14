@@ -144,15 +144,13 @@ function buildBriefRows(brief: ClientBriefRecap): { label: string; value: string
     rows.push({ label: 'Cuisines préférées', value: brief.cuisinePreferences });
   }
 
-  if (brief.budgetRange) {
-    rows.push({ label: 'Budget indicatif', value: brief.budgetRange });
-  } else if (brief.budgetAmount) {
-    const unit = brief.budgetUnit ? ` ${brief.budgetUnit}` : ' €';
-    rows.push({
-      label: 'Budget indicatif',
-      value: `${brief.budgetAmount.toLocaleString('fr-FR')}${unit}`,
-    });
-  }
+  // ⚠️ NE PAS afficher le budget dans le mail client.
+  // Raison : /request step 7 mappe les gammes Essentiel/Premium/Exception
+  // en chiffres bruts ('2500'/'5000'/'10000') côté budgetRange, ce qui
+  // produisait dans le mail « Budget indicatif : 2500 » — interprété
+  // par les clients UHNW comme une catégorisation en bas de gamme.
+  // Le client sait ce qu'il a saisi, pas besoin de le rappeler.
+  // Thomas garde la valeur en DB et sur l'admin pour son devis interne.
 
   return rows;
 }
