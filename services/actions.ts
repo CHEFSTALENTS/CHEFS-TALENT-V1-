@@ -107,7 +107,6 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     fullName: toNullIfEmpty(fullName),
     firstName: toNullIfEmpty(firstName),
 
-    matchType: toNullIfEmpty(data.mode),
     message: toNullIfEmpty(message),
 
     phone: toNullIfEmpty((data as any).phone),
@@ -136,19 +135,13 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
     replacementNeeded: toNullIfEmpty((data as any).replacementNeeded),
 
     preferredLanguage:
-      data.mode === 'concierge'
-        ? ((data as any).preferredLanguage ?? (data as any).languages ?? (data as any).language ?? null)
-        : null,
+      (data as any).preferredLanguage ?? (data as any).languages ?? (data as any).language ?? null,
 
     dietaryRestrictions:
-      data.mode === 'concierge'
-        ? ((data as any).dietaryRestrictions ?? (data as any).restrictions ?? (data as any).allergies ?? null)
-        : null,
+      (data as any).dietaryRestrictions ?? (data as any).restrictions ?? (data as any).allergies ?? null,
 
     cuisinePreferences:
-      data.mode === 'concierge'
-        ? ((data as any).cuisinePreferences ?? (data as any).cuisineStyle ?? (data as any).cuisines ?? null)
-        : null,
+      (data as any).cuisinePreferences ?? (data as any).cuisineStyle ?? (data as any).cuisines ?? null,
 
     notes: toNullIfEmpty((data as any).notes),
   };
@@ -166,15 +159,6 @@ export const submitRequest = async (data: RequestForm): Promise<FastMatchResult>
   }
 
   const json = (await r.json().catch(() => ({}))) as { ok?: boolean; requestId?: string };
-
-  if (data.mode === 'fast') {
-    return {
-      success: true,
-      mode: 'instant_match',
-      referenceId: json.requestId || crypto.randomUUID(),
-      matchedChef: 'Chef Selection Pending',
-    };
-  }
 
   return {
     success: true,

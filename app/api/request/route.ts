@@ -68,7 +68,6 @@ export async function POST(req: Request) {
     const firstName = strOrNull(body.firstName);
     const fullName = strOrNull(body.fullName);
 
-    const matchType = strOrNull(body.matchType ?? body.mode);
     const message = strOrNull(body.message);
     const notes = strOrNull(body.notes);
 
@@ -133,25 +132,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
 
-    // matchType est legacy : on l'accepte si fourni (rétrocompat DB / admin),
-    // sinon on dérive automatiquement à partir de la durée (séjour de
-    // moins de 3 jours = 'fast', sinon 'concierge'). Plus de rejet 400.
-    const resolvedMatchType: 'fast' | 'concierge' = (() => {
-      if (matchType === 'fast' || matchType === 'concierge') return matchType;
-      if (start_date && end_date) {
-        const ms = new Date(end_date).getTime() - new Date(start_date).getTime();
-        const days = Math.max(1, Math.round(ms / 86_400_000));
-        return days >= 3 ? 'concierge' : 'fast';
-      }
-      return 'fast';
-    })();
+    // La colonne match_type reste en DB (nullable) pour rétrocompat des
+    // anciennes lignes, mais on n'écrit plus de nouvelle valeur dedans.
+    // Plus de logique fast / concierge dans le routing.
 
     const insertRow = {
       email,
       first_name: firstName,
       full_name: fullName,
 
-      match_type: resolvedMatchType,
+      match_type: null,
       status: 'new',
 
       message,
@@ -243,7 +233,6 @@ export async function POST(req: Request) {
     try {
       await sendInternalNewRequest({
         requestId,
-        matchType: resolvedMatchType as any,
         email,
         firstName: firstName ?? undefined,
         message: message ?? notes ?? undefined,

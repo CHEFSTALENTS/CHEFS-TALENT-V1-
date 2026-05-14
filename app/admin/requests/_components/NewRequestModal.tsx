@@ -60,7 +60,6 @@ export default function NewRequestModal({ onClose, onSuccess }: Props) {
         fullName: form.fullName.trim() || null,
         phone: form.phone.trim() || null,
 
-        matchType: 'concierge', // les demandes admin sont toujours concierge
         clientType: form.clientType,
         companyName:
           form.clientType === 'concierge' ? form.companyName.trim() || null : null,

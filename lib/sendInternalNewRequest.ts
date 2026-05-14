@@ -15,7 +15,6 @@ function escapeHtml(str: string) {
 export async function sendInternalNewRequest(input: {
   to?: string | string[]; // optionnel (sinon env)
   requestId: string;
-  matchType: 'fast' | 'concierge';
   email: string;
   firstName?: string;
   message?: string;
@@ -36,16 +35,12 @@ export async function sendInternalNewRequest(input: {
 
   const createdAt = input.createdAtISO || new Date().toISOString();
 
-  const subject =
-    input.matchType === 'fast'
-      ? `🔥 Nouvelle demande FAST (${input.requestId})`
-      : `📩 Nouvelle demande CONCIERGE (${input.requestId})`;
+  const subject = `📩 Nouvelle demande (${input.requestId})`;
 
   const txt = [
     `Nouvelle demande reçue sur Chef Talents`,
     ``,
     `ID: ${input.requestId}`,
-    `Type: ${input.matchType}`,
     `Client: ${input.firstName || '—'}`,
     `Email: ${input.email}`,
     `Créée: ${createdAt}`,
@@ -65,7 +60,7 @@ export async function sendInternalNewRequest(input: {
           Chef Talents · Notification interne
         </div>
         <div style="font-size:26px;line-height:1.2;color:#0c0a09;font-family:ui-serif,Georgia,serif;">
-          Nouvelle demande ${input.matchType === 'fast' ? 'Fast Match' : 'Concierge Match'}
+          Nouvelle demande
         </div>
         <div style="margin-top:10px;font-size:13px;color:#78716c;">
           Reçue le <strong style="color:#44403c;">${escapeHtml(createdAt)}</strong>
@@ -78,10 +73,6 @@ export async function sendInternalNewRequest(input: {
             <tr>
               <td style="padding:10px 0;color:#a8a29e;width:140px;">ID</td>
               <td style="padding:10px 0;"><strong>${escapeHtml(input.requestId)}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding:10px 0;color:#a8a29e;">Type</td>
-              <td style="padding:10px 0;">${escapeHtml(input.matchType)}</td>
             </tr>
             <tr>
               <td style="padding:10px 0;color:#a8a29e;">Client</td>
