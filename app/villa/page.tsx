@@ -1,12 +1,15 @@
 // app/villa/page.tsx
 // Landing page dédiée aux campagnes Google Ads.
-// Server Component avec metadata + schema FAQ + lien direct vers form 3-steps.
+// Server Component avec metadata + schema FAQ. Tous les CTA pointent
+// vers /request?source=villa-landing pour utiliser le 7-step unique
+// (conversion tracking, brief complet, email de confirmation déjà OK).
 
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import InlineRequestForm from './_components/InlineRequestForm';
+
+const REQUEST_URL = '/request?source=villa-landing';
 
 const BASE = 'https://chefstalents.com';
 const URL = `${BASE}/villa`;
@@ -112,12 +115,12 @@ export default function VillaLandingPage() {
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a
-              href="#form"
+            <Link
+              href={REQUEST_URL}
               className="inline-flex min-h-[60px] items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-medium text-[#161616] transition hover:bg-white/90"
             >
               Décrire mon projet <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
+            </Link>
             <a
               href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Bonjour Thomas, j'ai un projet de chef privé.")}`}
               target="_blank"
@@ -277,31 +280,36 @@ export default function VillaLandingPage() {
         </div>
       </section>
 
-      {/* ── FORMULAIRE INTÉGRÉ ───────────────────────────── */}
-      <section id="form" className="bg-[#161616] px-6 py-24 text-white md:px-10 lg:px-16">
-        <div className="mx-auto max-w-3xl">
+      {/* ── CTA FINAL ────────────────────────────────────── */}
+      <section className="bg-[#161616] px-6 py-28 text-white md:px-10 md:py-32 lg:px-16">
+        <div className="mx-auto max-w-4xl text-center">
           <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Votre projet</p>
           <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
             Décrivez votre projet.<br />Réponse sous 6 à 24h.
           </h2>
-          <p className="mt-6 max-w-2xl text-[17px] font-light leading-8 text-white/80">
-            3 étapes courtes. Thomas, votre interlocuteur, vous recontacte sous 6 à 24h avec une sélection ciblée.
+          <p className="mt-8 max-w-2xl mx-auto text-[17px] font-light leading-8 text-white/80">
+            Thomas, votre interlocuteur, vous recontacte avec une sélection ciblée selon votre brief.
           </p>
 
-          <div className="mt-12">
-            <InlineRequestForm source="villa-landing" />
-          </div>
-
-          <p className="mt-10 text-center text-[12px] text-white/45">
-            Préférence pour un échange direct ?{' '}
+          <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              href={`https://wa.me/${WHATSAPP_NUMBER}`}
+              href={REQUEST_URL}
+              className="inline-flex min-h-[60px] items-center justify-center rounded-full bg-white px-9 py-4 text-sm font-medium text-[#161616] transition hover:bg-white/90"
+            >
+              Décrire mon projet <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Bonjour Thomas, j'ai un projet de chef privé.")}`}
               target="_blank"
               rel="noreferrer"
-              className="underline underline-offset-2 hover:text-white/80"
+              className="inline-flex min-h-[60px] items-center justify-center rounded-full border border-white/30 px-7 py-4 text-sm font-medium text-white/90 transition hover:bg-white/10"
             >
-              WhatsApp Thomas
-            </Link>
+              WhatsApp — Thomas
+            </a>
+          </div>
+
+          <p className="mt-10 text-[12px] text-white/45">
+            Sans engagement · Aucune réservation sans votre validation
           </p>
         </div>
       </section>
