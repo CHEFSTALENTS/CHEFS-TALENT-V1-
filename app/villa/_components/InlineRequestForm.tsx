@@ -330,7 +330,7 @@ export default function InlineRequestForm({ source }: { source: string }) {
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-300" />
           <h3 className="mt-6 text-2xl font-serif text-white">Demande reçue.</h3>
           <p className="mt-4 max-w-md mx-auto text-[16px] leading-7 text-white/75">
-            Nous revenons vers vous sous 6 heures avec un profil ciblé.
+            Des chefs sont prêts à opérer. Thomas, votre interlocuteur, vous recontacte sous 6 à 24h avec une sélection ciblée.
           </p>
           <p className="mt-2 text-[14px] text-white/55">
             Un email de confirmation vient d'être envoyé à <span className="text-white/85">{s3.email}</span>.

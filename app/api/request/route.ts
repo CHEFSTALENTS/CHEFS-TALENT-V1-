@@ -133,16 +133,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
 
-    if (matchType !== 'fast' && matchType !== 'concierge') {
-      return NextResponse.json({ error: 'Invalid matchType' }, { status: 400 });
-    }
+    // matchType est legacy : on l'accepte si fourni (rétrocompat DB / admin),
+    // sinon on dérive automatiquement à partir de la durée (séjour de
+    // moins de 3 jours = 'fast', sinon 'concierge'). Plus de rejet 400.
+    const resolvedMatchType: 'fast' | 'concierge' = (() => {
+      if (matchType === 'fast' || matchType === 'concierge') return matchType;
+      if (start_date && end_date) {
+        const ms = new Date(end_date).getTime() - new Date(start_date).getTime();
+        const days = Math.max(1, Math.round(ms / 86_400_000));
+        return days >= 3 ? 'concierge' : 'fast';
+      }
+      return 'fast';
+    })();
 
     const insertRow = {
       email,
       first_name: firstName,
       full_name: fullName,
 
-      match_type: matchType,
+      match_type: resolvedMatchType,
       status: 'new',
 
       message,
@@ -203,8 +212,28 @@ export async function POST(req: Request) {
     try {
       await sendClientConfirmation({
         email,
-        firstName: firstName ?? undefined,
-        type: matchType as any,
+        requestId,
+        brief: {
+          firstName,
+          fullName,
+          location,
+          startDate: start_date,
+          endDate: end_date,
+          dateMode: date_mode,
+          missionCategory: mission_category,
+          assignmentType: assignment_type,
+          guestCount: guest_count,
+          serviceExpectations: service_expectations,
+          serviceRhythm: service_rhythm,
+          mealPlan: meal_plan,
+          preferredLanguage: preferred_language,
+          dietaryRestrictions: dietary_restrictions,
+          cuisinePreferences: cuisine_preferences,
+          budgetRange: budget_range,
+          budgetAmount: budget_amount,
+          budgetUnit: budget_unit,
+          message: message ?? notes,
+        },
       });
       clientEmailOk = true;
     } catch (e) {
@@ -214,7 +243,7 @@ export async function POST(req: Request) {
     try {
       await sendInternalNewRequest({
         requestId,
-        matchType: matchType as any,
+        matchType: resolvedMatchType as any,
         email,
         firstName: firstName ?? undefined,
         message: message ?? notes ?? undefined,

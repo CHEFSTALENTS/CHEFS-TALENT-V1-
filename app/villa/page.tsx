@@ -47,13 +47,13 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
 export const metadata: Metadata = {
   title: 'Chef privé pour villas, yachts et résidences — Chefs Talents',
   description:
-    "Chef privé pour villas, yachts et résidences. D'un dîner à toute la saison. Sélection en moins de 6h, partout en Europe.",
+    "Chef privé pour villas, yachts et résidences. D'un dîner à toute la saison. Réponse sous 6 à 24h, partout en Europe.",
   alternates: { canonical: URL },
   robots: { index: true, follow: true },
   openGraph: {
     title: 'Chef privé pour villas, yachts et résidences — Chefs Talents',
     description:
-      "D'un dîner à toute la saison. Sélection en moins de 6h, partout en Europe.",
+      "D'un dîner à toute la saison. Réponse sous 6 à 24h, partout en Europe.",
     url: URL,
     siteName: 'Chefs Talents',
     images: ['/images/editorial/villa-service.jpg'],
@@ -108,7 +108,7 @@ export default function VillaLandingPage() {
             D'un dîner à toute la saison. Une orchestration sans friction, partout en Europe.
           </p>
           <p className="mt-3 text-[14px] text-white/65">
-            Sélection en moins de 6 heures.
+            Réponse sous 6 à 24h.
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -135,7 +135,7 @@ export default function VillaLandingPage() {
             <Stat value="400" label="chefs" />
             <Stat value="400" label="missions" />
             <Stat value="50" label="destinations" />
-            <Stat value="< 6h" label="délai" />
+            <Stat value="6-24h" label="délai" />
           </div>
         </div>
       </section>
@@ -282,10 +282,10 @@ export default function VillaLandingPage() {
         <div className="mx-auto max-w-3xl">
           <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Votre projet</p>
           <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
-            Décrivez votre projet.<br />Réponse sous 6 heures.
+            Décrivez votre projet.<br />Réponse sous 6 à 24h.
           </h2>
           <p className="mt-6 max-w-2xl text-[17px] font-light leading-8 text-white/80">
-            3 étapes courtes. Nous revenons vers vous avec un profil ciblé sous 6 heures.
+            3 étapes courtes. Thomas, votre interlocuteur, vous recontacte sous 6 à 24h avec une sélection ciblée.
           </p>
 
           <div className="mt-12">
