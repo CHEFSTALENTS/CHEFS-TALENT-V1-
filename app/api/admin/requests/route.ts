@@ -70,13 +70,10 @@ export async function GET(req: Request) {
 
     if (error) throw error;
 
-    // ✅ Normalisation au cas où certains champs n'existent pas selon le type
+    // ✅ Normalisation : status par défaut. match_type est legacy et conservé
+    // tel quel pour rétrocompat (peut être null sur les nouvelles lignes).
     const items = (data ?? []).map((x: any) => ({
       ...x,
-      // match_type absent => on déduit
-      match_type:
-        x.match_type ??
-        (x.client_type === 'concierge' ? 'concierge' : 'fast'),
       status: x.status ?? 'new',
     }));
 
@@ -124,7 +121,9 @@ export async function POST(req: Request) {
       full_name: fullName,
       phone: strOrNull(body.phone),
 
-      match_type: strOrNull(body.matchType) || 'concierge',
+      // match_type legacy : on n'écrit plus de valeur sur les nouvelles
+      // lignes. La colonne reste en DB pour rétrocompat.
+      match_type: null,
       // 'new' : la demande vient de rentrer, pas encore traitée
       status: 'new',
 

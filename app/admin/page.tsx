@@ -93,7 +93,7 @@ function shortText(s: string, max: number) {
 /**
  * ✅ Normalisation Supabase → RequestEntity
  * - userType = b2b si client_type=concierge, sinon b2c
- * - mode = fast si match_type=fast, sinon concierge
+ * - mode : legacy, plus utilisé dans l'UI mais gardé pour type compat
  * - budgetRange = budget_range en priorité
  */
 function normalizeRequestRow(x: any): RequestEntity {
@@ -101,7 +101,7 @@ function normalizeRequestRow(x: any): RequestEntity {
     x.client_type === 'concierge' || x.user_type === 'b2b' ? 'b2b' : 'b2c';
 
   const mode: RequestEntity['mode'] =
-    (x.match_type ?? x.mode ?? 'concierge') === 'fast' ? 'fast' : 'concierge';
+    (x.match_type ?? x.mode ?? null) as RequestEntity['mode'];
 
   const budgetRange =
     x.budget_range ??
@@ -528,9 +528,6 @@ export default function AdminDashboardPage() {
                             <div className="flex items-center gap-2">
                               <Badge tone={r.userType === 'b2b' ? 'amber' : 'blue'}>
                                 {r.userType === 'b2b' ? 'B2B' : 'B2C'}
-                              </Badge>
-                              <Badge tone={r.mode === 'fast' ? 'violet' : 'stone'}>
-                                {r.mode === 'fast' ? 'Fast' : 'Standard'}
                               </Badge>
                               <StatusPill status={String(r.status || 'new')} />
                             </div>

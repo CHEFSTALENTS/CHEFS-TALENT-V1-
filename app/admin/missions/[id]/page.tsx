@@ -77,7 +77,6 @@ type ClientRequest = {
   clientType: string | null;
   companyName: string | null;
   status: string | null;
-  matchType: string | null;
   notes: string | null;
   createdAt: string | null;
   budgetRange: string | null;

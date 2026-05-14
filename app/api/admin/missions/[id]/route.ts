@@ -98,7 +98,6 @@ export async function GET(
           clientType: req.client_type,
           companyName: req.company_name,
           status: req.status,
-          matchType: req.match_type,
           notes: req.notes || req.message,
           createdAt: req.created_at,
           budgetRange: req.budget_range,

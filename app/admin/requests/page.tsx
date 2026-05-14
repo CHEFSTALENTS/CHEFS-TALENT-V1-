@@ -33,10 +33,11 @@ export default function AdminRequestsPage() {
         id: x.id,
         status: x.status ?? 'new',
 
-        // match_type dans ta table => fast|concierge
-        mode: (x.match_type ?? 'concierge') as any,
+        // match_type est legacy, on garde le champ mappé sur 'mode' pour
+        // ne pas casser le type RequestEntity. Plus utilisé dans l'UI.
+        mode: (x.match_type ?? null) as any,
 
-        // client_type: concierge => b2b sinon b2c
+        // client_type: concierge => b2b sinon b2c (B2B/B2C reste actif)
         userType: x.client_type === 'concierge' ? 'b2b' : 'b2c',
 
         createdAt: x.created_at ?? null,
@@ -260,7 +261,6 @@ export default function AdminRequestsPage() {
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <Badge tone={r.userType === 'b2b' ? 'dark' : 'stone'}>{r.userType === 'b2b' ? 'B2B' : 'B2C'}</Badge>
-                        <Badge tone={r.mode === 'fast' ? 'violet' : 'stone'}>{r.mode === 'fast' ? 'Fast' : 'Standard'}</Badge>
                       </div>
 
                       <div className="mt-2">
