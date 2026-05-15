@@ -159,8 +159,48 @@ export function unsignChefProfileUrls(profile: any): void {
 }
 
 /**
+ * Signe uniquement les champs avatar (avatarUrl + photoUrl) d'un profile.
+ * Variante allégée pour les endpoints qui listent N profils sans avoir
+ * besoin du portfolio (ex: liste admin /admin/chefs, dashboard map…).
+ *
+ * Évite de faire ~10× plus d'appels createSignedUrl que nécessaire.
+ *
+ * @param profile - objet profile (sera muté)
+ * @param ttlSec - TTL des signed URLs en secondes (default 1h)
+ */
+export async function signChefAvatarOnly(
+  profile: any,
+  ttlSec: number = DEFAULT_TTL_SEC,
+): Promise<void> {
+  if (!profile || typeof profile !== 'object') return;
+
+  const tasks: Promise<void>[] = [];
+
+  if (profile.avatarUrl) {
+    tasks.push(
+      signChefUrl(profile.avatarUrl, ttlSec).then((url) => {
+        profile.avatarUrl = url || profile.avatarUrl;
+      }),
+    );
+  }
+  if (profile.photoUrl) {
+    tasks.push(
+      signChefUrl(profile.photoUrl, ttlSec).then((url) => {
+        profile.photoUrl = url || profile.photoUrl;
+      }),
+    );
+  }
+
+  await Promise.all(tasks);
+}
+
+/**
  * Signe les champs avatarUrl/photoUrl/images d'un profile chef in-place.
- * Utilitaire pour les endpoints qui retournent des profils chef.
+ * Utilitaire pour les endpoints qui retournent un profil chef DÉTAILLÉ
+ * (avec portfolio).
+ *
+ * Pour les listes (N profils sans portfolio affiché), préférer
+ * signChefAvatarOnly() qui est environ 10× plus rapide.
  *
  * @param profile - objet profile (sera muté)
  * @param ttlSec - TTL des signed URLs en secondes (default 1h)

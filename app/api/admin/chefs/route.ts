@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendChefActivated } from '@/lib/email/sendChefActivated';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
-import { signChefProfileUrls } from '@/lib/storage';
+import { signChefAvatarOnly } from '@/lib/storage';
 
 const TABLE = 'chef_profiles';
 
@@ -96,9 +96,12 @@ export async function GET(req: Request) {
       };
     });
 
-    // Bucket chef-uploads privé : signer les URLs avatar/photo/images
-    // de chaque profile avant de retourner au client (TTL 1h).
-    await Promise.all(data.map((c: any) => signChefProfileUrls(c.profile)));
+    // Bucket chef-uploads privé : on signe UNIQUEMENT l'avatar (pas le
+    // portfolio entier) sur la liste, car la liste affiche juste l'avatar.
+    // Le portfolio complet est signé seulement sur la fiche chef détail
+    // /admin/chefs/[id]. Économise ~10× les appels createSignedUrl quand
+    // chaque chef a 5-15 photos portfolio.
+    await Promise.all(data.map((c: any) => signChefAvatarOnly(c.profile)));
 
     return NextResponse.json({ chefs: data });
   } catch (e: any) {
