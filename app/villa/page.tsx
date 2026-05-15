@@ -3,16 +3,25 @@
 // Server Component avec metadata + schema FAQ. Tous les CTA pointent
 // vers /request?source=villa-landing pour utiliser le 7-step unique
 // (conversion tracking, brief complet, email de confirmation déjà OK).
+//
+// Design v2 : fond blanc, accents burgundy, carousel témoignages,
+// image break + galerie pour plus de chair visuelle.
 
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-
-const REQUEST_URL = '/request?source=villa-landing';
+import TestimonialsCarousel from './_components/TestimonialsCarousel';
 
 const BASE = 'https://chefstalents.com';
 const URL = `${BASE}/villa`;
+
+const REQUEST_URL = '/request?source=villa-landing';
+const WHATSAPP_NUMBER = '33756827612'; // +33 7 56 82 76 12
+
+// Palette
+const ACCENT = '#7f1d1d';        // burgundy
+const ACCENT_SOFT = '#fef2f2';   // burgundy 50, fond très léger
 
 const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
@@ -65,7 +74,66 @@ export const metadata: Metadata = {
   },
 };
 
-const WHATSAPP_NUMBER = '33756827612'; // +33 7 56 82 76 12
+const GALLERY = [
+  {
+    src: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1600&auto=format&fit=crop',
+    alt: 'Villa de luxe en Méditerranée',
+    label: 'Villa Côte d\'Azur',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1600&auto=format&fit=crop',
+    alt: 'Yacht privé en charter',
+    label: 'Yacht charter',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1600&auto=format&fit=crop',
+    alt: 'Chef en cuisine au travail',
+    label: 'Chef en mission',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1600&auto=format&fit=crop',
+    alt: 'Dressage gastronomique',
+    label: 'Dressage gastronomique',
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    quote: "Réactivité, qualité, discrétion. Exactement ce dont nous avions besoin pour nos clients de l'été.",
+    author: 'Selma R.',
+    role: 'Villa Manager, Cap Ferrat',
+  },
+  {
+    quote: 'Chef proposé sous 6h, installé chez nous dans la semaine. Le séjour entier en a été transformé.',
+    author: 'Alexandre P.',
+    role: 'Locataire saison, Saint-Tropez',
+  },
+  {
+    quote: 'Un partenaire fiable pour des demandes complexes. Discrétion totale, ce qui est non-négociable pour nous.',
+    author: 'Constance L.',
+    role: 'Conciergerie, Monaco',
+  },
+  {
+    quote: "Le chef a tenu trois services par jour pendant deux semaines, sans une fausse note. Brigade en tête.",
+    author: 'Karim B.',
+    role: 'Charter manager, Antibes',
+  },
+  {
+    quote: "Ils ont compris notre brief en cinq minutes au téléphone. Le profil envoyé matchait à 100 %.",
+    author: 'Élise V.',
+    role: 'Famille UHNW, Ibiza',
+  },
+  {
+    quote: "Chef trouvé un week-end, en pleine saison. Personne d'autre n'aurait pu nous sortir de là.",
+    author: 'Henri D.',
+    role: 'Owner villa, Saint-Jean-Cap-Ferrat',
+  },
+  {
+    quote: "Coordination impeccable avec notre house manager. Le chef s'est intégré comme s'il était là depuis toujours.",
+    author: 'Béatrice M.',
+    role: 'Conciergerie privée, Genève',
+  },
+];
 
 export default function VillaLandingPage() {
   const faqJsonLd = {
@@ -79,7 +147,7 @@ export default function VillaLandingPage() {
   };
 
   return (
-    <main className="bg-[#fafaf7] text-[#161616]">
+    <main className="bg-white text-[#161616]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -94,9 +162,9 @@ export default function VillaLandingPage() {
             fill
             priority
             sizes="100vw"
-            className="object-cover opacity-50"
+            className="object-cover opacity-55"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/75" />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 py-24 md:px-10 md:py-32 lg:px-16 lg:py-40">
@@ -110,7 +178,7 @@ export default function VillaLandingPage() {
           <p className="mt-6 max-w-2xl text-[18px] font-light leading-8 text-white/90 md:text-2xl md:leading-relaxed">
             D'un dîner à toute la saison. Une orchestration sans friction, partout en Europe.
           </p>
-          <p className="mt-3 text-[14px] text-white/65">
+          <p className="mt-3 text-[14px] text-white/70">
             Réponse sous 6 à 24h.
           </p>
 
@@ -133,7 +201,7 @@ export default function VillaLandingPage() {
         </div>
 
         {/* Bandeau chiffres */}
-        <div className="relative border-t border-white/10 bg-black/40 backdrop-blur-sm">
+        <div className="relative border-t border-white/10 bg-black/45 backdrop-blur-sm">
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-y-4 px-6 py-6 md:grid-cols-4 md:px-10 lg:px-16">
             <Stat value="400" label="chefs" />
             <Stat value="400" label="missions" />
@@ -144,9 +212,11 @@ export default function VillaLandingPage() {
       </section>
 
       {/* ── POUR QUI ──────────────────────────────────────── */}
-      <section className="px-6 py-24 md:px-10 lg:px-16">
+      <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Pour qui</p>
+          <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            Pour qui
+          </p>
           <h2 className="mt-4 max-w-3xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
             Trois profils, un même standard.
           </h2>
@@ -168,47 +238,105 @@ export default function VillaLandingPage() {
         </div>
       </section>
 
-      {/* ── ORCHESTRATION ─────────────────────────────────── */}
-      <section className="bg-[#f3efe7] px-6 py-24 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Orchestration</p>
-          <h2 className="mt-4 max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
-            Plus qu'une mise en relation.<br />Une orchestration.
-          </h2>
-          <p className="mt-8 max-w-3xl text-[18px] font-light leading-8 text-[#3a352e] md:text-2xl md:leading-relaxed">
-            Nous ne livrons pas un chef : nous cadrons une mission. Qualification du besoin, sélection ciblée parmi 400 profils, coordination du brief, anticipation des imprévus.
-          </p>
-          <p className="mt-6 max-w-3xl text-[18px] font-light leading-8 text-[#3a352e] md:text-xl md:leading-relaxed">
-            Notre rôle n'est pas de servir. Il est de faire en sorte que rien ne dépasse, et que tout soit juste.
-          </p>
+      {/* ── IMAGE BREAK ──────────────────────────────────── */}
+      <section className="bg-white px-6 pt-2 pb-16 md:px-10 lg:px-16">
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-[28px]">
+          <div className="relative h-[52vh] md:h-[64vh]">
+            <Image
+              src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2400&auto=format&fit=crop"
+              alt="Chef en mission villa Méditerranée"
+              fill
+              sizes="(max-width: 1280px) 100vw, 1200px"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
+            <div className="absolute inset-0 flex items-end">
+              <div className="max-w-3xl px-7 pb-9 md:px-12 md:pb-14">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/85">
+                  Exécution
+                </p>
+                <h3 className="mt-3 text-[2rem] font-serif leading-[1.06] text-white md:text-5xl">
+                  Une présence discrète, une exécution constante,<br className="hidden md:inline" /> un niveau de service tenu.
+                </h3>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── TÉMOIGNAGES ──────────────────────────────────── */}
-      <section className="px-6 py-24 md:px-10 lg:px-16">
+      {/* ── ORCHESTRATION ─────────────────────────────────── */}
+      <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+              Orchestration
+            </p>
+            <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
+              Plus qu'une mise en relation.<br />
+              <span style={{ color: ACCENT }}>Une orchestration.</span>
+            </h2>
+          </div>
+          <div className="lg:col-span-7">
+            <p className="text-[18px] font-light leading-8 text-[#3a352e] md:text-2xl md:leading-relaxed">
+              Nous ne livrons pas un chef : nous cadrons une mission. Qualification du besoin, sélection ciblée parmi 400 profils, coordination du brief, anticipation des imprévus.
+            </p>
+            <p className="mt-6 text-[16px] leading-8 text-[#5d5651] md:text-lg">
+              Notre rôle n'est pas de servir. Il est de faire en sorte que rien ne dépasse, et que tout soit juste.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── GALERIE ──────────────────────────────────────── */}
+      <section className="bg-white px-6 pb-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Témoignages</p>
+          <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            Décors
+          </p>
+          <h2 className="mt-4 max-w-3xl text-[2.2rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
+            Là où nos chefs interviennent.
+          </h2>
+
+          <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+            {GALLERY.map((img) => (
+              <figure
+                key={img.src + img.label}
+                className="relative aspect-[4/5] overflow-hidden rounded-[20px] bg-stone-100"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="object-cover transition duration-700 hover:scale-105"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 md:p-4">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-white">
+                    {img.label}
+                  </span>
+                </div>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TÉMOIGNAGES (carousel défilant) ─────────────── */}
+      <section
+        className="overflow-hidden py-24"
+        style={{ backgroundColor: ACCENT_SOFT }}
+      >
+        <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-16">
+          <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            Témoignages
+          </p>
           <h2 className="mt-4 max-w-3xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
             Ce que nos clients en disent.
           </h2>
+        </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            <Testimonial
-              quote="Réactivité, qualité, discrétion. Exactement ce dont nous avions besoin pour nos clients de l'été."
-              author="Selma R."
-              role="Villa Manager, Cap Ferrat"
-            />
-            <Testimonial
-              quote="Chef proposé sous 6h, installé chez nous dans la semaine. Le séjour entier en a été transformé."
-              author="Alexandre P."
-              role="Locataire saison, Saint-Tropez"
-            />
-            <Testimonial
-              quote="Un partenaire fiable pour des demandes complexes. Discrétion totale, ce qui est non-négociable pour nous."
-              author="Constance L."
-              role="Conciergerie, Monaco"
-            />
-          </div>
+        <div className="mt-12">
+          <TestimonialsCarousel testimonials={TESTIMONIALS} accent={ACCENT} />
         </div>
       </section>
 
@@ -233,9 +361,9 @@ export default function VillaLandingPage() {
       </section>
 
       {/* ── MÉTHODE ──────────────────────────────────────── */}
-      <section className="px-6 py-24 md:px-10 lg:px-16">
+      <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Méthode</p>
+          <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: ACCENT }}>Méthode</p>
           <h2 className="mt-4 max-w-3xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
             Une demande simple.<br />Un traitement structuré.
           </h2>
@@ -260,9 +388,14 @@ export default function VillaLandingPage() {
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────── */}
-      <section className="bg-[#f3efe7] px-6 py-24 md:px-10 lg:px-16">
+      <section
+        className="px-6 py-24 md:px-10 lg:px-16"
+        style={{ backgroundColor: ACCENT_SOFT }}
+      >
         <div className="mx-auto max-w-4xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Questions fréquentes</p>
+          <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: ACCENT }}>
+            Questions fréquentes
+          </p>
           <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
             Avant de demander.
           </h2>
@@ -281,13 +414,24 @@ export default function VillaLandingPage() {
       </section>
 
       {/* ── CTA FINAL ────────────────────────────────────── */}
-      <section className="bg-[#161616] px-6 py-28 text-white md:px-10 md:py-32 lg:px-16">
-        <div className="mx-auto max-w-4xl text-center">
+      <section className="relative overflow-hidden bg-[#161616] px-6 py-28 text-white md:px-10 md:py-32 lg:px-16">
+        <div className="absolute inset-0 opacity-30">
+          <Image
+            src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2400&auto=format&fit=crop"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/40" />
+        </div>
+
+        <div className="relative mx-auto max-w-4xl text-center">
           <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Votre projet</p>
           <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
             Décrivez votre projet.<br />Réponse sous 6 à 24h.
           </h2>
-          <p className="mt-8 max-w-2xl mx-auto text-[17px] font-light leading-8 text-white/80">
+          <p className="mt-8 max-w-2xl mx-auto text-[17px] font-light leading-8 text-white/85">
             Thomas, votre interlocuteur, vous recontacte avec une sélection ciblée selon votre brief.
           </p>
 
@@ -308,7 +452,7 @@ export default function VillaLandingPage() {
             </a>
           </div>
 
-          <p className="mt-10 text-[12px] text-white/45">
+          <p className="mt-10 text-[12px] text-white/55">
             Sans engagement · Aucune réservation sans votre validation
           </p>
         </div>
@@ -321,40 +465,35 @@ function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex items-baseline gap-2 text-white">
       <span className="text-3xl font-serif md:text-4xl">{value}</span>
-      <span className="text-[11px] uppercase tracking-[0.2em] text-white/60">{label}</span>
+      <span className="text-[11px] uppercase tracking-[0.2em] text-white/65">{label}</span>
     </div>
   );
 }
 
 function PersonaCard({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-[24px] border border-[#d8d1c7] bg-white p-7">
+    <div className="group rounded-[24px] border border-stone-200 bg-white p-7 transition hover:border-[#7f1d1d]/30 hover:shadow-[0_18px_40px_-20px_rgba(127,29,29,0.25)]">
+      <div
+        className="h-[3px] w-10 mb-5 rounded-full"
+        style={{ backgroundColor: '#7f1d1d' }}
+      />
       <h3 className="text-xl font-serif text-[#161616]">{title}</h3>
-      <p className="mt-4 text-[15px] font-light leading-7 text-[#3a352e]">{body}</p>
+      <p className="mt-4 text-[15px] font-light leading-7 text-[#5d5651]">{body}</p>
     </div>
-  );
-}
-
-function Testimonial({ quote, author, role }: { quote: string; author: string; role: string }) {
-  return (
-    <figure className="rounded-[24px] border border-[#e6e0d4] bg-white p-7">
-      <blockquote className="text-[16px] font-light leading-7 text-[#161616]">
-        « {quote} »
-      </blockquote>
-      <figcaption className="mt-5 text-[13px] text-[#3a352e]">
-        <span className="font-medium text-[#161616]">{author}</span>
-        <span className="text-[#7d756a]"> — {role}</span>
-      </figcaption>
-    </figure>
   );
 }
 
 function StepCard({ number, title, text }: { number: string; title: string; text: string }) {
   return (
-    <div className="rounded-[24px] border border-[#d8d1c7] bg-white p-7">
-      <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">{number}</p>
+    <div className="rounded-[24px] border border-stone-200 bg-white p-7">
+      <p
+        className="text-[11px] font-medium uppercase tracking-[0.24em]"
+        style={{ color: '#7f1d1d' }}
+      >
+        {number}
+      </p>
       <h3 className="mt-4 text-xl font-serif text-[#161616]">{title}</h3>
-      <p className="mt-3 text-[15px] font-light leading-7 text-[#3a352e]">{text}</p>
+      <p className="mt-3 text-[15px] font-light leading-7 text-[#5d5651]">{text}</p>
     </div>
   );
 }
