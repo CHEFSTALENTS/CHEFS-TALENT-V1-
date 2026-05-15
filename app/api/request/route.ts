@@ -132,16 +132,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing email' }, { status: 400 });
     }
 
-    // La colonne match_type reste en DB (nullable) pour rétrocompat des
-    // anciennes lignes, mais on n'écrit plus de nouvelle valeur dedans.
-    // Plus de logique fast / concierge dans le routing.
+    // La colonne match_type est NOT NULL en DB. La logique business
+    // fast/concierge a été retirée (PR #65) mais on doit toujours
+    // écrire une valeur valide pour ne pas violer la contrainte.
+    // 'concierge' sert de valeur par défaut neutre. Si on veut
+    // vraiment supprimer la colonne, prévoir une migration séparée
+    // (DROP NOT NULL puis usage progressif).
 
     const insertRow = {
       email,
       first_name: firstName,
       full_name: fullName,
 
-      match_type: null,
+      match_type: 'concierge',
       status: 'new',
 
       message,
