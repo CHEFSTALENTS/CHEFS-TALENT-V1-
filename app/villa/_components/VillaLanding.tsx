@@ -16,7 +16,10 @@ const ACCENT_SOFT = '#fef2f2';
 const WHATSAPP_NUMBER = '33756827612';
 
 function localePath(lang: VillaCopy['lang']): string {
-  return lang === 'fr' ? '/request?source=villa-landing' : `/${lang}/request?source=villa-landing`;
+  // /request est un wizard multilingue unique : on lui passe la langue
+  // en query param pour qu'il pré-sélectionne celle-ci (override de la
+  // détection navigator.language par défaut). Source = pour le tracking.
+  return `/request?source=villa-landing&lang=${lang}`;
 }
 
 export default function VillaLanding({ copy }: { copy: VillaCopy }) {
