@@ -967,9 +967,17 @@ function WizardContent() {
     };
   }, [step, result]);
 
-  // Détection langue + pays au chargement
+  // Détection langue + pays au chargement.
+  // Priorité : query param ?lang=fr|en|es > navigator.language.
+  // Cela permet aux landing /en/villa et /es/villa de forcer la langue
+  // du wizard sans dépendre du navigateur du visiteur.
   useEffect(() => {
-    setLang(detectLang());
+    const qpLang = searchParams.get('lang')?.toLowerCase();
+    if (qpLang === 'fr' || qpLang === 'en' || qpLang === 'es') {
+      setLang(qpLang as Lang);
+    } else {
+      setLang(detectLang());
+    }
     // Géolocalisation IP légère via un service public
     fetch("https://ipapi.co/json/")
       .then(r => r.json())
