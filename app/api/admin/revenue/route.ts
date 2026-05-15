@@ -288,6 +288,17 @@ async function sumManualEntries(sinceIso: string): Promise<{
   };
 }
 
+// Cache in-memory module-level pour les payloads /api/admin/revenue.
+// TTL court (60s) pour soulager les round-trips Stripe + Supabase qui
+// rendent le dashboard /admin lent. Sur Vercel serverless, le cache
+// vit dans l'instance chaude ; cold start = miss (acceptable).
+//
+// Bypass possible via ?fresh=1 (utile quand on saisit une nouvelle
+// vente manuelle et qu'on veut voir le total à jour immédiatement).
+type RevenueCacheEntry = { at: number; payload: any };
+const revenueCache = new Map<string, RevenueCacheEntry>();
+const REVENUE_CACHE_TTL_MS = 60_000;
+
 export async function GET(req: Request) {
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
@@ -295,6 +306,21 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const rawPeriod = searchParams.get('period');
   const periodKey: PeriodKey = isPeriodKey(rawPeriod) ? rawPeriod : 'current_month';
+  const bypassCache = searchParams.get('fresh') === '1';
+
+  // Cache lookup
+  const cacheKey = periodKey;
+  if (!bypassCache) {
+    const cached = revenueCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < REVENUE_CACHE_TTL_MS) {
+      return NextResponse.json(cached.payload, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Age-Ms': String(Date.now() - cached.at),
+        },
+      });
+    }
+  }
 
   const now = new Date();
   const { from: periodFrom, to: periodTo } = getPeriodRange(periodKey, now);
@@ -329,7 +355,7 @@ export async function GET(req: Request) {
     const totalYtd =
       chargesYtd.totalEur + missionsYtd.commissionEur + manualYtd.htEur;
 
-    return NextResponse.json({
+    const payload = {
       ok: true,
       generatedAt: new Date().toISOString(),
       period: {
@@ -373,6 +399,13 @@ export async function GET(req: Request) {
         periodEur: Math.round(totalPeriod * 100) / 100,
         ytdEur: Math.round(totalYtd * 100) / 100,
       },
+    };
+
+    // Stocke en cache (TTL 60s)
+    revenueCache.set(cacheKey, { at: Date.now(), payload });
+
+    return NextResponse.json(payload, {
+      headers: { 'X-Cache': bypassCache ? 'BYPASS' : 'MISS' },
     });
   } catch (e: any) {
     console.error('[admin/revenue] error', e);
