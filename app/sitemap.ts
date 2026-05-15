@@ -18,6 +18,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/insights`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE_URL}/request`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE_URL}/accompagnement`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    // Landing /villa (Google Ads) — FR/EN/ES
+    { url: `${BASE_URL}/villa`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${BASE_URL}/en/villa`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${BASE_URL}/es/villa`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
   ];
 
   // Pages destinations (FR + EN + ES, lues dynamiquement depuis lib/destinations.ts)

@@ -1,44 +1,41 @@
-// app/villa/page.tsx
-// Landing /villa version française (racine).
-// Server Component avec metadata + schema FAQ + hreflang.
-// Le contenu est dans VillaLanding (composant partagé FR/EN/ES).
+// app/en/villa/page.tsx — English version of /villa.
 
 import type { Metadata } from 'next';
-import VillaLanding from './_components/VillaLanding';
-import { frCopy } from './_lib/copy';
+import VillaLanding from '../../villa/_components/VillaLanding';
+import { enCopy } from '../../villa/_lib/copy';
 
 const BASE = 'https://chefstalents.com';
-const PATH = '/villa';
+const PATH = '/en/villa';
 
 export const metadata: Metadata = {
-  title: frCopy.meta.title,
-  description: frCopy.meta.description,
+  title: enCopy.meta.title,
+  description: enCopy.meta.description,
   alternates: {
     canonical: `${BASE}${PATH}`,
     languages: {
-      fr: `${BASE}${PATH}`,
-      en: `${BASE}/en${PATH}`,
-      es: `${BASE}/es${PATH}`,
-      'x-default': `${BASE}/en${PATH}`,
+      fr: `${BASE}/villa`,
+      en: `${BASE}${PATH}`,
+      es: `${BASE}/es/villa`,
+      'x-default': `${BASE}${PATH}`,
     },
   },
   robots: { index: true, follow: true },
   openGraph: {
-    title: frCopy.meta.title,
-    description: frCopy.meta.description,
+    title: enCopy.meta.title,
+    description: enCopy.meta.description,
     url: `${BASE}${PATH}`,
     siteName: 'Chefs Talents',
     images: ['/images/editorial/IMG_1619.jpg'],
-    locale: 'fr_FR',
+    locale: 'en_GB',
     type: 'website',
   },
 };
 
-export default function VillaPage() {
+export default function EnVillaPage() {
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: frCopy.faq.items.map((f) => ({
+    mainEntity: enCopy.faq.items.map((f) => ({
       '@type': 'Question',
       name: f.question,
       acceptedAnswer: { '@type': 'Answer', text: f.answer },
@@ -51,7 +48,7 @@ export default function VillaPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <VillaLanding copy={frCopy} />
+      <VillaLanding copy={enCopy} />
     </>
   );
 }
