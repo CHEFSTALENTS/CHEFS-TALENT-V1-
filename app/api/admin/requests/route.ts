@@ -121,9 +121,10 @@ export async function POST(req: Request) {
       full_name: fullName,
       phone: strOrNull(body.phone),
 
-      // match_type legacy : on n'écrit plus de valeur sur les nouvelles
-      // lignes. La colonne reste en DB pour rétrocompat.
-      match_type: null,
+      // match_type est NOT NULL en DB. La logique business fast/concierge
+      // a été retirée mais on doit écrire une valeur valide. 'concierge'
+      // sert de valeur par défaut neutre.
+      match_type: 'concierge',
       // 'new' : la demande vient de rentrer, pas encore traitée
       status: 'new',
 
