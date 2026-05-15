@@ -76,24 +76,24 @@ export const metadata: Metadata = {
 
 const GALLERY = [
   {
-    src: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1600&auto=format&fit=crop',
-    alt: 'Villa de luxe en Méditerranée',
-    label: 'Villa Côte d\'Azur',
+    src: '/images/editorial/IMG_1622.jpg',
+    alt: 'Terrasse de villa avec vue infinity sur la Méditerranée',
+    label: 'Villa Méditerranée',
   },
   {
-    src: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1600&auto=format&fit=crop',
-    alt: 'Yacht privé en charter',
+    src: '/images/editorial/IMG_1624.jpg',
+    alt: 'Table dressée à bord d\'un yacht au mouillage',
     label: 'Yacht charter',
   },
   {
-    src: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1600&auto=format&fit=crop',
-    alt: 'Chef en cuisine au travail',
-    label: 'Chef en mission',
+    src: '/images/editorial/IMG_1620.jpg',
+    alt: 'Table d\'hôtes en extérieur au coucher de soleil',
+    label: 'Dîner privé',
   },
   {
-    src: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1600&auto=format&fit=crop',
-    alt: 'Dressage gastronomique',
-    label: 'Dressage gastronomique',
+    src: '/images/editorial/IMG_1625.jpg',
+    alt: 'Service à bord d\'un yacht en baie de Monaco',
+    label: 'Service en mer',
   },
 ];
 
@@ -157,14 +157,14 @@ export default function VillaLandingPage() {
       <section className="relative overflow-hidden bg-[#161616] text-white">
         <div className="absolute inset-0">
           <Image
-            src="/images/editorial/villa-service.jpg"
-            alt="Chef privé en villa"
+            src="/images/editorial/IMG_1619.jpg"
+            alt="Table dressée bord de piscine vue mer Méditerranée"
             fill
             priority
             sizes="100vw"
-            className="object-cover opacity-55"
+            className="object-cover opacity-65"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/75" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/70" />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 py-24 md:px-10 md:py-32 lg:px-16 lg:py-40">
@@ -243,8 +243,8 @@ export default function VillaLandingPage() {
         <div className="mx-auto max-w-7xl overflow-hidden rounded-[28px]">
           <div className="relative h-[52vh] md:h-[64vh]">
             <Image
-              src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2400&auto=format&fit=crop"
-              alt="Chef en mission villa Méditerranée"
+              src="/images/editorial/IMG_1623.jpg"
+              alt="Villa contemporaine avec piscine, vue collines et mer Méditerranée"
               fill
               sizes="(max-width: 1280px) 100vw, 1200px"
               className="object-cover"
@@ -417,7 +417,7 @@ export default function VillaLandingPage() {
       <section className="relative overflow-hidden bg-[#161616] px-6 py-28 text-white md:px-10 md:py-32 lg:px-16">
         <div className="absolute inset-0 opacity-30">
           <Image
-            src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2400&auto=format&fit=crop"
+            src="/images/editorial/IMG_1620.jpg"
             alt=""
             fill
             sizes="100vw"
