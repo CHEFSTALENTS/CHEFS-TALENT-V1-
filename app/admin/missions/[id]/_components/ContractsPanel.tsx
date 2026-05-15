@@ -364,115 +364,169 @@ function ChefForm({ value, onChange }: { value: ChefContractData; onChange: (v: 
 }
 
 function ClientForm({ value, onChange }: { value: ClientContractData; onChange: (v: ClientContractData) => void }) {
-  function togglePayment(method: string) {
-    const has = value.paymentMethods.includes(method);
-    onChange({
-      ...value,
-      paymentMethods: has ? value.paymentMethods.filter((m) => m !== method) : [...value.paymentMethods, method],
-    });
-  }
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <Field label="Nom client">
-        <Input value={value.clientName} onChange={(v) => onChange({ ...value, clientName: v })} />
+    <div className="space-y-5">
+      <SectionTitle>En-tête</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Titre du contrat">
+          <Input value={value.contractTypeLabel} onChange={(v) => onChange({ ...value, contractTypeLabel: v })} />
+        </Field>
+        <Field label="Sous-titre (lieu + saison)">
+          <Input value={value.contractSubtitle} onChange={(v) => onChange({ ...value, contractSubtitle: v })} />
+        </Field>
+        <Field label="Ville de signature">
+          <Input value={value.signatureCity} onChange={(v) => onChange({ ...value, signatureCity: v })} />
+        </Field>
+        <Field label="Date de signature">
+          <Input type="date" value={value.signatureDate} onChange={(v) => onChange({ ...value, signatureDate: v })} />
+        </Field>
+      </div>
+
+      <SectionTitle>Parties</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Représentant Agence">
+          <Input value={value.agencyRep} onChange={(v) => onChange({ ...value, agencyRep: v })} />
+        </Field>
+        <Field label="SIRET Agence">
+          <Input value={value.agencySiret} onChange={(v) => onChange({ ...value, agencySiret: v })} />
+        </Field>
+        <Field label="Civilité client">
+          <Select
+            value={value.clientCivilite}
+            options={[
+              { value: '', label: '—' },
+              { value: 'Monsieur', label: 'Monsieur' },
+              { value: 'Madame', label: 'Madame' },
+            ]}
+            onChange={(v) => onChange({ ...value, clientCivilite: v as any })}
+          />
+        </Field>
+        <Field label="Nom client">
+          <Input value={value.clientName} onChange={(v) => onChange({ ...value, clientName: v })} />
+        </Field>
+        <Field label="Société (si B2B)">
+          <Input value={value.clientCompany} onChange={(v) => onChange({ ...value, clientCompany: v })} />
+        </Field>
+      </div>
+
+      <SectionTitle>Article 2 — Conditions de la mission</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Lieu">
+          <Input value={value.missionLocation} onChange={(v) => onChange({ ...value, missionLocation: v })} />
+        </Field>
+        <Field label="Couverts">
+          <NumberInput value={value.guestCount} onChange={(v) => onChange({ ...value, guestCount: v })} />
+        </Field>
+        <Field label="Date début">
+          <Input type="date" value={value.startDate} onChange={(v) => onChange({ ...value, startDate: v })} />
+        </Field>
+        <Field label="Date fin">
+          <Input type="date" value={value.endDate} onChange={(v) => onChange({ ...value, endDate: v })} />
+        </Field>
+        <Field label="Rythme">
+          <Input value={value.rythme} onChange={(v) => onChange({ ...value, rythme: v })} />
+        </Field>
+        <Field label="Jour de repos">
+          <Input value={value.jourRepos} onChange={(v) => onChange({ ...value, jourRepos: v })} />
+        </Field>
+        <div className="md:col-span-2">
+          <Field label="Logement">
+            <Input value={value.logement} onChange={(v) => onChange({ ...value, logement: v })} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <Field label="Véhicule">
+            <Input value={value.vehicule} onChange={(v) => onChange({ ...value, vehicule: v })} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <Field label="Approvisionnements">
+            <Input value={value.approvisionnements} onChange={(v) => onChange({ ...value, approvisionnements: v })} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <Field label="Langues de travail">
+            <Input value={value.langues} onChange={(v) => onChange({ ...value, langues: v })} />
+          </Field>
+        </div>
+      </div>
+
+      <SectionTitle>Article 3 — Étendue des prestations</SectionTitle>
+      <Field label="Prestations incluses (une par ligne)">
+        <Textarea value={value.prestationsIncluses} rows={5} onChange={(v) => onChange({ ...value, prestationsIncluses: v })} />
       </Field>
-      <Field label="Société (si B2B)">
-        <Input value={value.clientCompany} onChange={(v) => onChange({ ...value, clientCompany: v })} />
-      </Field>
-      <Field label="Lieu de mission">
-        <Input value={value.missionLocation} onChange={(v) => onChange({ ...value, missionLocation: v })} />
-      </Field>
-      <Field label="Niveau de service">
-        <Input value={value.serviceLevel} onChange={(v) => onChange({ ...value, serviceLevel: v })} />
-      </Field>
-      <Field label="Date début">
-        <Input type="date" value={value.startDate} onChange={(v) => onChange({ ...value, startDate: v })} />
-      </Field>
-      <Field label="Date fin">
-        <Input type="date" value={value.endDate} onChange={(v) => onChange({ ...value, endDate: v })} />
-      </Field>
-      <Field label="Couverts">
-        <NumberInput value={value.guestCount} onChange={(v) => onChange({ ...value, guestCount: v })} />
-      </Field>
-      <Field label="Montant TTC (€)">
-        <NumberInput value={value.amountTtc} onChange={(v) => onChange({ ...value, amountTtc: v })} />
+      <Field label="Prestations non incluses (une par ligne)">
+        <Textarea value={value.prestationsNonIncluses} rows={3} onChange={(v) => onChange({ ...value, prestationsNonIncluses: v })} />
       </Field>
 
-      <Field label="Mode paiement client">
-        <Select
-          value={value.acompteMode}
-          options={[
-            { value: 'auto', label: 'Auto (100 % si <30k€, sinon 60/40)' },
-            { value: '100', label: '100 % à la commande' },
-            { value: '60_40', label: '60 % acompte + 40 % solde' },
-          ]}
-          onChange={(v) => onChange({ ...value, acompteMode: v as any })}
-        />
-      </Field>
-      <Field label="Solde N heures avant">
-        <NumberInput value={value.soldeDaysBefore} onChange={(v) => onChange({ ...value, soldeDaysBefore: v ?? 0 })} />
-      </Field>
-
-      <div className="md:col-span-2">
-        <Field label="Moyens de paiement acceptés">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { v: 'virement', l: 'Virement' },
-              { v: 'stripe', l: 'Stripe (CB)' },
-              { v: 'revolut', l: 'Revolut' },
-            ].map((opt) => {
-              const active = value.paymentMethods.includes(opt.v);
-              return (
-                <button
-                  key={opt.v}
-                  type="button"
-                  onClick={() => togglePayment(opt.v)}
-                  className={[
-                    'px-3 py-1.5 rounded-lg border text-xs transition',
-                    active
-                      ? 'border-white/30 bg-white/15 text-white'
-                      : 'border-white/10 bg-white/5 text-white/55 hover:bg-white/10',
-                  ].join(' ')}
-                >
-                  {opt.l}
-                </button>
-              );
-            })}
+      <SectionTitle>Article 4 — Conditions financières</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Honoraires Agence (€ HT)">
+          <NumberInput value={value.amountHt} onChange={(v) => onChange({ ...value, amountHt: v })} />
+        </Field>
+        <Field label="Modalités de règlement">
+          <Select
+            value={value.paymentMode}
+            options={[
+              { value: 'integral_signature', label: 'Intégral à la signature' },
+              { value: '60_40', label: '60 % acompte + 40 % solde 48h avant' },
+              { value: 'custom', label: 'Personnalisé…' },
+            ]}
+            onChange={(v) => onChange({ ...value, paymentMode: v as any })}
+          />
+        </Field>
+        {value.paymentMode === 'custom' ? (
+          <div className="md:col-span-2">
+            <Field label="Texte modalités personnalisé">
+              <Textarea value={value.paymentCustomText} rows={3} onChange={(v) => onChange({ ...value, paymentCustomText: v })} />
+            </Field>
           </div>
+        ) : null}
+        <div className="md:col-span-2">
+          <Field label="Article 4.3 — Facturation des approvisionnements">
+            <Textarea value={value.facturationApprosText} rows={3} onChange={(v) => onChange({ ...value, facturationApprosText: v })} />
+          </Field>
+        </div>
+      </div>
+
+      <SectionTitle>Article 5 — Exclusivité</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field label="Durée exclusivité (mois)">
+          <NumberInput value={value.exclusiviteDureeMois} onChange={(v) => onChange({ ...value, exclusiviteDureeMois: v ?? 24 })} />
+        </Field>
+        <Field label="Sanction contournement (%)">
+          <NumberInput value={value.sanctionContournementPct} onChange={(v) => onChange({ ...value, sanctionContournementPct: v ?? 30 })} />
+        </Field>
+        <Field label="Délai paiement sanction (jours)">
+          <NumberInput value={value.delaiPaiementSanctionJours} onChange={(v) => onChange({ ...value, delaiPaiementSanctionJours: v ?? 15 })} />
         </Field>
       </div>
 
-      <Field label="Retenue annulation ≥ 7j (%)">
-        <NumberInput value={value.cancelGte7d} onChange={(v) => onChange({ ...value, cancelGte7d: v ?? 0 })} />
-      </Field>
-      <Field label="Retenue annulation < 6j ou no-show (%)">
-        <NumberInput value={value.cancelLt6d} onChange={(v) => onChange({ ...value, cancelLt6d: v ?? 0 })} />
-      </Field>
-
-      <Field label="Fonds courses">
-        <Select
-          value={value.fondsCourses}
-          options={[
-            { value: 'inclus', label: 'Inclus dans le TTC' },
-            { value: 'sur_facture', label: 'Sur facture en complément' },
-            { value: 'avance', label: 'Avance client en début de mission' },
-          ]}
-          onChange={(v) => onChange({ ...value, fondsCourses: v as any })}
-        />
-      </Field>
-      <Field label="Plafond fonds courses (€, optionnel)">
-        <NumberInput value={value.fondsCoursesPlafond} onChange={(v) => onChange({ ...value, fondsCoursesPlafond: v })} />
-      </Field>
-
-      <Field label="Inclure clause NDA">
-        <Toggle value={value.ndaInclude} onChange={(v) => onChange({ ...value, ndaInclude: v })} />
-      </Field>
-
-      <div className="md:col-span-2">
-        <Field label="Clauses spécifiques (optionnel)">
-          <Textarea value={value.customClauses} rows={3} onChange={(v) => onChange({ ...value, customClauses: v })} />
+      <SectionTitle>Article 8 — Annulation</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Retenue ≥ 7j (%)">
+          <NumberInput value={value.cancelGte7d} onChange={(v) => onChange({ ...value, cancelGte7d: v ?? 25 })} />
+        </Field>
+        <Field label="Retenue < 6j / no-show (%)">
+          <NumberInput value={value.cancelLt6d} onChange={(v) => onChange({ ...value, cancelLt6d: v ?? 50 })} />
         </Field>
       </div>
+
+      <SectionTitle>Article 10 — Juridiction</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field label="Juridiction">
+          <Input value={value.juridiction} onChange={(v) => onChange({ ...value, juridiction: v })} />
+        </Field>
+        <Field label="Délai amiable (jours)">
+          <NumberInput value={value.delaiAmiableJours} onChange={(v) => onChange({ ...value, delaiAmiableJours: v ?? 30 })} />
+        </Field>
+        <Field label="Délai remboursement Agence (jours)">
+          <NumberInput value={value.delaiRemboursementAgenceJours} onChange={(v) => onChange({ ...value, delaiRemboursementAgenceJours: v ?? 15 })} />
+        </Field>
+      </div>
+
+      <SectionTitle>Clauses spécifiques (optionnel)</SectionTitle>
+      <Textarea value={value.customClauses} rows={3} onChange={(v) => onChange({ ...value, customClauses: v })} />
     </div>
   );
 }
@@ -480,6 +534,14 @@ function ClientForm({ value, onChange }: { value: ClientContractData; onChange: 
 // ─────────────────────────────────────────────────────────────
 // Small UI primitives
 // ─────────────────────────────────────────────────────────────
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#b08d57] mt-1 mb-2">
+      {children}
+    </div>
+  );
+}
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
