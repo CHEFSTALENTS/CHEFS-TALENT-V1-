@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import MarkPaidModal from '../_components/MarkPaidModal';
 import ClientEditor from './_components/ClientEditor';
+import ContractsPanel from './_components/ContractsPanel';
+import type { ContractsData } from './_lib/contracts';
 import {
   Loader2,
   ArrowLeft,
@@ -56,6 +58,7 @@ type MissionRow = {
   payment_reference: string | null;
   created_at: string | null;
   updated_at: string | null;
+  contracts_data: ContractsData | null;
 };
 
 type ChefInfo = {
@@ -658,6 +661,14 @@ export default function AdminMissionDetailPage() {
             )}
           </Panel>
         </div>
+      </div>
+
+      {/* Panneau Contrats : variables éditables + preview + copy HTML */}
+      <div className="px-6 pb-6">
+        <ContractsPanel
+          mission={mission}
+          client={client}
+        />
       </div>
 
       {/* Modal Marquer encaissée — montant pré-rempli = prix client */}

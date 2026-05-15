@@ -217,6 +217,7 @@ export async function PATCH(
     if (body.serviceLevel !== undefined) patch.service_level = body.serviceLevel || null;
     if (body.chefAmount !== undefined) patch.chef_amount = body.chefAmount;
     if (body.clientAmount !== undefined) patch.client_amount = body.clientAmount;
+    if (body.contractsData !== undefined) patch.contracts_data = body.contractsData;
 
     if (
       body.chefAmount !== undefined &&
