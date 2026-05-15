@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import MarkPaidModal from '../_components/MarkPaidModal';
+import ClientEditor from './_components/ClientEditor';
 import {
   Loader2,
   ArrowLeft,
@@ -104,6 +105,7 @@ export default function AdminMissionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showPaidModal, setShowPaidModal] = useState(false);
+  const [showClientEditor, setShowClientEditor] = useState(false);
 
   // Form édition contrat
   const [editingContract, setEditingContract] = useState(false);
@@ -586,20 +588,29 @@ export default function AdminMissionDetailPage() {
           <Panel title="Client" subtitle="Demande à l'origine">
             {client ? (
               <div className="space-y-3">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium text-white">
-                    {client.fullName || client.email}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="text-sm font-medium text-white truncate">
+                      {client.fullName || client.email}
+                    </div>
+                    {client.companyName && (
+                      <div className="text-xs text-white/55 flex items-center gap-1 mt-0.5">
+                        <Building2 className="w-3 h-3" /> {client.companyName}
+                      </div>
+                    )}
+                    {client.clientType && (
+                      <div className="text-[11px] uppercase tracking-widest text-white/45 mt-1">
+                        {client.clientType === 'concierge' ? 'B2B' : 'B2C'}
+                      </div>
+                    )}
                   </div>
-                  {client.companyName && (
-                    <div className="text-xs text-white/55 flex items-center gap-1 mt-0.5">
-                      <Building2 className="w-3 h-3" /> {client.companyName}
-                    </div>
-                  )}
-                  {client.clientType && (
-                    <div className="text-[11px] uppercase tracking-widest text-white/45 mt-1">
-                      {client.clientType === 'concierge' ? 'B2B' : 'B2C'}
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setShowClientEditor(true)}
+                    className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-white/10 bg-white/5 text-[11px] uppercase tracking-widest text-white/70 hover:bg-white/10 transition"
+                    title="Modifier les coordonnées client"
+                  >
+                    <PenSquare className="w-3 h-3" /> Modifier
+                  </button>
                 </div>
 
                 <div className="space-y-1.5 text-sm">
@@ -660,6 +671,34 @@ export default function AdminMissionDetailPage() {
           onSuccess={() => {
             setShowPaidModal(false);
             refresh();
+          }}
+        />
+      )}
+
+      {/* Modal édition client */}
+      {showClientEditor && client && (
+        <ClientEditor
+          client={{
+            id: client.id,
+            email: client.email,
+            fullName: client.fullName,
+            phone: client.phone,
+            companyName: client.companyName,
+            clientType: client.clientType,
+          }}
+          onClose={() => setShowClientEditor(false)}
+          onSaved={(next) => {
+            setClient((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    email: next.email,
+                    fullName: next.fullName,
+                    phone: next.phone,
+                    companyName: next.companyName,
+                  }
+                : prev,
+            );
           }}
         />
       )}
