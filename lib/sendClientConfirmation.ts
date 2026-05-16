@@ -144,13 +144,20 @@ function buildBriefRows(brief: ClientBriefRecap): { label: string; value: string
     rows.push({ label: 'Cuisines préférées', value: brief.cuisinePreferences });
   }
 
-  // ⚠️ NE PAS afficher le budget dans le mail client.
-  // Raison : /request step 7 mappe les gammes Essentiel/Premium/Exception
-  // en chiffres bruts ('2500'/'5000'/'10000') côté budgetRange, ce qui
-  // produisait dans le mail « Budget indicatif : 2500 » — interprété
-  // par les clients UHNW comme une catégorisation en bas de gamme.
-  // Le client sait ce qu'il a saisi, pas besoin de le rappeler.
-  // Thomas garde la valeur en DB et sur l'admin pour son devis interne.
+  // Budget : on l'affiche UNIQUEMENT si le client a saisi un montant
+  // explicite via l'option « Définir mon budget » (custom) → budgetAmount
+  // est alors set. On n'affiche JAMAIS quand seul budgetRange est rempli
+  // (les gammes Essentiel/Premium/Exception mappent à '2500'/'5000'/
+  // '10000' côté form, ce qui produisait « Budget indicatif : 2500 » —
+  // interprété par les clients UHNW comme une catégorisation en bas
+  // de gamme. Voir hotfix PR #64).
+  if (brief.budgetAmount && Number.isFinite(brief.budgetAmount) && brief.budgetAmount > 0) {
+    const unit = brief.budgetUnit === 'per_day' ? ' € / jour' : ' € total';
+    rows.push({
+      label: 'Budget annoncé',
+      value: `${brief.budgetAmount.toLocaleString('fr-FR')}${unit}`,
+    });
+  }
 
   return rows;
 }
@@ -170,7 +177,6 @@ function buildClientHtml(params: {
 }) {
   const greeting = escapeHtml(formatGreeting(params.brief.firstName));
   const briefRows = buildBriefRows(params.brief);
-  const message = params.brief.message ? params.brief.message.trim() : '';
   const requestId = params.requestId ? escapeHtml(params.requestId) : null;
 
   // Palette sobre
@@ -199,16 +205,12 @@ function buildClientHtml(params: {
         .join('')
     : '';
 
-  const messageHtml = message
-    ? `<div style="margin-top:18px;padding:14px 16px;background:#FBFAF8;border-left:3px solid ${gold};">
-         <div style="font-family:ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${muted};margin-bottom:6px;">
-           Vos précisions
-         </div>
-         <div style="font-family:ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial;font-size:14px;line-height:1.7;color:${ink};white-space:pre-wrap;">
-           ${escapeHtml(message)}
-         </div>
-       </div>`
-    : '';
+  // Note : on n'inclut PAS le bloc « Vos précisions » (notes/message
+  // libres) dans le mail client. Le message du client sert à Thomas
+  // pour préparer son retour, mais on n'a pas besoin de le renvoyer
+  // tel quel au client (risque de mal-citation, de re-formulation
+  // bancale, ou simplement de pollution visuelle du mail).
+  // Le récap brief structuré (lieu, dates, couverts, etc.) suffit.
 
   return `
   <!doctype html>
@@ -274,21 +276,16 @@ function buildClientHtml(params: {
               </tr>
 
               ${
-                briefRowsHtml || messageHtml
+                briefRowsHtml
                   ? `<!-- Brief recap -->
                      <tr>
                        <td style="padding:24px 28px 6px 28px;">
                          <div style="font-family:ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${muted};margin-bottom:10px;">
                            Votre brief
                          </div>
-                         ${
-                           briefRowsHtml
-                             ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-top:1px solid ${line};">
-                                 ${briefRowsHtml}
-                               </table>`
-                             : ''
-                         }
-                         ${messageHtml}
+                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-top:1px solid ${line};">
+                           ${briefRowsHtml}
+                         </table>
                        </td>
                      </tr>`
                   : ''
@@ -383,11 +380,8 @@ function buildClientText(
     lines.push('');
   }
 
-  if (brief.message) {
-    lines.push('Vos précisions :');
-    lines.push(brief.message.trim());
-    lines.push('');
-  }
+  // Volontairement : pas de bloc « Vos précisions » dans le mail
+  // client (cf. commentaire buildClientHtml ci-dessus).
 
   if (requestId) {
     lines.push(`Référence : ${requestId}`);
