@@ -1,4 +1,37 @@
 /** @type {import('next').NextConfig} */
+
+// Content-Security-Policy : limite les sources autorisées pour les scripts,
+// images, styles, etc. → réduit l'impact d'un XSS éventuel et bloque
+// certains vecteurs (clickjacking, exfiltration).
+//
+// Démarré en `Content-Security-Policy-Report-Only` : le navigateur applique
+// la policy en mode observation (log les violations dans la console, ne
+// bloque rien) pendant 7-14 jours pour repérer les domains manquants sans
+// casser la prod. Quand les logs sont propres, renommer le header en
+// `Content-Security-Policy` pour passer en enforcement.
+//
+// Sources autorisées :
+// - script : Stripe Checkout, GTM/Google Ads, Meta Pixel, PostHog
+// - connect : Supabase, Stripe API, PostHog, Google Analytics, IP geo (ipapi)
+// - img : Unsplash (placeholders SEO), Supabase Storage, Meta tracking
+// - frame : Stripe Checkout, FB Pixel (1x1)
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  // 'unsafe-inline' + 'unsafe-eval' requis par Next.js App Router (RSC bootstrap)
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google-analytics.com https://connect.facebook.net https://*.posthog.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://www.facebook.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co https://api.stripe.com https://*.posthog.com https://www.google-analytics.com https://stats.g.doubleclick.net https://ipapi.co",
+  "frame-src 'self' https://js.stripe.com https://www.facebook.com",
+  "media-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join('; ');
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -6,6 +39,13 @@ const nextConfig = {
   async headers() {
     // Headers de sécurité communs à toutes les pages
     const securityHeaders = [
+      // CSP en mode observation (Report-Only). Bascule en
+      // 'Content-Security-Policy' (sans Report-Only) après 7-14 jours
+      // d'observation sans violations dans la console navigateur.
+      {
+        key: 'Content-Security-Policy-Report-Only',
+        value: CSP_DIRECTIVES,
+      },
       // HSTS : force HTTPS pendant 1 an, inclut les subdomains, autorise
       // l'inscription dans la liste preload Chromium (à demander manuellement
       // si tu veux via https://hstspreload.org/)
@@ -82,10 +122,21 @@ const nextConfig = {
   },
 
   images: {
+    // ⚠️ Sécurité : éviter les wildcards de hostname dans remotePatterns.
+    // Un wildcard '*.supabase.co' permet à n'importe quel projet Supabase
+    // d'être source d'images proxifiées par Next.js Image Optimizer →
+    // vecteur de DoS (cf. GHSA-9g9p-9gw9-jx7f).
+    //
+    // À FAIRE manuellement par Thomas : remplacer 'PROJECT-ID' par
+    // l'ID exact du projet Supabase Chefs Talents (visible dans
+    // NEXT_PUBLIC_SUPABASE_URL : https://PROJECT-ID.supabase.co).
+    // En attendant, le wildcard reste actif pour ne pas casser les
+    // images chef-uploads en prod, mais c'est À RESTREINDRE.
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      // TODO sécurité : restreindre à 'PROJECT-ID.supabase.co' une fois
+      // l'ID confirmé. Le wildcard ci-dessous reste actif pour la prod.
       { protocol: 'https', hostname: '*.supabase.co' },
-      { protocol: 'https', hostname: '*.supabase.in' },
     ],
   },
 };
