@@ -82,21 +82,32 @@ export default function ChefSignupPage() {
       }
 
       // Envoie l'email de bienvenue + lien de vérification (fire-and-forget,
-      // ne bloque pas le redirect).
-      fetch('/api/auth/email/send-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          email,
-          firstName: formData.firstName.trim(),
-          locale,
-        }),
-      }).catch((e) =>
-        console.error('[signup] send-verification failed', e?.message),
-      );
-
+      // ne bloque pas le redirect). Requiert Bearer Supabase pour
+      // l'authentification — on récupère le token de la session active.
       const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (accessToken) {
+        fetch('/api/auth/email/send-verification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            firstName: formData.firstName.trim(),
+            locale,
+          }),
+        }).catch((e) =>
+          console.error('[signup] send-verification failed', e?.message),
+        );
+      } else {
+        // Pas de session : Supabase est configuré avec « Confirm email »
+        // requise. Le mail Supabase par défaut prendra le relais ; on
+        // retrouvera notre flow custom au premier login authentifié si
+        // on appelle send-verification depuis là.
+        console.warn('[signup] no session yet, skipping welcome email');
+      }
+
       if (sessionData.session) {
         router.replace('/chef/dashboard');
       } else {
