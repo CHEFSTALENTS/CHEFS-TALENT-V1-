@@ -1,6 +1,7 @@
 // app/api/chef/onboarding/evaluate/route.ts
 import { NextResponse } from "next/server";
 import { computeChefScore, type ChefProfile } from "@/lib/chefScore";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 type Action = { title: string; route: string; priority: "high" | "medium" | "low" };
 
@@ -68,6 +69,17 @@ function buildPitches(chef: any) {
 }
 
 export async function POST(req: Request) {
+  // Rate limit : endpoint sans auth (l'évaluation du score se fait à la
+  // volée pendant l'onboarding chef, avant qu'il soit connecté).
+  // 20 req / minute / IP suffit pour un onboarding réel, bloque l'abus
+  // CPU sur computeChefScore.
+  const rl = rateLimit(req, {
+    identifier: "onboard-evaluate",
+    windowMs: 60_000,
+    max: 20,
+  });
+  if (!rl.ok) return rateLimitResponse(rl);
+
   const body = await req.json().catch(() => null);
 
   const chef = (body?.chef ?? null) as ChefProfile | null;
