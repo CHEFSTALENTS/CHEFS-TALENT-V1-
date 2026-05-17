@@ -1624,5 +1624,67 @@ export const articles: Article[] = [
       { question: "How many covers can a single chef handle in Ibiza?", answer: "A solo private chef can handle plated meals up to 12 to 15 covers. Beyond that, a dedicated commis is needed for plating. At 25 covers or above, the nominal team is 2 in the kitchen and 1 in service. For event dinners above 50 covers (UHNW wedding, prestige cocktail), coordination shifts to a brigade format of 4 to 6 people." },
       { question: "What's the difference between a Chefs Talents profile and finding a chef directly through a local contact?", answer: "With Chefs Talents, the profile is validated upstream on UHNW experience, contactable references, and ability to coordinate with house staff. The contract is structured, invoicing is handled by Chefs Talents (principal in own name, French VAT), and we remain available during the mission. On a high-stakes peak-season stay, this structure is the difference between a mission that runs well and a mission where every unforeseen event is resolved in panic." }
     ]
+  },
+  {
+    id: '45',
+    slug: 'chef-prive-french-riviera-secrete-cap-ferrat-mougins-eze',
+    title: "Chef privé French Riviera secrète : Cap Ferrat, Mougins, Èze, Antibes hors saturation",
+    subtitle: "Les vraies destinations UHNW de la Côte d'Azur ne sont pas celles que vous voyez sur Instagram. Comment placer un chef sur les villas hors radar entre Beaulieu et Mougins.",
+    date: "Mai 2026",
+    publishedAt: "2026-05-17",
+    category: "Côte d'Azur",
+    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/destinations/chef-prive-cote-azur",
+    relatedLinkText: "Voir la page Côte d'Azur",
+    blocks: [
+      { type: 'paragraph', content: "Quand on parle Côte d'Azur, le grand public pense Saint-Tropez, Cannes, Monaco. Le marché UHNW réel se joue ailleurs, sur quelques micro-destinations qui concentrent une densité exceptionnelle de villas hors radar : Cap Ferrat, Mougins, Èze-village, Cap d'Antibes, Beaulieu-sur-Mer. Cet article fait le point sur les particularités de ces zones, les profils chefs adaptés, et les tarifs pratiqués pour la saison 2026." },
+      { type: 'h2', content: "Pourquoi ces micro-destinations sont à part" },
+      { type: 'paragraph', content: "Le Cap Ferrat est probablement la zone la plus discrète et la plus dense en propriétés UHNW d'Europe au mètre carré. Mougins, dans l'arrière-pays cannois, attire les familles qui veulent l'effet Côte d'Azur sans les contraintes côtières. Èze-village, perché entre Nice et Monaco, est un refuge de propriétés patrimoniales avec vue mer dégagée. Cap d'Antibes joue dans la même cour que Saint-Jean-Cap-Ferrat avec une logistique de presqu'île. Beaulieu-sur-Mer offre un compromis entre Cap Ferrat et Monaco." },
+      { type: 'paragraph', content: "Ce qui réunit ces zones : une clientèle familiale plutôt que festive, des séjours plus longs (3 semaines à 3 mois plutôt que 7 jours), une exigence de discrétion absolue, et un marché chef beaucoup moins tendu que Saint-Tropez ou Cannes-Festival. La haute saison y existe (juillet-août) mais reste accessible avec une anticipation raisonnable." },
+      { type: 'h2', content: "Profils chefs adaptés par micro-destination" },
+      { type: 'list', content: [
+        "Cap Ferrat : chef résident saisonnier avec expérience famille UHNW longue durée. La presqu'île concentre des propriétés équipées de leur propre staff. Le chef s'intègre à une équipe en place (gouvernante, butler, parfois sommelier). Logement systématiquement sur place.",
+        "Mougins : chef gastronomique de l'arrière-pays cannois, autonome sur l'approvisionnement local (marché de Mougins, producteurs bio du moyen pays). Les villas y ont souvent des potagers ; un chef qui sait composer avec le jardin est valorisé.",
+        "Èze-village : chef ex-étoilé Riviera idéal. Les propriétés patrimoniales d'Èze attendent un niveau de cuisine très haut de gamme. Profil rare mais accessible hors juillet-août.",
+        "Cap d'Antibes : chef polyvalent capable de basculer entre villa et yacht (la presqu'île concentre yachting privé et résidences). STCW utile.",
+        "Beaulieu-sur-Mer : chef confirmé classique Côte d'Azur, profil identique à ceux placés sur Nice / Èze, logistique simple."
+      ] },
+      { type: 'h2', content: "Marché tarifaire 2026 sur ces zones" },
+      { type: 'paragraph', content: "Les tarifs sur ces micro-destinations sont en moyenne 10 à 20 % inférieurs à Saint-Tropez à profil équivalent, principalement parce que la concurrence est moins explosive sur la haute saison. Voici les fourchettes observées en 2026." },
+      { type: 'list', content: [
+        "Mission semaine Cap Ferrat : 5 500 à 9 000 € pour le chef seul, hors fonds courses et per diem.",
+        "Mission mensuelle Cap Ferrat / Cap d'Antibes : 9 500 à 17 000 € par mois selon le profil.",
+        "Mission semaine Mougins : 4 500 à 8 000 € pour le chef seul, légèrement moins cher que la côte (logistique plus simple, moins de pression urbaine).",
+        "Mission Èze-village avec profil ex-étoilé : 12 000 à 22 000 € par mois, profil rare donc tarif premium.",
+        "Période 14 juillet et 15 août : majoration 15 à 30 %, moindre qu'à Saint-Tropez où la majoration tape 40 %.",
+        "Fonds courses standard : 200 à 350 € par personne par semaine. Sourcing UHNW : 500 à 900 € par personne par semaine."
+      ] },
+      { type: 'h2', content: "Logistique et sourcing par zone" },
+      { type: 'paragraph', content: "Le Cap Ferrat impose une logistique d'approvisionnement spécifique car la presqu'île est un cul-de-sac : pas de marché propre, le chef doit faire 30 minutes aller-retour sur Villefranche ou Beaulieu pour le frais. Les meilleurs profils ont des fournisseurs établis qui livrent jusqu'à la villa." },
+      { type: 'paragraph', content: "Mougins fonctionne à l'inverse : marché matinal très qualitatif, producteurs bio dans un rayon de 15 km, fromager et boucher de référence sur place. Un chef nouveau sur la zone peut s'établir en quelques jours s'il fait l'effort de tourner les fournisseurs." },
+      { type: 'paragraph', content: "Èze-village et Beaulieu profitent de la proximité de Monaco (Marché de la Condamine) et de Nice (Cours Saleya). Cap d'Antibes a son propre marché et un accès direct aux fournisseurs cannois." },
+      { type: 'h2', content: "Calendrier réel saison 2026" },
+      { type: 'paragraph', content: "À mi-mai 2026, l'état du marché sur ces micro-destinations est sensiblement plus accessible qu'à Saint-Tropez." },
+      { type: 'list', content: [
+        "Juin : ouverture quasi-totale, tous profils accessibles avec délai de 7 jours.",
+        "Première moitié de juillet : encore des profils confirmés sur la plupart des zones.",
+        "Mi-juillet à mi-août : tension réelle mais pas saturation. Profils ex-étoilés rares sur Èze-village. Cap Ferrat et Cap d'Antibes restent accessibles pour des séjours d'au moins 2 semaines.",
+        "Septembre et octobre : excellente fenêtre pour les longs séjours. Tarifs en baisse d'environ 15 % par rapport à la haute saison."
+      ] },
+      { type: 'h2', content: "Pour qui ces destinations sont le bon choix" },
+      { type: 'paragraph', content: "Si vous êtes une famille UHNW qui cherche un séjour discret de plusieurs semaines avec un chef intégré, ces micro-destinations battent Saint-Tropez et Cannes à la fois sur la tranquillité, la disponibilité chef et le rapport prix-qualité. Le compromis est un accès moins direct au social-life Riviera (yachts, beach clubs), ce qui pour la plupart de nos clients est exactement ce qu'ils cherchent." },
+      { type: 'paragraph', content: "Si à l'inverse vous voulez le côté visible de la Côte d'Azur (sorties yacht, événements festival), restez sur Saint-Tropez ou Cannes et acceptez la friction associée (anticipation 6 mois, majoration tarif, disponibilités chef tendues)." },
+      { type: 'h2', content: "Comment soumettre une demande" },
+      { type: 'paragraph', content: "Une demande sur Cap Ferrat, Mougins, Èze, Antibes ou Beaulieu se traite en 48 à 72 heures dès lors qu'on a les éléments suivants : dates fermes ou flexibles, format villa avec staff déjà en place ou autonomie complète chef, niveau de service attendu, contraintes alimentaires, budget cadre." },
+      { type: 'quote', content: "Les zones les plus intéressantes de la Côte d'Azur ne sont pas celles dont on parle le plus. Cap Ferrat, Mougins, Èze offrent en 2026 ce que Saint-Tropez ne peut plus offrir : tranquillité, profils accessibles, tarifs encore raisonnables." }
+    ],
+    faqs: [
+      { question: "Pourquoi placer un chef au Cap Ferrat plutôt qu'à Saint-Tropez ?", answer: "Le Cap Ferrat reste plus accessible côté disponibilité chef en haute saison, avec une majoration tarifaire plus modérée (15-30 % vs 40 % à Saint-Tropez) et une logistique de presqu'île plus simple pour la discrétion. La clientèle y est plus familiale et long séjour, ce qui matche mieux la plupart de nos profils saisonniers." },
+      { question: "Mougins est-il vraiment une destination chef privé sérieuse ?", answer: "Oui, à condition d'aimer l'arrière-pays plutôt que la côte. Mougins concentre des villas familiales UHNW avec une qualité de vie supérieure aux résidences côtières en été (moins de bruit, jardins, accès direct aux meilleurs producteurs bio du moyen pays). Les chefs gastronomiques formés à Mougins (région forte tradition culinaire) y sont nombreux et accessibles à des tarifs sensiblement inférieurs à Saint-Tropez." },
+      { question: "Trouver un chef ex-étoilé pour Èze-village est-il réaliste ?", answer: "Oui hors juillet-août. Èze est l'une des zones où nos profils ex-étoilés Riviera (anciens seconds de Mirazur, La Chèvre d'Or, La Vague d'Or) acceptent des missions longues. Tarif premium 12 000 à 22 000 € par mois selon l'ancienneté. À anticiper 3-4 mois pour caler les dates." },
+      { question: "Quelle différence entre Cap Ferrat et Cap d'Antibes pour engager un chef ?", answer: "Cap Ferrat = clientèle plus discrète, séjours longs, propriétés avec staff en place, le chef s'intègre. Cap d'Antibes = davantage de propriétés-yachts combinés, chefs polyvalents valorisés (mer + villa), STCW utile. Les tarifs sont équivalents, le choix dépend du format de votre séjour." },
+      { question: "Quel délai d'anticipation pour Mougins ou Cap Ferrat en juillet-août 2026 ?", answer: "À mi-mai 2026, on peut encore placer des profils confirmés pour des missions de 2 semaines ou plus en juillet-août sur Cap Ferrat, Mougins, Beaulieu et Cap d'Antibes. Pour Èze-village avec profil ex-étoilé, les disponibilités juillet-août sont quasi-épuisées. Septembre-octobre reste ouvert avec excellent rapport qualité-prix." },
+      { question: "Peut-on combiner une mission sur deux destinations (ex: Cap Ferrat + Monaco) ?", answer: "Oui, c'est même fréquent pour les familles UHNW qui louent en Cap Ferrat avec accès récurrent à Monaco. On place alors un chef capable de gérer un service variable selon le lieu du jour. Les meilleurs profils sur cette zone connaissent les deux marchés fournisseurs (Villefranche / Marché de la Condamine) et s'adaptent." }
+    ]
   }
 ];
