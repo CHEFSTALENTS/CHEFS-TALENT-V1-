@@ -232,7 +232,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       ok: false,
       stage: 'yousign',
       error: e?.message,
+      message: e?.message,                    // dupliqué pour que l'UI le récupère via .message
       detail: e?.body,
+      violations: e?.violations || [],
     }, { status: 500 });
   }
 

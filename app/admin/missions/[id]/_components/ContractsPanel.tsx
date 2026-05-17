@@ -180,6 +180,14 @@ export default function ContractsPanel({
         if (json?.missing?.length) {
           throw new Error(`${msg}\nManque : ${json.missing.join(', ')}`);
         }
+        // Si YouSign a renvoyé des violations détaillées, on les affiche
+        const violations = Array.isArray(json?.violations) ? json.violations : [];
+        if (violations.length) {
+          const vStr = violations
+            .map((v: any) => `• ${v.field || v.propertyPath || '?'} : ${v.message || v.code || 'invalid'}`)
+            .join('\n');
+          throw new Error(`${msg}\n\nDétail YouSign :\n${vStr}`);
+        }
         throw new Error(msg);
       }
       await loadSignatureRequests();
