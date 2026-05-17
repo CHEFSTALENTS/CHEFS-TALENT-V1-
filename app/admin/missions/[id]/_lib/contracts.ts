@@ -262,6 +262,14 @@ function dateRange(start: string, end: string): string {
 }
 
 const baseStyles = `
+  @page { size: A4; margin: 18mm 16mm; }
+  @media print {
+    body { padding: 0 !important; max-width: 100% !important; }
+    .doc-header { position: running(header); }
+    h2, h3 { page-break-after: avoid; }
+    table, ul { page-break-inside: avoid; }
+    .signatures { page-break-inside: avoid; margin-top: 32px; }
+  }
   body { font-family: 'Times New Roman', Times, serif; color: #1a1a1a; max-width: 720px; margin: 0 auto; padding: 40px 48px; line-height: 1.5; font-size: 12.5pt; text-align: justify; }
   h1 { font-size: 22pt; text-align: center; font-weight: bold; margin: 0 0 6px 0; line-height: 1.15; letter-spacing: 0.01em; }
   h2 { font-size: 12.5pt; text-decoration: underline; margin: 22px 0 10px 0; font-weight: bold; }
