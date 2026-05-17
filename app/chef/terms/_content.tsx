@@ -92,8 +92,9 @@ export function BodyFR() {
           indépendants (ci-après le « Chef ») collaborent avec :
         </p>
         <p>
-          <strong>SASU Chefs Talents</strong>, immatriculée au RCS de Bordeaux sous le SIRET 89832072600026,
-          dont le siège social est situé 73 rue Porte Dijeaux, 33000 Bordeaux, représentée par Thomas Delcroix
+          <strong>SASU La cantine de Thomas</strong>, exploitée sous le nom commercial <strong>Chefs Talents</strong>,
+          immatriculée au RCS de Bordeaux sous le SIRET 89832072600026, dont le siège social est situé
+          25 cours Evrard de Fayolle, 33000 Bordeaux, représentée par Thomas Delcroix
           (ci-après « Chefs Talents »).
         </p>
         <p>
@@ -523,8 +524,9 @@ export function BodyEN() {
           pastry chefs, sommeliers, butlers and hospitality professionals (hereafter the “Chef”) collaborate with:
         </p>
         <p>
-          <strong>SASU Chefs Talents</strong>, registered with the Bordeaux Trade Register under SIRET 89832072600026,
-          headquartered at 73 rue Porte Dijeaux, 33000 Bordeaux, France, represented by Thomas Delcroix
+          <strong>SASU La cantine de Thomas</strong>, trading as <strong>Chefs Talents</strong>,
+          registered with the Bordeaux Trade Register under SIRET 89832072600026,
+          headquartered at 25 cours Evrard de Fayolle, 33000 Bordeaux, France, represented by Thomas Delcroix
           (hereafter “Chefs Talents”).
         </p>
         <p>
@@ -944,8 +946,9 @@ export function BodyES() {
           (en adelante el «Chef») colaboran con:
         </p>
         <p>
-          <strong>SASU Chefs Talents</strong>, inscrita en el RCS de Burdeos con SIRET 89832072600026, con domicilio social en
-          73 rue Porte Dijeaux, 33000 Burdeos (Francia), representada por Thomas Delcroix (en adelante «Chefs Talents»).
+          <strong>SASU La cantine de Thomas</strong>, que opera bajo el nombre comercial <strong>Chefs Talents</strong>,
+          inscrita en el RCS de Burdeos con SIRET 89832072600026, con domicilio social en
+          25 cours Evrard de Fayolle, 33000 Burdeos (Francia), representada por Thomas Delcroix (en adelante «Chefs Talents»).
         </p>
         <p>
           Chefs Talents es una agencia especializada en la colocación y comercialización de prestaciones culinarias privadas

@@ -38,7 +38,7 @@ export default function NccProposeMissionPage() {
               <li>le Chef à l'origine de la transmission (« Chef Référent ») ;</li>
               <li>le Chef qui prend en charge l'exécution (« Chef Exécutant ») ;</li>
               <li>le client final auquel la mission est destinée (« Client ») ;</li>
-              <li>SASU Chefs Talents (« Chefs Talents »).</li>
+              <li>SASU La cantine de Thomas, exploitée sous le nom commercial Chefs Talents (« Chefs Talents »).</li>
             </ol>
             <p className="mt-3 font-light leading-relaxed">
               Il garantit au Chef Référent une commission sur la mission ainsi qu'une protection contre tout
@@ -105,8 +105,8 @@ export default function NccProposeMissionPage() {
               <div className="border border-stone-200 p-5 rounded-xl space-y-3">
                 <p className="font-medium text-stone-800">Chefs Talents</p>
                 <p className="text-sm">
-                  SASU Chefs Talents — SIRET 89832072600026<br />
-                  Siège : 73 rue Porte Dijeaux, 33000 Bordeaux, France<br />
+                  SASU La cantine de Thomas (nom commercial Chefs Talents) — SIRET 89832072600026<br />
+                  Siège : 25 cours Evrard de Fayolle, 33000 Bordeaux, France<br />
                   Représentée par Thomas Delcroix, Président<br />
                   Email : <a href="mailto:contact@chefstalents.com" className="underline">contact@chefstalents.com</a>
                 </p>
@@ -344,7 +344,7 @@ export default function NccProposeMissionPage() {
                   <p className="text-xs uppercase tracking-widest text-stone-500 mb-4">Chefs Talents</p>
                   <p className="text-sm">
                     Nom, Prénom : Thomas Delcroix<br />
-                    Qualité : Président, SASU Chefs Talents<br /><br />
+                    Qualité : Président, SASU La cantine de Thomas (Chefs Talents)<br /><br />
                     Date : <span className="font-mono">_______________</span><br /><br />
                     Signature :
                   </p>

@@ -40,13 +40,14 @@ export default function LegalPage() {
               <div className="space-y-3">
                 <p className="font-medium text-stone-800">1. Éditeur du site</p>
                 <p>
-                  <strong>SASU Chefs Talents</strong><br />
+                  <strong>SASU La cantine de Thomas</strong> — exploitée sous le nom commercial <strong>Chefs Talents</strong><br />
                   Forme juridique : <em>Société par Actions Simplifiée Unipersonnelle</em><br />
                   Capital social : <em>1 000,00 €</em><br />
                   SIRET : <em>89832072600026</em><br />
                   RCS : <em>Bordeaux</em><br />
                   TVA intracommunautaire : <em>FR35898320726</em><br />
-                  Siège social : <em>73 rue Porte Dijeaux, 33000 Bordeaux, France</em>
+                  Siège social : <em>25 cours Evrard de Fayolle, 33000 Bordeaux, France</em><br />
+                  Bureau : <em>73 rue Porte Dijeaux, 33000 Bordeaux, France</em>
                 </p>
               </div>
               <div className="space-y-3">
