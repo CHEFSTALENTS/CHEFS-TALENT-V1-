@@ -7,16 +7,51 @@
 export type ContractKind = 'essai' | 'chef' | 'client';
 
 export type EssaiData = {
+  // En-tête / mise en forme
+  contractTypeLabel: string;        // "ACCORD D'ESSAI & DE NON-CONTOURNEMENT"
+  contractSubtitle: string;         // "Chef privé résident · Résidence privée Paris 7ème — MAI 2026"
+  signatureCity: string;            // "Bordeaux"
+  signatureDate: string;            // YYYY-MM-DD
+
+  // Parties
+  agencyRep: string;                // "Monsieur Thomas Delcroix"
+  agencySiret: string;              // "89832072600026"
+  clientCivilite: 'Monsieur' | 'Madame' | '';
+  clientName: string;
+  clientCompany: string;
   chefName: string;
   chefEmail: string;
-  trialDate: string;        // YYYY-MM-DD
-  trialLocation: string;
-  trialDuration: '0.5d' | '1d' | '2d' | 'custom';
-  trialDurationCustom: string;
-  trialAmountHt: number | null;   // €
-  expensesIncluded: boolean;
-  evaluationCriteria: string;
-  ndaSpecific: boolean;
+
+  // Article 1 — Objet
+  recruitmentContext: string;       // ex: "un poste de chef privé résident à Paris, 7ème arrondissement"
+
+  // Article 2 — Modalités de l'essai
+  trialDate: string;                // YYYY-MM-DD
+  trialLocation: string;            // "Résidence privée : Paris 7ème arrondissement"
+  trialService: string;             // "Déjeuner et dîner pour 2 personnes"
+  trialStyle: string;               // "Cuisine du quotidien simple..."
+  trialAmountHt: number | null;     // indemnité essai (€ HT) — optionnel
+  trialAmountShow: boolean;         // afficher ou non l'indemnité dans le contrat
+  expensesIncluded: boolean;        // frais d'essai inclus / refacturés
+
+  // Article 3 — Mission envisagée
+  missionLocation: string;          // "Résidence privée Paris 7ème arrondissement"
+  missionStart: string;             // "Le lendemain de l'essai (lundi)"
+  missionDuration: string;          // "30 ou 45 jours selon les conditions définies dans le contrat de mission"
+  missionRythme: string;            // "7 jours sur 7, déjeuner et dîner quotidiens"
+  missionRemuneration: string;      // "Définie et communiquée par l'Agence exclusivement..."
+
+  // Conditions de règlement — toujours éditable (varie selon durée de mission :
+  // hebdomadaire, à la quinzaine, fin de mission, etc.)
+  paymentTerms: string;
+
+  // Article 4 — Non-contournement
+  sanctionContournementPct: number; // 50
+
+  // Article 6 — Droit applicable
+  juridiction: string;              // "Bordeaux"
+
+  // Custom
   customClauses: string;
 };
 
@@ -126,19 +161,49 @@ type ClientLike = {
   companyName?: string | null;
 };
 
-export function buildEssaiDefaults(m: MissionLike): EssaiData {
+export function buildEssaiDefaults(m: MissionLike, c?: ClientLike): EssaiData {
+  const loc = m.location || '';
   return {
+    contractTypeLabel: "ACCORD D'ESSAI & DE NON-CONTOURNEMENT",
+    contractSubtitle: loc ? `Chef privé · ${loc}` : 'Chef privé',
+    signatureCity: 'Bordeaux',
+    signatureDate: new Date().toISOString().slice(0, 10),
+
+    agencyRep: 'Monsieur Thomas Delcroix',
+    agencySiret: '89832072600026',
+    clientCivilite: '',
+    clientName: c?.fullName || '',
+    clientCompany: c?.companyName || '',
     chefName: m.chef_name || '',
     chefEmail: m.chef_email || '',
+
+    recruitmentContext: loc
+      ? `un poste de chef privé pour la mission située à ${loc}`
+      : 'un poste de chef privé',
+
     trialDate: m.start_date || '',
-    trialLocation: m.location || '',
-    trialDuration: '1d',
-    trialDurationCustom: '',
+    trialLocation: loc,
+    trialService: 'Déjeuner et dîner pour 2 personnes',
+    trialStyle: 'Cuisine du quotidien, simple et qualitative',
     trialAmountHt: null,
+    trialAmountShow: false,
     expensesIncluded: false,
-    evaluationCriteria:
-      'Technique, autonomie, dressage, gestion du temps, posture en environnement client.',
-    ndaSpecific: true,
+
+    missionLocation: loc,
+    missionStart: 'Le lendemain de l\'essai',
+    missionDuration: 'Selon les conditions définies dans le contrat de mission',
+    missionRythme: '7 jours sur 7, déjeuner et dîner quotidiens',
+    missionRemuneration:
+      'Définie et communiquée par l\'Agence exclusivement. Toute discussion tarifaire directe entre le Client et le Prestataire est expressément interdite.',
+
+    // ⚠️ Toujours éditable — varie selon la durée de la mission
+    paymentTerms:
+      'Règlement à l\'issue de la mission par virement bancaire, sur facture émise par l\'Agence Chefs Talents.',
+
+    sanctionContournementPct: 50,
+
+    juridiction: 'Bordeaux',
+
     customClauses: '',
   };
 }
@@ -291,40 +356,118 @@ const baseStyles = `
 `;
 
 export function renderEssai(d: EssaiData): string {
-  const durationLabel = d.trialDuration === '0.5d' ? "½ journée"
-    : d.trialDuration === '1d' ? '1 journée'
-    : d.trialDuration === '2d' ? '2 journées'
-    : d.trialDurationCustom || '—';
+  const clientFull = [d.clientCivilite, d.clientName].filter(Boolean).join(' ').trim() || '—';
+  const clientCompanyLine = d.clientCompany ? ` — ${esc(d.clientCompany)}` : '';
+  const chefLine = [esc(d.chefName) || '—', d.chefEmail ? esc(d.chefEmail) : null]
+    .filter(Boolean)
+    .join(' · ');
+
+  // Bloc indemnité essai — affiché seulement si activé
+  const trialAmountRow = d.trialAmountShow
+    ? `<tr><td class="label">Indemnité essai</td><td>${eurFmt(d.trialAmountHt)} HT — ${d.expensesIncluded ? 'frais inclus' : 'frais à la charge de Chefs Talents sur justificatifs'}</td></tr>`
+    : '';
+
   return `
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><style>${baseStyles}</style></head><body>
-<h1>Contrat d'essai chef</h1>
-<p class="meta">Entre Chefs Talents (Bordeaux, France) et le chef ci-dessous nommé.</p>
 
-<h2>Chef</h2>
-<p><strong>${esc(d.chefName) || '—'}</strong>${d.chefEmail ? ' — ' + esc(d.chefEmail) : ''}</p>
+<div class="doc-header">
+  <span>CHEFS TALENTS</span>
+  <span>Accord d'Essai &amp; Non-Contournement — Confidentiel</span>
+</div>
 
-<h2>Essai</h2>
-<ul>
-  <li>Date : <strong>${dateFmt(d.trialDate)}</strong></li>
-  <li>Lieu : <strong>${esc(d.trialLocation) || '—'}</strong></li>
-  <li>Durée : <strong>${esc(durationLabel)}</strong></li>
-  <li>Indemnité : <strong>${eurFmt(d.trialAmountHt)} HT</strong></li>
-  <li>Frais ${d.expensesIncluded ? 'inclus dans l\'indemnité' : 'à la charge de Chefs Talents sur justificatifs'}</li>
-</ul>
+<div class="doc-title">
+  <h1>${esc(d.contractTypeLabel)}</h1>
+  ${d.contractSubtitle ? `<div class="subtitle">${esc(d.contractSubtitle)}</div>` : ''}
+  <div class="place-date">${esc(d.signatureCity)}, le ${dateFmt(d.signatureDate)}</div>
+</div>
 
-<h2>Critères d'évaluation</h2>
-<p>${esc(d.evaluationCriteria) || '—'}</p>
+<h2>ENTRE LES SOUSSIGNÉS :</h2>
 
-${d.ndaSpecific ? `<h2>Confidentialité</h2>
-<p>Le chef s'engage à ne divulguer aucune information relative à Chefs Talents, à ses clients, ses fournisseurs ou ses méthodes opérationnelles, pendant et après l'essai. Cette obligation perdure 24 mois après la date d'essai.</p>` : ''}
+<table class="parties">
+  <tr>
+    <td class="label">L'Agence</td>
+    <td>CHEFS TALENTS — exploitée par la <strong>SASU La cantine de Thomas</strong>, SIRET ${esc(d.agencySiret)}, siège 25 cours Evrard de Fayolle, 33000 Bordeaux, représentée par ${esc(d.agencyRep)} (ci-après « l'Agence »)</td>
+  </tr>
+  <tr>
+    <td class="label">Le Client</td>
+    <td>${esc(clientFull)}${clientCompanyLine} (ci-après « le Client »)</td>
+  </tr>
+  <tr>
+    <td class="label">Le Prestataire</td>
+    <td>${chefLine || '—'}, chef privé indépendant (ci-après « le Prestataire »)</td>
+  </tr>
+</table>
+
+<p>Il a été convenu ce qui suit :</p>
+
+<h2>Article 1. — OBJET</h2>
+<p>Le présent accord encadre la réalisation d'un essai professionnel entre le Client et le Prestataire, organisé par l'Agence Chefs Talents, dans le cadre d'un recrutement pour ${esc(d.recruitmentContext) || '—'}.</p>
+
+<h2>Article 2. — MODALITÉS DE L'ESSAI</h2>
+<table class="conditions">
+  <tr><td class="label">Date</td><td>${dateFmt(d.trialDate)}</td></tr>
+  <tr><td class="label">Lieu</td><td>${esc(d.trialLocation) || '—'}</td></tr>
+  <tr><td class="label">Service</td><td>${esc(d.trialService) || '—'}</td></tr>
+  <tr><td class="label">Style</td><td>${esc(d.trialStyle) || '—'}</td></tr>
+  ${trialAmountRow}
+</table>
+<p>L'essai a pour seul objectif d'évaluer l'adéquation du Prestataire avec les attentes culinaires de la famille. Il ne constitue en aucun cas un engagement de la part de l'une ou l'autre des parties.</p>
+
+<h2>Article 3. — MISSION ENVISAGÉE</h2>
+<p>En cas d'issue favorable à l'essai, la mission envisagée serait la suivante :</p>
+<table class="conditions">
+  <tr><td class="label">Lieu</td><td>${esc(d.missionLocation) || '—'}</td></tr>
+  <tr><td class="label">Début</td><td>${esc(d.missionStart) || '—'}</td></tr>
+  <tr><td class="label">Durée</td><td>${esc(d.missionDuration) || '—'}</td></tr>
+  <tr><td class="label">Rythme</td><td>${esc(d.missionRythme) || '—'}</td></tr>
+  <tr><td class="label">Rémunération</td><td>${esc(d.missionRemuneration) || '—'}</td></tr>
+  <tr><td class="label">Conditions de règlement</td><td>${esc(d.paymentTerms) || '—'}</td></tr>
+</table>
+<p>Les conditions définitives feront l'objet d'un contrat de mission distinct, transmis par l'Agence dès validation de l'essai.</p>
+
+<h2>Article 4. — CLAUSE DE NON-CONTOURNEMENT</h2>
+<p><strong>⚠ Toute relation commerciale directe entre le Client et le Prestataire, faisant suite à cette mise en relation, doit obligatoirement être contractualisée via l'Agence Chefs Talents, sans exception.</strong></p>
+<p>Le Client et le Prestataire s'engagent conjointement à ne pas établir de relation commerciale directe, que ce soit pour la mission envisagée ou pour toute autre mission future, sans l'intermédiation de Chefs Talents.</p>
+<p><strong>⚠ INTERDICTION EXPRESSE :</strong> aucune discussion relative aux conditions financières, tarifaires ou de rémunération ne doit avoir lieu directement entre le Client et le Prestataire. Toute négociation commerciale est réservée exclusivement à l'Agence.</p>
+<p>En cas de contournement avéré, le Client et/ou le Prestataire s'engagent solidairement à verser à l'Agence une indemnité forfaitaire égale à <strong>${d.sanctionContournementPct} %</strong> de la valeur totale de la mission envisagée, sans mise en demeure préalable.</p>
+
+<h2>Article 5. — CONFIDENTIALITÉ</h2>
+<p>Toutes les informations échangées dans le cadre de cet essai sont strictement confidentielles. Les parties s'engagent à ne pas divulguer les coordonnées ou informations personnelles respectives sans accord préalable de l'Agence.</p>
+
+<h2>Article 6. — DROIT APPLICABLE</h2>
+<p>Le présent accord est soumis au droit français. Tout litige sera porté devant les tribunaux de ${esc(d.juridiction) || 'Bordeaux'}.</p>
 
 ${d.customClauses ? `<h2>Clauses spécifiques</h2><p>${esc(d.customClauses).replaceAll('\n', '<br/>')}</p>` : ''}
 
-<div class="signature">
-  <div>Chefs Talents · Thomas Delcroix<br/>Date : __________</div>
-  <div>Chef · ${esc(d.chefName) || '—'}<br/>Date : __________</div>
+<h2>SIGNATURES</h2>
+<p>Fait à ${esc(d.signatureCity)}, le ${dateFmt(d.signatureDate)}, en trois exemplaires originaux.</p>
+
+<div class="signatures" style="grid-template-columns: 1fr 1fr 1fr; gap: 24px;">
+  <div class="signature-block">
+    <div class="role">Le Client</div>
+    <div class="name">${esc(clientFull)}</div>
+    <div>Signature :</div>
+    <div class="line">Date :</div>
+  </div>
+  <div class="signature-block">
+    <div class="role">Le Prestataire</div>
+    <div class="name">${esc(d.chefName) || '—'}</div>
+    <div>Signature :</div>
+    <div class="line">Date :</div>
+  </div>
+  <div class="signature-block">
+    <div class="role">Pour Chefs Talents</div>
+    <div class="name">${esc(d.agencyRep)}</div>
+    <div>Signature :</div>
+    <div class="line">Date :</div>
+  </div>
 </div>
+
+<p class="mention-manuscrite">Mention manuscrite obligatoire : « Lu et approuvé »</p>
+
+<div class="doc-footer">Document confidentiel — Chefs Talents — contact@chefstalents.com</div>
+
 </body></html>`.trim();
 }
 

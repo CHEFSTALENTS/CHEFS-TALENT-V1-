@@ -58,7 +58,7 @@ export default function ContractsPanel({
   }>(() => {
     const d = mission.contracts_data ?? {};
     return {
-      essai: { ...buildEssaiDefaults(mission), ...(d.essai ?? {}) } as EssaiData,
+      essai: { ...buildEssaiDefaults(mission, client ?? {}), ...(d.essai ?? {}) } as EssaiData,
       chef: { ...buildChefDefaults(mission), ...(d.chef ?? {}) } as ChefContractData,
       client: { ...buildClientDefaults(mission, client ?? {}), ...(d.client ?? {}) } as ClientContractData,
     };
@@ -202,49 +202,136 @@ export default function ContractsPanel({
 function EssaiForm({ value, onChange }: { value: EssaiData; onChange: (v: EssaiData) => void }) {
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      <Field label="Nom chef">
+      {/* En-tête */}
+      <div className="md:col-span-2">
+        <Field label="Titre du contrat">
+          <Input value={value.contractTypeLabel} onChange={(v) => onChange({ ...value, contractTypeLabel: v })} />
+        </Field>
+      </div>
+      <div className="md:col-span-2">
+        <Field label="Sous-titre" hint="ex: Chef privé résident · Résidence privée Paris 7ème — MAI 2026">
+          <Input value={value.contractSubtitle} onChange={(v) => onChange({ ...value, contractSubtitle: v })} />
+        </Field>
+      </div>
+      <Field label="Ville de signature">
+        <Input value={value.signatureCity} onChange={(v) => onChange({ ...value, signatureCity: v })} />
+      </Field>
+      <Field label="Date de signature">
+        <Input type="date" value={value.signatureDate} onChange={(v) => onChange({ ...value, signatureDate: v })} />
+      </Field>
+
+      {/* Parties */}
+      <Field label="Civilité client">
+        <Select
+          value={value.clientCivilite}
+          options={[
+            { value: '', label: '—' },
+            { value: 'Monsieur', label: 'Monsieur' },
+            { value: 'Madame', label: 'Madame' },
+          ]}
+          onChange={(v) => onChange({ ...value, clientCivilite: v as any })}
+        />
+      </Field>
+      <Field label="Nom client">
+        <Input value={value.clientName} onChange={(v) => onChange({ ...value, clientName: v })} />
+      </Field>
+      <Field label="Société client (optionnel)">
+        <Input value={value.clientCompany} onChange={(v) => onChange({ ...value, clientCompany: v })} />
+      </Field>
+      <Field label="Représentant Agence">
+        <Input value={value.agencyRep} onChange={(v) => onChange({ ...value, agencyRep: v })} />
+      </Field>
+      <Field label="Nom chef (prestataire)">
         <Input value={value.chefName} onChange={(v) => onChange({ ...value, chefName: v })} />
       </Field>
       <Field label="Email chef">
         <Input value={value.chefEmail} onChange={(v) => onChange({ ...value, chefEmail: v })} />
       </Field>
+
+      {/* Article 1 */}
+      <div className="md:col-span-2">
+        <Field
+          label="Contexte du recrutement (Art. 1)"
+          hint="ex: un poste de chef privé résident à Paris, 7ème arrondissement"
+        >
+          <Input value={value.recruitmentContext} onChange={(v) => onChange({ ...value, recruitmentContext: v })} />
+        </Field>
+      </div>
+
+      {/* Article 2 — Modalités de l'essai */}
       <Field label="Date d'essai">
         <Input type="date" value={value.trialDate} onChange={(v) => onChange({ ...value, trialDate: v })} />
       </Field>
       <Field label="Lieu de l'essai">
         <Input value={value.trialLocation} onChange={(v) => onChange({ ...value, trialLocation: v })} />
       </Field>
-      <Field label="Durée">
-        <Select
-          value={value.trialDuration}
-          options={[
-            { value: '0.5d', label: '½ journée' },
-            { value: '1d', label: '1 journée' },
-            { value: '2d', label: '2 journées' },
-            { value: 'custom', label: 'Autre…' },
-          ]}
-          onChange={(v) => onChange({ ...value, trialDuration: v as any })}
-        />
-      </Field>
-      {value.trialDuration === 'custom' ? (
-        <Field label="Précision durée">
-          <Input value={value.trialDurationCustom} onChange={(v) => onChange({ ...value, trialDurationCustom: v })} />
-        </Field>
-      ) : null}
-      <Field label="Indemnité essai (€ HT)">
-        <NumberInput value={value.trialAmountHt} onChange={(v) => onChange({ ...value, trialAmountHt: v })} />
-      </Field>
-      <Field label="Frais inclus">
-        <Toggle value={value.expensesIncluded} onChange={(v) => onChange({ ...value, expensesIncluded: v })} />
-      </Field>
-      <Field label="Clause NDA spécifique" hint="Confidentialité 24 mois.">
-        <Toggle value={value.ndaSpecific} onChange={(v) => onChange({ ...value, ndaSpecific: v })} />
-      </Field>
       <div className="md:col-span-2">
-        <Field label="Critères d'évaluation">
-          <Textarea value={value.evaluationCriteria} rows={2} onChange={(v) => onChange({ ...value, evaluationCriteria: v })} />
+        <Field label="Service" hint="ex: Déjeuner et dîner pour 2 personnes">
+          <Input value={value.trialService} onChange={(v) => onChange({ ...value, trialService: v })} />
         </Field>
       </div>
+      <div className="md:col-span-2">
+        <Field label="Style culinaire attendu" hint="ex: Cuisine du quotidien simple et qualitative, française, japonaise, mexicaine">
+          <Input value={value.trialStyle} onChange={(v) => onChange({ ...value, trialStyle: v })} />
+        </Field>
+      </div>
+      <Field label="Afficher l'indemnité essai" hint="Décoche pour un essai gratuit non rémunéré.">
+        <Toggle value={value.trialAmountShow} onChange={(v) => onChange({ ...value, trialAmountShow: v })} />
+      </Field>
+      {value.trialAmountShow ? (
+        <>
+          <Field label="Indemnité essai (€ HT)">
+            <NumberInput value={value.trialAmountHt} onChange={(v) => onChange({ ...value, trialAmountHt: v })} />
+          </Field>
+          <Field label="Frais inclus dans l'indemnité">
+            <Toggle value={value.expensesIncluded} onChange={(v) => onChange({ ...value, expensesIncluded: v })} />
+          </Field>
+        </>
+      ) : null}
+
+      {/* Article 3 — Mission envisagée */}
+      <Field label="Lieu mission envisagée">
+        <Input value={value.missionLocation} onChange={(v) => onChange({ ...value, missionLocation: v })} />
+      </Field>
+      <Field label="Début mission" hint="ex: Le lendemain de l'essai (lundi)">
+        <Input value={value.missionStart} onChange={(v) => onChange({ ...value, missionStart: v })} />
+      </Field>
+      <div className="md:col-span-2">
+        <Field label="Durée mission" hint="ex: 30 ou 45 jours selon les conditions définies dans le contrat de mission">
+          <Input value={value.missionDuration} onChange={(v) => onChange({ ...value, missionDuration: v })} />
+        </Field>
+      </div>
+      <div className="md:col-span-2">
+        <Field label="Rythme" hint="ex: 7 jours sur 7, déjeuner et dîner quotidiens">
+          <Input value={value.missionRythme} onChange={(v) => onChange({ ...value, missionRythme: v })} />
+        </Field>
+      </div>
+      <div className="md:col-span-2">
+        <Field label="Rémunération chef">
+          <Textarea value={value.missionRemuneration} rows={2} onChange={(v) => onChange({ ...value, missionRemuneration: v })} />
+        </Field>
+      </div>
+
+      {/* Conditions de règlement — toujours éditable */}
+      <div className="md:col-span-2">
+        <Field
+          label="Conditions de règlement ⚠️ à adapter selon la durée"
+          hint="Fin de mission par défaut. Pour les missions longues : règlement hebdomadaire (chaque vendredi), à la quinzaine, mensuel… À éditer au cas par cas."
+        >
+          <Textarea value={value.paymentTerms} rows={2} onChange={(v) => onChange({ ...value, paymentTerms: v })} />
+        </Field>
+      </div>
+
+      {/* Article 4 */}
+      <Field label="Pénalité non-contournement (% mission)">
+        <NumberInput value={value.sanctionContournementPct} onChange={(v) => onChange({ ...value, sanctionContournementPct: v ?? 0 })} />
+      </Field>
+
+      {/* Article 6 */}
+      <Field label="Juridiction">
+        <Input value={value.juridiction} onChange={(v) => onChange({ ...value, juridiction: v })} />
+      </Field>
+
       <div className="md:col-span-2">
         <Field label="Clauses spécifiques (optionnel)">
           <Textarea value={value.customClauses} rows={3} onChange={(v) => onChange({ ...value, customClauses: v })} />
