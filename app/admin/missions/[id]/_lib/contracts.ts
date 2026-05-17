@@ -200,9 +200,13 @@ export function buildChefDefaults(m: MissionLike): ChefContractData {
     contractRef: monthYear && locShort && chefShort ? `${monthYear}_${locShort}_${chefShort}` : '',
     emissionDate: today,
 
-    // Source de vérité : /legal du site
-    agencyDenomination: 'SASU Chefs Talents',
-    agencyAddress: '73 rue Porte Dijeaux, 33000 Bordeaux',
+    // Société (raison sociale légale) : SASU La cantine de Thomas, siège
+    // 25 cours evrard de fayolle. Nom commercial : Chefs Talents.
+    // Bureau opérationnel : 73 rue Porte Dijeaux.
+    // Source : confirmé par Thomas le 17/05/2026 (le /legal du site
+    // sera mis à jour dans une PR séparée pour aligner les mentions).
+    agencyDenomination: 'SASU La cantine de Thomas',
+    agencyAddress: '25 cours evrard de fayolle, 33000 Bordeaux',
     agencyRep: 'Thomas Delcroix',
     agencyPhone: '+33 6 23 84 61 70',
     agencyEmail: 'contact@chefstalents.com',
