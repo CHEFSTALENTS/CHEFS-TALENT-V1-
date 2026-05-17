@@ -25,10 +25,8 @@ const ALLOWED_CHANNELS = new Set(['email', 'whatsapp', 'manual']);
 // =============================================================
 // GET /api/admin/proposals/[id]
 // =============================================================
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
@@ -58,10 +56,8 @@ export async function GET(
 // Permet à l'admin de mettre à jour le statut manuellement (le chef
 // répond par WhatsApp / téléphone, l'admin reflète ici).
 // =============================================================
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
@@ -151,10 +147,8 @@ export async function PUT(
 // Pour supprimer une proposal créée par erreur. Pas de soft-delete
 // pour l'instant — la table est en RLS strict, l'admin a la main.
 // =============================================================
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;

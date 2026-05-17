@@ -6,12 +6,12 @@ import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
-    const missionId = decodeURIComponent(ctx.params.id || '').trim();
+    const missionId = decodeURIComponent((await ctx.params).id || '').trim();
     const body = await req.json();
     const { contractUrl } = body;
 

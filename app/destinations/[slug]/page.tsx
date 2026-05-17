@@ -12,16 +12,17 @@ export async function generateStaticParams() {
 }
 
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const dest = getDestinationBySlug(params.slug);
   if (!dest) return {};
- 
+
   const BASE = 'https://chefstalents.com';
   const canonical = `${BASE}/destinations/${dest.slug}`;
- 
+
   // Récupérer les paires de langues depuis LANG_PAIRS
   const pair = LANG_PAIRS[dest.slug] ?? null;
- 
+
   // Construire les alternates hreflang
   const languages: Record<string, string> = {};
   if (pair) {
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     }
     languages['x-default'] = `${BASE}/destinations/${pair.en}`;
   }
- 
+
   return {
     title: dest.metaTitle,
     description: dest.metaDescription,
@@ -251,7 +252,8 @@ function detectLang(dest: any): Lang {
   return 'fr';
 }
 
-export default function DestinationPage({ params }: { params: { slug: string } }) {
+export default async function DestinationPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const dest = getDestinationBySlug(params.slug) as any;
   if (!dest) notFound();
 

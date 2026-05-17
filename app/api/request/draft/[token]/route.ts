@@ -23,7 +23,7 @@ function supabaseAdmin() {
 // =============================================================
 export async function GET(
   req: Request,
-  ctx: { params: { token: string } },
+  ctx: { params: Promise<{ token: string }> },
 ) {
   // Rate limit léger pour éviter l'énumération de tokens.
   // 30 req / 5 min par IP — généreux mais bloque les bruteforces.
@@ -35,7 +35,7 @@ export async function GET(
   if (!rl.ok) return rateLimitResponse(rl);
 
   try {
-    const token = decodeURIComponent(ctx.params.token || '').trim();
+    const token = decodeURIComponent((await ctx.params).token || '').trim();
     if (!token || token.length < 10) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
     }

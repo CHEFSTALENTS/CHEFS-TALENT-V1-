@@ -26,10 +26,8 @@ function supabaseAdmin() {
 //
 // Body (optionnel) : peut surcharger snapshot avant promote
 // =============================================================
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;

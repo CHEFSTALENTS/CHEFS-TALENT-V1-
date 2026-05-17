@@ -45,13 +45,13 @@ const ALLOWED_STATUSES = new Set(['paid', 'partial', 'refunded']);
 // =============================================================
 export async function PATCH(
   req: Request,
-  ctx: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
-    const missionId = decodeURIComponent(ctx.params.id || '').trim();
+    const missionId = decodeURIComponent((await ctx.params).id || '').trim();
     if (!missionId) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }

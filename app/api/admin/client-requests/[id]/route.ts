@@ -23,10 +23,8 @@ function isValidEmail(v: string): boolean {
   return /^\S+@\S+\.\S+$/.test(v);
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
