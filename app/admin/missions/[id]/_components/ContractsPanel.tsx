@@ -647,6 +647,19 @@ function ClientForm({ value, onChange }: { value: ClientContractData; onChange: 
         <Field label="Honoraires Agence (€ HT)">
           <NumberInput value={value.amountHt} onChange={(v) => onChange({ ...value, amountHt: v })} />
         </Field>
+        <Field
+          label="Régime TVA"
+          hint="« Non applicable, art. 259-1 CGI » pour une société hors UE (B2B autoliquidation). Sinon « TVA applicable » par défaut."
+        >
+          <Select
+            value={value.tvaRegime}
+            options={[
+              { value: 'applicable', label: 'TVA française applicable au taux en vigueur' },
+              { value: 'non_applicable', label: 'TVA non applicable, article 259-1 du CGI' },
+            ]}
+            onChange={(v) => onChange({ ...value, tvaRegime: v as any })}
+          />
+        </Field>
         <Field label="Modalités de règlement">
           <Select
             value={value.paymentMode}
