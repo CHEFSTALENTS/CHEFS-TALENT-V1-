@@ -21,26 +21,68 @@ export type EssaiData = {
 };
 
 export type ChefContractData = {
-  chefName: string;
-  chefCompany: string;
-  chefSiret: string;
-  missionLocation: string;
-  startDate: string;
-  endDate: string;
-  guestCount: number | null;
-  serviceFormat: string;
+  // En-tête
+  contractRef: string;                // "2506_Ibiza_Lucas.U"
+  emissionDate: string;               // YYYY-MM-DD
+
+  // Agence (pré-rempli depuis /legal, overridable)
+  agencyDenomination: string;         // "SASU Chefs Talents"
+  agencyAddress: string;              // "73 rue Porte Dijeaux, 33000 Bordeaux"
+  agencyRep: string;                  // "Thomas Delcroix"
+  agencyPhone: string;                // "+33 6 23 84 61 70"
+  agencyEmail: string;                // "contact@chefstalents.com"
+  agencySiret: string;                // "89832072600026"
+
+  // Chef
+  chefName: string;                   // "LUCAS UCHÔA"
+  chefRef: string;                    // "REF.CT_LUCAS.U"
+
+  // Article 1 — Objet de la mission
+  missionLocation: string;            // "Ibiza, Espagne"
+  startDate: string;                  // YYYY-MM-DD
+  endDate: string;                    // YYYY-MM-DD
+  missionObjectives: string;          // texte libre, une puce par ligne
+
+  // Article 2 — Conditions de la mission
+  lieu: string;                       // "Finca privée — Ibiza, Espagne"
+  rythme: string;                     // "6 jours travaillés sur 7"
+  jourRepos: string;
+  logement: string;
+  vehicule: string;
+  approvisionnements: string;         // "Gérés directement par le Client, le Chef n'avance aucun frais"
+
+  // Article 4 — Rémunération
   amountHt: number | null;
-  depositPct: number;      // par défaut 15
-  balancePct: number;      // par défaut 85
-  balanceDays: number;     // par défaut 4
-  perDiemLogement: 'inclus' | 'a_charge_client' | 'forfait';
-  perDiemLogementMontant: number | null;
-  perDiemRepas: 'inclus' | 'a_charge_client' | 'forfait';
-  perDiemRepasMontant: number | null;
-  perDiemDeplacement: string;
-  fondsCoursesQuiPaye: 'client' | 'chefs_talents' | 'avance_chef';
-  fondsCoursesPlafond: number | null;
-  ruptureConditions: string;
+  depositPct: number;                 // 15 (CGV)
+  balancePct: number;                 // 85
+  balanceDays: number;                // 4 (jours ouvrés)
+  paymentRetentionText: string;       // "Chefs Talents se réserve le droit de retenir..."
+
+  // Article 5 — Approvisionnement (puces texte libre)
+  approvisionnementClauses: string;
+
+  // Article 6 — Non-contournement
+  // ⚠️ DEFAUTS ALIGNÉS SUR /chef/terms (CGV chef) :
+  //   exclusiviteDureeMois = 24
+  //   sanctionType = 'cgv'   →  « 30 % du montant HT ou 30 000 €, le plus élevé »
+  //   sanctionType = 'six_months_commissions' →  legacy PDF Lucas/Daniele, NON CONFORME CGV
+  //   sanctionType = 'custom' →  utiliser sanctionTextOverride
+  exclusiviteDureeMois: number;
+  sanctionType: 'cgv' | 'six_months_commissions' | 'custom';
+  sanctionTextOverride: string;
+
+  // Article 7 — Confidentialité (puces texte libre)
+  confidentialiteItems: string;
+
+  // Article 8 — Standards (puces texte libre)
+  standardsItems: string;
+
+  // Article 11 — Résiliation
+  // ⚠️ ALIGNÉ CGV : acompte 15 % reste acquis (et NON 10 % comme dans
+  // le PDF Lucas qui contient une incohérence interne 15 % vs 10 %)
+  resiliationAcomptePct: number;      // 15 par défaut
+
+  // Custom
   customClauses: string;
 };
 
@@ -144,28 +186,84 @@ export function buildEssaiDefaults(m: MissionLike): EssaiData {
 }
 
 export function buildChefDefaults(m: MissionLike): ChefContractData {
+  const today = new Date().toISOString().slice(0, 10);
+  const year = m.start_date ? new Date(m.start_date).getFullYear() : new Date().getFullYear();
+  const monthYear = m.start_date
+    ? `${String(new Date(m.start_date).getMonth() + 1).padStart(2, '0')}${String(year).slice(-2)}`
+    : '';
+  const locShort = (m.location || '').split(/[,\-]/)[0].trim().replace(/\s+/g, '');
+  const chefShort = (m.chef_name || '').split(' ').filter(Boolean).map((p, i, a) =>
+    i === 0 ? p : (a.length > 1 ? p[0] : ''),
+  ).join('.');
+
   return {
-    chefName: m.chef_name || '',
-    chefCompany: '',
-    chefSiret: '',
+    contractRef: monthYear && locShort && chefShort ? `${monthYear}_${locShort}_${chefShort}` : '',
+    emissionDate: today,
+
+    // Source de vérité : /legal du site
+    agencyDenomination: 'SASU Chefs Talents',
+    agencyAddress: '73 rue Porte Dijeaux, 33000 Bordeaux',
+    agencyRep: 'Thomas Delcroix',
+    agencyPhone: '+33 6 23 84 61 70',
+    agencyEmail: 'contact@chefstalents.com',
+    agencySiret: '89832072600026',
+
+    chefName: (m.chef_name || '').toUpperCase(),
+    chefRef: m.chef_name ? `REF.CT_${m.chef_name.split(' ').filter(Boolean).map((p, i, a) => i === 0 ? p.toUpperCase() : (a.length > 1 ? p[0].toUpperCase() : '')).join('.')}` : '',
+
     missionLocation: m.location || '',
     startDate: m.start_date || '',
     endDate: m.end_date || '',
-    guestCount: m.guest_count ?? null,
-    serviceFormat: m.service_level || '',
+    missionObjectives: [
+      'Préparation des repas quotidiens (petit-déjeuner, déjeuner, dîner)',
+      'Élaboration des menus adaptés aux préférences, régimes alimentaires et allergies du Client et de ses invités',
+      'Gestion simultanée de plusieurs niveaux de repas : adultes, enfants et personnel de maison',
+      'Exécution culinaire sur place avec un niveau de prestation haut de gamme',
+      'Entretien et nettoyage irréprochable de la cuisine après chaque service',
+      'Autonomie complète sur la planification des menus et l\'organisation des services',
+    ].join('\n'),
+
+    lieu: m.location || '',
+    rythme: '6 jours travaillés sur 7',
+    jourRepos: '1 jour par semaine, à convenir avec le Client en début de mission',
+    logement: 'chambre individuelle fournie sur place au sein de la guest house de la propriété',
+    vehicule: 'accès à un véhicule partagé sur place pour les besoins d\'approvisionnement',
+    approvisionnements: 'gérés directement par le Client, le Chef n\'avance aucun frais',
+
     amountHt: m.chef_amount ?? null,
     depositPct: 15,
     balancePct: 85,
     balanceDays: 4,
-    perDiemLogement: 'inclus',
-    perDiemLogementMontant: null,
-    perDiemRepas: 'inclus',
-    perDiemRepasMontant: null,
-    perDiemDeplacement: 'À la charge de Chefs Talents sur justificatifs.',
-    fondsCoursesQuiPaye: 'client',
-    fondsCoursesPlafond: null,
-    ruptureConditions:
-      'Indemnité de rupture sans cause = 30 % du montant chef. Force majeure : aucune indemnité.',
+    paymentRetentionText:
+      'Les virements sont effectués sur le compte bancaire communiqué par le Chef. Chefs Talents se réserve le droit de retenir tout ou partie du solde en cas de manquement grave aux obligations du présent contrat, dûment constaté.',
+
+    approvisionnementClauses: [
+      'Les courses et approvisionnements alimentaires sont pris en charge directement par le Client',
+      'Le Chef n\'avance aucun frais personnel dans le cadre de la mission',
+      'En cas d\'achat exceptionnel et préalablement validé, le Chef transmet les justificatifs à Chefs Talents dans les 48 heures',
+    ].join('\n'),
+
+    exclusiviteDureeMois: 24,
+    sanctionType: 'cgv',
+    sanctionTextOverride: '',
+
+    confidentialiteItems: [
+      'L\'identité du Client et de son entourage',
+      'Le lieu et les conditions de la mission',
+      'Toutes informations personnelles, patrimoniales ou familiales',
+      'Tout contenu médiatique (photos, vidéos, réseaux sociaux) lié à la mission ou à la propriété',
+    ].join('\n'),
+
+    standardsItems: [
+      'Respecter les standards haut de gamme attendus par Chefs Talents et le Client',
+      'Être ponctuel, organisé et professionnel en toutes circonstances',
+      'Maintenir une hygiène irréprochable — tenue, espace de travail, manipulations alimentaires',
+      'Adopter une tenue et un comportement adaptés à l\'environnement privé et familial',
+      'Informer Chefs Talents sans délai de toute difficulté rencontrée en cours de mission',
+    ].join('\n'),
+
+    resiliationAcomptePct: 15,
+
     customClauses: '',
   };
 }
@@ -329,49 +427,148 @@ ${d.customClauses ? `<h2>Clauses spécifiques</h2><p>${esc(d.customClauses).repl
 }
 
 export function renderChef(d: ChefContractData): string {
+  const bulletList = (text: string): string => {
+    const items = (text || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    if (items.length === 0) return '';
+    return `<ul>${items.map((it) => `<li>${esc(it)}</li>`).join('')}</ul>`;
+  };
+
+  // Article 6 — Sanction non-contournement, alignée par défaut sur les CGV chef.
+  const sanctionText = (() => {
+    if (d.sanctionType === 'custom' && d.sanctionTextOverride) {
+      return d.sanctionTextOverride;
+    }
+    if (d.sanctionType === 'six_months_commissions') {
+      return "En cas de non-respect, une pénalité équivalente à 6 mois de commissions Chefs Talents calculées sur la base du tarif de la présente mission sera immédiatement exigible, sans mise en demeure préalable.";
+    }
+    // 'cgv' (default) — texte aligné /chef/terms § 12.3
+    return "En cas de violation avérée, le Chef sera redevable envers Chefs Talents d'une indemnité forfaitaire égale à 30 % du montant HT total de la mission contournée ou 30 000 €, le plus élevé des deux montants, sans préjudice de tout dommage complémentaire que Chefs Talents pourrait démontrer. Cette indemnité est immédiatement exigible et payable dans un délai de 15 jours à compter de la notification.";
+  })();
+
+  // Amount derived (acompte / solde)
+  const amount = d.amountHt ?? 0;
+  const acompteValue = amount > 0 ? Math.round(amount * d.depositPct) / 100 : 0;
+  const soldeValue = amount > 0 ? Math.round(amount * d.balancePct) / 100 : 0;
+  // Date butoir solde = endDate + balanceDays jours (calendaire, approximation pour affichage)
+  let soldeButoir = '';
+  if (d.endDate && d.balanceDays > 0) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d.endDate);
+    if (m) {
+      const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+      dt.setUTCDate(dt.getUTCDate() + d.balanceDays);
+      soldeButoir = dateFmt(dt.toISOString().slice(0, 10));
+    }
+  }
+
   return `
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><style>${baseStyles}</style></head><body>
-<h1>Contrat de mission chef</h1>
-<p class="meta">Entre Chefs Talents (Bordeaux, France) et le prestataire chef ci-dessous nommé.</p>
 
-<h2>Chef prestataire</h2>
-<p><strong>${esc(d.chefName) || '—'}</strong>${d.chefCompany ? ' — ' + esc(d.chefCompany) : ''}${d.chefSiret ? ' (SIRET ' + esc(d.chefSiret) + ')' : ''}</p>
-
-<h2>Mission</h2>
-<ul>
-  <li>Lieu : <strong>${esc(d.missionLocation) || '—'}</strong></li>
-  <li>Dates : <strong>${dateRange(d.startDate, d.endDate)}</strong></li>
-  <li>Couverts moyens : <strong>${d.guestCount ?? '—'}</strong></li>
-  <li>Format de service : <strong>${esc(d.serviceFormat) || '—'}</strong></li>
-</ul>
-
-<h2>Rémunération</h2>
-<ul>
-  <li>Montant chef : <strong>${eurFmt(d.amountHt)} HT</strong></li>
-  <li>Acompte : <strong>${d.depositPct} %</strong> à la signature du présent contrat</li>
-  <li>Solde : <strong>${d.balancePct} %</strong> sous <strong>${d.balanceDays} jours ouvrés</strong> après fin de mission</li>
-</ul>
-
-<h2>Per diem</h2>
-<ul>
-  <li>Logement : <strong>${perDiemLabel(d.perDiemLogement, d.perDiemLogementMontant)}</strong></li>
-  <li>Repas : <strong>${perDiemLabel(d.perDiemRepas, d.perDiemRepasMontant)}</strong></li>
-  <li>Déplacement : ${esc(d.perDiemDeplacement) || '—'}</li>
-</ul>
-
-<h2>Fonds courses</h2>
-<p>Pris en charge par <strong>${fondsCoursesQuiLabel(d.fondsCoursesQuiPaye)}</strong>${d.fondsCoursesPlafond ? ', plafond ' + eurFmt(d.fondsCoursesPlafond) : ''}.</p>
-
-<h2>Rupture</h2>
-<p>${esc(d.ruptureConditions) || '—'}</p>
-
-${d.customClauses ? `<h2>Clauses spécifiques</h2><p>${esc(d.customClauses).replaceAll('\n', '<br/>')}</p>` : ''}
-
-<div class="signature">
-  <div>Chefs Talents · Thomas Delcroix<br/>Date : __________</div>
-  <div>Chef · ${esc(d.chefName) || '—'}<br/>Date : __________</div>
+<div class="doc-header">
+  <span>CHEFS TALENTS</span>
+  <span>Contrat de Prestation – Chef Privé</span>
 </div>
+
+<div class="doc-title">
+  <h1>CONTRAT DE PRESTATION<br/><span style="color:#b08d57;">CHEF PRIVÉ</span></h1>
+  <div class="place-date">Réf. ${esc(d.contractRef) || '—'} · Émis le ${dateFmt(d.emissionDate)}</div>
+</div>
+
+<h2>PARTIES</h2>
+
+<table class="parties">
+  <tr>
+    <td class="label">Émis par</td>
+    <td>
+      L'Agence <strong>Chefs Talents</strong><br/>
+      ${esc(d.agencyDenomination)}<br/>
+      Adresse ${esc(d.agencyAddress)}<br/>
+      Représentée par ${esc(d.agencyRep)}<br/>
+      Contact ${esc(d.agencyPhone)} · ${esc(d.agencyEmail)}
+    </td>
+  </tr>
+  <tr>
+    <td class="label">Le Chef</td>
+    <td>
+      <strong>${esc(d.chefName) || '—'}</strong>${d.chefRef ? `<br/>Référence ${esc(d.chefRef)}` : ''}
+    </td>
+  </tr>
+</table>
+
+<h2>1. OBJET DE LA MISSION</h2>
+<p>Le Chef est engagé pour une mission privée ${dateRange(d.startDate, d.endDate)} à ${esc(d.missionLocation) || '—'}.</p>
+<p>Le Chef s'engage à fournir :</p>
+${bulletList(d.missionObjectives)}
+
+<h2>2. CONDITIONS DE LA MISSION</h2>
+<ul>
+  ${d.lieu ? `<li>Lieu : ${esc(d.lieu)}</li>` : ''}
+  ${d.startDate ? `<li>Période : ${dateRange(d.startDate, d.endDate)} inclus</li>` : ''}
+  ${d.rythme ? `<li>Rythme : ${esc(d.rythme)}</li>` : ''}
+  ${d.jourRepos ? `<li>Jour de repos : ${esc(d.jourRepos)}</li>` : ''}
+  ${d.logement ? `<li>Logement : ${esc(d.logement)}</li>` : ''}
+  ${d.vehicule ? `<li>Véhicule : ${esc(d.vehicule)}</li>` : ''}
+  ${d.approvisionnements ? `<li>Approvisionnements : ${esc(d.approvisionnements)}</li>` : ''}
+</ul>
+
+<h2>3. STATUT</h2>
+<p>Le Chef intervient en tant que prestataire indépendant et ne dispose d'aucun lien de subordination avec Chefs Talents. Le présent contrat ne constitue en aucun cas un contrat de travail.</p>
+
+<h2>4. RÉMUNÉRATION</h2>
+<table class="conditions">
+  <tr><td class="label">Montant total</td><td>${eurFmt(d.amountHt)}</td></tr>
+  <tr><td class="label">Acompte (${d.depositPct} %)</td><td>${eurFmt(acompteValue)} — versé à la signature du contrat</td></tr>
+  <tr><td class="label">Solde (${d.balancePct} %)</td><td>${eurFmt(soldeValue)} — versé au plus tard J+${d.balanceDays} après la fin de mission${soldeButoir ? ` (soit au plus tard le ${soldeButoir})` : ''}</td></tr>
+</table>
+<p>${esc(d.paymentRetentionText)}</p>
+
+<h2>5. APPROVISIONNEMENT &amp; DÉPENSES</h2>
+${bulletList(d.approvisionnementClauses)}
+
+<h2>6. NON-CONTOURNEMENT &amp; EXCLUSIVITÉ</h2>
+<p>Le Chef s'engage à ne pas entrer en relation directe avec le Client introduit par Chefs Talents, que ce soit directement ou via un intermédiaire.</p>
+<p>Cette interdiction s'applique pendant toute la durée de la mission et pour une période de <strong>${d.exclusiviteDureeMois} mois</strong> après la fin de celle-ci.</p>
+<p>${esc(sanctionText)}</p>
+
+<h2>7. CONFIDENTIALITÉ</h2>
+<p>Le Chef s'engage à une confidentialité stricte concernant :</p>
+${bulletList(d.confidentialiteItems)}
+
+<h2>8. STANDARDS &amp; OBLIGATIONS PROFESSIONNELLES</h2>
+<p>Le Chef s'engage à :</p>
+${bulletList(d.standardsItems)}
+
+<h2>9. RESPONSABILITÉ</h2>
+<p>Le Chef est seul responsable de la bonne exécution de ses prestations, de ses actes, omissions et comportements pendant toute la durée de la mission. Il agit en totale autonomie et ne peut en aucun cas engager la responsabilité de Chefs Talents.</p>
+
+<h2>10. ASSURANCE PROFESSIONNELLE</h2>
+<p>Le Chef déclare être titulaire d'une assurance responsabilité civile professionnelle en cours de validité couvrant l'ensemble de ses prestations. Il s'engage à fournir une attestation sur simple demande de Chefs Talents.</p>
+<p>En cas de défaut d'assurance, le Chef assume seul toutes les conséquences financières et juridiques liées à son activité et à la mission.</p>
+
+<h2>11. RÉSILIATION</h2>
+<p>En cas d'annulation de la mission par le Client après signature du présent contrat, l'acompte de <strong>${d.resiliationAcomptePct} %</strong> reste acquis au Chef à titre d'indemnité forfaitaire.</p>
+<p>En cas de résiliation à l'initiative du Chef sans motif légitime, l'acompte devra être restitué et une pénalité pourra être appliquée à hauteur des préjudices subis par Chefs Talents.</p>
+
+${d.customClauses ? `<h2>CLAUSES SPÉCIFIQUES</h2><p>${esc(d.customClauses).replaceAll('\n', '<br/>')}</p>` : ''}
+
+<h2>SIGNATURES</h2>
+<div class="signatures">
+  <div class="signature-block">
+    <div class="role">Le Chef</div>
+    <div class="name">${esc(d.chefName) || '—'}</div>
+    <div>Signature :</div>
+    <div class="line">Date :</div>
+  </div>
+  <div class="signature-block">
+    <div class="role">L'Agence</div>
+    <div class="name">${esc(d.agencyDenomination)} – ${esc(d.agencyRep)}</div>
+    <div>Signature :</div>
+    <div class="line">Date :</div>
+  </div>
+</div>
+
+<div class="doc-footer">${esc(d.agencyDenomination)} · ${esc(d.agencyAddress)} · ${esc(d.agencyEmail)}</div>
+
 </body></html>`.trim();
 }
 

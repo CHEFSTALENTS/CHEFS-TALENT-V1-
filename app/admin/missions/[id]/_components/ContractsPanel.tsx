@@ -256,109 +256,164 @@ function EssaiForm({ value, onChange }: { value: EssaiData; onChange: (v: EssaiD
 
 function ChefForm({ value, onChange }: { value: ChefContractData; onChange: (v: ChefContractData) => void }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <Field label="Nom chef">
-        <Input value={value.chefName} onChange={(v) => onChange({ ...value, chefName: v })} />
-      </Field>
-      <Field label="Société chef (optionnel)">
-        <Input value={value.chefCompany} onChange={(v) => onChange({ ...value, chefCompany: v })} />
-      </Field>
-      <Field label="SIRET (optionnel)">
-        <Input value={value.chefSiret} onChange={(v) => onChange({ ...value, chefSiret: v })} />
-      </Field>
-      <Field label="Lieu de mission">
-        <Input value={value.missionLocation} onChange={(v) => onChange({ ...value, missionLocation: v })} />
-      </Field>
-      <Field label="Date début">
-        <Input type="date" value={value.startDate} onChange={(v) => onChange({ ...value, startDate: v })} />
-      </Field>
-      <Field label="Date fin">
-        <Input type="date" value={value.endDate} onChange={(v) => onChange({ ...value, endDate: v })} />
-      </Field>
-      <Field label="Couverts moyens">
-        <NumberInput value={value.guestCount} onChange={(v) => onChange({ ...value, guestCount: v })} />
-      </Field>
-      <Field label="Format de service">
-        <Input value={value.serviceFormat} onChange={(v) => onChange({ ...value, serviceFormat: v })} />
-      </Field>
-      <Field label="Montant chef HT (€)">
-        <NumberInput value={value.amountHt} onChange={(v) => onChange({ ...value, amountHt: v })} />
-      </Field>
-      <Field label="Acompte (%)">
-        <NumberInput value={value.depositPct} onChange={(v) => onChange({ ...value, depositPct: v ?? 0 })} />
-      </Field>
-      <Field label="Solde (%)">
-        <NumberInput value={value.balancePct} onChange={(v) => onChange({ ...value, balancePct: v ?? 0 })} />
-      </Field>
-      <Field label="Solde sous (jours ouvrés)">
-        <NumberInput value={value.balanceDays} onChange={(v) => onChange({ ...value, balanceDays: v ?? 0 })} />
-      </Field>
-
-      <Field label="Logement">
-        <Select
-          value={value.perDiemLogement}
-          options={[
-            { value: 'inclus', label: 'Inclus tarif chef' },
-            { value: 'a_charge_client', label: 'À la charge du client' },
-            { value: 'forfait', label: 'Forfait' },
-          ]}
-          onChange={(v) => onChange({ ...value, perDiemLogement: v as any })}
-        />
-      </Field>
-      {value.perDiemLogement === 'forfait' ? (
-        <Field label="Forfait logement (€)">
-          <NumberInput value={value.perDiemLogementMontant} onChange={(v) => onChange({ ...value, perDiemLogementMontant: v })} />
+    <div className="space-y-5">
+      <SectionTitle>En-tête</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Référence contrat" hint="ex: 2506_Ibiza_Lucas.U">
+          <Input value={value.contractRef} onChange={(v) => onChange({ ...value, contractRef: v })} />
         </Field>
-      ) : null}
-
-      <Field label="Repas">
-        <Select
-          value={value.perDiemRepas}
-          options={[
-            { value: 'inclus', label: 'Inclus tarif chef' },
-            { value: 'a_charge_client', label: 'À la charge du client' },
-            { value: 'forfait', label: 'Forfait' },
-          ]}
-          onChange={(v) => onChange({ ...value, perDiemRepas: v as any })}
-        />
-      </Field>
-      {value.perDiemRepas === 'forfait' ? (
-        <Field label="Forfait repas (€)">
-          <NumberInput value={value.perDiemRepasMontant} onChange={(v) => onChange({ ...value, perDiemRepasMontant: v })} />
-        </Field>
-      ) : null}
-
-      <div className="md:col-span-2">
-        <Field label="Déplacement">
-          <Input value={value.perDiemDeplacement} onChange={(v) => onChange({ ...value, perDiemDeplacement: v })} />
+        <Field label="Date d'émission">
+          <Input type="date" value={value.emissionDate} onChange={(v) => onChange({ ...value, emissionDate: v })} />
         </Field>
       </div>
 
-      <Field label="Fonds courses pris en charge par">
-        <Select
-          value={value.fondsCoursesQuiPaye}
-          options={[
-            { value: 'client', label: 'Le client' },
-            { value: 'chefs_talents', label: 'Chefs Talents' },
-            { value: 'avance_chef', label: 'Avance chef, remboursé' },
-          ]}
-          onChange={(v) => onChange({ ...value, fondsCoursesQuiPaye: v as any })}
-        />
-      </Field>
-      <Field label="Plafond fonds courses (€, optionnel)">
-        <NumberInput value={value.fondsCoursesPlafond} onChange={(v) => onChange({ ...value, fondsCoursesPlafond: v })} />
+      <SectionTitle>Agence (parties)</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Dénomination">
+          <Input value={value.agencyDenomination} onChange={(v) => onChange({ ...value, agencyDenomination: v })} />
+        </Field>
+        <Field label="SIRET">
+          <Input value={value.agencySiret} onChange={(v) => onChange({ ...value, agencySiret: v })} />
+        </Field>
+        <div className="md:col-span-2">
+          <Field label="Adresse">
+            <Input value={value.agencyAddress} onChange={(v) => onChange({ ...value, agencyAddress: v })} />
+          </Field>
+        </div>
+        <Field label="Représentant">
+          <Input value={value.agencyRep} onChange={(v) => onChange({ ...value, agencyRep: v })} />
+        </Field>
+        <Field label="Téléphone">
+          <Input value={value.agencyPhone} onChange={(v) => onChange({ ...value, agencyPhone: v })} />
+        </Field>
+        <Field label="Email">
+          <Input value={value.agencyEmail} onChange={(v) => onChange({ ...value, agencyEmail: v })} />
+        </Field>
+      </div>
+
+      <SectionTitle>Chef</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Nom complet (CAPS)">
+          <Input value={value.chefName} onChange={(v) => onChange({ ...value, chefName: v })} />
+        </Field>
+        <Field label="Référence chef" hint="ex: REF.CT_LUCAS.U">
+          <Input value={value.chefRef} onChange={(v) => onChange({ ...value, chefRef: v })} />
+        </Field>
+      </div>
+
+      <SectionTitle>Article 1 — Objet de la mission</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Lieu (générique)">
+          <Input value={value.missionLocation} onChange={(v) => onChange({ ...value, missionLocation: v })} />
+        </Field>
+        <div />
+        <Field label="Date début">
+          <Input type="date" value={value.startDate} onChange={(v) => onChange({ ...value, startDate: v })} />
+        </Field>
+        <Field label="Date fin">
+          <Input type="date" value={value.endDate} onChange={(v) => onChange({ ...value, endDate: v })} />
+        </Field>
+      </div>
+      <Field label="Engagements chef (une puce par ligne)">
+        <Textarea value={value.missionObjectives} rows={6} onChange={(v) => onChange({ ...value, missionObjectives: v })} />
       </Field>
 
-      <div className="md:col-span-2">
-        <Field label="Conditions de rupture">
-          <Textarea value={value.ruptureConditions} rows={2} onChange={(v) => onChange({ ...value, ruptureConditions: v })} />
+      <SectionTitle>Article 2 — Conditions de la mission</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <Field label="Lieu détaillé" hint="ex: Finca privée — Ibiza, Espagne">
+            <Input value={value.lieu} onChange={(v) => onChange({ ...value, lieu: v })} />
+          </Field>
+        </div>
+        <Field label="Rythme">
+          <Input value={value.rythme} onChange={(v) => onChange({ ...value, rythme: v })} />
+        </Field>
+        <Field label="Jour de repos">
+          <Input value={value.jourRepos} onChange={(v) => onChange({ ...value, jourRepos: v })} />
+        </Field>
+        <div className="md:col-span-2">
+          <Field label="Logement">
+            <Input value={value.logement} onChange={(v) => onChange({ ...value, logement: v })} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <Field label="Véhicule">
+            <Input value={value.vehicule} onChange={(v) => onChange({ ...value, vehicule: v })} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <Field label="Approvisionnements">
+            <Input value={value.approvisionnements} onChange={(v) => onChange({ ...value, approvisionnements: v })} />
+          </Field>
+        </div>
+      </div>
+
+      <SectionTitle>Article 4 — Rémunération</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field label="Montant total (€ HT)">
+          <NumberInput value={value.amountHt} onChange={(v) => onChange({ ...value, amountHt: v })} />
+        </Field>
+        <Field label="Acompte (%)" hint="CGV : 15">
+          <NumberInput value={value.depositPct} onChange={(v) => onChange({ ...value, depositPct: v ?? 15 })} />
+        </Field>
+        <Field label="Solde (%)" hint="CGV : 85">
+          <NumberInput value={value.balancePct} onChange={(v) => onChange({ ...value, balancePct: v ?? 85 })} />
+        </Field>
+        <Field label="Solde J+N (jours)" hint="CGV : 4">
+          <NumberInput value={value.balanceDays} onChange={(v) => onChange({ ...value, balanceDays: v ?? 4 })} />
         </Field>
       </div>
-      <div className="md:col-span-2">
-        <Field label="Clauses spécifiques (optionnel)">
-          <Textarea value={value.customClauses} rows={3} onChange={(v) => onChange({ ...value, customClauses: v })} />
+      <Field label="Clause de rétention du solde (texte fixe)">
+        <Textarea value={value.paymentRetentionText} rows={3} onChange={(v) => onChange({ ...value, paymentRetentionText: v })} />
+      </Field>
+
+      <SectionTitle>Article 5 — Approvisionnement &amp; dépenses</SectionTitle>
+      <Field label="Clauses (une puce par ligne)">
+        <Textarea value={value.approvisionnementClauses} rows={4} onChange={(v) => onChange({ ...value, approvisionnementClauses: v })} />
+      </Field>
+
+      <SectionTitle>Article 6 — Non-contournement</SectionTitle>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Durée exclusivité (mois)">
+          <NumberInput value={value.exclusiviteDureeMois} onChange={(v) => onChange({ ...value, exclusiviteDureeMois: v ?? 24 })} />
         </Field>
+        <Field label="Type de sanction" hint="CGV = 30 % HT ou 30k€">
+          <Select
+            value={value.sanctionType}
+            options={[
+              { value: 'cgv', label: 'CGV : 30 % HT ou 30 000 € (recommandé)' },
+              { value: 'six_months_commissions', label: 'Legacy : 6 mois de commissions' },
+              { value: 'custom', label: 'Personnalisé…' },
+            ]}
+            onChange={(v) => onChange({ ...value, sanctionType: v as any })}
+          />
+        </Field>
+        {value.sanctionType === 'custom' ? (
+          <div className="md:col-span-2">
+            <Field label="Texte personnalisé">
+              <Textarea value={value.sanctionTextOverride} rows={3} onChange={(v) => onChange({ ...value, sanctionTextOverride: v })} />
+            </Field>
+          </div>
+        ) : null}
       </div>
+
+      <SectionTitle>Article 7 — Confidentialité</SectionTitle>
+      <Field label="Items (une puce par ligne)">
+        <Textarea value={value.confidentialiteItems} rows={4} onChange={(v) => onChange({ ...value, confidentialiteItems: v })} />
+      </Field>
+
+      <SectionTitle>Article 8 — Standards &amp; obligations</SectionTitle>
+      <Field label="Items (une puce par ligne)">
+        <Textarea value={value.standardsItems} rows={5} onChange={(v) => onChange({ ...value, standardsItems: v })} />
+      </Field>
+
+      <SectionTitle>Article 11 — Résiliation</SectionTitle>
+      <Field label="Acompte conservé en cas d'annulation client (%)" hint="CGV : 15">
+        <NumberInput value={value.resiliationAcomptePct} onChange={(v) => onChange({ ...value, resiliationAcomptePct: v ?? 15 })} />
+      </Field>
+
+      <SectionTitle>Clauses spécifiques (optionnel)</SectionTitle>
+      <Textarea value={value.customClauses} rows={3} onChange={(v) => onChange({ ...value, customClauses: v })} />
     </div>
   );
 }
