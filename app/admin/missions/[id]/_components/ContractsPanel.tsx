@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Copy, Eye, FileDown, Loader2, Save, Send, XCircle } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import SendForSignatureModal, { type ModalSigner } from '@/app/admin/_components/SendForSignatureModal';
 import {
   type ContractKind,
   type ContractsData,
@@ -95,6 +96,19 @@ export default function ContractsPanel({
   const [sigLoading, setSigLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
+  // Modal de double-vérification
+  const [modalOpen, setModalOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    signers: ModalSigner[];
+    missingFields: string[];
+    html: string;
+    filename: string;
+    alreadyPending: boolean;
+    canSend: boolean;
+  } | null>(null);
+
   const loadSignatureRequests = useCallback(async () => {
     setSigLoading(true);
     try {
@@ -112,19 +126,54 @@ export default function ContractsPanel({
   // Dernier signature_request pour le kind affiché (le plus récent en premier)
   const currentSig = useMemo(() => sigItems.find((s) => s.kind === tab) || null, [sigItems, tab]);
 
-  async function sendForSignature() {
-    if (!confirm(`Envoyer le contrat « ${tabLabel(tab)} » pour signature électronique ?\n\nLes signataires recevront une invitation par email YouSign.`)) {
+  // Étape 1 : ouvre le modal et charge la preview (signataires + HTML rendu serveur)
+  // L'admin doit ensuite cocher « j'ai vérifié » puis cliquer Confirmer pour
+  // déclencher l'envoi réel via confirmSendForSignature().
+  async function openSendModal() {
+    // Sauvegarde implicite AVANT preview pour que le HTML rendu serveur reflète
+    // les derniers champs édités dans le form (sinon preview = ancien état DB).
+    try {
+      await save();
+    } catch {
+      // si save échoue, on n'ouvre pas le modal — l'utilisateur a déjà vu l'alert
       return;
     }
+
+    setModalOpen(true);
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewData(null);
+    try {
+      const r = await adminFetchRaw(
+        `/api/admin/missions/${encodeURIComponent(mission.id)}/send-signature?kind=${tab}`,
+      );
+      const json = await r.json();
+      if (!r.ok || !json.ok) {
+        throw new Error(json?.message || json?.error || `HTTP ${r.status}`);
+      }
+      setPreviewData({
+        signers: json.signers as ModalSigner[],
+        missingFields: json.missingFields || [],
+        html: json.html || '',
+        filename: json.filename || '',
+        alreadyPending: !!json.alreadyPending,
+        canSend: !!json.canSend,
+      });
+    } catch (e: any) {
+      setPreviewError(e?.message || 'Erreur chargement aperçu');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  // Étape 2 : appelé par le modal quand l'admin clique « Confirmer l'envoi »
+  async function confirmSendForSignature() {
     setSending(true);
     try {
-      // Sauvegarde implicite avant envoi pour s'assurer que YouSign signe la
-      // version la plus à jour (sinon il signerait l'état précédent en DB).
-      await save();
-      const r = await adminFetchRaw(`/api/admin/missions/${encodeURIComponent(mission.id)}/send-signature`, {
-        method: 'POST',
-        body: JSON.stringify({ kind: tab }),
-      });
+      const r = await adminFetchRaw(
+        `/api/admin/missions/${encodeURIComponent(mission.id)}/send-signature`,
+        { method: 'POST', body: JSON.stringify({ kind: tab }) },
+      );
       const json = await r.json();
       if (!r.ok || !json.ok) {
         const msg = json?.message || json?.error || `HTTP ${r.status}`;
@@ -134,9 +183,11 @@ export default function ContractsPanel({
         throw new Error(msg);
       }
       await loadSignatureRequests();
+      setModalOpen(false);
       alert(`✅ Contrat ${tabLabel(tab)} envoyé pour signature à ${json.signatureRequest.signerCount} signataires.`);
     } catch (e: any) {
       alert(e?.message || 'Erreur envoi signature');
+      throw e; // remonte au modal pour qu'il sorte du state submitting
     } finally {
       setSending(false);
     }
@@ -287,12 +338,12 @@ export default function ContractsPanel({
             <FileDown className="mr-2 h-4 w-4" /> Télécharger PDF
           </button>
           <button
-            onClick={sendForSignature}
-            disabled={sending || (currentSig?.status === 'ongoing')}
+            onClick={openSendModal}
+            disabled={sending || saving || previewLoading || (currentSig?.status === 'ongoing')}
             className="inline-flex items-center px-3 py-2 rounded-xl border border-emerald-400/40 bg-emerald-400/15 text-sm font-medium text-emerald-100 hover:bg-emerald-400/25 transition disabled:opacity-50"
-            title={currentSig?.status === 'ongoing' ? 'Une signature est déjà en cours' : 'Envoie le contrat via YouSign'}
+            title={currentSig?.status === 'ongoing' ? 'Une signature est déjà en cours' : 'Vérifier puis envoyer via YouSign'}
           >
-            {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+            {(sending || previewLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Envoyer pour signature
           </button>
         </div>
@@ -308,6 +359,26 @@ export default function ContractsPanel({
           />
         </div>
       ) : null}
+
+      {/* Modal de double-vérification avant envoi YouSign */}
+      <SendForSignatureModal
+        isOpen={modalOpen}
+        onClose={() => { if (!sending) setModalOpen(false); }}
+        onConfirm={confirmSendForSignature}
+        title={`Envoyer le contrat « ${tabLabel(tab)} » pour signature`}
+        loading={previewLoading}
+        error={previewError}
+        signers={previewData?.signers || []}
+        missingFields={previewData?.missingFields || []}
+        html={previewData?.html || ''}
+        filename={previewData?.filename}
+        canSend={!!previewData?.canSend}
+        blockerMessage={
+          previewData?.alreadyPending
+            ? 'Une signature est déjà en cours pour ce contrat. Annule-la dans YouSign avant d\'en relancer une.'
+            : null
+        }
+      />
     </div>
   );
 }
