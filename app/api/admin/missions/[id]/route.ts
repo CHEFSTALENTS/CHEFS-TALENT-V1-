@@ -21,13 +21,13 @@ function supabaseAdmin() {
 // =============================================================
 export async function GET(
   req: Request,
-  ctx: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
-    const id = decodeURIComponent(ctx.params.id || '').trim();
+    const id = decodeURIComponent((await ctx.params).id || '').trim();
     if (!id) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }
@@ -159,13 +159,13 @@ const ALLOWED_STATUSES = new Set([
 
 export async function PATCH(
   req: Request,
-  ctx: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
 
-    const id = decodeURIComponent(ctx.params.id || '').trim();
+    const id = decodeURIComponent((await ctx.params).id || '').trim();
     if (!id) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }

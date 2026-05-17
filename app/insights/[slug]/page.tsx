@@ -29,11 +29,12 @@ export function generateStaticParams() {
   return articles.map((a) => ({ slug: a.slug }));
 }
 
-export function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Metadata {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ slug: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const article = articles.find((a) => a.slug === params.slug);
   if (!article) return { title: 'Article introuvable' };
 
@@ -63,11 +64,12 @@ export function generateMetadata({
   };
 }
 
-export default function InsightPostPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default async function InsightPostPage(
+  props: {
+    params: Promise<{ slug: string }>;
+  }
+) {
+  const params = await props.params;
   const article = articles.find((a) => a.slug === params.slug);
   if (!article) notFound();
 

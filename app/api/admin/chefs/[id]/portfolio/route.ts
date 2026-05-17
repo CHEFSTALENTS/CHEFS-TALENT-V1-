@@ -29,10 +29,8 @@ function clean(v: any): string {
   return String(v ?? '').trim();
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
 

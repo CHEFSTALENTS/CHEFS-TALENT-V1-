@@ -36,10 +36,8 @@ function normalizeDate(v: any): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
@@ -112,10 +110,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;

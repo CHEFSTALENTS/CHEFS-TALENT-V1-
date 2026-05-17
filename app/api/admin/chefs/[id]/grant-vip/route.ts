@@ -73,10 +73,8 @@ async function patchProfile(userId: string, patch: Record<string, any>) {
  * - complimentary = true (différencie d'un VIP payant)
  * Aucun appel Stripe (pas de subscription créée).
  */
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
 
@@ -157,10 +155,8 @@ export async function POST(
  * Révoque le VIP offert. Ne touche pas aux abonnements payants Stripe.
  * Refuse de révoquer un VIP payant (utiliser le Billing Portal pour ça).
  */
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireAdminOr401(req);
   if (auth instanceof NextResponse) return auth;
 

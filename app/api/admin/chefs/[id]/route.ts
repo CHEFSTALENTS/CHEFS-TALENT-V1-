@@ -26,7 +26,8 @@ function numOrNull(v: any) {
   return Number.isFinite(n) ? n : null;
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
@@ -59,7 +60,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireAdminOr401(req);
     if (auth instanceof NextResponse) return auth;
