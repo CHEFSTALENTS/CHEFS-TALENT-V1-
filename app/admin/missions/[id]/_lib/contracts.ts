@@ -153,6 +153,10 @@ export type ClientContractData = {
 
   // Article 4 — Financier
   amountHt: number | null;               // 13000 HT
+  // Régime TVA — toujours laissé au choix :
+  //   'applicable'      → TVA française au taux en vigueur (cas standard FR/UE B2C/B2B non assujetti)
+  //   'non_applicable'  → TVA non applicable, article 259-1 du CGI (B2B hors UE, autoliquidation)
+  tvaRegime: 'applicable' | 'non_applicable';
   paymentMode: 'integral_signature' | '60_40' | 'custom';
   paymentCustomText: string;             // si custom
   facturationApprosText: string;         // texte 4.3
@@ -375,6 +379,7 @@ export function buildClientDefaults(m: MissionLike, c: ClientLike): ClientContra
     ].join('\n'),
 
     amountHt: m.client_amount ?? null,
+    tvaRegime: 'applicable',
     paymentMode: amount >= 30000 ? '60_40' : 'integral_signature',
     paymentCustomText: '',
     facturationApprosText:
@@ -815,8 +820,10 @@ ${bulletList(d.prestationsNonIncluses)}
 <h3>4.1 Honoraires de l'Agence</h3>
 <p>Les honoraires de coordination et de mise en relation de l'Agence Chefs Talents sont fixés à la somme forfaitaire de :</p>
 <div class="amount-block">${eurFmt(d.amountHt)} hors taxes (HT)</div>
-<div class="amount-note">(TVA française au taux en vigueur applicable au jour de la facturation)</div>
-<p>Ce prix couvre l'intégralité de la prestation chef décrite à l'article 3, sur toute la période définie à l'article 2. Il inclut la rémunération du Chef négociée par l'Agence, la marge commerciale de l'Agence et la TVA applicable. Le Chef est rémunéré directement par l'Agence selon les modalités du contrat de mission qui les lie.</p>
+<div class="amount-note">${d.tvaRegime === 'non_applicable'
+  ? '(TVA non applicable, article 259-1 du CGI)'
+  : '(TVA française au taux en vigueur applicable au jour de la facturation)'}</div>
+<p>Ce prix couvre l'intégralité de la prestation chef décrite à l'article 3, sur toute la période définie à l'article 2. Il inclut la rémunération du Chef négociée par l'Agence et la marge commerciale de l'Agence${d.tvaRegime === 'applicable' ? ', ainsi que la TVA applicable' : ''}. Le Chef est rémunéré directement par l'Agence selon les modalités du contrat de mission qui les lie.</p>
 
 <h3>4.2 Modalités de règlement</h3>
 <p>${esc(paymentModeText)}</p>
