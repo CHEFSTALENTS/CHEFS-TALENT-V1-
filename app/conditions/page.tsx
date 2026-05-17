@@ -135,7 +135,7 @@ export default function ConditionsPage() {
       <section className="space-y-3">
         <p className="text-stone-900 font-medium">5. Rôle de Chefs Talents</p>
         <p>
-          Chefs Talents (SASU Chefs Talents, SIRET 89832072600026, siège 73 rue Porte Dijeaux, 33000 Bordeaux)
+          Chefs Talents (nom commercial de la SASU La cantine de Thomas, SIRET 89832072600026, siège 25 cours Evrard de Fayolle, 33000 Bordeaux)
           agit en qualité de <strong>vendeur en nom propre</strong> de la prestation culinaire commandée par le Client.
           Chefs Talents :
         </p>
@@ -357,8 +357,9 @@ export default function ConditionsPage() {
                 <section className="space-y-3">
                   <p className="text-stone-900 font-medium">2. Nature et rôle de Chefs Talents</p>
                   <p>
-                    <strong>SASU Chefs Talents</strong>, immatriculée au RCS de Bordeaux sous le SIRET 89832072600026,
-                    siège 73 rue Porte Dijeaux 33000 Bordeaux, agit en qualité de <strong>vendeur en nom propre</strong>
+                    <strong>SASU La cantine de Thomas</strong>, exploitée sous le nom commercial <strong>Chefs Talents</strong>,
+                    immatriculée au RCS de Bordeaux sous le SIRET 89832072600026,
+                    siège 25 cours Evrard de Fayolle 33000 Bordeaux, agit en qualité de <strong>vendeur en nom propre</strong>
                     {' '}de la prestation culinaire commandée par le Client.
                   </p>
                   <p>À ce titre, Chefs Talents :</p>

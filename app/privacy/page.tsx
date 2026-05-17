@@ -50,10 +50,10 @@ export default function PrivacyPage() {
                 Le responsable du traitement des données personnelles collectées via le site chefstalents.com est :
               </p>
               <p>
-                <strong>SASU Chefs Talents</strong><br />
+                <strong>SASU La cantine de Thomas</strong> — exploitée sous le nom commercial <strong>Chefs Talents</strong><br />
                 SIRET : 89832072600026<br />
                 RCS : Bordeaux<br />
-                Siège social : 73 rue Porte Dijeaux, 33000 Bordeaux, France<br />
+                Siège social : 25 cours Evrard de Fayolle, 33000 Bordeaux, France<br />
                 Représentée par Thomas Delcroix, Président
               </p>
               <p>
@@ -399,7 +399,7 @@ export default function PrivacyPage() {
                   Email général : <a href="mailto:contact@chefstalents.com" className="underline hover:text-stone-900">contact@chefstalents.com</a>
                 </li>
                 <li>
-                  Courrier : SASU Chefs Talents — 73 rue Porte Dijeaux, 33000 Bordeaux, France
+                  Courrier : SASU La cantine de Thomas (Chefs Talents) — 25 cours Evrard de Fayolle, 33000 Bordeaux, France
                 </li>
               </ul>
               <p>
