@@ -1558,5 +1558,71 @@ export const articles: Article[] = [
       { question: "Combien de couverts peut tenir un chef seul à Saint-Tropez ?", answer: "Un chef privé seul peut tenir des repas à l'assiette jusqu'à 12 à 15 couverts. Au-delà, il faut un commis dédié au dressage. À 25 couverts ou plus, l'équipe nominale passe à 2 personnes en cuisine plus 1 en salle. Pour les dîners événementiels supérieurs à 50 couverts (mariage UHNW, cocktail prestige), la coordination passe en mode brigade de 4 à 6 personnes." },
       { question: "Quelle différence entre un chef proposé par Chefs Talents et un chef trouvé en direct via une connaissance locale ?", answer: "Avec Chefs Talents, le profil est validé en amont sur son expérience UHNW, ses références joignables, et son aisance à coordonner avec le personnel de maison. Le contrat est cadré, la facturation se fait sur Chefs Talents (vendeur en nom propre, TVA française), et nous restons présents en cas d'imprévu. Sur un séjour à fort enjeu en haute saison, ce cadre est la différence entre une mission qui se passe bien et une mission où chaque imprévu se règle dans la panique." }
     ]
+  },
+  {
+    id: '44',
+    slug: 'private-chef-ibiza-villas-2026-season',
+    title: "Private chef Ibiza villas 2026: profiles, calendar and rates for the season",
+    subtitle: "Ibiza 2026 villa staffing: how to secure a confirmed private chef for the high-demand June to September window.",
+    date: "May 2026",
+    publishedAt: "2026-05-17",
+    category: "Ibiza",
+    image: "https://images.unsplash.com/photo-1568084680786-a84f91d1153c?q=80&w=2070&auto=format&fit=crop",
+    relatedLink: "/destinations/private-chef-ibiza",
+    relatedLinkText: "See Ibiza destination page",
+    blocks: [
+      { type: 'paragraph', content: "Ibiza is one of the tightest private chef markets in the Mediterranean. The combination of UHNW family rentals in the north (San Juan, Cala Llonga, Es Cubells), high-end villas around Talamanca and Cap Martinet, and a heavy charter yacht presence creates more demand than the local supply can absorb between mid-June and mid-September. By March, most confirmed profiles for the peak weeks are already booked." },
+      { type: 'h2', content: "Why Ibiza is a market apart" },
+      { type: 'paragraph', content: "Three structural factors compress the chef market on Ibiza. First, the island geography limits the number of profiles physically available during high season — most chefs based in Madrid, Barcelona or France need flights, accommodation and a guaranteed minimum mission length to make the trip economical. Second, the UHNW clientele on Ibiza expects gastronomic standards equivalent to a Michelin two-star table, not a holiday cook. Third, the villa rentals are often booked through the year by the same families, which means recurring clients have already locked in their preferred chefs from previous seasons." },
+      { type: 'h2', content: "Two distinct profiles for Ibiza missions" },
+      { type: 'paragraph', content: "The mistake we see most often is treating villa missions and yacht missions as interchangeable. They are not. The skills, the logistics and the daily rhythm are fundamentally different." },
+      { type: 'list', content: [
+        "Villa chef Ibiza: full autonomy on sourcing (Santa Eulalia market, local farms in the north, fish suppliers in Sant Antoni), kitchen logistics inside the villa, service in indoor/outdoor format, often coordinating with a house manager or villa concierge. Mission length: typically one to four weeks.",
+        "Yacht charter chef: STCW certification required for vessels above 24 metres, galley constraints, weather adaptation, integration with the deck crew. Mission length: usually aligned with the charter contract (one to two weeks per booking).",
+        "Superyacht chef (over 60 metres): near-hotel staffing model, often with a permanent brigade already on board, the Ibiza stop is one leg of a longer Mediterranean season."
+      ] },
+      { type: 'h2', content: "2026 season calendar" },
+      { type: 'paragraph', content: "Here is what we observe on the market as of mid-May 2026, reflecting the availability of profiles in our network at the time of writing." },
+      { type: 'list', content: [
+        "End of May to mid-June: still possible to place a confirmed villa chef for short missions (3 to 7 days).",
+        "Mid-June to mid-July: confirmed profiles becoming rare. A request submitted before the end of May still has a fair chance.",
+        "Mid-July to mid-August: peak season, virtually saturated. New requests are matched only with profiles flying in from mainland Spain or France.",
+        "Mid-August to end of August: extremely tight. Most realistic option is a chef on rotation from another high-season destination (Saint-Tropez, Mykonos) for the latter half of the stay.",
+        "September: significantly more accessible, ideal for late-season stays with the same quality profiles at lower urgency."
+      ] },
+      { type: 'h2', content: "Rates for Ibiza 2026" },
+      { type: 'paragraph', content: "The figures below cover the chef's fee only, excluding shopping budget, accommodation when not provided on site, and travel from the mainland. They reflect the range of profiles we have placed for the 2026 season so far." },
+      { type: 'list', content: [
+        "Short villa mission (3 to 7 days): €700 to €1,400 per day depending on the profile, median around €950 for a confirmed chef.",
+        "One-week villa mission: €5,500 to €9,500 for the chef alone, excluding per diem and shopping.",
+        "Monthly seasonal mission in a villa: €10,000 to €17,000 per month for a confirmed chef, up to €23,000 for a former Michelin-starred profile with verifiable UHNW track record.",
+        "Yacht charter chef: €800 to €1,300 per day, excluding STCW certification cost and onboard accommodation.",
+        "Peak period (mid-July to mid-August): 20 to 40 % premium on short-mission rates.",
+        "Standard shopping budget: €200 to €350 per person per week. UHNW sourcing (truffle, caviar, rare wines): €500 to €900 per person per week."
+      ] },
+      { type: 'h2', content: "Logistics: what gets won or lost upstream" },
+      { type: 'paragraph', content: "On Ibiza in high season, the supplier relationship is as decisive as the chef's talent. The best butchers, fishmongers and producers around Santa Eulalia, Santa Gertrudis and Sant Joan operate on advance reservation and prioritise the chefs they already know. A new chef arriving without a local network spends 30 to 40 % of working time chasing products that a confirmed local chef sources with two phone calls." },
+      { type: 'paragraph', content: "Our role in coordination is to validate, before each mission, that the proposed chef either has previous Ibiza experience or has a credible sourcing plan. This validation happens in a 20-minute call with detailed questions on which suppliers will be contacted." },
+      { type: 'h2', content: "Windows still open as of mid-May 2026" },
+      { type: 'paragraph', content: "For clients reading this article at the time of publication, here are the windows where a confirmed profile is still realistically achievable, provided the request is submitted within 7 to 14 days." },
+      { type: 'list', content: [
+        "Short missions of 3 to 5 days in June, outside the Pentecost weekend.",
+        "One-week missions in the first half of June or the first week of July.",
+        "September missions, accessible for almost any budget.",
+        "Yacht charter spot windows, coordinated with the charter agency."
+      ] },
+      { type: 'paragraph', content: "Beyond 1 June, the July to August windows close fast. From mid-June onwards, we cannot guarantee a confirmed profile for the high-season peak without date flexibility." },
+      { type: 'h2', content: "How to submit a request" },
+      { type: 'paragraph', content: "An Ibiza request is processed faster with a few key inputs upfront: firm or flexible dates, format (villa or yacht, number of guests, presence of visiting friends and family), service level expected, dietary constraints, and an indicative budget. With this brief, we present two or three matched profiles within 48 to 72 hours." },
+      { type: 'quote', content: "On Ibiza in peak season, the best profiles are not found, they are reserved. The gap between a mission that runs well and one that complicates is decided upstream, in selection and coordination." }
+    ],
+    faqs: [
+      { question: "When should I submit a private chef request for Ibiza in summer 2026?", answer: "For July and August 2026, the best confirmed profiles are already booked as of mid-May. You can still expect a confirmed chef for the first half of June, early July, or any week in September. For the strict peak season (14 July to 20 August), we no longer guarantee a confirmed profile without date flexibility or brief adjustment." },
+      { question: "What is the rate for a private chef in Ibiza for a week in a villa?", answer: "Expect €5,500 to €9,500 for the chef alone over 7 days, excluding shopping budget and per diem. The median daily rate for a confirmed chef is €950 in Ibiza during the season. Shopping budget is added separately: €200 to €350 per person per week standard, up to €700 to €900 with UHNW sourcing (truffle, caviar, rare wines)." },
+      { question: "Can a villa chef in Ibiza also cook on a yacht?", answer: "Not automatically. Working on a yacht imposes specific constraints (limited galley, roll management, STCW certification recommended, integration with deck crew). An experienced villa chef can take on a yacht at the quay or close anchorage, but not for a navigation mission. We validate the profile-format compatibility before each placement." },
+      { question: "Do I need to cover the chef's accommodation during the mission?", answer: "Depends on the mission. For a villa with a dedicated staff cottage, accommodation is included by default. For a villa without dedicated staff lodging, the client covers nearby accommodation, typically €100 to €180 per night in high season. On a yacht, the chef is accommodated on board. For short missions with travel from the mainland, transport must also be planned (first-class train or flight)." },
+      { question: "How many covers can a single chef handle in Ibiza?", answer: "A solo private chef can handle plated meals up to 12 to 15 covers. Beyond that, a dedicated commis is needed for plating. At 25 covers or above, the nominal team is 2 in the kitchen and 1 in service. For event dinners above 50 covers (UHNW wedding, prestige cocktail), coordination shifts to a brigade format of 4 to 6 people." },
+      { question: "What's the difference between a Chefs Talents profile and finding a chef directly through a local contact?", answer: "With Chefs Talents, the profile is validated upstream on UHNW experience, contactable references, and ability to coordinate with house staff. The contract is structured, invoicing is handled by Chefs Talents (principal in own name, French VAT), and we remain available during the mission. On a high-stakes peak-season stay, this structure is the difference between a mission that runs well and a mission where every unforeseen event is resolved in panic." }
+    ]
   }
 ];
