@@ -7,7 +7,7 @@
 // Sauvegarde via PATCH /api/admin/missions/[id] avec contractsData JSONB.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Eye, Loader2, Save } from 'lucide-react';
+import { Copy, Eye, FileDown, Loader2, Save } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import {
   type ContractKind,
@@ -111,6 +111,41 @@ export default function ContractsPanel({
     }
   }
 
+  // Génération PDF côté client : on ouvre une nouvelle fenêtre avec le HTML
+  // rendu et on déclenche window.print(). Le user sauvegarde via la boîte
+  // de dialogue d'impression du navigateur (« Save as PDF »).
+  // Avantage : pas de Puppeteer côté serveur (lourd sur Vercel serverless),
+  // pas de dépendance externe, rend exactement le HTML qu'on a en preview.
+  function printPdf() {
+    try {
+      const win = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1200');
+      if (!win) {
+        alert('Bloqué par le bloqueur de popup. Autorise les popups pour ce site puis réessaie.');
+        return;
+      }
+      win.document.open();
+      win.document.write(renderedHtml);
+      win.document.close();
+      // Attend que le rendu soit prêt avant de print (sinon la boîte de
+      // dialogue s'ouvre sur une page blanche dans Chrome).
+      const tryPrint = () => {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          // ignore — l'utilisateur peut Ctrl/Cmd+P manuellement
+        }
+      };
+      if (win.document.readyState === 'complete') {
+        setTimeout(tryPrint, 300);
+      } else {
+        win.onload = () => setTimeout(tryPrint, 300);
+      }
+    } catch (e: any) {
+      alert(e?.message || 'Erreur lors de l\'ouverture de la fenêtre d\'impression.');
+    }
+  }
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -160,10 +195,10 @@ export default function ContractsPanel({
         {tab === 'client' && <ClientForm value={clientData} onChange={setClientData} />}
       </div>
 
-      {/* Preview + copy */}
+      {/* Preview + copy + PDF */}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[11px] text-white/45">
-          Astuce : clique « Aperçu » pour vérifier le rendu, puis « Copier le HTML » pour le coller dans ton mail.
+          Astuce : « Aperçu » pour vérifier le rendu, « Télécharger PDF » pour l'envoyer en pièce jointe, « Copier HTML » pour le coller dans le corps d'un mail.
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -174,9 +209,15 @@ export default function ContractsPanel({
           </button>
           <button
             onClick={copyHtml}
+            className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
+          >
+            <Copy className="mr-2 h-4 w-4" /> Copier HTML
+          </button>
+          <button
+            onClick={printPdf}
             className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white text-sm font-medium text-[#161616] hover:bg-white/90 transition"
           >
-            <Copy className="mr-2 h-4 w-4" /> Copier le HTML
+            <FileDown className="mr-2 h-4 w-4" /> Télécharger PDF
           </button>
         </div>
       </div>
