@@ -6,8 +6,8 @@
 //
 // Sauvegarde via PATCH /api/admin/missions/[id] avec contractsData JSONB.
 
-import { useEffect, useMemo, useState } from 'react';
-import { Copy, Eye, FileDown, Loader2, Save } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Copy, Eye, FileDown, Loader2, Save, Send, XCircle } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import {
   type ContractKind,
@@ -77,6 +77,70 @@ export default function ContractsPanel({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // ─── Signature électronique (YouSign) ───────────────────────
+  type SignatureItem = {
+    id: string;
+    kind: ContractKind;
+    status: 'draft' | 'ongoing' | 'done' | 'declined' | 'expired' | 'cancelled' | 'error';
+    yousignId: string;
+    signers: Array<{ name: string; email: string; role: string }>;
+    sentAt: string | null;
+    completedAt: string | null;
+    createdAt: string;
+    signedPdfUrl: string | null;
+    errorMessage: string | null;
+  };
+  const [sigItems, setSigItems] = useState<SignatureItem[]>([]);
+  const [sigLoading, setSigLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const loadSignatureRequests = useCallback(async () => {
+    setSigLoading(true);
+    try {
+      const r = await adminFetchRaw(`/api/admin/missions/${encodeURIComponent(mission.id)}/signature-requests`);
+      const json = await r.json();
+      if (r.ok && json.ok) {
+        setSigItems(json.items as SignatureItem[]);
+      }
+    } catch { /* silencieux : non-bloquant */ }
+    finally { setSigLoading(false); }
+  }, [mission.id]);
+
+  useEffect(() => { loadSignatureRequests(); }, [loadSignatureRequests]);
+
+  // Dernier signature_request pour le kind affiché (le plus récent en premier)
+  const currentSig = useMemo(() => sigItems.find((s) => s.kind === tab) || null, [sigItems, tab]);
+
+  async function sendForSignature() {
+    if (!confirm(`Envoyer le contrat « ${tabLabel(tab)} » pour signature électronique ?\n\nLes signataires recevront une invitation par email YouSign.`)) {
+      return;
+    }
+    setSending(true);
+    try {
+      // Sauvegarde implicite avant envoi pour s'assurer que YouSign signe la
+      // version la plus à jour (sinon il signerait l'état précédent en DB).
+      await save();
+      const r = await adminFetchRaw(`/api/admin/missions/${encodeURIComponent(mission.id)}/send-signature`, {
+        method: 'POST',
+        body: JSON.stringify({ kind: tab }),
+      });
+      const json = await r.json();
+      if (!r.ok || !json.ok) {
+        const msg = json?.message || json?.error || `HTTP ${r.status}`;
+        if (json?.missing?.length) {
+          throw new Error(`${msg}\nManque : ${json.missing.join(', ')}`);
+        }
+        throw new Error(msg);
+      }
+      await loadSignatureRequests();
+      alert(`✅ Contrat ${tabLabel(tab)} envoyé pour signature à ${json.signatureRequest.signerCount} signataires.`);
+    } catch (e: any) {
+      alert(e?.message || 'Erreur envoi signature');
+    } finally {
+      setSending(false);
+    }
+  }
 
   const renderedHtml = useMemo(() => {
     if (tab === 'essai') return renderEssai(essai);
@@ -188,6 +252,9 @@ export default function ContractsPanel({
         ))}
       </div>
 
+      {/* Bandeau status signature pour le tab courant */}
+      <SignatureStatusBanner item={currentSig} loading={sigLoading} />
+
       {/* Forms */}
       <div className="grid gap-4">
         {tab === 'essai' && <EssaiForm value={essai} onChange={setEssai} />}
@@ -195,12 +262,12 @@ export default function ContractsPanel({
         {tab === 'client' && <ClientForm value={clientData} onChange={setClientData} />}
       </div>
 
-      {/* Preview + copy + PDF */}
+      {/* Preview + copy + PDF + Signature */}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[11px] text-white/45">
-          Astuce : « Aperçu » pour vérifier le rendu, « Télécharger PDF » pour l'envoyer en pièce jointe, « Copier HTML » pour le coller dans le corps d'un mail.
+          « Envoyer pour signature » = YouSign envoie les invitations email aux signataires. Sinon : « Télécharger PDF » et envoi à la main.
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowPreview((o) => !o)}
             className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
@@ -215,9 +282,18 @@ export default function ContractsPanel({
           </button>
           <button
             onClick={printPdf}
-            className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white text-sm font-medium text-[#161616] hover:bg-white/90 transition"
+            className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
           >
             <FileDown className="mr-2 h-4 w-4" /> Télécharger PDF
+          </button>
+          <button
+            onClick={sendForSignature}
+            disabled={sending || (currentSig?.status === 'ongoing')}
+            className="inline-flex items-center px-3 py-2 rounded-xl border border-emerald-400/40 bg-emerald-400/15 text-sm font-medium text-emerald-100 hover:bg-emerald-400/25 transition disabled:opacity-50"
+            title={currentSig?.status === 'ongoing' ? 'Une signature est déjà en cours' : 'Envoie le contrat via YouSign'}
+          >
+            {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+            Envoyer pour signature
           </button>
         </div>
       </div>
@@ -830,5 +906,111 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
     >
       {value ? 'Oui' : 'Non'}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Signature électronique — helpers UI
+// ─────────────────────────────────────────────────────────────
+
+function tabLabel(k: ContractKind): string {
+  return k === 'essai' ? 'Essai chef' : k === 'chef' ? 'Mission chef' : 'Prestation client';
+}
+
+type SignatureBannerItem = {
+  id: string;
+  status: 'draft' | 'ongoing' | 'done' | 'declined' | 'expired' | 'cancelled' | 'error';
+  signers: Array<{ name: string; email: string; role: string }>;
+  sentAt: string | null;
+  completedAt: string | null;
+  signedPdfUrl: string | null;
+  errorMessage: string | null;
+} | null;
+
+function SignatureStatusBanner({
+  item,
+  loading,
+}: {
+  item: SignatureBannerItem;
+  loading: boolean;
+}) {
+  if (loading && !item) {
+    return (
+      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] text-white/45">
+        Chargement du statut signature…
+      </div>
+    );
+  }
+  if (!item) return null;
+
+  const dotColor: Record<string, string> = {
+    draft:     'bg-white/30',
+    ongoing:   'bg-amber-400 animate-pulse',
+    done:      'bg-emerald-400',
+    declined:  'bg-red-400',
+    expired:   'bg-stone-400',
+    cancelled: 'bg-stone-400',
+    error:     'bg-red-400',
+  };
+  const label: Record<string, string> = {
+    draft:     'Brouillon YouSign',
+    ongoing:   'Signature en cours',
+    done:      'Signé par tous',
+    declined:  'Refusé',
+    expired:   'Expiré',
+    cancelled: 'Annulé',
+    error:     'Erreur',
+  };
+
+  const signedCount = item.signers.length;
+  const sentAt = item.sentAt ? new Date(item.sentAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : null;
+  const completedAt = item.completedAt ? new Date(item.completedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : null;
+
+  return (
+    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotColor[item.status] || 'bg-white/30'}`} />
+        <div className="text-sm font-medium text-white">{label[item.status] || item.status}</div>
+        {item.status === 'done' && (
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+        )}
+        {(item.status === 'declined' || item.status === 'error') && (
+          <XCircle className="h-4 w-4 text-red-400" />
+        )}
+        <div className="ml-auto flex items-center gap-3 text-[11px] text-white/55">
+          {sentAt && <span>Envoyé : {sentAt}</span>}
+          {completedAt && <span>Signé : {completedAt}</span>}
+          <span>{signedCount} signataire{signedCount > 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      {item.signers.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {item.signers.map((s, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-white/5 border border-white/10 text-white/70"
+              title={s.email}
+            >
+              {s.role} · {s.name}
+            </span>
+          ))}
+        </div>
+      )}
+      {item.signedPdfUrl && (
+        <div className="mt-2">
+          <a
+            href={item.signedPdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-xs text-emerald-300 hover:text-emerald-200 underline"
+          >
+            <FileDown className="mr-1 h-3.5 w-3.5" /> Télécharger le PDF signé
+          </a>
+        </div>
+      )}
+      {item.errorMessage && (
+        <div className="mt-2 text-[11px] text-red-300">{item.errorMessage}</div>
+      )}
+    </div>
   );
 }

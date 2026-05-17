@@ -258,11 +258,32 @@ export async function downloadSignedDocument(input: {
 // Helper haut-niveau : tout-en-un
 // ────────────────────────────────────────────────────────────
 
+export type SignaturePlacement = {
+  /** Page (1-indexée). Si omis : dernière page du PDF (recommandé). */
+  page?: number;
+  /** Coordonnées en points PDF (origine = coin bas-gauche de la page) */
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+};
+
 export async function sendForSignature(input: {
   name: string;                                      // "Contrat chef — Lucas Ibiza 2026"
   pdfBuffer: Buffer;
   filename: string;
   signers: YousignSignerInput[];
+  /**
+   * Position des zones de signature dans le PDF, dans le même ordre que `signers`.
+   * Si omis → on auto-positionne en bas de la dernière page, signataires
+   * espacés horizontalement (matchant le bloc <div class="signatures"> du HTML).
+   */
+  placements?: SignaturePlacement[];
+  /**
+   * Méta-info du PDF nécessaire pour l'auto-positionnement (cf. getPdfMeta).
+   * Requis si `placements` n'est pas fourni.
+   */
+  pdfMeta?: { pageCount: number; lastPageSize: { width: number; height: number } };
   expirationDate?: string;
 }): Promise<{
   signatureRequest: YousignSignatureRequest;
@@ -278,22 +299,53 @@ export async function sendForSignature(input: {
     pdfBuffer: input.pdfBuffer,
     filename: input.filename,
   });
+
+  // Calcul des placements
+  let placements: SignaturePlacement[];
+  if (input.placements && input.placements.length === input.signers.length) {
+    placements = input.placements;
+  } else if (input.pdfMeta) {
+    // Auto : on espace les signataires sur la dernière page, en bas.
+    // Nos templates HTML rendent un .signatures block (grid 2 ou 3 colonnes)
+    // en fin de doc. On colle approximativement par-dessus.
+    const { pageCount, lastPageSize } = input.pdfMeta;
+    const n = input.signers.length;
+    const margin = 60;                                            // marge latérale
+    const usable = lastPageSize.width - margin * 2;
+    const fieldW = Math.min(140, usable / n - 20);
+    const fieldH = 50;
+    const gap = (usable - fieldW * n) / Math.max(1, n - 1);       // espace entre champs
+    const y = 120;                                                // bas de la dernière page
+    placements = input.signers.map((_, i) => ({
+      page: pageCount,
+      x: margin + i * (fieldW + (n > 1 ? gap : 0)),
+      y,
+      width: fieldW,
+      height: fieldH,
+    }));
+  } else {
+    // Fallback : page 1, top-left → laid mais ne fail pas
+    placements = input.signers.map((_, i) => ({
+      page: 1,
+      x: 80 + i * 160,
+      y: 700,
+      width: 140,
+      height: 50,
+    }));
+  }
+
   const createdSigners: YousignSigner[] = [];
-  for (const s of input.signers) {
-    // On positionne chaque signature en bas de la dernière page, espacées
-    // horizontalement. Le PDF généré par notre puppeteer prévoit une zone
-    // « Signatures » sur la dernière page — on signe par-dessus.
-    const idx = createdSigners.length;
+  for (let i = 0; i < input.signers.length; i++) {
     const created = await addSigner({
       signatureRequestId: sr.id,
       documentId: doc.id,
-      signer: s,
+      signer: input.signers[i],
       signatureField: {
-        page: 1,                          // sera repositionné après MVP
-        x: 100 + idx * 160,
-        y: 100,
-        width: 140,
-        height: 50,
+        page: placements[i].page ?? 1,
+        x: placements[i].x,
+        y: placements[i].y,
+        width: placements[i].width ?? 140,
+        height: placements[i].height ?? 50,
       },
     });
     createdSigners.push(created);
