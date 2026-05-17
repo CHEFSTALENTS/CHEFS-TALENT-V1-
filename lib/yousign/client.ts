@@ -19,7 +19,7 @@
 //   YOUSIGN_WEBHOOK_SECRET   →  secret HMAC pour /api/webhooks/yousign
 //                              (configuré côté dashboard YouSign)
 
-export type YousignSignerRole = 'client' | 'chef' | 'agency' | 'concierge';
+export type YousignSignerRole = 'client' | 'chef' | 'agency' | 'concierge' | 'apporteur';
 
 export type YousignSignerInput = {
   firstName: string;

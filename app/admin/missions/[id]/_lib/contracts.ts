@@ -404,7 +404,9 @@ export function buildClientDefaults(m: MissionLike, c: ClientLike): ClientContra
 // Rendu HTML (preview + copier-coller)
 // ─────────────────────────────────────────────────────────────
 
-function esc(s: string | null | undefined): string {
+// Exportés pour réutilisation par d'autres templates contractuels
+// (ex: lib/contracts/nccTemplate.ts pour le NCC concierge).
+export function esc(s: string | null | undefined): string {
   if (s === null || s === undefined) return '';
   return String(s)
     .replaceAll('&', '&amp;')
@@ -417,7 +419,7 @@ function eurFmt(n: number | null | undefined): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 }
 
-function dateFmt(iso: string | null | undefined): string {
+export function dateFmt(iso: string | null | undefined): string {
   if (!iso) return '—';
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return iso;
@@ -433,7 +435,7 @@ function dateRange(start: string, end: string): string {
   return '—';
 }
 
-const baseStyles = `
+export const baseStyles = `
   @page { size: A4; margin: 18mm 16mm; }
   @media print {
     body { padding: 0 !important; max-width: 100% !important; }

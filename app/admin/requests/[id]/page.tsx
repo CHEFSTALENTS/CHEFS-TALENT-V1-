@@ -10,6 +10,7 @@ import { buildWhatsappBriefForChef, buildInternalBrief, openWhatsappWithText, ca
 import AssignMissionModal from '@/components/AssignMissionModal';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import ProposalsList from './_components/ProposalsList';
+import NccPanel from './_components/NccPanel';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
 
@@ -294,6 +295,14 @@ export default function AdminRequestDetailPage() {
                 refresh();
               }}
             />
+          </Panel>
+
+          {/* NCC concierge — accord de non-contournement à 4 parties (apporteur, chef, client, Thomas) */}
+          <Panel
+            title="NCC concierge"
+            subtitle="Accord de Non-Contournement & Confidentialité — envoi YouSign aux 4 parties"
+          >
+            <NccPanel requestId={id} />
           </Panel>
 
           <Panel
