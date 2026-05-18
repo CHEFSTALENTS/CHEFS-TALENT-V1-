@@ -117,12 +117,27 @@ async function yousignFetch<T = any>(path: string, opts: FetchOpts = {}): Promis
       .join(' | ');
     const baseDetail = json?.detail || json?.message || text || `HTTP ${res.status}`;
     const fullDetail = violationsStr ? `${baseDetail} → ${violationsStr}` : baseDetail;
-    // Log côté serveur (visible dans les logs Vercel)
-    console.error('[YouSign]', opts.method || 'GET', path, res.status, fullDetail, json);
+
+    // Reconstruit le request body lisible pour les logs (pas pour multipart).
+    // Utile quand YouSign refuse SANS violations[]/invalid_params — on peut
+    // alors diagnostiquer en regardant ce qu'on a envoyé.
+    let requestBodyForLog: any = null;
+    if (!opts.formData && opts.body !== undefined) {
+      try { requestBodyForLog = opts.body; } catch { /* ignore */ }
+    } else if (opts.formData) {
+      requestBodyForLog = '(multipart FormData)';
+    }
+
+    // Log côté serveur (visible dans les logs Vercel) — INCLUT le request body
+    console.error('[YouSign]', opts.method || 'GET', path, res.status, fullDetail);
+    console.error('[YouSign request body]', JSON.stringify(requestBodyForLog));
+    console.error('[YouSign response body]', JSON.stringify(json));
+
     const err: any = new Error(`YouSign ${opts.method || 'GET'} ${path} → ${res.status}: ${fullDetail}`);
     err.status = res.status;
     err.body = json;
     err.violations = violations;
+    err.requestBody = requestBodyForLog;
     throw err;
   }
   return json as T;

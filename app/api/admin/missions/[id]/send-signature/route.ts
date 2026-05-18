@@ -235,6 +235,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       message: e?.message,                    // dupliqué pour que l'UI le récupère via .message
       detail: e?.body,
       violations: e?.violations || [],
+      requestBody: e?.requestBody || null,    // ⚠️ inclut le payload qu'on a envoyé à YouSign (debug)
     }, { status: 500 });
   }
 
