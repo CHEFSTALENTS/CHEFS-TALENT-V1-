@@ -214,6 +214,31 @@ export default function ContractsPanel({
     }
   }
 
+  // Annule la signature en cours pour le tab actuel.
+  // Permet à l'admin de relancer après correction (mauvais email, etc.)
+  async function cancelCurrentSignature() {
+    if (!currentSig) return;
+    const reason = window.prompt(
+      `Annuler la signature ${tabLabel(tab)} en cours ?\n\nLes signataires recevront un email d'annulation YouSign.\n\nMotif (optionnel) :`,
+      'Erreur de saisie — sera relancé',
+    );
+    if (reason === null) return; // user cancelled the prompt
+    try {
+      const r = await adminFetchRaw(
+        `/api/admin/signature-requests/${encodeURIComponent(currentSig.id)}/cancel`,
+        { method: 'POST', body: JSON.stringify({ reason: reason || undefined }) },
+      );
+      const json = await r.json();
+      if (!r.ok || !json.ok) {
+        throw new Error(json?.message || json?.error || `HTTP ${r.status}`);
+      }
+      await loadSignatureRequests();
+      alert('✅ Signature annulée. Tu peux relancer un nouvel envoi.');
+    } catch (e: any) {
+      alert(`Erreur annulation : ${e?.message || 'inconnue'}`);
+    }
+  }
+
   const renderedHtml = useMemo(() => {
     if (tab === 'essai') return renderEssai(essai);
     if (tab === 'chef') return renderChef(chef);
@@ -325,7 +350,7 @@ export default function ContractsPanel({
       </div>
 
       {/* Bandeau status signature pour le tab courant */}
-      <SignatureStatusBanner item={currentSig} loading={sigLoading} />
+      <SignatureStatusBanner item={currentSig} loading={sigLoading} onCancel={cancelCurrentSignature} />
 
       {/* Forms */}
       <div className="grid gap-4">
@@ -1037,9 +1062,11 @@ type SignatureBannerItem = {
 function SignatureStatusBanner({
   item,
   loading,
+  onCancel,
 }: {
   item: SignatureBannerItem;
   loading: boolean;
+  onCancel?: () => void;
 }) {
   if (loading && !item) {
     return (
@@ -1088,6 +1115,16 @@ function SignatureStatusBanner({
           {sentAt && <span>Envoyé : {sentAt}</span>}
           {completedAt && <span>Signé : {completedAt}</span>}
           <span>{signedCount} signataire{signedCount > 1 ? 's' : ''}</span>
+          {/* Bouton annuler — visible uniquement pour les status annulables */}
+          {onCancel && (item.status === 'ongoing' || item.status === 'draft') && (
+            <button
+              onClick={onCancel}
+              className="ml-1 px-2.5 py-1 rounded-lg border border-red-400/30 bg-red-400/10 text-red-200 hover:bg-red-400/20 transition text-[11px] font-medium"
+              title="Annule la signature côté YouSign et permet de relancer un nouvel envoi"
+            >
+              Annuler
+            </button>
+          )}
         </div>
       </div>
       {item.signers.length > 0 && (
