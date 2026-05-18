@@ -86,20 +86,39 @@ function normalizeMission(row: MissionRow): MissionView {
   };
 }
 
-// Buckets de statut. Le bucket 'paid' croise mission.status (confirmed)
-// avec payment_status='paid' pour ne montrer que ce qui est encaissé.
+// Buckets de statut. Combine deux dimensions :
+//   - Workflow (status DB)     → 'pending' (non confirmé), 'canceled', 'paid' (encaissée)
+//   - Phase temporelle (dates) → 'upcoming' (à venir), 'live' (en cours), 'done' (terminée)
+//
+// Logique : pour les missions confirmées NON encaissées, on bascule auto
+// entre 'upcoming' / 'live' / 'done' selon start_date / end_date vs today.
+// Une mission confirmed + payment_status='paid' va prioritairement dans 'paid'.
 type StatusGroup = 'pending' | 'upcoming' | 'paid' | 'live' | 'done' | 'canceled';
 
 function bucket(m: MissionView): StatusGroup {
   const s = m.status;
-  // Si la mission est confirmée ET encaissée (= client a payé Chefs Talents),
-  // elle va dans le bucket 'paid' (= « Encaissées »).
-  if (s === 'confirmed' && m.paymentStatus === 'paid') return 'paid';
-  if (['offered', 'pending', 'pitched'].includes(s)) return 'pending';
-  if (['confirmed', 'upcoming', 'scheduled', 'accepted'].includes(s)) return 'upcoming';
-  if (['live', 'in_progress'].includes(s)) return 'live';
-  if (['done', 'completed'].includes(s)) return 'done';
+
+  // 1. Annulées / déclinées / expirées → bucket 'canceled' (peu importe les dates)
   if (['canceled', 'cancelled', 'declined', 'expired'].includes(s)) return 'canceled';
+
+  // 2. Pas encore confirmée (offered/pending/pitched) → 'pending'
+  if (['offered', 'pending', 'pitched'].includes(s)) return 'pending';
+
+  // 3. Confirmée ET encaissée → 'paid' (priorité, l'admin veut voir le cash)
+  if (s === 'confirmed' && m.paymentStatus === 'paid') return 'paid';
+
+  // 4. Pour tout ce qui est « active » (confirmed / accepted / scheduled / live / completed),
+  //    on bucket selon la phase temporelle calculée depuis les dates.
+  if (['confirmed', 'upcoming', 'scheduled', 'accepted', 'live', 'in_progress', 'done', 'completed'].includes(s)) {
+    const phase = computeMissionLifecyclePhase({
+      status: s, start_date: m.startAt, end_date: m.endAt, chef_paid_at: m.chefPaidAt,
+    });
+    if (phase === 'upcoming') return 'upcoming';
+    if (phase === 'in_progress') return 'live';
+    if (phase === 'completed') return 'done';
+    return 'upcoming'; // fallback (pas de dates)
+  }
+
   return 'pending';
 }
 
@@ -235,11 +254,11 @@ export default function AdminMissionsPage() {
 
       {/* KPI quick — 6 buckets */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
-        <Kpi title="En attente" value={counts.pending} hint="offered" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} />
-        <Kpi title="À venir" value={counts.upcoming} hint="confirmed" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} />
+        <Kpi title="En attente" value={counts.pending} hint="non confirmées" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} />
+        <Kpi title="À venir" value={counts.upcoming} hint="début > aujourd'hui" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} />
         <Kpi title="Encaissées" value={counts.paid} hint="client a payé" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} accent="emerald" />
-        <Kpi title="En cours" value={counts.live} hint="in_progress" active={statusGroup === 'live'} onClick={() => setStatusGroup('live')} />
-        <Kpi title="Terminées" value={counts.done} hint="completed" active={statusGroup === 'done'} onClick={() => setStatusGroup('done')} />
+        <Kpi title="En cours" value={counts.live} hint="dates en cours" active={statusGroup === 'live'} onClick={() => setStatusGroup('live')} />
+        <Kpi title="Terminées" value={counts.done} hint="fin < aujourd'hui" active={statusGroup === 'done'} onClick={() => setStatusGroup('done')} />
         <Kpi title="Annulées" value={counts.canceled} hint="canceled" active={statusGroup === 'canceled'} onClick={() => setStatusGroup('canceled')} />
       </div>
 
