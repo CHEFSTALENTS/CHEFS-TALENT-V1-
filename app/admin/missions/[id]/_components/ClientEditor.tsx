@@ -15,6 +15,7 @@ type ClientLike = {
   phone: string | null;
   companyName: string | null;
   clientType: string | null;
+  notes?: string | null;
 };
 
 export default function ClientEditor({
@@ -31,6 +32,8 @@ export default function ClientEditor({
     email: client.email ?? '',
     phone: client.phone ?? '',
     companyName: client.companyName ?? '',
+    clientType: client.clientType ?? '',
+    notes: client.notes ?? '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,8 @@ export default function ClientEditor({
       email: client.email ?? '',
       phone: client.phone ?? '',
       companyName: client.companyName ?? '',
+      clientType: client.clientType ?? '',
+      notes: client.notes ?? '',
     });
   }, [client]);
 
@@ -61,6 +66,8 @@ export default function ClientEditor({
             email: form.email.trim() || null,
             phone: form.phone.trim() || null,
             companyName: form.companyName.trim() || null,
+            clientType: form.clientType || null,
+            notes: form.notes.trim() || null,
           }),
         },
       );
@@ -134,6 +141,29 @@ export default function ClientEditor({
               value={form.companyName}
               onChange={(e) => setForm((s) => ({ ...s, companyName: e.target.value }))}
               placeholder="Nom de la conciergerie / société"
+              className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
+            />
+          </Field>
+
+          <Field label="Type de client">
+            <select
+              value={form.clientType}
+              onChange={(e) => setForm((s) => ({ ...s, clientType: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
+            >
+              <option value="" className="bg-neutral-900">—</option>
+              <option value="b2c" className="bg-neutral-900">Particulier (B2C)</option>
+              <option value="b2b" className="bg-neutral-900">Entreprise (B2B)</option>
+              <option value="concierge" className="bg-neutral-900">Conciergerie / Apporteur</option>
+            </select>
+          </Field>
+
+          <Field label="Notes admin (interne, jamais affichées au client)">
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
+              rows={3}
+              placeholder="Ex: client exigeant, préfère WhatsApp, langue anglaise..."
               className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white"
             />
           </Field>
