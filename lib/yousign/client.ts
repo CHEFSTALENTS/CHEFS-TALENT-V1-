@@ -100,10 +100,23 @@ async function yousignFetch<T = any>(path: string, opts: FetchOpts = {}): Promis
   try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
 
   if (!res.ok) {
-    const detail = json?.detail || json?.message || text || `HTTP ${res.status}`;
-    const err: any = new Error(`YouSign ${opts.method || 'GET'} ${path} → ${res.status}: ${detail}`);
+    // YouSign v3 renvoie typiquement :
+    //   { detail: "You have some invalid params in your payload.",
+    //     status: 400, title: "Invalid params.",
+    //     violations: [{ field: "ordered_signers", message: "...", code: "..." }] }
+    const violations: Array<{ field?: string; message?: string; code?: string; propertyPath?: string }> =
+      Array.isArray(json?.violations) ? json.violations : [];
+    const violationsStr = violations
+      .map((v) => `${v.field || v.propertyPath || '?'}: ${v.message || v.code || 'invalid'}`)
+      .join(' | ');
+    const baseDetail = json?.detail || json?.message || text || `HTTP ${res.status}`;
+    const fullDetail = violationsStr ? `${baseDetail} → ${violationsStr}` : baseDetail;
+    // Log côté serveur (visible dans les logs Vercel)
+    console.error('[YouSign]', opts.method || 'GET', path, res.status, fullDetail, json);
+    const err: any = new Error(`YouSign ${opts.method || 'GET'} ${path} → ${res.status}: ${fullDetail}`);
     err.status = res.status;
     err.body = json;
+    err.violations = violations;
     throw err;
   }
   return json as T;
@@ -117,24 +130,34 @@ export async function createSignatureRequest(input: {
   name: string;                                      // "Contrat chef — Lucas Ibiza 2026"
   deliveryMode?: 'email' | 'none';                   // 'email' = YouSign envoie les invitations
   orderedSigners?: boolean;                          // false par défaut → tout le monde signe en parallèle
-  expirationDate?: string;                           // ISO 8601 — défaut YouSign = 90 jours
+  expirationDate?: string;                           // YYYY-MM-DD — défaut YouSign = 90 jours
+  timezone?: string;                                 // défaut "Europe/Paris"
   reminderSettings?: {
     interval_in_days: number;
     max_occurrences: number;
   };
 }): Promise<YousignSignatureRequest> {
+  // YouSign v3 est strict sur le payload : on ne sérialise QUE les clés non-undefined
+  // (sinon JSON.stringify les drop, ok — mais on construit prudemment pour éviter
+  // tout null implicite).
+  const body: Record<string, any> = {
+    name: input.name,
+    delivery_mode: input.deliveryMode || 'email',
+    ordered_signers: input.orderedSigners ?? false,
+    timezone: input.timezone || 'Europe/Paris',
+  };
+  if (input.expirationDate) {
+    body.expiration_date = input.expirationDate;
+  }
+  // reminder_settings : OPTIONNEL côté YouSign. Si invalide, ça 400. On omet
+  // par défaut (YouSign utilisera ses propres défauts), et on ne le pose que
+  // si explicitement demandé.
+  if (input.reminderSettings) {
+    body.reminder_settings = input.reminderSettings;
+  }
   return yousignFetch<YousignSignatureRequest>('/signature_requests', {
     method: 'POST',
-    body: {
-      name: input.name,
-      delivery_mode: input.deliveryMode || 'email',
-      ordered_signers: input.orderedSigners ?? false,
-      expiration_date: input.expirationDate,
-      reminder_settings: input.reminderSettings || {
-        interval_in_days: 3,
-        max_occurrences: 3,
-      },
-    },
+    body,
   });
 }
 
