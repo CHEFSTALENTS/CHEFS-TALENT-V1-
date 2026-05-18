@@ -187,7 +187,20 @@ export default function NccPanel({ requestId }: { requestId: string }) {
   return (
     <div className="space-y-4">
       {/* Bandeau status */}
-      <NccStatusBanner item={currentSig} loading={sigLoading} onRefresh={() => loadSignatureRequests()} />
+      <NccStatusBanner
+        item={currentSig}
+        loading={sigLoading}
+        onRefresh={async () => {
+          // Refresh manuel = force-sync YouSign d'abord (au cas où le webhook
+          // n'est jamais arrivé) puis recharge la DB
+          if (currentSig?.id) {
+            try {
+              await adminFetchRaw(`/api/admin/signature-requests/${encodeURIComponent(currentSig.id)}/sync`, { method: 'POST' });
+            } catch { /* best-effort, on continue */ }
+          }
+          await loadSignatureRequests();
+        }}
+      />
 
       {/* Form sections */}
       <div className="grid gap-4 md:grid-cols-2">
