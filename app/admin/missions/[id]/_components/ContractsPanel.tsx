@@ -41,6 +41,8 @@ type MissionLike = {
 type ClientLike = {
   fullName?: string | null;
   companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
 };
 
 export default function ContractsPanel({
@@ -434,14 +436,23 @@ function EssaiForm({ value, onChange }: { value: EssaiData; onChange: (v: EssaiD
       <Field label="Société client (optionnel)">
         <Input value={value.clientCompany} onChange={(v) => onChange({ ...value, clientCompany: v })} />
       </Field>
+      <Field label="Email client" hint="⚠️ Requis pour signature électronique (YouSign envoie ici l'invitation)">
+        <Input value={value.clientEmail} onChange={(v) => onChange({ ...value, clientEmail: v })} />
+      </Field>
+      <Field label="Téléphone client (optionnel)">
+        <Input value={value.clientPhone} onChange={(v) => onChange({ ...value, clientPhone: v })} />
+      </Field>
       <Field label="Représentant Agence">
         <Input value={value.agencyRep} onChange={(v) => onChange({ ...value, agencyRep: v })} />
       </Field>
       <Field label="Nom chef (prestataire)">
         <Input value={value.chefName} onChange={(v) => onChange({ ...value, chefName: v })} />
       </Field>
-      <Field label="Email chef">
+      <Field label="Email chef" hint="⚠️ Requis pour signature électronique">
         <Input value={value.chefEmail} onChange={(v) => onChange({ ...value, chefEmail: v })} />
+      </Field>
+      <Field label="Téléphone chef (optionnel)">
+        <Input value={value.chefPhone} onChange={(v) => onChange({ ...value, chefPhone: v })} />
       </Field>
 
       {/* Article 1 */}
@@ -744,6 +755,12 @@ function ClientForm({ value, onChange }: { value: ClientContractData; onChange: 
         </Field>
         <Field label="Société (si B2B)">
           <Input value={value.clientCompany} onChange={(v) => onChange({ ...value, clientCompany: v })} />
+        </Field>
+        <Field label="Email client" hint="⚠️ Requis pour signature électronique (YouSign envoie ici l'invitation)">
+          <Input value={value.clientEmail} onChange={(v) => onChange({ ...value, clientEmail: v })} />
+        </Field>
+        <Field label="Téléphone client (optionnel)">
+          <Input value={value.clientPhone} onChange={(v) => onChange({ ...value, clientPhone: v })} />
         </Field>
       </div>
 

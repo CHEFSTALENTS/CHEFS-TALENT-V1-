@@ -110,27 +110,56 @@ export function resolveContract(args: {
   const clientLike = {
     fullName: clientRequest?.full_name ?? clientRequest?.first_name ?? null,
     companyName: clientRequest?.company_name ?? null,
+    email: clientRequest?.email ?? null,
+    phone: clientRequest?.phone ?? null,
   };
 
   // ── Build HTML + snapshot
   let html: string;
   let contractSnapshot: any;
   let docName: string;
+  // Données client/chef finales (form data en priorité, sinon DB)
+  let resolvedClient: { fullName: string; email: string; phone: string; company: string };
+  let resolvedChefFromForm: { name: string; email: string; phone: string };
   if (kind === 'essai') {
     const data = { ...buildEssaiDefaults(missionLike, clientLike), ...(contractsData.essai ?? {}) } as EssaiData;
     html = renderEssai(data);
     contractSnapshot = data;
     docName = `essai_${data.trialDate || mission.start_date || ''}`;
+    resolvedClient = {
+      fullName: data.clientName || clientLike.fullName || '',
+      email: data.clientEmail || clientLike.email || '',
+      phone: data.clientPhone || clientLike.phone || '',
+      company: data.clientCompany || clientLike.companyName || '',
+    };
+    resolvedChefFromForm = {
+      name: data.chefName || mission.chef_name || '',
+      email: data.chefEmail || mission.chef_email || '',
+      phone: data.chefPhone || '',
+    };
   } else if (kind === 'chef') {
     const data = { ...buildChefDefaults(missionLike), ...(contractsData.chef ?? {}) } as ChefContractData;
     html = renderChef(data);
     contractSnapshot = data;
     docName = `chef_${data.chefName || mission.chef_name || ''}`;
+    resolvedClient = { fullName: '', email: '', phone: '', company: '' }; // pas utilisé pour chef
+    resolvedChefFromForm = {
+      name: data.chefName || mission.chef_name || '',
+      email: mission.chef_email || '',  // chefContract n'a pas chefEmail dans le snapshot — on prend la mission
+      phone: '',
+    };
   } else {
     const data = { ...buildClientDefaults(missionLike, clientLike), ...(contractsData.client ?? {}) } as ClientContractData;
     html = renderClient(data);
     contractSnapshot = data;
     docName = `client_${data.clientName || clientLike.fullName || ''}`;
+    resolvedClient = {
+      fullName: data.clientName || clientLike.fullName || '',
+      email: data.clientEmail || clientLike.email || '',
+      phone: data.clientPhone || clientLike.phone || '',
+      company: data.clientCompany || clientLike.companyName || '',
+    };
+    resolvedChefFromForm = { name: '', email: '', phone: '' }; // pas utilisé pour client
   }
 
   const filename = `Contrat_${kind}_${docName.replace(/[^a-zA-Z0-9_]/g, '_')}.pdf`;
@@ -141,44 +170,55 @@ export function resolveContract(args: {
 
   const chefProfile = chef
     ? {
-        firstName: chef.profile?.firstName || splitName(chef.profile?.name || mission.chef_name).first,
-        lastName: chef.profile?.lastName || splitName(chef.profile?.name || mission.chef_name).last,
+        firstName: chef.profile?.firstName || splitName(chef.profile?.name || resolvedChefFromForm.name || mission.chef_name).first,
+        lastName: chef.profile?.lastName || splitName(chef.profile?.name || resolvedChefFromForm.name || mission.chef_name).last,
         email: chef.email,
         phone: chef.profile?.phone || chef.profile?.phoneNumber || undefined,
       }
     : null;
 
-  // Client signataire (essai + client)
+  // Client signataire (essai + client) — form data prioritaire, request en fallback
   if (kind === 'essai' || kind === 'client') {
-    const fullName = clientRequest?.full_name || clientRequest?.first_name || '';
-    const email = clientRequest?.email || '';
+    const fullName = resolvedClient.fullName;
+    const email = resolvedClient.email;
     if (!email || !fullName) {
-      missingFields.push('client (full_name + email)');
+      const lacks: string[] = [];
+      if (!fullName) lacks.push('nom');
+      if (!email) lacks.push('email');
+      missingFields.push(`client (${lacks.join(' + ')})`);
     } else {
       const sn = splitName(fullName);
       signers.push({
         firstName: sn.first,
         lastName: sn.last,
         email,
-        phoneNumber: clientRequest?.phone || undefined,
+        phoneNumber: resolvedClient.phone || undefined,
         role: 'client',
-        warnings: validateEmail(email, 'client', !!clientRequest?.company_name),
+        warnings: validateEmail(email, 'client', !!resolvedClient.company),
       });
     }
   }
 
-  // Chef signataire (essai + chef)
+  // Chef signataire (essai + chef) — form prioritaire, profile DB en fallback
   if (kind === 'essai' || kind === 'chef') {
-    if (!chefProfile?.email) {
-      missingFields.push('chef (email + name)');
+    // Pour essai : chefEmail vient du contract snapshot (data.chefEmail). Si vide → fallback profile DB.
+    // Pour chef  : on prend prioritairement le profile DB (le snapshot chef n'a pas chefEmail).
+    const finalChefEmail = resolvedChefFromForm.email || chefProfile?.email || '';
+    const finalChefName = resolvedChefFromForm.name || (chefProfile ? `${chefProfile.firstName} ${chefProfile.lastName}`.trim() : '') || mission.chef_name || '';
+    if (!finalChefEmail || !finalChefName) {
+      const lacks: string[] = [];
+      if (!finalChefName) lacks.push('nom');
+      if (!finalChefEmail) lacks.push('email');
+      missingFields.push(`chef (${lacks.join(' + ')})`);
     } else {
+      const sn = splitName(finalChefName);
       signers.push({
-        firstName: chefProfile.firstName,
-        lastName: chefProfile.lastName,
-        email: chefProfile.email,
-        phoneNumber: chefProfile.phone,
+        firstName: chefProfile?.firstName || sn.first,
+        lastName: chefProfile?.lastName || sn.last,
+        email: finalChefEmail,
+        phoneNumber: resolvedChefFromForm.phone || chefProfile?.phone || undefined,
         role: 'chef',
-        warnings: validateEmail(chefProfile.email, 'chef'),
+        warnings: validateEmail(finalChefEmail, 'chef'),
       });
     }
   }
