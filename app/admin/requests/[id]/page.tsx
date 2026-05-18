@@ -298,12 +298,14 @@ export default function AdminRequestDetailPage() {
           </Panel>
 
           {/* NCC concierge — accord de non-contournement à 4 parties (apporteur, chef, client, Thomas) */}
-          <Panel
-            title="NCC concierge"
-            subtitle="Accord de Non-Contournement & Confidentialité — envoi YouSign aux 4 parties"
-          >
-            <NccPanel requestId={id} />
-          </Panel>
+          <div id="ncc" className="scroll-mt-24">
+            <Panel
+              title="NCC concierge"
+              subtitle="Accord de Non-Contournement & Confidentialité — envoi YouSign aux 4 parties"
+            >
+              <NccPanel requestId={id} />
+            </Panel>
+          </div>
 
           <Panel
             title="Chefs matchables"
