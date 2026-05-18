@@ -279,6 +279,32 @@ export async function deleteSignatureRequest(signatureRequestId: string): Promis
   }
 }
 
+/**
+ * Annule une signature_request en cours (status='ongoing'). YouSign envoie
+ * un email aux signataires non encore signés pour les notifier de l'annulation.
+ *
+ * Différence avec deleteSignatureRequest :
+ *   - DELETE ne marche QUE sur les status 'draft' (jamais activés)
+ *   - cancel marche sur les 'ongoing' (déjà activés, invitations envoyées)
+ *
+ * @param reason - Raison transmise aux signataires dans l'email d'annulation
+ */
+export async function cancelSignatureRequest(
+  signatureRequestId: string,
+  reason?: string,
+): Promise<YousignSignatureRequest> {
+  return yousignFetch<YousignSignatureRequest>(
+    `/signature_requests/${encodeURIComponent(signatureRequestId)}/cancel`,
+    {
+      method: 'POST',
+      body: {
+        reason: reason || 'cancelled_by_sender',
+        custom_note: reason || 'Annulation par l\'Agence',
+      },
+    },
+  );
+}
+
 // ────────────────────────────────────────────────────────────
 // 5. Lecture (status, signed document)
 // ────────────────────────────────────────────────────────────
