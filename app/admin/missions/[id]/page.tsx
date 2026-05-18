@@ -8,6 +8,7 @@ import MarkPaidModal from '../_components/MarkPaidModal';
 import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
+import ChefReplacementPanel from './_components/ChefReplacementPanel';
 import type { ContractsData } from './_lib/contracts';
 import {
   Loader2,
@@ -681,6 +682,27 @@ export default function AdminMissionDetailPage() {
             </div>
           </div>
           <PaymentPlanPanel missionId={mission.id} />
+        </div>
+      </div>
+
+      {/* Panneau Remplacement chef : historique + split tarifaire prorata */}
+      <div className="px-6 pb-2">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-white">Remplacement chef</div>
+            <div className="text-xs text-white/45 mt-0.5">
+              En cas d'indisponibilité du chef en cours de mission — calcul du split au prorata des jours travaillés.
+            </div>
+          </div>
+          <ChefReplacementPanel
+            missionId={mission.id}
+            currentChefName={mission.chef_name}
+            currentChefEmail={mission.chef_email}
+            missionStartDate={mission.start_date}
+            missionEndDate={mission.end_date}
+            chefAmount={mission.chef_amount}
+            onChefReplaced={() => refresh()}
+          />
         </div>
       </div>
 
