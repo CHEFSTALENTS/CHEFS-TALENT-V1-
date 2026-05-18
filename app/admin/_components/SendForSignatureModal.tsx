@@ -115,13 +115,13 @@ export default function SendForSignatureModal(props: SendForSignatureModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
     >
       <div
-        className="relative w-full max-w-5xl max-h-[92vh] flex flex-col bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-5xl max-h-[96vh] sm:max-h-[92vh] flex flex-col bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
         role="dialog"
         aria-modal="true"
       >
@@ -150,7 +150,7 @@ export default function SendForSignatureModal(props: SendForSignatureModalProps)
         )}
 
         {/* Body */}
-        <div className="flex-1 overflow-auto p-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <div className="flex-1 overflow-auto p-4 sm:p-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
           {/* Colonne gauche : signataires + checkbox */}
           <div className="space-y-4 min-w-0">
             <div>
@@ -267,15 +267,14 @@ export default function SendForSignatureModal(props: SendForSignatureModalProps)
             <div className="text-xs uppercase tracking-wider text-white/45 mb-2">Aperçu</div>
             <div className="rounded-xl border border-white/10 bg-white overflow-hidden">
               {loading ? (
-                <div className="h-[60vh] flex items-center justify-center text-stone-500">
+                <div className="h-[40vh] md:h-[60vh] flex items-center justify-center text-stone-500">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : (
                 <iframe
                   srcDoc={html}
                   title="Aperçu contrat"
-                  className="w-full"
-                  style={{ height: '60vh', border: 0 }}
+                  className="w-full h-[40vh] md:h-[60vh] border-0"
                 />
               )}
             </div>

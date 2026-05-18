@@ -205,7 +205,8 @@ export default function PaymentPlanPanel({ missionId }: { missionId: string }) {
         </div>
       ) : (
         <div className="border border-white/10 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-[1.2fr_1fr_0.8fr_1.2fr_1.5fr_auto] gap-2 px-3 py-2 bg-white/5 text-[10px] uppercase tracking-wider text-white/45 font-semibold">
+          {/* Header (visible ≥ md uniquement — sur mobile chaque row est une card avec labels intégrés) */}
+          <div className="hidden md:grid grid-cols-[1.2fr_1fr_0.8fr_1.2fr_1.5fr_auto] gap-2 px-3 py-2 bg-white/5 text-[10px] uppercase tracking-wider text-white/45 font-semibold">
             <div>Date</div>
             <div>Montant</div>
             <div>Statut</div>
@@ -335,44 +336,72 @@ function PaymentRow({
   onCancel: () => void;
   onDelete: () => void;
 }) {
+  // Mobile : card empilée verticalement avec labels.
+  // Desktop (md+) : grid 6 colonnes comme avant.
   return (
-    <div className="grid grid-cols-[1.2fr_1fr_0.8fr_1.2fr_1.5fr_auto] gap-2 items-center px-3 py-2.5 border-t border-white/10 text-sm">
-      <div>
-        <div className="text-white font-medium">{fmtDate(item.dueDate)}</div>
-        {item.label && <div className="text-[11px] text-white/45 mt-0.5">{item.label}</div>}
+    <div className="border-t border-white/10 px-3 py-3 text-sm md:grid md:grid-cols-[1.2fr_1fr_0.8fr_1.2fr_1.5fr_auto] md:gap-2 md:items-center md:py-2.5">
+      {/* Date + label */}
+      <div className="flex items-center justify-between md:block">
+        <div className="md:hidden text-[10px] uppercase tracking-wider text-white/40 font-semibold">Date</div>
+        <div>
+          <div className="text-white font-medium">{fmtDate(item.dueDate)}</div>
+          {item.label && <div className="text-[11px] text-white/45 mt-0.5">{item.label}</div>}
+        </div>
       </div>
-      <div className="text-white font-semibold">{fmtEur(item.amountEur)}</div>
-      <div>
-        <StatusBadge status={item.status} isOverdue={item.isOverdue} />
-        {item.isOverdue && (
-          <div className="text-[10px] text-red-300/80 mt-0.5">+{item.daysOverdue}j de retard</div>
-        )}
+
+      {/* Montant */}
+      <div className="flex items-center justify-between mt-2 md:mt-0">
+        <div className="md:hidden text-[10px] uppercase tracking-wider text-white/40 font-semibold">Montant</div>
+        <div className="text-white font-semibold">{fmtEur(item.amountEur)}</div>
       </div>
-      <div className="text-xs text-white/65">
-        {item.paymentMethod ? METHOD_LABELS[item.paymentMethod] : '—'}
-        {item.paidAt && (
-          <div className="text-[10px] text-white/40 mt-0.5">le {fmtDate(item.paidAt.slice(0, 10))}</div>
-        )}
+
+      {/* Statut */}
+      <div className="flex items-center justify-between mt-2 md:mt-0">
+        <div className="md:hidden text-[10px] uppercase tracking-wider text-white/40 font-semibold">Statut</div>
+        <div>
+          <StatusBadge status={item.status} isOverdue={item.isOverdue} />
+          {item.isOverdue && (
+            <div className="text-[10px] text-red-300/80 mt-0.5 text-right md:text-left">+{item.daysOverdue}j de retard</div>
+          )}
+        </div>
       </div>
-      <div className="text-xs text-white/65 truncate" title={item.paymentReference || item.notes || ''}>
-        {item.paymentReference || item.notes || '—'}
-        {item.reminderCount > 0 && (
-          <span className="ml-1 text-[10px] text-amber-300/70" title={`Dernière relance : ${item.lastRemindedAt ? fmtDate(item.lastRemindedAt.slice(0, 10)) : '—'}`}>
-            · {item.reminderCount} relance{item.reminderCount > 1 ? 's' : ''}
-          </span>
-        )}
+
+      {/* Méthode */}
+      <div className="flex items-center justify-between mt-2 md:mt-0">
+        <div className="md:hidden text-[10px] uppercase tracking-wider text-white/40 font-semibold">Méthode</div>
+        <div className="text-xs text-white/65 text-right md:text-left">
+          {item.paymentMethod ? METHOD_LABELS[item.paymentMethod] : '—'}
+          {item.paidAt && (
+            <div className="text-[10px] text-white/40 mt-0.5">le {fmtDate(item.paidAt.slice(0, 10))}</div>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-1 justify-end">
+
+      {/* Réf / Notes */}
+      <div className="flex items-center justify-between mt-2 md:mt-0 md:min-w-0">
+        <div className="md:hidden text-[10px] uppercase tracking-wider text-white/40 font-semibold">Réf / Notes</div>
+        <div className="text-xs text-white/65 truncate text-right md:text-left max-w-[60%] md:max-w-none" title={item.paymentReference || item.notes || ''}>
+          {item.paymentReference || item.notes || '—'}
+          {item.reminderCount > 0 && (
+            <span className="ml-1 text-[10px] text-amber-300/70" title={`Dernière relance : ${item.lastRemindedAt ? fmtDate(item.lastRemindedAt.slice(0, 10)) : '—'}`}>
+              · {item.reminderCount} relance{item.reminderCount > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 md:gap-1 justify-start md:justify-end mt-3 md:mt-0 flex-wrap">
         {item.status === 'pending' && (
           <>
             <button onClick={onMarkPaid} disabled={busy}
-              className="px-2 py-1 text-[11px] rounded-md border border-emerald-400/30 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15 disabled:opacity-50"
+              className="px-2.5 py-1.5 md:py-1 text-[11px] rounded-md border border-emerald-400/30 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/15 disabled:opacity-50"
               title="Marquer comme payée">
               ✓ Payée
             </button>
             {item.isOverdue && (
               <button onClick={onMarkReminded} disabled={busy}
-                className="px-2 py-1 text-[11px] rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15 disabled:opacity-50"
+                className="px-2.5 py-1.5 md:py-1 text-[11px] rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15 disabled:opacity-50"
                 title="Marquer comme relancée (incrémente le compteur de relances)">
                 <RefreshCcw className="w-3 h-3 inline mr-0.5" />Relancé
               </button>
@@ -381,22 +410,22 @@ function PaymentRow({
         )}
         {item.status === 'paid' && (
           <button onClick={onUnmarkPaid} disabled={busy}
-            className="px-2 py-1 text-[11px] rounded-md border border-white/10 bg-white/5 text-white/65 hover:bg-white/10 disabled:opacity-50"
+            className="px-2.5 py-1.5 md:py-1 text-[11px] rounded-md border border-white/10 bg-white/5 text-white/65 hover:bg-white/10 disabled:opacity-50"
             title="Repasser en attente">
             ↩ Annuler paiement
           </button>
         )}
         {item.status === 'pending' && (
           <button onClick={onCancel} disabled={busy}
-            className="p-1 text-white/40 hover:text-white/65 disabled:opacity-50"
-            title="Annuler cette échéance (n'est plus comptée dans le total dû)">
-            <X className="w-3.5 h-3.5" />
+            className="p-1.5 md:p-1 text-white/40 hover:text-white/65 disabled:opacity-50"
+            title="Annuler cette échéance">
+            <X className="w-4 h-4 md:w-3.5 md:h-3.5" />
           </button>
         )}
         <button onClick={onDelete} disabled={busy}
-          className="p-1 text-white/40 hover:text-red-300 disabled:opacity-50"
+          className="p-1.5 md:p-1 text-white/40 hover:text-red-300 disabled:opacity-50"
           title="Supprimer définitivement">
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-4 h-4 md:w-3.5 md:h-3.5" />
         </button>
       </div>
     </div>
