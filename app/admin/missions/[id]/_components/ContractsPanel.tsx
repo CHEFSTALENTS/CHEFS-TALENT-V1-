@@ -7,7 +7,7 @@
 // Sauvegarde via PATCH /api/admin/missions/[id] avec contractsData JSONB.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Copy, Eye, FileDown, Loader2, Save, Send, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, Eye, FileDown, Loader2, RefreshCw, Save, Send, XCircle } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import SendForSignatureModal, { type ModalSigner } from '@/app/admin/_components/SendForSignatureModal';
 import {
@@ -113,8 +113,8 @@ export default function ContractsPanel({
     canSend: boolean;
   } | null>(null);
 
-  const loadSignatureRequests = useCallback(async () => {
-    setSigLoading(true);
+  const loadSignatureRequests = useCallback(async (silent = false) => {
+    if (!silent) setSigLoading(true);
     try {
       const r = await adminFetchRaw(`/api/admin/missions/${encodeURIComponent(mission.id)}/signature-requests`);
       const json = await r.json();
@@ -122,13 +122,26 @@ export default function ContractsPanel({
         setSigItems(json.items as SignatureItem[]);
       }
     } catch { /* silencieux : non-bloquant */ }
-    finally { setSigLoading(false); }
+    finally { if (!silent) setSigLoading(false); }
   }, [mission.id]);
 
   useEffect(() => { loadSignatureRequests(); }, [loadSignatureRequests]);
 
   // Dernier signature_request pour le kind affiché (le plus récent en premier)
   const currentSig = useMemo(() => sigItems.find((s) => s.kind === tab) || null, [sigItems, tab]);
+
+  // Auto-polling toutes les 20s si une signature est en cours (status='ongoing'
+  // ou 'draft') pour détecter automatiquement la fin de signature côté YouSign
+  // sans que l'admin ait à recharger la page. Stop dès qu'il n'y a plus rien
+  // d'actif (économise des requêtes).
+  useEffect(() => {
+    const hasActiveSig = sigItems.some((s) => s.status === 'ongoing' || s.status === 'draft');
+    if (!hasActiveSig) return;
+    const interval = setInterval(() => {
+      loadSignatureRequests(true); // silent = pas de spinner
+    }, 20_000);
+    return () => clearInterval(interval);
+  }, [sigItems, loadSignatureRequests]);
 
   // Étape 1 : ouvre le modal et charge la preview (signataires + HTML rendu serveur)
   // L'admin doit ensuite cocher « j'ai vérifié » puis cliquer Confirmer pour
@@ -364,7 +377,12 @@ export default function ContractsPanel({
       </div>
 
       {/* Bandeau status signature pour le tab courant */}
-      <SignatureStatusBanner item={currentSig} loading={sigLoading} onCancel={cancelCurrentSignature} />
+      <SignatureStatusBanner
+        item={currentSig}
+        loading={sigLoading}
+        onCancel={cancelCurrentSignature}
+        onRefresh={() => loadSignatureRequests()}
+      />
 
       {/* Forms */}
       <div className="grid gap-4">
@@ -1128,10 +1146,12 @@ function SignatureStatusBanner({
   item,
   loading,
   onCancel,
+  onRefresh,
 }: {
   item: SignatureBannerItem;
   loading: boolean;
   onCancel?: () => void;
+  onRefresh?: () => void;
 }) {
   if (loading && !item) {
     return (
@@ -1165,6 +1185,8 @@ function SignatureStatusBanner({
   const sentAt = item.sentAt ? new Date(item.sentAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : null;
   const completedAt = item.completedAt ? new Date(item.completedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : null;
 
+  const isActiveStatus = item.status === 'ongoing' || item.status === 'draft';
+
   return (
     <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
       <div className="flex items-center gap-3 flex-wrap">
@@ -1176,15 +1198,34 @@ function SignatureStatusBanner({
         {(item.status === 'declined' || item.status === 'error') && (
           <XCircle className="h-4 w-4 text-red-400" />
         )}
-        <div className="ml-auto flex items-center gap-3 text-[11px] text-white/55">
+        {/* Indicateur auto-refresh (visible si status actif) */}
+        {isActiveStatus && (
+          <span className="text-[10px] text-white/35 italic flex items-center gap-1" title="Le statut se rafraîchit automatiquement toutes les 20 secondes">
+            <span className="inline-block w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+            auto-refresh
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-2 flex-wrap text-[11px] text-white/55">
           {sentAt && <span>Envoyé : {sentAt}</span>}
           {completedAt && <span>Signé : {completedAt}</span>}
           <span>{signedCount} signataire{signedCount > 1 ? 's' : ''}</span>
+          {/* Bouton refresh manuel */}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="ml-1 inline-flex items-center justify-center w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-white/65 hover:bg-white/10 hover:text-white transition disabled:opacity-50"
+              title="Rafraîchir le statut depuis YouSign"
+              aria-label="Rafraîchir"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
           {/* Bouton annuler — visible uniquement pour les status annulables */}
-          {onCancel && (item.status === 'ongoing' || item.status === 'draft') && (
+          {onCancel && isActiveStatus && (
             <button
               onClick={onCancel}
-              className="ml-1 px-2.5 py-1 rounded-lg border border-red-400/30 bg-red-400/10 text-red-200 hover:bg-red-400/20 transition text-[11px] font-medium"
+              className="px-2.5 py-1 rounded-lg border border-red-400/30 bg-red-400/10 text-red-200 hover:bg-red-400/20 transition text-[11px] font-medium"
               title="Annule la signature côté YouSign et permet de relancer un nouvel envoi"
             >
               Annuler
