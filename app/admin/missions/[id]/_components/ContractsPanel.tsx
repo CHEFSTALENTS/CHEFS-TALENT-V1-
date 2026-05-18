@@ -190,7 +190,18 @@ export default function ContractsPanel({
             .join('\n');
           throw new Error(`${msg}\n\nDétail YouSign :\n${vStr}`);
         }
-        throw new Error(msg);
+        // Pas de violations → on tente de surfacer detail.title / detail.detail
+        // et un extrait du body pour debug si YouSign ne renvoie qu'un message générique.
+        const d = json?.detail;
+        if (d && typeof d === 'object') {
+          const extra = [d.title, d.detail, d.code].filter(Boolean).join(' — ');
+          if (extra) throw new Error(`${msg}\n\nDétail YouSign : ${extra}\n\n(voir logs Vercel pour le payload complet)`);
+          try {
+            const bodyStr = JSON.stringify(d, null, 2);
+            throw new Error(`${msg}\n\nRéponse YouSign brute :\n${bodyStr.slice(0, 500)}`);
+          } catch { /* fallthrough */ }
+        }
+        throw new Error(`${msg}\n\n(YouSign n'a pas fourni de détail précis — voir logs Vercel)`);
       }
       await loadSignatureRequests();
       setModalOpen(false);
