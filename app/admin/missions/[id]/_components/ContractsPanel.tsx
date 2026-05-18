@@ -843,7 +843,7 @@ function ClientForm({ value, onChange }: { value: ClientContractData; onChange: 
             onChange={(v) => onChange({ ...value, tvaRegime: v as any })}
           />
         </Field>
-        <Field label="Modalités de règlement">
+        <Field label="Modalités de règlement (échelonnement)">
           <Select
             value={value.paymentMode}
             options={[
@@ -852,6 +852,20 @@ function ClientForm({ value, onChange }: { value: ClientContractData; onChange: 
               { value: 'custom', label: 'Personnalisé…' },
             ]}
             onChange={(v) => onChange({ ...value, paymentMode: v as any })}
+          />
+        </Field>
+        <Field
+          label="Moyen de paiement"
+          hint="Virement par défaut. Lien CB pour un paiement immédiat (Stripe). « Au choix » laisse les deux options au client."
+        >
+          <Select
+            value={value.paymentMethod}
+            options={[
+              { value: 'transfer', label: 'Virement bancaire' },
+              { value: 'card_link', label: 'Lien de paiement CB' },
+              { value: 'choice', label: 'Au choix du client (virement OU CB)' },
+            ]}
+            onChange={(v) => onChange({ ...value, paymentMethod: v as any })}
           />
         </Field>
         {value.paymentMode === 'custom' ? (
