@@ -100,14 +100,20 @@ async function yousignFetch<T = any>(path: string, opts: FetchOpts = {}): Promis
   try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
 
   if (!res.ok) {
-    // YouSign v3 renvoie typiquement :
-    //   { detail: "You have some invalid params in your payload.",
-    //     status: 400, title: "Invalid params.",
-    //     violations: [{ field: "ordered_signers", message: "...", code: "..." }] }
-    const violations: Array<{ field?: string; message?: string; code?: string; propertyPath?: string }> =
-      Array.isArray(json?.violations) ? json.violations : [];
+    // YouSign v3 renvoie selon les endpoints SOIT :
+    //   format A (problem+json) : { detail, violations: [{ field, message, code }] }
+    //   format B (custom)       : { detail, type, invalid_params: [{ name, reason }] }
+    // On supporte les deux et on les normalise en un seul `violations[]`.
+    const rawViolations: any[] = Array.isArray(json?.violations) ? json.violations
+      : Array.isArray(json?.invalid_params) ? json.invalid_params
+      : [];
+    const violations = rawViolations.map((v: any) => ({
+      field: v.field || v.name || v.propertyPath || undefined,
+      message: v.message || v.reason || v.code || undefined,
+      code: v.code || v.type || undefined,
+    }));
     const violationsStr = violations
-      .map((v) => `${v.field || v.propertyPath || '?'}: ${v.message || v.code || 'invalid'}`)
+      .map((v) => `${v.field || '?'}: ${v.message || 'invalid'}`)
       .join(' | ');
     const baseDetail = json?.detail || json?.message || text || `HTTP ${res.status}`;
     const fullDetail = violationsStr ? `${baseDetail} → ${violationsStr}` : baseDetail;
@@ -392,11 +398,15 @@ export async function sendForSignature(input: {
         documentId: doc.id,
         signer: input.signers[i],
         signatureField: {
-          page: placements[i].page ?? 1,
-          x: placements[i].x,
-          y: placements[i].y,
-          width: placements[i].width ?? 140,
-          height: placements[i].height ?? 50,
+          // ⚠️ YouSign v3 exige des INTEGERS pour les coordonnées de fields.
+          // pdf-lib renvoie la largeur d'une page A4 = 595.275590551... → les
+          // calculs (gap, x, fieldW) produisent des floats → 400 invalid_params.
+          // Math.round() systématique avant envoi.
+          page: Math.round(placements[i].page ?? 1),
+          x: Math.round(placements[i].x),
+          y: Math.round(placements[i].y),
+          width: Math.round(placements[i].width ?? 140),
+          height: Math.round(placements[i].height ?? 50),
         },
       });
       createdSigners.push(created);
