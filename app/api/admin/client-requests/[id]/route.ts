@@ -58,6 +58,19 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
       patch.company_name = strOrNull(body.companyName);
     }
 
+    if (body.clientType !== undefined) {
+      const ct = strOrNull(body.clientType);
+      // Valeurs autorisées : b2c (privé) / b2b (entreprise) / concierge (apporteur)
+      if (ct && !['b2c', 'b2b', 'concierge'].includes(ct)) {
+        return NextResponse.json({ error: 'Invalid clientType (b2c|b2b|concierge)' }, { status: 400 });
+      }
+      patch.client_type = ct;
+    }
+
+    if (body.notes !== undefined) {
+      patch.notes = strOrNull(body.notes);
+    }
+
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: 'No valid field to update' }, { status: 400 });
     }
@@ -67,7 +80,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
       .from(TABLE)
       .update(patch)
       .eq('id', id)
-      .select('id, email, full_name, first_name, phone, company_name, client_type')
+      .select('id, email, full_name, first_name, phone, company_name, client_type, notes')
       .single();
 
     if (error) {
@@ -89,6 +102,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
         phone: data.phone,
         companyName: data.company_name,
         clientType: data.client_type,
+        notes: data.notes,
       },
     });
   } catch (e: any) {
