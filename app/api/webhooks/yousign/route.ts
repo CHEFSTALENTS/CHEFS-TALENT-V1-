@@ -29,6 +29,7 @@ import {
   getSignatureRequest,
 } from '@/lib/yousign/client';
 import { uploadSignedContractToDrive } from '@/lib/storage/googleDrive';
+import { sendContractSignedNotification } from '@/lib/email/sendContractSignedNotification';
 
 function supabaseAdmin() {
   return createClient(
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
     .from('signature_requests')
     .update(updates)
     .eq('yousign_request_id', sigRequestId)
-    .select('id, kind, target_kind, target_id')
+    .select('id, kind, target_kind, target_id, signers')
     .maybeSingle();
 
   if (updErr) {
@@ -111,22 +112,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, warning: 'unknown signature_request' });
   }
 
-  // 5. Si signé : récupère le PDF signé et l'archive dans Supabase Storage + Google Drive
+  // 5. Si signé : récupère le PDF signé, archive Supabase Storage + Google Drive,
+  //    puis notifie l'admin par email avec le PDF en pièce jointe.
   if (newStatus === 'done') {
+    let signedPdfBuffer: Buffer | null = null;
+    let signedFilename = `Contrat_${sigRow.kind}_${sigRow.id.slice(0, 8)}.pdf`;
+
     try {
       const full = await getSignatureRequest(sigRequestId);
       const signableDoc = full.documents.find((d) => d.nature === 'signable_document') || full.documents[0];
       if (signableDoc) {
-        const pdfBuffer = await downloadSignedDocument({
+        signedPdfBuffer = await downloadSignedDocument({
           signatureRequestId: sigRequestId,
           documentId: signableDoc.id,
         });
+        if (signableDoc.filename) signedFilename = signableDoc.filename;
 
         // 5a. Backup Supabase Storage (bucket privé)
         const path = `${sigRow.kind}/${sigRow.id}.pdf`;
         const { error: upErr } = await supabase.storage
           .from(SIGNED_BUCKET)
-          .upload(path, pdfBuffer, {
+          .upload(path, signedPdfBuffer, {
             contentType: 'application/pdf',
             upsert: true,
           });
@@ -141,7 +147,7 @@ export async function POST(req: Request) {
         // 5b. Backup Google Drive (best-effort — skip silencieux si non activé)
         const driveFilename = signableDoc.filename || `Contrat_${sigRow.kind}_${sigRow.id.slice(0, 8)}.pdf`;
         const driveResult = await uploadSignedContractToDrive({
-          pdfBuffer,
+          pdfBuffer: signedPdfBuffer,
           filename: driveFilename,
           subfolder: sigRow.kind, // organisé par /YYYY/MM/[essai|chef|client|ncc]/
         });
@@ -161,6 +167,22 @@ export async function POST(req: Request) {
     } catch (e: any) {
       console.error('[webhooks/yousign] archive PDF error', e?.message || e);
       // On ne fail pas le webhook — l'archive PDF est best-effort
+    }
+
+    // 6. Email de notification à Thomas avec PDF signé en pièce jointe
+    try {
+      await sendContractSignedNotification({
+        kind: sigRow.kind as any,
+        targetKind: sigRow.target_kind as any,
+        targetId: sigRow.target_id || null,
+        signers: Array.isArray(sigRow.signers) ? sigRow.signers : [],
+        pdfBuffer: signedPdfBuffer || undefined,
+        filename: signedFilename,
+        yousignRequestId: sigRequestId,
+      });
+    } catch (e: any) {
+      console.error('[webhooks/yousign] notification email error', e?.message || e);
+      // Best-effort : ne fail pas le webhook
     }
   }
 

@@ -651,6 +651,13 @@ export default function AdminMissionDetailPage() {
                 >
                   Voir la demande →
                 </Link>
+                <Link
+                  href={`/admin/requests/${encodeURIComponent(client.id)}#ncc`}
+                  className="block w-full text-center px-3 py-2 rounded-lg border border-emerald-400/30 bg-emerald-400/10 text-sm font-medium text-emerald-100 hover:bg-emerald-400/15 transition"
+                  title="Le NCC concierge se gère depuis la fiche demande"
+                >
+                  📝 Envoyer NCC concierge →
+                </Link>
               </div>
             ) : (
               <div className="text-xs text-white/45 italic">
