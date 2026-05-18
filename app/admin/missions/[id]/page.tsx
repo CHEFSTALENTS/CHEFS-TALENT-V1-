@@ -9,7 +9,15 @@ import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
 import ChefReplacementPanel from './_components/ChefReplacementPanel';
+import ChefPaidModal from './_components/ChefPaidModal';
 import type { ContractsData } from './_lib/contracts';
+import {
+  computeMissionLifecyclePhase,
+  isContractFullySigned,
+  needsChefPaymentValidation,
+  pendingContractKinds,
+  PHASE_LABELS,
+} from '@/lib/missionLifecycle';
 import {
   Loader2,
   ArrowLeft,
@@ -58,6 +66,11 @@ type MissionRow = {
   paid_amount: number | null;
   payment_method: string | null;
   payment_reference: string | null;
+  // Paiement CHEF (différent du paid_* qui est l'encaissement CLIENT)
+  chef_paid_at: string | null;
+  chef_paid_amount: number | null;
+  chef_paid_method: string | null;
+  chef_paid_reference: string | null;
   created_at: string | null;
   updated_at: string | null;
   contracts_data: ContractsData | null;
@@ -111,6 +124,10 @@ export default function AdminMissionDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showPaidModal, setShowPaidModal] = useState(false);
   const [showClientEditor, setShowClientEditor] = useState(false);
+  const [showChefPaidModal, setShowChefPaidModal] = useState(false);
+
+  // Signature requests (pour validation auto « Contrat signé » dans timeline)
+  const [signatureRequests, setSignatureRequests] = useState<Array<{ kind: string; status: string; completedAt: string | null }>>([]);
 
   // Form édition contrat
   const [editingContract, setEditingContract] = useState(false);
@@ -131,6 +148,17 @@ export default function AdminMissionDetailPage() {
       setChef(json.chef);
       setClient(json.clientRequest);
       setContractDraft(json.mission?.contract_url || '');
+
+      // Fetch signature_requests pour validation auto « Contrat signé »
+      try {
+        const sigRes = await adminFetchRaw(
+          `/api/admin/missions/${encodeURIComponent(id)}/signature-requests`,
+        );
+        const sigJson = await sigRes.json();
+        if (sigRes.ok && sigJson.ok) {
+          setSignatureRequests(sigJson.items || []);
+        }
+      } catch { /* non-bloquant : timeline retombe sur contract_signed_at legacy */ }
     } catch (e: any) {
       console.error('[admin/missions/[id]] fetch failed', e);
       setError(e?.message || 'Erreur chargement');
@@ -210,6 +238,24 @@ export default function AdminMissionDetailPage() {
     await patch({ status: 'completed' }, 'completed');
   };
 
+  const unmarkChefPaid = async () => {
+    if (!confirm('Annuler le marquage « Chef payé » ?')) return;
+    setActionLoading('unmark-chef-paid');
+    try {
+      const r = await adminFetchRaw(
+        `/api/admin/missions/${encodeURIComponent(id)}/mark-chef-paid`,
+        { method: 'DELETE' },
+      );
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      await refresh();
+    } catch (e: any) {
+      alert(e?.message || 'Erreur serveur');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const toggleContractSigned = async () => {
     if (!mission) return;
     if (mission.contract_signed_at) {
@@ -258,10 +304,35 @@ export default function AdminMissionDetailPage() {
   const canRevertPaid = paymentStatus === 'paid';
   const canCancel = !['cancelled', 'declined', 'completed'].includes(status);
   const canMarkCompleted = status === 'confirmed' && paymentStatus === 'paid';
-  const contractSigned = !!mission.contract_signed_at;
+  // Contrat signé : auto via signature_requests (kind chef + client = done) OU legacy m.contract_signed_at
+  const contractSigned = isContractFullySigned(signatureRequests) || !!mission.contract_signed_at;
+
+  // Phase auto du cycle de vie (calculée selon dates start/end)
+  const lifecyclePhase = computeMissionLifecyclePhase(mission as any);
+  const needsChefPayment = needsChefPaymentValidation(mission as any);
+  const chefPaid = !!mission.chef_paid_at;
 
   return (
     <div className="p-6 space-y-5">
+      {/* Banner alerte rouge : mission terminée mais chef pas encore payé */}
+      {needsChefPayment && (
+        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex items-start gap-3">
+          <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse mt-1.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-red-100">⚠️ Paiement chef à valider</div>
+            <div className="text-xs text-red-200/85 mt-0.5">
+              La mission est terminée depuis le {fmtDate(mission.end_date)} mais le chef ({mission.chef_name || mission.chef_email}) n'a pas encore été marqué comme payé.
+            </div>
+          </div>
+          <button
+            onClick={() => setShowChefPaidModal(true)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
+          >
+            Marquer chef payé
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
@@ -275,9 +346,15 @@ export default function AdminMissionDetailPage() {
             {mission.title || `Mission ${mission.location || ''}`}
           </h1>
           <div className="flex items-center flex-wrap gap-2 mt-2">
+            <PhaseBadge phase={lifecyclePhase} />
             <StatusBadge status={status} />
             <PaymentBadge status={paymentStatus} />
             <ContractBadge signed={contractSigned} hasUrl={!!mission.contract_url} />
+            {chefPaid && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest bg-emerald-500/15 text-emerald-200 border border-emerald-500/30">
+                <BadgeCheck className="w-3 h-3" /> Chef payé
+              </span>
+            )}
             <span className="text-xs text-white/45">
               Créée le {fmtDate(mission.created_at)}
             </span>
@@ -320,6 +397,25 @@ export default function AdminMissionDetailPage() {
               variant="muted"
               loading={actionLoading === 'completed'}
               onClick={markCompleted}
+            />
+          )}
+          {/* Marquer chef payé — toujours dispo tant que pas marqué */}
+          {!chefPaid && (
+            <ActionBtn
+              icon={<BadgeCheck className="w-3.5 h-3.5" />}
+              label="Marquer chef payé"
+              variant={needsChefPayment ? 'danger' : 'success'}
+              loading={false}
+              onClick={() => setShowChefPaidModal(true)}
+            />
+          )}
+          {chefPaid && (
+            <ActionBtn
+              icon={<RotateCcw className="w-3.5 h-3.5" />}
+              label="Annuler chef payé"
+              variant="muted"
+              loading={actionLoading === 'unmark-chef-paid'}
+              onClick={unmarkChefPaid}
             />
           )}
           {canCancel && (
@@ -511,7 +607,7 @@ export default function AdminMissionDetailPage() {
 
           {/* Bloc Timeline */}
           <Panel title="Historique" subtitle="Cycle de vie de la mission">
-            <Timeline events={buildTimeline(mission)} />
+            <Timeline events={buildTimeline(mission, signatureRequests)} />
           </Panel>
         </div>
 
@@ -724,6 +820,20 @@ export default function AdminMissionDetailPage() {
           onClose={() => setShowPaidModal(false)}
           onSuccess={() => {
             setShowPaidModal(false);
+            refresh();
+          }}
+        />
+      )}
+
+      {/* Modal Marquer chef payé — montant pré-rempli = chef_amount */}
+      {showChefPaidModal && (
+        <ChefPaidModal
+          missionId={mission.id}
+          chefName={mission.chef_name}
+          defaultAmount={mission.chef_amount}
+          onClose={() => setShowChefPaidModal(false)}
+          onSuccess={() => {
+            setShowChefPaidModal(false);
             refresh();
           }}
         />
@@ -995,7 +1105,35 @@ type TimelineEvent = {
   done: boolean;
 };
 
-function buildTimeline(m: MissionRow): TimelineEvent[] {
+function buildTimeline(
+  m: MissionRow,
+  signatureRequests: Array<{ kind: string; status: string; completedAt: string | null }>,
+): TimelineEvent[] {
+  // Calcul auto « Contrat signé » via signature_requests (contrats chef + client,
+  // hors essai). Fallback sur m.contract_signed_at pour les missions legacy
+  // sans signatures YouSign.
+  const allMissionContractsSigned = isContractFullySigned(signatureRequests);
+  const lastSignedAt = (() => {
+    if (!allMissionContractsSigned) return null;
+    // Date du dernier "done" parmi chef/client
+    const completed = signatureRequests
+      .filter((s) => (s.kind === 'chef' || s.kind === 'client') && s.status === 'done')
+      .map((s) => s.completedAt)
+      .filter(Boolean) as string[];
+    if (completed.length === 0) return null;
+    return completed.sort().reverse()[0];
+  })();
+
+  const contractSigned = allMissionContractsSigned || !!m.contract_signed_at;
+  const contractSignedAt = lastSignedAt || m.contract_signed_at;
+
+  const pendingKinds = pendingContractKinds(signatureRequests);
+  const contractLabel = contractSigned
+    ? 'Contrat signé'
+    : pendingKinds.length > 0
+      ? `En attente signature : ${pendingKinds.map((k) => k === 'chef' ? 'chef' : 'client').join(' + ')}`
+      : 'Contrat pas encore envoyé';
+
   return [
     { label: 'Mission créée', date: m.created_at, done: true },
     {
@@ -1014,16 +1152,19 @@ function buildTimeline(m: MissionRow): TimelineEvent[] {
       done: !!m.confirmed_at,
     },
     {
-      label: m.contract_signed_at
-        ? 'Contrat signé'
-        : 'Contrat pas encore signé',
-      date: m.contract_signed_at,
-      done: !!m.contract_signed_at,
+      label: contractLabel,
+      date: contractSignedAt,
+      done: contractSigned,
     },
     {
-      label: m.paid_at ? 'Encaissement client' : 'En attente encaissement',
+      label: m.paid_at ? 'Encaissement client' : 'En attente encaissement client',
       date: m.paid_at,
       done: !!m.paid_at,
+    },
+    {
+      label: m.chef_paid_at ? 'Chef payé' : 'Chef pas encore payé',
+      date: m.chef_paid_at,
+      done: !!m.chef_paid_at,
     },
   ];
 }
@@ -1094,4 +1235,20 @@ function fmtDateLong(iso: string | null): string {
   } catch {
     return iso;
   }
+}
+
+// Badge phase auto (À venir / En cours / Terminée / Annulée)
+function PhaseBadge({ phase }: { phase: import('@/lib/missionLifecycle').MissionLifecyclePhase }) {
+  const styles: Record<string, string> = {
+    draft: 'bg-white/10 text-white/55 border-white/15',
+    upcoming: 'bg-sky-500/15 text-sky-200 border-sky-500/30',
+    in_progress: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+    completed: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+    cancelled: 'bg-white/10 text-white/55 border-white/15',
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold uppercase tracking-widest border ${styles[phase] || styles.draft}`}>
+      {PHASE_LABELS[phase]}
+    </span>
+  );
 }
