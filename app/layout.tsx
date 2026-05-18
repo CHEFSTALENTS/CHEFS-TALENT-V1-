@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import AnalyticsProvider from '@/lib/analytics/AnalyticsProvider';
+import LandingFloatingCTAs from '@/components/landing/LandingFloatingCTAs';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chefstalents.com'),
@@ -77,6 +78,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         </Script>
 
         <AnalyticsProvider>{children}</AnalyticsProvider>
+
+        {/* Bulles flottantes (WhatsApp + Formulaire) sur la landing — le composant
+            détecte lui-même la pathname et se cache sur /admin /chef /request /api */}
+        <LandingFloatingCTAs />
 
         {/* Google Ads gtag.js — conservé en plus de GTM le temps de migrer
             les conversions côté GTM UI. Compatible avec GTM (partage le
