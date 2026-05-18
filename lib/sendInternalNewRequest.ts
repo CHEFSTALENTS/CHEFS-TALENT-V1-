@@ -20,17 +20,20 @@ export async function sendInternalNewRequest(input: {
   message?: string;
   createdAtISO?: string;
 }) {
-  const to =
-    input.to ??
-    (process.env.INTERNAL_NOTIFY_EMAILS || '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+  // Fallback HARD-CODÉ à contact@chefstalents.com si INTERNAL_NOTIFY_EMAILS
+  // est absent → garantit qu'on reçoit TOUJOURS la notif quand un client envoie
+  // une demande (cohérent avec lib/email/sendInternalUpsellNotification.ts).
+  // ⚠️ Avec des Ads en cours, manquer une notif = potentiellement un lead perdu.
+  const envList = (process.env.INTERNAL_NOTIFY_EMAILS || 'contact@chefstalents.com')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const to = input.to ?? envList;
 
   if (!to || (Array.isArray(to) && to.length === 0)) {
-    // Pas d'email interne configuré => on ne bloque pas le flow
-    console.warn('[sendInternalNewRequest] No INTERNAL_NOTIFY_EMAILS set, skipping.');
-    return { skipped: true };
+    // Cas extrême : input.to=[] explicite — on bascule sur le fallback
+    console.error('[sendInternalNewRequest] explicit empty to, fallback contact@chefstalents.com');
   }
 
   const createdAt = input.createdAtISO || new Date().toISOString();
@@ -110,12 +113,23 @@ export async function sendInternalNewRequest(input: {
   </div>
   `.trim();
 
-  return resend.emails.send({
+  // Envoi + vérif explicite du résultat — Resend renvoie { data, error } et
+  // PAR DÉFAUT ne throw pas. On veut un log ERROR visible si l'envoi rate.
+  const result = await resend.emails.send({
     from: process.env.MAIL_FROM!,
-    to,
+    to: Array.isArray(to) && to.length > 0 ? to : envList,
     replyTo: 'Chef Talents <contact@chefstalents.com>',
     subject,
     text: txt,
     html,
   });
+
+  if ((result as any)?.error) {
+    console.error('[sendInternalNewRequest] Resend error:', (result as any).error, 'requestId:', input.requestId);
+    // On rethrow pour que le caller logge avec stack trace
+    throw new Error(`Resend internal notification failed: ${JSON.stringify((result as any).error)}`);
+  }
+
+  console.log('[sendInternalNewRequest] sent OK to:', Array.isArray(to) ? to.join(', ') : to, 'requestId:', input.requestId);
+  return result;
 }
