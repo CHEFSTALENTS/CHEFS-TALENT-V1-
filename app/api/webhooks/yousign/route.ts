@@ -28,6 +28,7 @@ import {
   downloadSignedDocument,
   getSignatureRequest,
 } from '@/lib/yousign/client';
+import { uploadSignedContractToDrive } from '@/lib/storage/googleDrive';
 
 function supabaseAdmin() {
   return createClient(
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, warning: 'unknown signature_request' });
   }
 
-  // 5. Si signé : récupère le PDF signé et l'archive dans Supabase Storage
+  // 5. Si signé : récupère le PDF signé et l'archive dans Supabase Storage + Google Drive
   if (newStatus === 'done') {
     try {
       const full = await getSignatureRequest(sigRequestId);
@@ -121,6 +122,7 @@ export async function POST(req: Request) {
           documentId: signableDoc.id,
         });
 
+        // 5a. Backup Supabase Storage (bucket privé)
         const path = `${sigRow.kind}/${sigRow.id}.pdf`;
         const { error: upErr } = await supabase.storage
           .from(SIGNED_BUCKET)
@@ -129,12 +131,30 @@ export async function POST(req: Request) {
             upsert: true,
           });
 
+        const dbUpdates: Record<string, any> = {};
         if (upErr) {
           console.error('[webhooks/yousign] upload storage error', upErr.message);
         } else {
+          dbUpdates.signed_pdf_url = path;
+        }
+
+        // 5b. Backup Google Drive (best-effort — skip silencieux si non activé)
+        const driveFilename = signableDoc.filename || `Contrat_${sigRow.kind}_${sigRow.id.slice(0, 8)}.pdf`;
+        const driveResult = await uploadSignedContractToDrive({
+          pdfBuffer,
+          filename: driveFilename,
+          subfolder: sigRow.kind, // organisé par /YYYY/MM/[essai|chef|client|ncc]/
+        });
+        if (driveResult) {
+          dbUpdates.drive_file_id = driveResult.fileId;
+          dbUpdates.drive_file_url = driveResult.webViewLink;
+        }
+
+        // Update DB en une seule requête si on a quelque chose à mettre
+        if (Object.keys(dbUpdates).length > 0) {
           await supabase
             .from('signature_requests')
-            .update({ signed_pdf_url: path })
+            .update(dbUpdates)
             .eq('id', sigRow.id);
         }
       }

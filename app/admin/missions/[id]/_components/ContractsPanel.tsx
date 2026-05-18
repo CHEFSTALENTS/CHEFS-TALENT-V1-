@@ -92,6 +92,7 @@ export default function ContractsPanel({
     completedAt: string | null;
     createdAt: string;
     signedPdfUrl: string | null;
+    driveFileUrl: string | null;
     errorMessage: string | null;
   };
   const [sigItems, setSigItems] = useState<SignatureItem[]>([]);
@@ -1070,6 +1071,7 @@ type SignatureBannerItem = {
   sentAt: string | null;
   completedAt: string | null;
   signedPdfUrl: string | null;
+  driveFileUrl: string | null;
   errorMessage: string | null;
 } | null;
 
@@ -1154,16 +1156,29 @@ function SignatureStatusBanner({
           ))}
         </div>
       )}
-      {item.signedPdfUrl && (
-        <div className="mt-2">
-          <a
-            href={item.signedPdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-xs text-emerald-300 hover:text-emerald-200 underline"
-          >
-            <FileDown className="mr-1 h-3.5 w-3.5" /> Télécharger le PDF signé
-          </a>
+      {(item.signedPdfUrl || item.driveFileUrl) && (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {item.signedPdfUrl && (
+            <a
+              href={item.signedPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-xs text-emerald-300 hover:text-emerald-200 underline"
+            >
+              <FileDown className="mr-1 h-3.5 w-3.5" /> Télécharger le PDF signé
+            </a>
+          )}
+          {item.driveFileUrl && (
+            <a
+              href={item.driveFileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-xs text-sky-300 hover:text-sky-200 underline"
+              title="Ouvre le PDF signé dans Google Drive"
+            >
+              📁 Voir dans Google Drive
+            </a>
+          )}
         </div>
       )}
       {item.errorMessage && (
