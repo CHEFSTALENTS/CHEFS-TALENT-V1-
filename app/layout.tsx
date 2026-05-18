@@ -51,8 +51,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
       </head>
       <body>
+        {/* ──────────────────────────────────────────────────────────────
+            Google Tag Manager — noscript fallback (premier enfant du body
+            comme requis par la doc GTM). ID configurable via
+            NEXT_PUBLIC_GTM_ID, fallback hard-codé GTM-W9G5ZJ9L.
+            ─────────────────────────────────────────────────────────── */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${process.env.NEXT_PUBLIC_GTM_ID || 'GTM-W9G5ZJ9L'}`}
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+          />
+        </noscript>
+
+        {/* GTM script — afterInteractive : ne bloque pas le first paint
+            mais charge dès que le browser est prêt. GTM va ensuite gérer
+            les autres tags (Analytics, Ads conversion, etc.) si configurés. */}
+        <Script id="gtm" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${process.env.NEXT_PUBLIC_GTM_ID || 'GTM-W9G5ZJ9L'}');`}
+        </Script>
+
         <AnalyticsProvider>{children}</AnalyticsProvider>
 
+        {/* Google Ads gtag.js — conservé en plus de GTM le temps de migrer
+            les conversions côté GTM UI. Compatible avec GTM (partage le
+            même dataLayer). */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18111694917"
           strategy="afterInteractive"
