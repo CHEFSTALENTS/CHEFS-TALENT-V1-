@@ -6,6 +6,12 @@ import { Plus, BadgeCheck, Loader2, RotateCcw } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import NewMissionModal from './_components/NewMissionModal';
 import MarkPaidModal from './_components/MarkPaidModal';
+import {
+  computeMissionLifecyclePhase,
+  needsChefPaymentValidation,
+  PHASE_LABELS,
+  type MissionLifecyclePhase,
+} from '@/lib/missionLifecycle';
 
 // Type Supabase row de la table missions (snake_case)
 type MissionRow = {
@@ -35,6 +41,8 @@ type MissionRow = {
   paid_amount: number | null;
   payment_method: string | null;
   payment_reference: string | null;
+  // Champs paiement CHEF (migration 2026-05-missions-chef-paid.sql)
+  chef_paid_at?: string | null;
 };
 
 // Vue normalisée pour l'UI (camelCase + champs dérivés)
@@ -54,6 +62,7 @@ type MissionView = {
   paidAt: string | null;
   paidAmount: number | null;
   paymentMethod: string | null;
+  chefPaidAt: string | null;
 };
 
 function normalizeMission(row: MissionRow): MissionView {
@@ -73,6 +82,7 @@ function normalizeMission(row: MissionRow): MissionView {
     paidAt: row.paid_at,
     paidAmount: row.paid_amount,
     paymentMethod: row.payment_method,
+    chefPaidAt: row.chef_paid_at || null,
   };
 }
 
@@ -297,8 +307,25 @@ export default function AdminMissionsPage() {
               ) : view.length === 0 ? (
                 <tr><td className="p-4 text-white/60" colSpan={8}>Aucune mission dans cette catégorie.</td></tr>
               ) : (
-                view.map((m) => (
-                  <tr key={m.id} className="border-t border-white/10 hover:bg-white/5 transition">
+                view.map((m) => {
+                  // Phase auto basée sur les dates (À venir / En cours / Terminée)
+                  const phase = computeMissionLifecyclePhase({
+                    status: m.status, start_date: m.startAt, end_date: m.endAt, chef_paid_at: m.chefPaidAt,
+                  });
+                  // Rouge si terminée + chef pas payé
+                  const needsChefPay = needsChefPaymentValidation({
+                    status: m.status, start_date: m.startAt, end_date: m.endAt, chef_paid_at: m.chefPaidAt,
+                  });
+                  return (
+                  <tr
+                    key={m.id}
+                    className={`border-t border-white/10 transition ${
+                      needsChefPay
+                        ? 'bg-red-500/[0.07] hover:bg-red-500/[0.12]'
+                        : 'hover:bg-white/5'
+                    }`}
+                    title={needsChefPay ? '⚠️ Mission terminée — paiement chef à valider' : undefined}
+                  >
                     <td className="p-3">
                       <div className="text-white font-medium leading-tight">
                         {shortText(m.chefName, 40)}
@@ -310,9 +337,15 @@ export default function AdminMissionsPage() {
                     <td className="p-3 text-white/70 whitespace-nowrap">{formatDate(m.startAt)}</td>
                     <td className="p-3 text-white/85 whitespace-nowrap">
                       {m.chefAmount != null ? `${m.chefAmount.toLocaleString('fr-FR')} €` : '—'}
+                      {needsChefPay && (
+                        <div className="text-[10px] text-red-300 mt-0.5 font-semibold">⚠ Chef non payé</div>
+                      )}
                     </td>
                     <td className="p-3">
-                      <StatusBadge status={m.status} />
+                      <div className="flex flex-col items-start gap-1">
+                        <PhaseBadge phase={phase} />
+                        <StatusBadge status={m.status} />
+                      </div>
                     </td>
                     <td className="p-3">
                       <PaymentBadge status={m.paymentStatus} />
@@ -361,7 +394,8 @@ export default function AdminMissionsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -497,6 +531,22 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>
       {s || '—'}
+    </span>
+  );
+}
+
+// Badge phase auto basée sur les dates start/end (À venir / En cours / Terminée)
+function PhaseBadge({ phase }: { phase: MissionLifecyclePhase }) {
+  const styles: Record<string, string> = {
+    draft: 'bg-white/10 text-white/55 border-white/15',
+    upcoming: 'bg-sky-500/15 text-sky-200 border-sky-500/30',
+    in_progress: 'bg-amber-500/15 text-amber-200 border-amber-500/30',
+    completed: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+    cancelled: 'bg-white/10 text-white/55 border-white/15',
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest font-semibold border ${styles[phase]}`}>
+      {PHASE_LABELS[phase]}
     </span>
   );
 }
