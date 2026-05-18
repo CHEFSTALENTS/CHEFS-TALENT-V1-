@@ -35,7 +35,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const supabase = supabaseAdmin();
   const { data: rows, error } = await supabase
     .from('signature_requests')
-    .select('id, kind, yousign_request_id, yousign_status, signers, sent_at, completed_at, signed_pdf_url, error_message, created_at')
+    .select('id, kind, yousign_request_id, yousign_status, signers, sent_at, completed_at, signed_pdf_url, drive_file_url, error_message, created_at')
     .eq('target_kind', 'mission')
     .eq('target_id', missionId)
     .order('created_at', { ascending: false });
@@ -64,6 +64,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       createdAt: r.created_at,
       errorMessage: r.error_message,
       signedPdfUrl: signedUrl,
+      driveFileUrl: r.drive_file_url,    // Lien direct vers le PDF dans Google Drive
     };
   }));
 
