@@ -10,9 +10,11 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0B0F19] text-stone-100">
-      <div className="flex">
+      {/* Stack vertical sur mobile (sidebar rendue en header + drawer),
+          horizontal à partir de md (sidebar fixe à gauche). */}
+      <div className="md:flex">
         <AdminSidebar />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6 min-w-0">
           <div className="mx-auto max-w-6xl">
             <AdminGate>{children}</AdminGate>
           </div>

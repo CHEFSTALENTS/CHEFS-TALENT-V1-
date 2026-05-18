@@ -377,7 +377,7 @@ export default function AdminDashboardPage() {
         <div className="text-sm text-white/60">Chargement…</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
             <KpiCard title="À traiter" value={kpi.todo} subtitle="new + in_review" tone="amber" right={<DeltaBadge value={kpi.reqDeltaPct} label="7j" />} href="/admin/requests?status=new" />
             <KpiCard title="B2B (new)" value={kpi.b2bNew} subtitle="concierge" tone="amber" href="/admin/requests?type=b2b&status=new" />
             <KpiCard title="B2C (new)" value={kpi.b2cNew} subtitle="private" tone="blue" href="/admin/requests?type=b2c&status=new" />

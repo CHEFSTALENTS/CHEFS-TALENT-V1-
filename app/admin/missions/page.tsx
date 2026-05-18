@@ -224,7 +224,7 @@ export default function AdminMissionsPage() {
       </div>
 
       {/* KPI quick — 6 buckets */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
         <Kpi title="En attente" value={counts.pending} hint="offered" active={statusGroup === 'pending'} onClick={() => setStatusGroup('pending')} />
         <Kpi title="À venir" value={counts.upcoming} hint="confirmed" active={statusGroup === 'upcoming'} onClick={() => setStatusGroup('upcoming')} />
         <Kpi title="Encaissées" value={counts.paid} hint="client a payé" active={statusGroup === 'paid'} onClick={() => setStatusGroup('paid')} accent="emerald" />

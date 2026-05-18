@@ -203,7 +203,7 @@ export default function AdminRequestsPage() {
       </div>
 
       {/* KPI quick */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Kpi title="À traiter" value={counts.todo} hint="new + in_review" active={statusGroup === 'todo'} onClick={() => setStatusGroup('todo')} />
         <Kpi title="En cours" value={counts.active} hint="assigned" active={statusGroup === 'active'} onClick={() => setStatusGroup('active')} />
         <Kpi title="Clos" value={counts.closed} hint="closed" active={statusGroup === 'closed'} onClick={() => setStatusGroup('closed')} />
