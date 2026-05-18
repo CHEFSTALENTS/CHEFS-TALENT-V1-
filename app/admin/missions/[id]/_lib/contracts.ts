@@ -19,8 +19,11 @@ export type EssaiData = {
   clientCivilite: 'Monsieur' | 'Madame' | '';
   clientName: string;
   clientCompany: string;
+  clientEmail: string;              // signature YouSign — éditable côté form
+  clientPhone: string;              // optionnel, E.164 (+33...)
   chefName: string;
   chefEmail: string;
+  chefPhone: string;                // optionnel, E.164
 
   // Article 1 — Objet
   recruitmentContext: string;       // ex: "un poste de chef privé résident à Paris, 7ème arrondissement"
@@ -134,6 +137,8 @@ export type ClientContractData = {
   clientCivilite: 'Monsieur' | 'Madame' | '';
   clientName: string;
   clientCompany: string;
+  clientEmail: string;                   // signature YouSign — éditable côté form
+  clientPhone: string;                   // optionnel, E.164 (+33...)
 
   // Article 2 — Conditions de la mission
   missionLocation: string;
@@ -205,6 +210,8 @@ type MissionLike = {
 type ClientLike = {
   fullName?: string | null;
   companyName?: string | null;
+  email?: string | null;
+  phone?: string | null;
 };
 
 export function buildEssaiDefaults(m: MissionLike, c?: ClientLike): EssaiData {
@@ -220,8 +227,11 @@ export function buildEssaiDefaults(m: MissionLike, c?: ClientLike): EssaiData {
     clientCivilite: '',
     clientName: c?.fullName || '',
     clientCompany: c?.companyName || '',
+    clientEmail: c?.email || '',
+    clientPhone: c?.phone || '',
     chefName: m.chef_name || '',
     chefEmail: m.chef_email || '',
+    chefPhone: '',
 
     recruitmentContext: loc
       ? `un poste de chef privé pour la mission située à ${loc}`
@@ -354,6 +364,8 @@ export function buildClientDefaults(m: MissionLike, c: ClientLike): ClientContra
     clientCivilite: '',
     clientName: c.fullName || '',
     clientCompany: c.companyName || '',
+    clientEmail: c.email || '',
+    clientPhone: c.phone || '',
 
     missionLocation: m.location || '',
     startDate: m.start_date || '',
