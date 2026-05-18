@@ -207,28 +207,40 @@ export async function addSigner(input: {
     height?: number;
   };
 }): Promise<YousignSigner> {
-  const body: any = {
-    info: {
-      first_name: input.signer.firstName,
-      last_name: input.signer.lastName,
-      email: input.signer.email,
-      phone_number: input.signer.phoneNumber,
-      locale: 'fr',
-    },
-    signature_level: input.signer.signatureLevel || 'electronic_signature',
-    signature_authentication_mode: input.signer.signatureAuthenticationMode || 'no_otp',
-    fields: input.signatureField
-      ? [{
-          document_id: input.documentId,
-          type: 'signature',
-          page: input.signatureField.page,
-          x: input.signatureField.x,
-          y: input.signatureField.y,
-          width: input.signatureField.width ?? 120,
-          height: input.signatureField.height ?? 40,
-        }]
-      : [],
+  // Construction défensive : on omet les clés undefined / vides plutôt que de
+  // laisser JSON.stringify le faire — certaines versions de YouSign sont
+  // strictes sur les types attendus (refus si null ou string vide).
+  const info: Record<string, any> = {
+    first_name: input.signer.firstName,
+    last_name: input.signer.lastName,
+    email: input.signer.email,
+    locale: 'fr',
   };
+  if (input.signer.phoneNumber && input.signer.phoneNumber.trim()) {
+    info.phone_number = input.signer.phoneNumber.trim();
+  }
+
+  // ⚠️ YouSign v3 :
+  // - signature_level: 'electronic_signature' (simple) → REQUIERT
+  //   signature_authentication_mode = 'otp_email' ou 'otp_sms' (no_otp refusé)
+  // - signature_level: 'advanced_electronic_signature_with_witness' → no_otp OK
+  // Default = otp_email (compatible tous comptes, n'exige pas de phone_number)
+  const body: Record<string, any> = {
+    info,
+    signature_level: input.signer.signatureLevel || 'electronic_signature',
+    signature_authentication_mode: input.signer.signatureAuthenticationMode || 'otp_email',
+  };
+  if (input.signatureField) {
+    body.fields = [{
+      document_id: input.documentId,
+      type: 'signature',
+      page: input.signatureField.page,
+      x: input.signatureField.x,
+      y: input.signatureField.y,
+      width: input.signatureField.width ?? 120,
+      height: input.signatureField.height ?? 40,
+    }];
+  }
   return yousignFetch<YousignSigner>(
     `/signature_requests/${encodeURIComponent(input.signatureRequestId)}/signers`,
     { method: 'POST', body }
@@ -244,6 +256,21 @@ export async function activateSignatureRequest(signatureRequestId: string): Prom
     `/signature_requests/${encodeURIComponent(signatureRequestId)}/activate`,
     { method: 'POST' }
   );
+}
+
+/**
+ * Supprime une signature_request (utile pour cleanup si erreur en cours de
+ * flow : addSigner échoue → la SR créée reste en draft → on la supprime).
+ * Ne throw pas si la suppression elle-même fail (best-effort).
+ */
+export async function deleteSignatureRequest(signatureRequestId: string): Promise<void> {
+  try {
+    await yousignFetch(`/signature_requests/${encodeURIComponent(signatureRequestId)}`, {
+      method: 'DELETE',
+    });
+  } catch (e: any) {
+    console.warn('[YouSign] cleanup draft SR failed:', signatureRequestId, e?.message);
+  }
 }
 
 // ────────────────────────────────────────────────────────────
@@ -358,21 +385,28 @@ export async function sendForSignature(input: {
   }
 
   const createdSigners: YousignSigner[] = [];
-  for (let i = 0; i < input.signers.length; i++) {
-    const created = await addSigner({
-      signatureRequestId: sr.id,
-      documentId: doc.id,
-      signer: input.signers[i],
-      signatureField: {
-        page: placements[i].page ?? 1,
-        x: placements[i].x,
-        y: placements[i].y,
-        width: placements[i].width ?? 140,
-        height: placements[i].height ?? 50,
-      },
-    });
-    createdSigners.push(created);
+  try {
+    for (let i = 0; i < input.signers.length; i++) {
+      const created = await addSigner({
+        signatureRequestId: sr.id,
+        documentId: doc.id,
+        signer: input.signers[i],
+        signatureField: {
+          page: placements[i].page ?? 1,
+          x: placements[i].x,
+          y: placements[i].y,
+          width: placements[i].width ?? 140,
+          height: placements[i].height ?? 50,
+        },
+      });
+      createdSigners.push(created);
+    }
+    const activated = await activateSignatureRequest(sr.id);
+    return { signatureRequest: activated, document: doc, signers: createdSigners };
+  } catch (e) {
+    // Cleanup : la SR draft est inutilisable, on la supprime côté YouSign pour
+    // ne pas polluer le dashboard. Best-effort, ne masque pas l'erreur originelle.
+    await deleteSignatureRequest(sr.id);
+    throw e;
   }
-  const activated = await activateSignatureRequest(sr.id);
-  return { signatureRequest: activated, document: doc, signers: createdSigners };
 }
