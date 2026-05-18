@@ -356,6 +356,47 @@ export function buildChefDefaults(m: MissionLike): ChefContractData {
   };
 }
 
+// Sync les champs communs entre contrat client → contrat chef.
+// Préserve toutes les valeurs spécifiques au chef (rémunération, exclusivité,
+// per diem, confidentialité, standards, etc.). Anti-erreur juridique : le chef
+// et le client doivent avoir EXACTEMENT les mêmes conditions de mission (lieu,
+// dates, rythme, logement, etc.) — seul change qui paie quoi.
+//
+// Retourne un nouvel objet ChefContractData (immutable).
+export function syncChefFromClient(
+  chef: ChefContractData,
+  client: ClientContractData,
+): ChefContractData {
+  return {
+    ...chef,
+    missionLocation: client.missionLocation,
+    startDate: client.startDate,
+    endDate: client.endDate,
+    rythme: client.rythme,
+    jourRepos: client.jourRepos,
+    logement: client.logement,
+    vehicule: client.vehicule,
+    approvisionnements: client.approvisionnements,
+    // Note: on ne touche PAS à `lieu` qui est plus descriptif côté chef
+    // (« Finca privée Ibiza »), différent de `missionLocation` qui est
+    // l'adresse du contrat. Si l'admin veut les aligner, il peut le faire
+    // manuellement dans le form.
+  };
+}
+
+// Liste les noms des champs synchronisés (pour affichage UI : "Quels champs
+// vont être écrasés ?" tooltip).
+export const SYNCED_FIELDS_LABELS: Array<{ key: keyof ChefContractData; label: string }> = [
+  { key: 'missionLocation', label: 'Lieu de mission' },
+  { key: 'startDate', label: 'Date début' },
+  { key: 'endDate', label: 'Date fin' },
+  { key: 'rythme', label: 'Rythme' },
+  { key: 'jourRepos', label: 'Jour de repos' },
+  { key: 'logement', label: 'Logement' },
+  { key: 'vehicule', label: 'Véhicule' },
+  { key: 'approvisionnements', label: 'Approvisionnements' },
+];
+
 export function buildClientDefaults(m: MissionLike, c: ClientLike): ClientContractData {
   const amount = m.client_amount ?? 0;
   return {

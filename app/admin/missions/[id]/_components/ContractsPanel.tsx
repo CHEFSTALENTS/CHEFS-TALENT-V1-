@@ -22,6 +22,7 @@ import {
   renderEssai,
   renderChef,
   renderClient,
+  syncChefFromClient,
 } from '../_lib/contracts';
 
 type MissionLike = {
@@ -368,7 +369,17 @@ export default function ContractsPanel({
       {/* Forms */}
       <div className="grid gap-4">
         {tab === 'essai' && <EssaiForm value={essai} onChange={setEssai} />}
-        {tab === 'chef' && <ChefForm value={chef} onChange={setChef} />}
+        {tab === 'chef' && (
+          <ChefForm
+            value={chef}
+            onChange={setChef}
+            onSyncFromClient={() => {
+              if (!confirm('Synchroniser les conditions de mission (lieu, dates, rythme, logement…) depuis le contrat client ?\n\nLes valeurs spécifiques au chef (rémunération, exclusivité, per diem) ne sont PAS touchées.')) return;
+              setChef((c) => syncChefFromClient(c, clientData));
+              setSavedAt(`Synchronisé depuis client à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`);
+            }}
+          />
+        )}
         {tab === 'client' && <ClientForm value={clientData} onChange={setClientData} />}
       </div>
 
@@ -597,9 +608,35 @@ function EssaiForm({ value, onChange }: { value: EssaiData; onChange: (v: EssaiD
   );
 }
 
-function ChefForm({ value, onChange }: { value: ChefContractData; onChange: (v: ChefContractData) => void }) {
+function ChefForm({
+  value,
+  onChange,
+  onSyncFromClient,
+}: {
+  value: ChefContractData;
+  onChange: (v: ChefContractData) => void;
+  onSyncFromClient?: () => void;
+}) {
   return (
     <div className="space-y-5">
+      {/* Bouton sync depuis contrat client — anti-erreur juridique */}
+      {onSyncFromClient && (
+        <div className="rounded-xl border border-sky-400/20 bg-sky-400/[0.05] px-4 py-2.5 flex items-center justify-between gap-3">
+          <div className="text-[11px] text-sky-100/85 leading-relaxed">
+            ⓘ Pour garantir la cohérence client ⇄ chef, synchronise les <strong>conditions de mission</strong> (lieu, dates, rythme, logement, véhicule, approvisionnements) depuis le contrat client.
+            <br />Les valeurs spécifiques au chef (rémunération, exclusivité, per diem…) restent intactes.
+          </div>
+          <button
+            type="button"
+            onClick={onSyncFromClient}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-400/40 bg-sky-400/15 text-xs font-medium text-sky-100 hover:bg-sky-400/25 transition"
+            title="Copie les conditions identiques du contrat client (hors tarifs)"
+          >
+            ⟲ Synchroniser depuis client
+          </button>
+        </div>
+      )}
+
       <SectionTitle>En-tête</SectionTitle>
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Référence contrat" hint="ex: 2506_Ibiza_Lucas.U">
