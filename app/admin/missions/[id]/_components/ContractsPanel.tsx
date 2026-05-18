@@ -381,7 +381,16 @@ export default function ContractsPanel({
         item={currentSig}
         loading={sigLoading}
         onCancel={cancelCurrentSignature}
-        onRefresh={() => loadSignatureRequests()}
+        onRefresh={async () => {
+          // Refresh manuel = force-sync YouSign d'abord (au cas où le webhook
+          // n'est jamais arrivé) puis recharge la DB
+          if (currentSig?.id) {
+            try {
+              await adminFetchRaw(`/api/admin/signature-requests/${encodeURIComponent(currentSig.id)}/sync`, { method: 'POST' });
+            } catch { /* best-effort, on continue */ }
+          }
+          await loadSignatureRequests();
+        }}
       />
 
       {/* Forms */}
