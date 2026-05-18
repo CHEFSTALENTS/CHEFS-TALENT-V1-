@@ -71,6 +71,48 @@ function getConfig() {
   return { apiKey, apiBase: apiBase.replace(/\/$/, '') };
 }
 
+/**
+ * Normalise un numéro de téléphone vers le format E.164 strict (+XXX...) requis
+ * par YouSign. Retourne null si le numéro ne peut pas être normalisé proprement
+ * (dans ce cas, on omet le phone_number du payload — YouSign accepte sans).
+ *
+ * Cas gérés :
+ *   "+33612345678"       → "+33612345678"  (déjà E.164)
+ *   "+33 6 12 34 56 78"  → "+33612345678"  (E.164 avec espaces)
+ *   "+33-6-12-34-56-78"  → "+33612345678"  (E.164 avec tirets)
+ *   "0612345678"         → "+33612345678"  (FR sans préfixe → +33)
+ *   "06 12 34 56 78"     → "+33612345678"  (FR avec espaces → +33)
+ *   "06.12.34.56.78"     → "+33612345678"  (FR avec points → +33)
+ *   "0033612345678"      → "+33612345678"  (00 → +)
+ *   "abc"                → null            (invalide)
+ *   ""                   → null            (vide)
+ */
+export function normalizePhoneE164(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== 'string') return null;
+  // Strip TOUS les caractères non-chiffres sauf le '+' initial
+  const cleaned = raw.trim().replace(/[\s\-.()]/g, '');
+  if (!cleaned) return null;
+
+  let normalized: string;
+  if (cleaned.startsWith('+')) {
+    // Déjà avec préfixe +, on garde
+    normalized = '+' + cleaned.slice(1).replace(/\D/g, '');
+  } else if (cleaned.startsWith('00')) {
+    // 00XX → +XX (notation internationale alternative)
+    normalized = '+' + cleaned.slice(2).replace(/\D/g, '');
+  } else if (/^0[1-9]\d{8}$/.test(cleaned)) {
+    // Format FR : 0XXXXXXXXX (10 chiffres commençant par 0) → +33XXXXXXXXX
+    normalized = '+33' + cleaned.slice(1);
+  } else {
+    // Format inconnu (ex: numéro étranger sans préfixe) → on n'invente pas
+    return null;
+  }
+
+  // Validation finale E.164 : + suivi de 8 à 15 chiffres
+  if (!/^\+\d{8,15}$/.test(normalized)) return null;
+  return normalized;
+}
+
 async function yousignFetch<T = any>(path: string, opts: FetchOpts = {}): Promise<T> {
   const { apiKey, apiBase } = getConfig();
   const url = `${apiBase}${path.startsWith('/') ? path : '/' + path}`;
@@ -237,8 +279,15 @@ export async function addSigner(input: {
     email: input.signer.email,
     locale: 'fr',
   };
-  if (input.signer.phoneNumber && input.signer.phoneNumber.trim()) {
-    info.phone_number = input.signer.phoneNumber.trim();
+  // Normalise le téléphone en E.164 strict (+33XXXXXXXXX). YouSign refuse tout
+  // ce qui n'est pas E.164 → on omet plutôt que de planter le request. Le
+  // signataire recevra alors l'invitation par email uniquement (OK pour
+  // signature_level='electronic_signature' avec otp_email).
+  const normalizedPhone = normalizePhoneE164(input.signer.phoneNumber);
+  if (normalizedPhone) {
+    info.phone_number = normalizedPhone;
+  } else if (input.signer.phoneNumber && input.signer.phoneNumber.trim()) {
+    console.warn('[YouSign addSigner] phone omis (format non E.164):', input.signer.phoneNumber.trim());
   }
 
   // ⚠️ YouSign v3 :
