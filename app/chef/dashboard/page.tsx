@@ -408,6 +408,9 @@ export default function ChefDashboardPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
 
+      {/* Bannière succès / erreur changement d'email (depuis confirm-change redirect) */}
+      <EmailChangeBanner />
+
       {/* Header */}
       <div className="flex items-end justify-between border-b border-stone-200 pb-8">
         <div>
@@ -580,3 +583,60 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
+
+// ─── Bannière succès/erreur changement d'email ─────────────────────────────
+// Affichée après redirect depuis /api/chef/email/confirm-change
+// URL params : ?email-changed=1  OU  ?email-change-error=...
+function EmailChangeBanner() {
+  const [params, setParams] = useState<{ ok?: boolean; error?: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const u = new URL(window.location.href);
+    const ok = u.searchParams.get('email-changed') === '1';
+    const err = u.searchParams.get('email-change-error');
+    if (ok || err) {
+      setParams({ ok, error: err || undefined });
+      // Clean URL après lecture (sans recharger)
+      u.searchParams.delete('email-changed');
+      u.searchParams.delete('email-change-error');
+      window.history.replaceState({}, '', u.toString());
+      // Auto-dismiss après 6 secondes
+      const timer = setTimeout(() => setParams(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  if (!params) return null;
+
+  if (params.ok) {
+    return (
+      <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 flex items-start gap-3">
+        <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+        <div>
+          <div className="text-sm font-medium text-stone-900">Email mis à jour</div>
+          <p className="text-xs text-stone-700 mt-0.5">Tu peux maintenant te connecter avec ta nouvelle adresse.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const errorMessages: Record<string, string> = {
+    EXPIRED: 'Le lien a expiré (>24h). Demande un nouveau changement depuis /chef/account.',
+    INVALID_TOKEN: 'Lien invalide ou altéré. Demande un nouveau changement.',
+    MISMATCH: 'Ce lien ne correspond plus à ton changement en cours.',
+    AUTH_UPDATE_FAILED: 'Erreur lors de la mise à jour. Contacte le support.',
+    CHEF_NOT_FOUND: 'Profil chef introuvable.',
+    MISSING_TOKEN: 'Lien incomplet.',
+  };
+  return (
+    <div className="border border-red-200 bg-red-50 rounded-xl p-4 flex items-start gap-3">
+      <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+      <div>
+        <div className="text-sm font-medium text-stone-900">Changement d'email impossible</div>
+        <p className="text-xs text-stone-700 mt-0.5">{errorMessages[params.error || ''] || params.error}</p>
+      </div>
+    </div>
+  );
+}
+

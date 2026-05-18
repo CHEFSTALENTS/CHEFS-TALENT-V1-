@@ -553,6 +553,12 @@ export default function ChefSettingsPage() {
                     <div className="text-xs uppercase tracking-widest text-stone-400">{t.settings.hubProfileLabel}</div>
                     <div className="text-sm text-stone-900 font-medium">{profile.name?.trim() ? profile.name : '—'}</div>
                     <div className="text-xs text-stone-500">{profile.email ?? '—'}</div>
+                    <Link
+                      href="/chef/account"
+                      className="inline-block text-[11px] text-stone-500 hover:text-stone-900 underline mt-1"
+                    >
+                      Changer mon email
+                    </Link>
                   </div>
                 </div>
 
