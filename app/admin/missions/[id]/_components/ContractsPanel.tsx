@@ -191,18 +191,30 @@ export default function ContractsPanel({
             .join('\n');
           throw new Error(`${msg}\n\nDétail YouSign :\n${vStr}`);
         }
-        // Pas de violations → on tente de surfacer detail.title / detail.detail
-        // et un extrait du body pour debug si YouSign ne renvoie qu'un message générique.
+        // Pas de violations → on construit l'alert le plus complet possible
+        // sans obliger l'admin à aller dans les logs Vercel.
+        const parts: string[] = [msg];
         const d = json?.detail;
         if (d && typeof d === 'object') {
-          const extra = [d.title, d.detail, d.code].filter(Boolean).join(' — ');
-          if (extra) throw new Error(`${msg}\n\nDétail YouSign : ${extra}\n\n(voir logs Vercel pour le payload complet)`);
-          try {
-            const bodyStr = JSON.stringify(d, null, 2);
-            throw new Error(`${msg}\n\nRéponse YouSign brute :\n${bodyStr.slice(0, 500)}`);
-          } catch { /* fallthrough */ }
+          const extra = [d.title, d.detail, d.code, d.type].filter(Boolean).join(' — ');
+          if (extra) parts.push(`\nDétail YouSign : ${extra}`);
         }
-        throw new Error(`${msg}\n\n(YouSign n'a pas fourni de détail précis — voir logs Vercel)`);
+        // ⚠️ Inclut le payload qu'on a envoyé à YouSign — souvent suffisant pour
+        // identifier ce qui foire (mauvaise valeur, champ manquant, etc.)
+        if (json?.requestBody) {
+          try {
+            const bodyStr = JSON.stringify(json.requestBody, null, 2);
+            parts.push(`\nPayload envoyé :\n${bodyStr.slice(0, 800)}`);
+          } catch { /* ignore */ }
+        }
+        // Et la réponse YouSign brute en dernier recours
+        if (d && typeof d === 'object' && !json.requestBody) {
+          try {
+            const respStr = JSON.stringify(d, null, 2);
+            parts.push(`\nRéponse YouSign brute :\n${respStr.slice(0, 500)}`);
+          } catch { /* ignore */ }
+        }
+        throw new Error(parts.join('\n'));
       }
       await loadSignatureRequests();
       setModalOpen(false);
