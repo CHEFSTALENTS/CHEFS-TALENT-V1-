@@ -164,6 +164,11 @@ export type ClientContractData = {
   tvaRegime: 'applicable' | 'non_applicable';
   paymentMode: 'integral_signature' | '60_40' | 'custom';
   paymentCustomText: string;             // si custom
+  // Moyen de paiement — toujours éditable selon préférence client :
+  //   'transfer'  → virement bancaire (cas standard, B2B / gros montants)
+  //   'card_link' → lien de paiement CB sécurisé (Stripe ou similaire)
+  //   'choice'    → au choix du client (virement OU lien CB)
+  paymentMethod: 'transfer' | 'card_link' | 'choice';
   facturationApprosText: string;         // texte 4.3
 
   // Article 5 — Exclusivité / non-contournement
@@ -394,6 +399,7 @@ export function buildClientDefaults(m: MissionLike, c: ClientLike): ClientContra
     tvaRegime: 'applicable',
     paymentMode: amount >= 30000 ? '60_40' : 'integral_signature',
     paymentCustomText: '',
+    paymentMethod: 'transfer',
     facturationApprosText:
       'Les dépenses relatives aux produits alimentaires, boissons et fournitures culinaires sont supportées directement par le Client et gérées en dehors du présent contrat. Le Chef rend compte au Client de l\'utilisation des fonds alloués à cet effet.',
 
@@ -841,7 +847,13 @@ ${bulletList(d.prestationsNonIncluses)}
 
 <h3>4.2 Modalités de règlement</h3>
 <p>${esc(paymentModeText)}</p>
-<p>Le règlement s'effectue par virement bancaire aux coordonnées communiquées sur la facture émise par l'Agence.</p>
+<p>${
+  d.paymentMethod === 'card_link'
+    ? "Le règlement s'effectue par carte bancaire via le lien de paiement sécurisé transmis par l'Agence à l'adresse email du Client."
+    : d.paymentMethod === 'choice'
+    ? "Le règlement s'effectue au choix du Client : (i) par virement bancaire aux coordonnées communiquées sur la facture émise par l'Agence, ou (ii) par carte bancaire via le lien de paiement sécurisé transmis par l'Agence."
+    : "Le règlement s'effectue par virement bancaire aux coordonnées communiquées sur la facture émise par l'Agence."
+}</p>
 
 <h3>4.3 Facturation des approvisionnements</h3>
 <p>${esc(d.facturationApprosText)}</p>
