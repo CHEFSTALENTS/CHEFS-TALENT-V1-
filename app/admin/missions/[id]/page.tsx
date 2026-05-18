@@ -7,6 +7,7 @@ import { adminFetchRaw } from '@/lib/adminFetch';
 import MarkPaidModal from '../_components/MarkPaidModal';
 import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
+import PaymentPlanPanel from './_components/PaymentPlanPanel';
 import type { ContractsData } from './_lib/contracts';
 import {
   Loader2,
@@ -667,6 +668,19 @@ export default function AdminMissionDetailPage() {
               </div>
             )}
           </Panel>
+        </div>
+      </div>
+
+      {/* Panneau Plan de paiement : échéances illimitées + cashflow par mission */}
+      <div className="px-6 pb-2">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-white">Plan de paiement</div>
+            <div className="text-xs text-white/45 mt-0.5">
+              Échéances multiples — visuel cashflow et suivi des relances en temps réel.
+            </div>
+          </div>
+          <PaymentPlanPanel missionId={mission.id} />
         </div>
       </div>
 
