@@ -16,6 +16,7 @@ import {
   FileDown,
   FileText,
   Loader2,
+  RefreshCw,
   Send,
   XCircle,
 } from 'lucide-react';
@@ -75,8 +76,8 @@ export default function NccPanel({ requestId }: { requestId: string }) {
     }
   }, [requestId]);
 
-  const loadSignatureRequests = useCallback(async () => {
-    setSigLoading(true);
+  const loadSignatureRequests = useCallback(async (silent = false) => {
+    if (!silent) setSigLoading(true);
     try {
       const r = await adminFetchRaw(`/api/admin/requests/${encodeURIComponent(requestId)}/signature-requests`);
       const json = await r.json();
@@ -85,7 +86,7 @@ export default function NccPanel({ requestId }: { requestId: string }) {
         setSigItems((json.items as SignatureItem[]).filter((i) => i.kind === 'ncc'));
       }
     } catch { /* silent */ }
-    finally { setSigLoading(false); }
+    finally { if (!silent) setSigLoading(false); }
   }, [requestId]);
 
   useEffect(() => {
@@ -94,6 +95,16 @@ export default function NccPanel({ requestId }: { requestId: string }) {
   }, [loadInitial, loadSignatureRequests]);
 
   const currentSig = sigItems[0] || null;
+
+  // Auto-polling toutes les 20s si NCC en cours
+  useEffect(() => {
+    const hasActiveSig = sigItems.some((s) => s.status === 'ongoing' || s.status === 'draft');
+    if (!hasActiveSig) return;
+    const interval = setInterval(() => {
+      loadSignatureRequests(true);
+    }, 20_000);
+    return () => clearInterval(interval);
+  }, [sigItems, loadSignatureRequests]);
 
   function patch<K extends keyof NccData>(key: K, value: NccData[K]) {
     setNcc((cur) => (cur ? { ...cur, [key]: value } : cur));
@@ -176,7 +187,7 @@ export default function NccPanel({ requestId }: { requestId: string }) {
   return (
     <div className="space-y-4">
       {/* Bandeau status */}
-      <NccStatusBanner item={currentSig} loading={sigLoading} />
+      <NccStatusBanner item={currentSig} loading={sigLoading} onRefresh={() => loadSignatureRequests()} />
 
       {/* Form sections */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -411,7 +422,7 @@ function Select({
   );
 }
 
-function NccStatusBanner({ item, loading }: { item: SignatureItem | null; loading: boolean }) {
+function NccStatusBanner({ item, loading, onRefresh }: { item: SignatureItem | null; loading: boolean; onRefresh?: () => void }) {
   if (loading && !item) {
     return (
       <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/45">
@@ -442,6 +453,8 @@ function NccStatusBanner({ item, loading }: { item: SignatureItem | null; loadin
   const sentAt = item.sentAt ? new Date(item.sentAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : null;
   const completedAt = item.completedAt ? new Date(item.completedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : null;
 
+  const isActiveStatus = item.status === 'ongoing' || item.status === 'draft';
+
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
       <div className="flex items-center gap-3 flex-wrap">
@@ -449,10 +462,27 @@ function NccStatusBanner({ item, loading }: { item: SignatureItem | null; loadin
         <div className="text-sm font-medium text-white">NCC — {label[item.status] || item.status}</div>
         {item.status === 'done' && <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
         {(item.status === 'declined' || item.status === 'error') && <XCircle className="h-4 w-4 text-red-400" />}
-        <div className="ml-auto flex items-center gap-3 text-[11px] text-white/55">
+        {isActiveStatus && (
+          <span className="text-[10px] text-white/35 italic flex items-center gap-1" title="Le statut se rafraîchit automatiquement toutes les 20 secondes">
+            <span className="inline-block w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+            auto-refresh
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-2 flex-wrap text-[11px] text-white/55">
           {sentAt && <span>Envoyé : {sentAt}</span>}
           {completedAt && <span>Signé : {completedAt}</span>}
           <span>{item.signers.length} signataires</span>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="ml-1 inline-flex items-center justify-center w-7 h-7 rounded-lg border border-white/10 bg-white/5 text-white/65 hover:bg-white/10 hover:text-white transition disabled:opacity-50"
+              title="Rafraîchir le statut depuis YouSign"
+              aria-label="Rafraîchir"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
       </div>
       {item.signers.length > 0 && (
