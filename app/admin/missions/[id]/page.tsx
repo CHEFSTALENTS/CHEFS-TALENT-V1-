@@ -10,6 +10,7 @@ import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
 import ChefReplacementPanel from './_components/ChefReplacementPanel';
 import ChefPaidModal from './_components/ChefPaidModal';
+import MissionEditor from './_components/MissionEditor';
 import type { ContractsData } from './_lib/contracts';
 import {
   computeMissionLifecyclePhase,
@@ -125,6 +126,7 @@ export default function AdminMissionDetailPage() {
   const [showPaidModal, setShowPaidModal] = useState(false);
   const [showClientEditor, setShowClientEditor] = useState(false);
   const [showChefPaidModal, setShowChefPaidModal] = useState(false);
+  const [showMissionEditor, setShowMissionEditor] = useState(false);
 
   // Signature requests (pour validation auto « Contrat signé » dans timeline)
   const [signatureRequests, setSignatureRequests] = useState<Array<{ kind: string; status: string; completedAt: string | null }>>([]);
@@ -390,6 +392,15 @@ export default function AdminMissionDetailPage() {
               onClick={revertPayment}
             />
           )}
+          {/* Modifier la mission — toujours dispo, l'admin peut éditer
+              titre, lieu, dates, montants à tout moment */}
+          <ActionBtn
+            icon={<PenSquare className="w-3.5 h-3.5" />}
+            label="Modifier"
+            variant="muted"
+            loading={false}
+            onClick={() => setShowMissionEditor(true)}
+          />
           {canMarkCompleted && (
             <ActionBtn
               icon={<Sparkles className="w-3.5 h-3.5" />}
@@ -834,6 +845,30 @@ export default function AdminMissionDetailPage() {
           onClose={() => setShowChefPaidModal(false)}
           onSuccess={() => {
             setShowChefPaidModal(false);
+            refresh();
+          }}
+        />
+      )}
+
+      {/* Modal Édition mission (titre, lieu, dates, montants, notes) */}
+      {showMissionEditor && (
+        <MissionEditor
+          missionId={mission.id}
+          initial={{
+            title: mission.title,
+            location: mission.location,
+            startDate: mission.start_date,
+            endDate: mission.end_date,
+            guestCount: mission.guest_count,
+            serviceLevel: mission.service_level,
+            chefAmount: mission.chef_amount,
+            clientAmount: mission.client_amount,
+            notes: mission.notes,
+            contractUrl: mission.contract_url,
+          }}
+          onClose={() => setShowMissionEditor(false)}
+          onSuccess={() => {
+            setShowMissionEditor(false);
             refresh();
           }}
         />

@@ -13,11 +13,12 @@
 //                       « Nouveau chef : 7 jours × 200€ = 1400€ »
 //   4. Confirme → POST replace-chef → toast succès + refresh
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   Loader2,
   UserCog,
   X,
@@ -198,11 +199,77 @@ function ReplaceChefModal({
 }) {
   const [newChefId, setNewChefId] = useState('');
   const [newChefName, setNewChefName] = useState('');
+  // Email canonique du chef (= chef_profiles.email, auto-pré-rempli quand on pick un chef).
+  // newChefEmail est éditable séparément si l'admin veut envoyer le contrat
+  // ponctuellement à une autre adresse (sans toucher au compte du chef).
+  const [newChefEmailCanonical, setNewChefEmailCanonical] = useState('');
   const [newChefEmail, setNewChefEmail] = useState('');
+  const [emailOverridden, setEmailOverridden] = useState(false);
   const [replacementDate, setReplacementDate] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Liste des chefs disponibles (pour le picker)
+  const [chefsList, setChefsList] = useState<Array<{ userId: string; email: string; name: string; status: string }>>([]);
+  const [chefsLoading, setChefsLoading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+
+  // Load chefs au mount
+  useEffect(() => {
+    let alive = true;
+    setChefsLoading(true);
+    adminFetchRaw('/api/admin/chefs').then(r => r.json()).then(json => {
+      if (!alive) return;
+      // Le format de /api/admin/chefs peut varier. On normalise défensivement.
+      const items: any[] = Array.isArray(json?.items) ? json.items
+        : Array.isArray(json?.chefs) ? json.chefs
+        : Array.isArray(json) ? json
+        : [];
+      const normalized = items.map((c: any) => {
+        const profile = c.profile || c;
+        const firstName = profile.firstName || profile.first_name || '';
+        const lastName = profile.lastName || profile.last_name || '';
+        const name = [firstName, lastName].filter(Boolean).join(' ').trim() || profile.name || c.email || '—';
+        return {
+          userId: c.user_id || c.userId || c.id || '',
+          email: c.email || '',
+          name,
+          status: profile.status || c.status || '',
+        };
+      }).filter(c => c.userId && c.email);
+      setChefsList(normalized);
+    }).catch(() => { /* silencieux */ })
+      .finally(() => { if (alive) setChefsLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  // Liste filtrée par recherche
+  const filteredChefs = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    if (!q) return chefsList.slice(0, 20);
+    return chefsList.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      c.userId.toLowerCase().includes(q),
+    ).slice(0, 20);
+  }, [chefsList, pickerQuery]);
+
+  function selectChef(c: { userId: string; email: string; name: string }) {
+    setNewChefId(c.userId);
+    setNewChefName(c.name);
+    setNewChefEmailCanonical(c.email);
+    setNewChefEmail(c.email);
+    setEmailOverridden(false);
+    setPickerOpen(false);
+    setPickerQuery('');
+  }
+
+  function resetEmailToCanonical() {
+    setNewChefEmail(newChefEmailCanonical);
+    setEmailOverridden(false);
+  }
 
   // Calcul preview du split (côté client, miroir du serveur)
   const totalDays = daysBetween(missionStartDate, missionEndDate);
@@ -273,27 +340,97 @@ function ReplaceChefModal({
             <br />Montant total chef : <strong className="text-white">{fmtEur(chefAmount)}</strong> ({fmtEur(dailyRate)}/jour)
           </div>
 
-          {/* Nouveau chef */}
+          {/* Nouveau chef — picker depuis la base */}
           <div>
             <div className="text-xs uppercase tracking-wider text-white/55 font-semibold mb-2">Nouveau chef remplaçant</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <label className="block">
-                <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1">User ID (Supabase) *</span>
-                <input type="text" value={newChefId} onChange={(e) => setNewChefId(e.target.value)} placeholder="uuid du chef dans Supabase"
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 font-mono" />
-              </label>
-              <label className="block">
-                <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1">Nom complet *</span>
-                <input type="text" value={newChefName} onChange={(e) => setNewChefName(e.target.value)} placeholder="Marie Durand"
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25" />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1">Email *</span>
-                <input type="email" value={newChefEmail} onChange={(e) => setNewChefEmail(e.target.value)} placeholder="marie@chef.com"
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25" />
-              </label>
+
+            {/* Picker */}
+            <div className="relative mb-2">
+              <button
+                type="button"
+                onClick={() => setPickerOpen((o) => !o)}
+                className="w-full inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-sm text-white hover:bg-white/10 transition"
+              >
+                <span className="truncate text-left">
+                  {newChefName
+                    ? <><strong>{newChefName}</strong> <span className="text-white/55">— {newChefEmailCanonical || newChefEmail}</span></>
+                    : <span className="text-white/45">Choisir un chef…</span>}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-white/55 flex-shrink-0 transition ${pickerOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {pickerOpen && (
+                <div className="absolute z-20 left-0 right-0 mt-1 rounded-xl border border-white/15 bg-[#181819] shadow-xl max-h-[300px] overflow-y-auto">
+                  <div className="sticky top-0 p-2 bg-[#181819] border-b border-white/10">
+                    <input
+                      type="text"
+                      value={pickerQuery}
+                      onChange={(e) => setPickerQuery(e.target.value)}
+                      placeholder="Rechercher par nom, email..."
+                      autoFocus
+                      className="w-full px-2.5 py-1.5 rounded-md border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/35"
+                    />
+                  </div>
+                  {chefsLoading ? (
+                    <div className="px-3 py-4 text-xs text-white/55 flex items-center gap-2">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Chargement des chefs…
+                    </div>
+                  ) : filteredChefs.length === 0 ? (
+                    <div className="px-3 py-4 text-xs text-white/45 italic">Aucun chef trouvé.</div>
+                  ) : (
+                    filteredChefs.map((c) => (
+                      <button
+                        key={c.userId}
+                        type="button"
+                        onClick={() => selectChef(c)}
+                        className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm text-white truncate">{c.name}</div>
+                          <div className="text-[10px] text-white/45 truncate">{c.email}</div>
+                        </div>
+                        {c.status && (
+                          <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${
+                            c.status === 'active' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                              : c.status === 'approved' ? 'border-sky-400/30 bg-sky-400/10 text-sky-200'
+                              : 'border-white/10 bg-white/5 text-white/55'
+                          }`}>
+                            {c.status}
+                          </span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-            <div className="text-[10px] text-white/35 mt-1">Note : pour la V1, saisis manuellement les infos. Le picker chef sera ajouté plus tard.</div>
+
+            {/* Champs additionnels visibles APRÈS sélection */}
+            {newChefId && (
+              <div className="grid grid-cols-1 gap-2 mt-2">
+                <label className="block">
+                  <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1 flex items-center justify-between">
+                    <span>Email pour l'envoi du contrat *</span>
+                    {emailOverridden && newChefEmailCanonical && newChefEmail !== newChefEmailCanonical && (
+                      <button type="button" onClick={resetEmailToCanonical} className="text-[10px] text-sky-300 hover:text-sky-200 underline normal-case tracking-normal">
+                        ⟲ Restaurer email du compte
+                      </button>
+                    )}
+                  </span>
+                  <input
+                    type="email"
+                    value={newChefEmail}
+                    onChange={(e) => { setNewChefEmail(e.target.value); setEmailOverridden(e.target.value !== newChefEmailCanonical); }}
+                    placeholder="marie@chef.com"
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
+                  />
+                  <span className="block text-[10px] text-white/35 mt-1">
+                    {emailOverridden
+                      ? '⚠ Email override : le contrat sera envoyé à cette adresse plutôt qu\'au compte du chef.'
+                      : 'Email du compte chef (auto). Tu peux le modifier pour envoyer le contrat à une autre adresse.'}
+                  </span>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Date du remplacement */}
