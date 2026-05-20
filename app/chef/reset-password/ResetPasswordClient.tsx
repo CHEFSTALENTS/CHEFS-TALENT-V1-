@@ -3,15 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClientSupabase } from "@/utils/supabase/client";
+import { useChefLocale } from "@/lib/ChefLocaleContext";
 
 export default function ResetPasswordClient() {
   const supabase = useMemo(() => createClientSupabase(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useChefLocale();
 
   const [password, setPassword] = useState("");
   const [ready, setReady] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function ResetPasswordClient() {
           if (error) throw error;
         }
       } catch (e: any) {
-        if (alive) setError(e?.message || "Lien invalide ou expiré.");
+        if (alive) setError(e?.message || t.resetPassword.invalidOrExpired);
       } finally {
         if (alive) setReady(true);
       }
@@ -50,33 +53,39 @@ export default function ResetPasswordClient() {
     return () => {
       alive = false;
     };
-  }, [searchParams, supabase]);
+  }, [searchParams, supabase, t.resetPassword.invalidOrExpired]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSubmitting(true);
 
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) return setError(error.message);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setError(error.message);
+        return;
+      }
 
-    setDone(true);
-    setTimeout(() => router.replace("/chef/login"), 1200);
+      setDone(true);
+      setTimeout(() => router.replace("/chef/login"), 1200);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!ready) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-6">
-        <div className="text-sm text-stone-500">Chargement…</div>
+        <div className="text-sm text-stone-500">{t.resetPassword.loading}</div>
       </div>
     );
   }
 
   return (
     <div className="max-w-md mx-auto p-6">
-      <h1 className="text-xl font-semibold">Nouveau mot de passe</h1>
-      <p className="mt-2 text-sm text-stone-600">
-        Choisissez un nouveau mot de passe pour votre compte Chef Talents.
-      </p>
+      <h1 className="text-xl font-semibold">{t.resetPassword.pageTitle}</h1>
+      <p className="mt-2 text-sm text-stone-600">{t.resetPassword.pageSubtitle}</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-3">
         <input
@@ -85,22 +94,20 @@ export default function ResetPasswordClient() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Minimum 8 caractères"
+          placeholder={t.resetPassword.passwordPlaceholder}
           className="w-full border rounded-lg p-3"
         />
 
         <button
           type="submit"
-          disabled={done}
+          disabled={done || submitting}
           className="w-full rounded-lg p-3 bg-black text-white disabled:opacity-50"
         >
-          {done ? "Mis à jour ✅" : "Mettre à jour"}
+          {done ? t.resetPassword.success : submitting ? t.resetPassword.submitting : t.resetPassword.submit}
         </button>
 
         {done && (
-          <p className="text-sm">
-            Mot de passe mis à jour. Redirection vers la page de connexion…
-          </p>
+          <p className="text-sm">{t.resetPassword.successRedirecting}</p>
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>

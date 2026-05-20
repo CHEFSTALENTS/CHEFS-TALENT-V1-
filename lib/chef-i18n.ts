@@ -703,6 +703,54 @@ export type Dictionary = {
     summaryMinDays: string; // "min {n} jours"
     summaryMinGuests: string; // "min {n} pers"
   };
+
+  register: {
+    pageTitle: string;
+    firstNamePlaceholder: string;
+    lastNamePlaceholder: string;
+    emailPlaceholder: string;
+    passwordPlaceholder: string;
+    submit: string;
+    submitting: string;
+    errorFallback: string;
+  };
+
+  resetPassword: {
+    loading: string;
+    invalidOrExpired: string;
+    pageTitle: string;
+    pageSubtitle: string;
+    passwordPlaceholder: string;
+    submit: string;
+    submitting: string;
+    success: string;
+    successRedirecting: string;
+  };
+
+  account: {
+    backToDashboard: string;
+    pageLabel: string;
+    pageTitle: string;
+    pageSubtitle: string;
+    currentEmailLabel: string;
+    pendingTitle: string;
+    pendingDescription: string; // « Un email de vérification a été envoyé à {email}... »
+    pendingSentAt: string;      // « Envoyé le {date} · Valide 24h »
+    pendingCancel: string;
+    pendingCancelling: string;
+    newEmailLabel: string;
+    newEmailPlaceholder: string;
+    newEmailHint: string;
+    submitChange: string;
+    submitting: string;
+    confirmCancelChange: string; // confirm() text
+    errorInvalidFormat: string;
+    errorSameEmail: string;
+    errorSendFailed: string;
+    errorCancelFailed: string;
+    successDefault: string;     // « Email de vérification envoyé. »
+    successCanceled: string;    // « Changement annulé. »
+  };
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -1457,6 +1505,54 @@ const fr: Dictionary = {
     forgotCta: 'Envoyer le lien',
     forgotSent: 'Si l’email existe, un lien vient d’être envoyé.',
   },
+
+  register: {
+    pageTitle: 'Créer un compte Chef',
+    firstNamePlaceholder: 'Prénom',
+    lastNamePlaceholder: 'Nom',
+    emailPlaceholder: 'Email',
+    passwordPlaceholder: 'Mot de passe',
+    submit: 'Créer le compte',
+    submitting: 'Création en cours…',
+    errorFallback: 'Erreur lors de la création du compte.',
+  },
+
+  resetPassword: {
+    loading: 'Chargement…',
+    invalidOrExpired: 'Lien invalide ou expiré.',
+    pageTitle: 'Nouveau mot de passe',
+    pageSubtitle: 'Choisissez un nouveau mot de passe pour votre compte Chefs Talents.',
+    passwordPlaceholder: 'Minimum 8 caractères',
+    submit: 'Mettre à jour',
+    submitting: 'Mise à jour…',
+    success: 'Mis à jour ✅',
+    successRedirecting: 'Mot de passe mis à jour. Redirection vers la page de connexion…',
+  },
+
+  account: {
+    backToDashboard: 'Retour au dashboard',
+    pageLabel: 'Compte',
+    pageTitle: 'Paramètres du compte',
+    pageSubtitle: 'Gère ton email de connexion. Tout changement nécessite une vérification de la nouvelle adresse.',
+    currentEmailLabel: 'Email actuel',
+    pendingTitle: 'Changement en cours',
+    pendingDescription: 'Un email de vérification a été envoyé à {email}. Clique sur le lien dans cet email pour valider le changement.',
+    pendingSentAt: 'Envoyé le {date} · Valide 24h',
+    pendingCancel: 'Annuler le changement',
+    pendingCancelling: 'Annulation…',
+    newEmailLabel: 'Nouvel email',
+    newEmailPlaceholder: 'nouvel.email@exemple.com',
+    newEmailHint: 'Un lien de vérification sera envoyé à cette adresse. Ton email actuel reste actif tant que la vérification n’est pas faite.',
+    submitChange: 'Envoyer le lien de vérification',
+    submitting: 'Envoi…',
+    confirmCancelChange: 'Annuler le changement d’email en cours ?',
+    errorInvalidFormat: 'Format d’email invalide.',
+    errorSameEmail: 'Ce nouvel email est identique à l’actuel.',
+    errorSendFailed: 'Erreur lors de l’envoi.',
+    errorCancelFailed: 'Erreur lors de l’annulation.',
+    successDefault: 'Email de vérification envoyé.',
+    successCanceled: 'Changement annulé.',
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -2207,6 +2303,54 @@ const en: Dictionary = {
     forgotEmailPlaceholder: 'email@example.com',
     forgotCta: 'Send the link',
     forgotSent: 'If the email exists, a link has just been sent.',
+  },
+
+  register: {
+    pageTitle: 'Create a Chef account',
+    firstNamePlaceholder: 'First name',
+    lastNamePlaceholder: 'Last name',
+    emailPlaceholder: 'Email',
+    passwordPlaceholder: 'Password',
+    submit: 'Create account',
+    submitting: 'Creating account…',
+    errorFallback: 'Failed to create account.',
+  },
+
+  resetPassword: {
+    loading: 'Loading…',
+    invalidOrExpired: 'Link invalid or expired.',
+    pageTitle: 'New password',
+    pageSubtitle: 'Choose a new password for your Chefs Talents account.',
+    passwordPlaceholder: 'Minimum 8 characters',
+    submit: 'Update',
+    submitting: 'Updating…',
+    success: 'Updated ✅',
+    successRedirecting: 'Password updated. Redirecting to the login page…',
+  },
+
+  account: {
+    backToDashboard: 'Back to dashboard',
+    pageLabel: 'Account',
+    pageTitle: 'Account settings',
+    pageSubtitle: 'Manage your login email. Any change requires verification of the new address.',
+    currentEmailLabel: 'Current email',
+    pendingTitle: 'Change in progress',
+    pendingDescription: 'A verification email has been sent to {email}. Click the link in this email to confirm the change.',
+    pendingSentAt: 'Sent on {date} · Valid 24h',
+    pendingCancel: 'Cancel change',
+    pendingCancelling: 'Cancelling…',
+    newEmailLabel: 'New email',
+    newEmailPlaceholder: 'new.email@example.com',
+    newEmailHint: 'A verification link will be sent to this address. Your current email remains active until you confirm.',
+    submitChange: 'Send verification link',
+    submitting: 'Sending…',
+    confirmCancelChange: 'Cancel the current email change?',
+    errorInvalidFormat: 'Invalid email format.',
+    errorSameEmail: 'This new email is the same as the current one.',
+    errorSendFailed: 'Failed to send.',
+    errorCancelFailed: 'Failed to cancel.',
+    successDefault: 'Verification email sent.',
+    successCanceled: 'Change cancelled.',
   },
 };
 
@@ -2959,6 +3103,54 @@ const es: Dictionary = {
     forgotEmailPlaceholder: 'email@ejemplo.com',
     forgotCta: 'Enviar el enlace',
     forgotSent: 'Si el email existe, se acaba de enviar un enlace.',
+  },
+
+  register: {
+    pageTitle: 'Crear una cuenta de Chef',
+    firstNamePlaceholder: 'Nombre',
+    lastNamePlaceholder: 'Apellido',
+    emailPlaceholder: 'Email',
+    passwordPlaceholder: 'Contraseña',
+    submit: 'Crear cuenta',
+    submitting: 'Creando cuenta…',
+    errorFallback: 'Error al crear la cuenta.',
+  },
+
+  resetPassword: {
+    loading: 'Cargando…',
+    invalidOrExpired: 'Enlace no válido o caducado.',
+    pageTitle: 'Nueva contraseña',
+    pageSubtitle: 'Elija una nueva contraseña para su cuenta de Chefs Talents.',
+    passwordPlaceholder: 'Mínimo 8 caracteres',
+    submit: 'Actualizar',
+    submitting: 'Actualizando…',
+    success: 'Actualizada ✅',
+    successRedirecting: 'Contraseña actualizada. Redirigiendo a la página de inicio de sesión…',
+  },
+
+  account: {
+    backToDashboard: 'Volver al panel',
+    pageLabel: 'Cuenta',
+    pageTitle: 'Configuración de la cuenta',
+    pageSubtitle: 'Gestiona tu email de acceso. Todo cambio requiere una verificación de la nueva dirección.',
+    currentEmailLabel: 'Email actual',
+    pendingTitle: 'Cambio en curso',
+    pendingDescription: 'Se ha enviado un email de verificación a {email}. Haz clic en el enlace de ese correo para validar el cambio.',
+    pendingSentAt: 'Enviado el {date} · Válido 24h',
+    pendingCancel: 'Cancelar el cambio',
+    pendingCancelling: 'Cancelando…',
+    newEmailLabel: 'Nuevo email',
+    newEmailPlaceholder: 'nuevo.email@ejemplo.com',
+    newEmailHint: 'Se enviará un enlace de verificación a esta dirección. Tu email actual sigue activo mientras no se valide.',
+    submitChange: 'Enviar enlace de verificación',
+    submitting: 'Enviando…',
+    confirmCancelChange: '¿Cancelar el cambio de email en curso?',
+    errorInvalidFormat: 'Formato de email no válido.',
+    errorSameEmail: 'Este nuevo email es idéntico al actual.',
+    errorSendFailed: 'Error al enviar.',
+    errorCancelFailed: 'Error al cancelar.',
+    successDefault: 'Email de verificación enviado.',
+    successCanceled: 'Cambio cancelado.',
   },
 };
 

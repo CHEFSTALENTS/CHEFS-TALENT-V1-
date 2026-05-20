@@ -14,8 +14,11 @@ import Link from 'next/link';
 import { ArrowLeft, Check, Loader2, Mail, AlertCircle, X } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
 import { chefFetchRaw } from '@/lib/chefFetch';
+import { useChefLocale } from '@/lib/ChefLocaleContext';
+import { format } from '@/lib/chef-i18n';
 
 export default function ChefAccountPage() {
+  const { t, locale } = useChefLocale();
   const [loading, setLoading] = useState(true);
   const [currentEmail, setCurrentEmail] = useState('');
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
@@ -56,36 +59,37 @@ export default function ChefAccountPage() {
     setError(null);
     setSuccess(null);
     if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-      setError('Format d\'email invalide.');
+      setError(t.account.errorInvalidFormat);
       return;
     }
     if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
-      setError('Ce nouvel email est identique à l\'actuel.');
+      setError(t.account.errorSameEmail);
       return;
     }
     setSubmitting(true);
     try {
       const r = await chefFetchRaw('/api/chef/email/request-change', {
         method: 'POST',
-        body: JSON.stringify({ newEmail: newEmail.trim(), locale: 'fr' }),
+        // Locale du chef — utilisée par le serveur pour l'email de vérif (FR/EN/ES)
+        body: JSON.stringify({ newEmail: newEmail.trim(), locale }),
       });
       const json = await r.json();
       if (!r.ok || !json.ok) {
         throw new Error(json?.message || json?.error || `HTTP ${r.status}`);
       }
-      setSuccess(json.message || 'Email de vérification envoyé.');
+      setSuccess(json.message || t.account.successDefault);
       setPendingEmail(json.pendingEmail);
       setPendingRequestedAt(new Date().toISOString());
       setNewEmail('');
     } catch (e: any) {
-      setError(e?.message || 'Erreur lors de l\'envoi.');
+      setError(e?.message || t.account.errorSendFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function cancelChange() {
-    if (!confirm('Annuler le changement d\'email en cours ?')) return;
+    if (!confirm(t.account.confirmCancelChange)) return;
     setCancelling(true);
     try {
       const r = await chefFetchRaw('/api/chef/email/cancel-change', { method: 'POST' });
@@ -93,13 +97,16 @@ export default function ChefAccountPage() {
       if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
       setPendingEmail(null);
       setPendingRequestedAt(null);
-      setSuccess('Changement annulé.');
+      setSuccess(t.account.successCanceled);
     } catch (e: any) {
-      setError(e?.message || 'Erreur lors de l\'annulation.');
+      setError(e?.message || t.account.errorCancelFailed);
     } finally {
       setCancelling(false);
     }
   }
+
+  // Format date selon la locale du chef (FR/EN/ES)
+  const dateLocale = locale === 'en' ? 'en-GB' : locale === 'es' ? 'es-ES' : 'fr-FR';
 
   return (
     <div className="min-h-screen bg-stone-50 py-12 px-6">
@@ -108,15 +115,13 @@ export default function ChefAccountPage() {
           href="/chef/dashboard"
           className="inline-flex items-center text-sm text-stone-500 hover:text-stone-900 transition mb-8"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Retour au dashboard
+          <ArrowLeft className="w-4 h-4 mr-2" /> {t.account.backToDashboard}
         </Link>
 
         <div className="mb-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-stone-400 mb-2">Compte</p>
-          <h1 className="text-3xl font-serif text-stone-900">Paramètres du compte</h1>
-          <p className="text-sm text-stone-600 mt-2 font-light">
-            Gère ton email de connexion. Tout changement nécessite une vérification de la nouvelle adresse.
-          </p>
+          <p className="text-xs uppercase tracking-[0.25em] text-stone-400 mb-2">{t.account.pageLabel}</p>
+          <h1 className="text-3xl font-serif text-stone-900">{t.account.pageTitle}</h1>
+          <p className="text-sm text-stone-600 mt-2 font-light">{t.account.pageSubtitle}</p>
         </div>
 
         {loading ? (
@@ -126,7 +131,7 @@ export default function ChefAccountPage() {
         ) : (
           <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-6">
             <div>
-              <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Email actuel</div>
+              <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">{t.account.currentEmailLabel}</div>
               <div className="flex items-center gap-2 text-stone-900">
                 <Mail className="w-4 h-4 text-stone-400" />
                 <span className="font-medium">{currentEmail || '—'}</span>
@@ -139,14 +144,25 @@ export default function ChefAccountPage() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-stone-900">Changement en cours</div>
+                    <div className="text-sm font-medium text-stone-900">{t.account.pendingTitle}</div>
                     <p className="text-sm text-stone-700 mt-1">
-                      Un email de vérification a été envoyé à <strong className="font-mono break-all">{pendingEmail}</strong>.
-                      {' '}Clique sur le lien dans cet email pour valider le changement.
+                      {(() => {
+                        // Split la chaîne autour de {email} pour insérer le <strong> au milieu
+                        const parts = t.account.pendingDescription.split('{email}');
+                        return (
+                          <>
+                            {parts[0]}
+                            <strong className="font-mono break-all">{pendingEmail}</strong>
+                            {parts[1] ?? ''}
+                          </>
+                        );
+                      })()}
                     </p>
                     {pendingRequestedAt && (
                       <p className="text-xs text-stone-500 mt-1">
-                        Envoyé le {new Date(pendingRequestedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} · Valide 24h
+                        {format(t.account.pendingSentAt, {
+                          date: new Date(pendingRequestedAt).toLocaleString(dateLocale, { dateStyle: 'short', timeStyle: 'short' }),
+                        })}
                       </p>
                     )}
                     <button
@@ -155,7 +171,7 @@ export default function ChefAccountPage() {
                       className="mt-3 inline-flex items-center text-xs text-amber-700 hover:text-amber-900 underline disabled:opacity-50"
                     >
                       {cancelling ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <X className="w-3 h-3 mr-1" />}
-                      Annuler le changement
+                      {cancelling ? t.account.pendingCancelling : t.account.pendingCancel}
                     </button>
                   </div>
                 </div>
@@ -165,24 +181,22 @@ export default function ChefAccountPage() {
             {/* Form changement */}
             {!pendingEmail && (
               <div>
-                <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Nouvel email</div>
+                <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">{t.account.newEmailLabel}</div>
                 <input
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="nouvel.email@exemple.com"
+                  placeholder={t.account.newEmailPlaceholder}
                   className="w-full px-4 py-3 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-300"
                 />
-                <p className="text-xs text-stone-500 mt-2">
-                  Un lien de vérification sera envoyé à cette adresse. Ton email actuel reste actif tant que la vérification n'est pas faite.
-                </p>
+                <p className="text-xs text-stone-500 mt-2">{t.account.newEmailHint}</p>
                 <button
                   onClick={submitChange}
                   disabled={submitting || !newEmail}
                   className="mt-4 inline-flex items-center px-5 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
-                  Envoyer le lien de vérification
+                  {submitting ? t.account.submitting : t.account.submitChange}
                 </button>
               </div>
             )}
