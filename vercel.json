@@ -9,6 +9,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/seo-backlog-refill",
+      "schedule": "0 5 * * *"
+    },
+    {
       "path": "/api/cron/seo-generate",
       "schedule": "0 7 * * *"
     },
