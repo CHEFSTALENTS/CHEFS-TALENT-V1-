@@ -6,7 +6,18 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Sparkles, Trash2, Eye, RefreshCw, FileText } from 'lucide-react';
+import {
+  Loader2,
+  Sparkles,
+  Trash2,
+  Eye,
+  RefreshCw,
+  FileText,
+  PenSquare,
+  Globe,
+  Archive,
+  ExternalLink,
+} from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
 import { destinations } from '@/lib/destinations';
 
@@ -77,6 +88,13 @@ export default function AdminSeoPage() {
   // Preview
   const [previewing, setPreviewing] = useState<ArticleFull | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Edit modal
+  const [editing, setEditing] = useState<ArticleFull | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+
+  // Per-row publish state
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   // Tri destinations FR pour le select
   const frDestinations = useMemo(
@@ -165,6 +183,70 @@ export default function AdminSeoPage() {
       alert(`Impossible de charger l'article : ${e?.message || 'Erreur'}`);
     } finally {
       setLoadingPreview(false);
+    }
+  }
+
+  async function openEdit(id: string) {
+    setLoadingEdit(true);
+    try {
+      const json = await adminFetch<{ ok: boolean; article: ArticleFull }>(
+        `/api/admin/seo/articles/${encodeURIComponent(id)}`,
+      );
+      setEditing(json.article);
+    } catch (e: any) {
+      alert(`Impossible de charger l'article : ${e?.message || 'Erreur'}`);
+    } finally {
+      setLoadingEdit(false);
+    }
+  }
+
+  async function patchArticle(id: string, patch: Record<string, any>) {
+    const r = await adminFetchRaw(`/api/admin/seo/articles/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    const text = await r.text();
+    let json: any = null;
+    try { json = text ? JSON.parse(text) : null; } catch {
+      throw new Error(`Réponse non-JSON (HTTP ${r.status}). ${text.slice(0, 200)}`);
+    }
+    if (!r.ok || !json?.ok) {
+      throw new Error(json?.error || `HTTP ${r.status}`);
+    }
+    return json.article;
+  }
+
+  async function handlePublishToggle(article: ArticleListItem) {
+    const goingLive = article.status !== 'published';
+    const message = goingLive
+      ? `Publier « ${article.title} » sur /insights/${article.slug} ?`
+      : `Dépublier « ${article.title} » (l'article ne sera plus visible publiquement) ?`;
+    if (!confirm(message)) return;
+    setBusyId(article.id);
+    try {
+      await patchArticle(article.id, { status: goingLive ? 'published' : 'draft' });
+      await fetchArticles();
+    } catch (e: any) {
+      alert(`Échec : ${e?.message || 'Erreur'}`);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleArchive(article: ArticleListItem) {
+    if (article.status === 'published') {
+      alert('Dépubliez d\'abord l\'article avant de l\'archiver.');
+      return;
+    }
+    if (!confirm(`Archiver « ${article.title} » ? Il restera en base mais masqué de la liste active.`)) return;
+    setBusyId(article.id);
+    try {
+      await patchArticle(article.id, { status: 'archived' });
+      await fetchArticles();
+    } catch (e: any) {
+      alert(`Échec : ${e?.message || 'Erreur'}`);
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -339,6 +421,17 @@ export default function AdminSeoPage() {
                   </div>
                 </div>
                 <div className="shrink-0 flex items-center gap-1">
+                  {a.status === 'published' && (
+                    <a
+                      href={`/insights/${a.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white/85"
+                      title="Ouvrir sur le site public"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
                   <button
                     onClick={() => openPreview(a.id)}
                     className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white/85"
@@ -346,11 +439,44 @@ export default function AdminSeoPage() {
                   >
                     <Eye className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={() => openEdit(a.id)}
+                    className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white/85"
+                    title="Éditer"
+                  >
+                    <PenSquare className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handlePublishToggle(a)}
+                    disabled={busyId === a.id}
+                    className={
+                      a.status === 'published'
+                        ? 'p-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/20 text-amber-200 disabled:opacity-50'
+                        : 'p-1.5 rounded-lg border border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-200 disabled:opacity-50'
+                    }
+                    title={a.status === 'published' ? 'Dépublier' : 'Publier'}
+                  >
+                    {busyId === a.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Globe className="w-4 h-4" />
+                    )}
+                  </button>
+                  {a.status !== 'published' && a.status !== 'archived' && (
+                    <button
+                      onClick={() => handleArchive(a)}
+                      disabled={busyId === a.id}
+                      className="p-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white/65 disabled:opacity-50"
+                      title="Archiver"
+                    >
+                      <Archive className="w-4 h-4" />
+                    </button>
+                  )}
                   {a.status !== 'published' && (
                     <button
                       onClick={() => handleDelete(a.id, a.title)}
                       className="p-1.5 rounded-lg border border-red-400/20 bg-red-400/5 hover:bg-red-400/15 text-red-200"
-                      title="Supprimer le brouillon"
+                      title="Supprimer définitivement"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -368,6 +494,20 @@ export default function AdminSeoPage() {
           article={previewing}
           loading={loadingPreview}
           onClose={() => setPreviewing(null)}
+        />
+      )}
+
+      {/* Modal edit */}
+      {(editing || loadingEdit) && (
+        <EditModal
+          article={editing}
+          loading={loadingEdit}
+          onClose={() => setEditing(null)}
+          onSaved={async () => {
+            setEditing(null);
+            await fetchArticles();
+          }}
+          patchArticle={patchArticle}
         />
       )}
     </div>
@@ -479,5 +619,265 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <span className="block text-[10px] text-white/35 mt-0.5">{hint}</span>}
     </label>
+  );
+}
+
+function EditModal({
+  article,
+  loading,
+  onClose,
+  onSaved,
+  patchArticle,
+}: {
+  article: ArticleFull | null;
+  loading: boolean;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+  patchArticle: (id: string, patch: Record<string, any>) => Promise<any>;
+}) {
+  const [form, setForm] = useState({
+    slug: '',
+    title: '',
+    subtitle: '',
+    meta_title: '',
+    meta_description: '',
+    category: '',
+    image_url: '',
+    image_alt: '',
+    target_destination_slug: '',
+    blocks_json: '[]',
+    faqs_json: '[]',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (article) {
+      setForm({
+        slug: article.slug || '',
+        title: article.title || '',
+        subtitle: article.subtitle || '',
+        meta_title: article.meta_title || '',
+        meta_description: article.meta_description || '',
+        category: article.category || '',
+        image_url: (article as any).image_url || '',
+        image_alt: (article as any).image_alt || '',
+        target_destination_slug: article.target_destination_slug || '',
+        blocks_json: JSON.stringify(article.blocks || [], null, 2),
+        faqs_json: JSON.stringify(article.faqs || [], null, 2),
+      });
+      setError(null);
+    }
+  }, [article?.id]);
+
+  async function save() {
+    if (!article) return;
+    setError(null);
+    setSaving(true);
+    try {
+      // Validation JSON pour blocks et faqs
+      let blocks: any[];
+      let faqs: any[];
+      try {
+        blocks = JSON.parse(form.blocks_json);
+        if (!Array.isArray(blocks)) throw new Error('blocks doit être un tableau');
+      } catch (e: any) {
+        throw new Error(`blocks JSON invalide : ${e?.message}`);
+      }
+      try {
+        faqs = JSON.parse(form.faqs_json);
+        if (!Array.isArray(faqs)) throw new Error('faqs doit être un tableau');
+      } catch (e: any) {
+        throw new Error(`faqs JSON invalide : ${e?.message}`);
+      }
+
+      await patchArticle(article.id, {
+        slug: form.slug.trim() || undefined,
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim(),
+        meta_title: form.meta_title.trim(),
+        meta_description: form.meta_description.trim(),
+        category: form.category.trim(),
+        image_url: form.image_url.trim(),
+        image_alt: form.image_alt.trim(),
+        target_destination_slug: form.target_destination_slug.trim(),
+        blocks,
+        faqs,
+      });
+      await onSaved();
+    } catch (e: any) {
+      setError(e?.message || 'Erreur');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
+    >
+      <div className="w-full max-w-4xl bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl max-h-[96vh] overflow-y-auto">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0f0f10]/95 backdrop-blur z-10">
+          <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
+            <PenSquare className="w-5 h-5 text-sky-300" />
+            Éditer l'article
+          </h3>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-xs text-white/85 hover:bg-white/10 disabled:opacity-50"
+          >
+            Fermer
+          </button>
+        </div>
+
+        {loading || !article ? (
+          <div className="px-5 py-10 text-center text-white/55">
+            <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+            Chargement…
+          </div>
+        ) : (
+          <div className="px-5 py-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Titre" hint="50-60 chars idéalement">
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+                />
+              </Field>
+              <Field label="Slug" hint="kebab-case, attention : changer le slug casse les liens existants">
+                <input
+                  type="text"
+                  value={form.slug}
+                  onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white font-mono text-xs"
+                />
+              </Field>
+            </div>
+
+            <Field label="Subtitle" hint="15-25 mots, sous le H1 sur la page">
+              <textarea
+                value={form.subtitle}
+                onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+              />
+            </Field>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Meta title (≤ 60 chars)">
+                <input
+                  type="text"
+                  value={form.meta_title}
+                  onChange={(e) => setForm((f) => ({ ...f, meta_title: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+                />
+              </Field>
+              <Field label="Catégorie">
+                <input
+                  type="text"
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                  placeholder="Destinations / Saisonnier / Yacht"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
+                />
+              </Field>
+            </div>
+
+            <Field label="Meta description" hint="140-160 chars, balise <meta> Google">
+              <textarea
+                value={form.meta_description}
+                onChange={(e) => setForm((f) => ({ ...f, meta_description: e.target.value }))}
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+              />
+            </Field>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Image URL (hero)" hint="https://images.unsplash.com/...">
+                <input
+                  type="url"
+                  value={form.image_url}
+                  onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 font-mono text-xs"
+                />
+              </Field>
+              <Field label="Image alt (a11y + SEO)">
+                <input
+                  type="text"
+                  value={form.image_alt}
+                  onChange={(e) => setForm((f) => ({ ...f, image_alt: e.target.value }))}
+                  placeholder="Villa avec chef privé sur la Côte d'Azur"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
+                />
+              </Field>
+            </div>
+
+            <Field label="Destination liée (slug)" hint="ex: chef-prive-saint-tropez — sert au lien CTA + lien interne">
+              <input
+                type="text"
+                value={form.target_destination_slug}
+                onChange={(e) => setForm((f) => ({ ...f, target_destination_slug: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white font-mono text-xs"
+              />
+            </Field>
+
+            <Field
+              label="Blocks (JSON)"
+              hint="[{ type: 'paragraph'|'h2'|'h3'|'list'|'quote', content: string|string[] }, ...]"
+            >
+              <textarea
+                value={form.blocks_json}
+                onChange={(e) => setForm((f) => ({ ...f, blocks_json: e.target.value }))}
+                rows={16}
+                spellCheck={false}
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-white font-mono"
+              />
+            </Field>
+
+            <Field
+              label="FAQs (JSON)"
+              hint="[{ question: string, answer: string }, ...]"
+            >
+              <textarea
+                value={form.faqs_json}
+                onChange={(e) => setForm((f) => ({ ...f, faqs_json: e.target.value }))}
+                rows={10}
+                spellCheck={false}
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-white font-mono"
+              />
+            </Field>
+
+            {error && (
+              <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200 whitespace-pre-wrap">
+                {error}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+              <button
+                onClick={onClose}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={save}
+                disabled={saving}
+                className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
+                {saving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
