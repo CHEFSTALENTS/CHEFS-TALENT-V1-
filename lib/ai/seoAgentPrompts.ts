@@ -293,3 +293,121 @@ export function buildTranslateArticlePrompt(input: {
   ];
   return lines.join('\n');
 }
+
+/**
+ * System prompt dédié au générateur de backlog : Claude reçoit la liste des
+ * topics déjà couverts + la liste des destinations disponibles, et propose
+ * une short-list de NOUVEAUX topics stratégiques non-redondants.
+ *
+ * On garde un system distinct du SEO_AGENT_SYSTEM_PROMPT (qui est long)
+ * pour que ce prompt court reste rapide à processer et cacheable séparément.
+ */
+export const SEO_BACKLOG_GENERATOR_SYSTEM_PROMPT = `
+Tu es l'éditeur SEO senior de **Chefs Talents**, agence française de chefs privés haut de gamme. Ton rôle pour CE prompt : proposer des **topics d'articles SEO stratégiques** à ajouter au calendrier éditorial.
+
+## Positionnement à respecter
+Chefs Talents = agence sélective française qui place des chefs Michelin-trained pour :
+- Clientèle **UHNW** (villas Côte d'Azur, yachts Méditerranée, chalets Alpes, résidences privées)
+- Clientèle **CSP+++** (cadres très aisés, professions libérales, chefs d'entreprise) — pour des dîners ponctuels, mariages, événements
+- Amplitude des missions : du **dîner unique** (3-6h) au **placement long terme** (>2 mois)
+
+## Stratégie SEO Chefs Talents (à utiliser pour choisir les topics)
+1. **Blue ocean — micro-zones UHNW délaissées par les concurrents** : Cap-Ferrat, Pampelonne, Cap d'Antibes, Ramatuelle, Mougins, Èze, Roquebrune-Cap-Martin, La Croix-Valmer, La Garoupe (vs simplement « Côte d'Azur » ou « Saint-Tropez »). Megève / Courchevel / Val d'Isère traités séparément (pas « Alpes »).
+2. **Types de missions à couvrir systématiquement** : villa, yacht, chalet, dîner ponctuel, événement (mariage, anniversaire, séminaire UHNW), week-end, saison, placement permanent.
+3. **Saisonnalité événementielle** : Cannes Festival (mai), Monaco Grand Prix (mai), Wimbledon (juillet), été méditerranéen (juin-août), hiver alpin (décembre-mars).
+4. **Régimes spécifiques rentables** : kosher, plant-based haute gastronomie, longevity / low-glycemic, allergènes UHNW.
+5. **Profils chefs** : chefs étoilés, ex-restaurants 1-3 étoiles, sommeliers, chefs pâtissiers, chefs spécialisés (japonais, italien, méditerranéen).
+
+## Règles strictes
+- **Pas de redondance** avec les topics déjà existants (te seront fournis dans le user prompt).
+- **Variété** : ne propose pas que des destinations — alterne destinations / types de missions / saisons / profils chefs.
+- **Saisonnalité contextuelle** : si on est en automne, prioriser les sujets « réservations été suivant », « événements automne », « chalets hiver à venir ». Si on est en mai-juin, prioriser saison méditerranéenne en cours, etc.
+- **Priorités** : assigne une priorité 0-10 par topic. Les sujets très saisonniers/d'actualité = priorité haute (5-10). Les fonds de catalogue = priorité 0-3.
+- **Modes** :
+  - \`new_article\` pour un sujet libre (avec optionnellement un \`destination_slug\` si la destination existe dans le site)
+  - \`improve_destination\` pour approfondir une destination existante du site
+- **Angles éditoriaux différenciés** : varie les angles (logistique, gastronomie locale, profils chefs, saisonnalité, événementiel, etc.)
+
+## Format de sortie (JSON STRICT)
+Aucun texte hors du JSON. Pas de wrapper \`\`\`json.
+`.trim();
+
+export const BACKLOG_TOPICS_SCHEMA_HINT = `
+{
+  "topics": [
+    {
+      "topic": "string (sujet précis et SEO-friendly, ex: 'Chef privé Cap-Ferrat villa juillet')",
+      "mode": "new_article" | "improve_destination",
+      "destination_slug": "string|null (slug existant dans lib/destinations.ts ou null)",
+      "desired_angle": "string|null (angle éditorial particulier, optionnel)",
+      "priority": 0,
+      "rationale": "string (1 phrase justifiant pourquoi ce topic - pour audit interne, n'apparaîtra pas dans l'article final)"
+    }
+  ]
+}
+`.trim();
+
+/**
+ * Construit le user prompt pour générer un batch de topics SEO.
+ */
+export function buildBacklogTopicsPrompt(input: {
+  count: number;                          // nombre de topics à générer
+  existingTopics: Array<{                 // topics déjà dans le backlog (toutes statuts)
+    topic: string;
+    mode: string;
+    destination_slug?: string | null;
+    status: string;
+  }>;
+  publishedArticles: Array<{              // articles déjà publiés (pour éviter les doublons)
+    title: string;
+    slug: string;
+    target_destination_slug?: string | null;
+  }>;
+  availableDestinations: Array<{          // destinations existantes utilisables en mode improve_destination
+    slug: string;
+    name: string;
+  }>;
+  now?: Date;
+}): string {
+  const now = input.now || new Date();
+  const month = now.toLocaleString('fr-FR', { month: 'long' });
+  const year = now.getFullYear();
+
+  const lines: string[] = [
+    `## Repère temporel`,
+    `Nous sommes en **${month} ${year}**. Tiens-en compte pour la saisonnalité.`,
+    ``,
+    `## Mission`,
+    `Propose **${input.count} topics SEO** stratégiques à ajouter au backlog Chefs Talents.`,
+    ``,
+  ];
+
+  if (input.existingTopics.length > 0) {
+    lines.push(`## Topics déjà au backlog (NE PAS dupliquer)`);
+    for (const t of input.existingTopics.slice(0, 80)) {
+      lines.push(`- [${t.status}] ${t.mode} : ${t.topic}${t.destination_slug ? ` (→ ${t.destination_slug})` : ''}`);
+    }
+    lines.push('');
+  }
+
+  if (input.publishedArticles.length > 0) {
+    lines.push(`## Articles déjà publiés (NE PAS dupliquer, peuvent être complétés sous un autre angle)`);
+    for (const a of input.publishedArticles.slice(0, 50)) {
+      lines.push(`- ${a.title} (/${a.slug}${a.target_destination_slug ? ` → ${a.target_destination_slug}` : ''})`);
+    }
+    lines.push('');
+  }
+
+  if (input.availableDestinations.length > 0) {
+    lines.push(`## Destinations existantes sur le site (utilisables en mode improve_destination)`);
+    lines.push(input.availableDestinations.map((d) => `${d.slug} (${d.name})`).join(' · '));
+    lines.push('');
+  }
+
+  lines.push(`Produis **${input.count} topics variés et non-redondants** selon la stratégie. Mix entre :`);
+  lines.push(`- mode 'new_article' avec sujets précis (micro-zones, types de missions, saisonnalité, événements, profils chefs)`);
+  lines.push(`- mode 'improve_destination' (max 30% du batch) sur des destinations dont la page commerciale gagnerait à être enrichie`);
+  lines.push('');
+  lines.push(`Respecte STRICTEMENT le format JSON décrit. Aucun texte hors du JSON.`);
+  return lines.join('\n');
+}

@@ -137,6 +137,7 @@ export default function AdminSeoPage() {
   const [loadingTopics, setLoadingTopics] = useState(true);
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [topicBusyId, setTopicBusyId] = useState<string | null>(null);
+  const [autoGenerating, setAutoGenerating] = useState(false);
 
   // Tri destinations FR pour le select
   const frDestinations = useMemo(
@@ -191,6 +192,36 @@ export default function AdminSeoPage() {
       alert(`Suppression impossible : ${e?.message}`);
     } finally {
       setTopicBusyId(null);
+    }
+  }
+
+  async function autoGenerateTopics() {
+    if (!confirm(
+      'Demander à Claude 15 nouveaux topics SEO stratégiques ?\n\n' +
+      'Claude analysera les topics et articles existants pour éviter les doublons, ' +
+      'et tiendra compte de la saisonnalité courante. ~10-20s, coût ~0,01-0,03 €.',
+    )) return;
+    setAutoGenerating(true);
+    try {
+      const r = await adminFetchRaw('/api/admin/seo/topics/generate-batch', {
+        method: 'POST',
+        body: JSON.stringify({ count: 15 }),
+      });
+      const text = await r.text();
+      let json: any = null;
+      try { json = text ? JSON.parse(text) : null; } catch {
+        throw new Error(`Réponse non-JSON (HTTP ${r.status}). ${text.slice(0, 200)}`);
+      }
+      if (!r.ok || !json?.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      alert(
+        `✓ ${json.insertedCount} topics ajoutés au backlog ` +
+        `(${json.skippedDuplicates} doublons ignorés, coût ${json.generation?.costEur?.toFixed(4)} €).`,
+      );
+      await fetchTopics();
+    } catch (e: any) {
+      alert(`Échec : ${e?.message || 'Erreur'}`);
+    } finally {
+      setAutoGenerating(false);
     }
   }
 
@@ -542,6 +573,8 @@ export default function AdminSeoPage() {
         }}
         onDelete={deleteTopic}
         onRetry={retryTopic}
+        onAutoGenerate={autoGenerateTopics}
+        autoGenerating={autoGenerating}
         frDestinations={frDestinations}
       />
 
@@ -1125,6 +1158,8 @@ function BacklogSection({
   onAdded,
   onDelete,
   onRetry,
+  onAutoGenerate,
+  autoGenerating,
   frDestinations,
 }: {
   topics: SeoTopic[];
@@ -1136,6 +1171,8 @@ function BacklogSection({
   onAdded: () => Promise<void> | void;
   onDelete: (id: string, topic: string) => Promise<void> | void;
   onRetry: (id: string) => Promise<void> | void;
+  onAutoGenerate: () => Promise<void> | void;
+  autoGenerating: boolean;
   frDestinations: Array<{ slug: string; name: string }>;
 }) {
   const pendingCount = topics.filter((t) => t.status === 'pending').length;
@@ -1153,10 +1190,10 @@ function BacklogSection({
             </span>
           )}
           <span className="text-[10px] text-white/40">
-            · Cron 2x/jour (8h &amp; 14h Paris)
+            · Cron génération 2x/jour · Auto-refill 1x/jour
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onRefresh}
             disabled={loading}
@@ -1164,6 +1201,19 @@ function BacklogSection({
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Rafraîchir
+          </button>
+          <button
+            onClick={onAutoGenerate}
+            disabled={autoGenerating}
+            className="inline-flex items-center px-3 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 text-xs text-indigo-200 hover:bg-indigo-400/20 disabled:opacity-50"
+            title="Demander à Claude 15 nouveaux topics non-redondants"
+          >
+            {autoGenerating ? (
+              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            Auto-générer
           </button>
           <button
             onClick={onToggleForm}
