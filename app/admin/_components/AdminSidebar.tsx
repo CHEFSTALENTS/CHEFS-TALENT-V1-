@@ -14,6 +14,7 @@ import {
   BookOpen,
   Mail,
   Send,
+  Sparkles,
   CreditCard,
   LogOut,
   Menu,
@@ -82,6 +83,7 @@ export function AdminSidebar({
       items: [
         { label: 'Newsletter', href: '/admin/newsletter', icon: Mail },
         { label: 'Test délivrabilité', href: '/admin/email-test', icon: Send },
+        { label: 'Console SEO', href: '/admin/seo', icon: Sparkles },
       ],
     },
     {
