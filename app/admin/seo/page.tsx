@@ -17,6 +17,9 @@ import {
   Globe,
   Archive,
   ExternalLink,
+  CalendarClock,
+  Plus,
+  RotateCw,
 } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
 import { destinations } from '@/lib/destinations';
@@ -43,6 +46,35 @@ type ArticleListItem = {
 type GeneratedBlock = {
   type: 'paragraph' | 'h2' | 'h3' | 'list' | 'quote';
   content: string | string[];
+};
+
+type SeoTopic = {
+  id: string;
+  topic: string;
+  mode: 'new_article' | 'improve_destination';
+  destination_slug: string | null;
+  desired_angle: string | null;
+  priority: number;
+  status: 'pending' | 'processing' | 'done' | 'failed';
+  generated_article_id: string | null;
+  error: string | null;
+  processed_at: string | null;
+  created_at: string;
+  generated?: { slug: string; title: string; status: string } | null;
+};
+
+const TOPIC_STATUS_LABEL: Record<SeoTopic['status'], string> = {
+  pending: 'En attente',
+  processing: 'En cours',
+  done: 'Généré',
+  failed: 'Échec',
+};
+
+const TOPIC_STATUS_CLASS: Record<SeoTopic['status'], string> = {
+  pending: 'bg-amber-400/15 text-amber-200 border-amber-400/25',
+  processing: 'bg-sky-400/15 text-sky-200 border-sky-400/25',
+  done: 'bg-emerald-400/15 text-emerald-200 border-emerald-400/25',
+  failed: 'bg-red-400/15 text-red-200 border-red-400/25',
 };
 
 type ArticleFull = ArticleListItem & {
@@ -99,6 +131,12 @@ export default function AdminSeoPage() {
   // Per-row publish state
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Backlog topics
+  const [topics, setTopics] = useState<SeoTopic[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(true);
+  const [showTopicForm, setShowTopicForm] = useState(false);
+  const [topicBusyId, setTopicBusyId] = useState<string | null>(null);
+
   // Tri destinations FR pour le select
   const frDestinations = useMemo(
     () => destinations.filter((d) => d.lang === 'fr').sort((a, b) => a.name.localeCompare(b.name)),
@@ -119,9 +157,58 @@ export default function AdminSeoPage() {
     }
   }, []);
 
+  const fetchTopics = useCallback(async () => {
+    setLoadingTopics(true);
+    try {
+      const json = await adminFetch<{ ok: boolean; topics: SeoTopic[] }>(
+        '/api/admin/seo/topics?limit=100',
+      );
+      setTopics(json.topics || []);
+    } catch (e: any) {
+      console.error('[admin/seo] fetch topics', e);
+    } finally {
+      setLoadingTopics(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchArticles();
-  }, [fetchArticles]);
+    fetchTopics();
+  }, [fetchArticles, fetchTopics]);
+
+  async function deleteTopic(id: string, topic: string) {
+    if (!confirm(`Retirer du backlog : « ${topic} » ?`)) return;
+    setTopicBusyId(id);
+    try {
+      const r = await adminFetchRaw(`/api/admin/seo/topics?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      await fetchTopics();
+    } catch (e: any) {
+      alert(`Suppression impossible : ${e?.message}`);
+    } finally {
+      setTopicBusyId(null);
+    }
+  }
+
+  async function retryTopic(id: string) {
+    setTopicBusyId(id);
+    try {
+      const r = await adminFetchRaw(`/api/admin/seo/topics`, {
+        method: 'PATCH',
+        body: JSON.stringify({ id, status: 'pending' }),
+      });
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      await fetchTopics();
+    } catch (e: any) {
+      alert(`Reset impossible : ${e?.message}`);
+    } finally {
+      setTopicBusyId(null);
+    }
+  }
 
   async function handleGenerate() {
     setFormError(null);
@@ -400,6 +487,23 @@ export default function AdminSeoPage() {
           </div>
         )}
       </section>
+
+      {/* Backlog SEO (cron) */}
+      <BacklogSection
+        topics={topics}
+        loading={loadingTopics}
+        busyId={topicBusyId}
+        showForm={showTopicForm}
+        onToggleForm={() => setShowTopicForm((v) => !v)}
+        onRefresh={fetchTopics}
+        onAdded={async () => {
+          setShowTopicForm(false);
+          await fetchTopics();
+        }}
+        onDelete={deleteTopic}
+        onRetry={retryTopic}
+        frDestinations={frDestinations}
+      />
 
       {/* Liste des articles */}
       <section className="rounded-2xl border border-white/10 bg-white/[0.02]">
@@ -949,6 +1053,283 @@ function EditModal({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function BacklogSection({
+  topics,
+  loading,
+  busyId,
+  showForm,
+  onToggleForm,
+  onRefresh,
+  onAdded,
+  onDelete,
+  onRetry,
+  frDestinations,
+}: {
+  topics: SeoTopic[];
+  loading: boolean;
+  busyId: string | null;
+  showForm: boolean;
+  onToggleForm: () => void;
+  onRefresh: () => Promise<void> | void;
+  onAdded: () => Promise<void> | void;
+  onDelete: (id: string, topic: string) => Promise<void> | void;
+  onRetry: (id: string) => Promise<void> | void;
+  frDestinations: Array<{ slug: string; name: string }>;
+}) {
+  const pendingCount = topics.filter((t) => t.status === 'pending').length;
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.02]">
+      <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="w-4 h-4 text-white/55" />
+          <h2 className="text-sm font-semibold text-white">
+            Backlog SEO ({topics.length})
+          </h2>
+          {pendingCount > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-400/25 bg-amber-400/15 text-amber-200">
+              {pendingCount} en attente
+            </span>
+          )}
+          <span className="text-[10px] text-white/40">
+            · Cron 2x/jour (8h &amp; 14h Paris)
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="inline-flex items-center px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-white/85 hover:bg-white/10"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            Rafraîchir
+          </button>
+          <button
+            onClick={onToggleForm}
+            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-sky-400 text-sky-950 text-xs font-medium hover:bg-sky-300"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Ajouter
+          </button>
+        </div>
+      </header>
+
+      {showForm && <AddTopicForm onAdded={onAdded} frDestinations={frDestinations} />}
+
+      {loading ? (
+        <div className="px-5 py-8 text-center text-sm text-white/45">
+          <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+          Chargement…
+        </div>
+      ) : topics.length === 0 ? (
+        <div className="px-5 py-8 text-center text-sm text-white/45">
+          Aucun topic dans le backlog. Ajoute des sujets pour que le cron les génère automatiquement.
+        </div>
+      ) : (
+        <ul className="divide-y divide-white/10">
+          {topics.map((t) => (
+            <li key={t.id} className="px-5 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${TOPIC_STATUS_CLASS[t.status]}`}>
+                    {TOPIC_STATUS_LABEL[t.status]}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-white/55">
+                    {t.mode === 'improve_destination' ? 'Approfondir' : 'Nouvel article'}
+                  </span>
+                  {t.priority !== 0 && (
+                    <span className="text-[10px] text-white/45">priorité {t.priority}</span>
+                  )}
+                </div>
+                <div className="text-sm text-white/90 truncate mt-0.5">{t.topic}</div>
+                <div className="text-[11px] text-white/45 mt-0.5">
+                  {t.destination_slug && `→ ${t.destination_slug}`}
+                  {t.desired_angle && ` · ${t.desired_angle.slice(0, 80)}`}
+                  {t.processed_at && ` · traité ${new Date(t.processed_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}`}
+                  {t.generated?.slug && (
+                    <>
+                      {' · '}
+                      <a
+                        href={`/insights/${t.generated.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-white/75"
+                      >
+                        /insights/{t.generated.slug}
+                      </a>
+                    </>
+                  )}
+                </div>
+                {t.error && (
+                  <div className="text-[11px] text-red-200 mt-1">⚠ {t.error}</div>
+                )}
+              </div>
+              <div className="shrink-0 flex items-center gap-1">
+                {t.status === 'failed' && (
+                  <button
+                    onClick={() => onRetry(t.id)}
+                    disabled={busyId === t.id}
+                    className="p-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 hover:bg-sky-400/20 text-sky-200 disabled:opacity-50"
+                    title="Réessayer (remettre en pending)"
+                  >
+                    {busyId === t.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RotateCw className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+                {t.status !== 'processing' && (
+                  <button
+                    onClick={() => onDelete(t.id, t.topic)}
+                    disabled={busyId === t.id}
+                    className="p-1.5 rounded-lg border border-red-400/20 bg-red-400/5 hover:bg-red-400/15 text-red-200 disabled:opacity-50"
+                    title="Retirer du backlog"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function AddTopicForm({
+  onAdded,
+  frDestinations,
+}: {
+  onAdded: () => Promise<void> | void;
+  frDestinations: Array<{ slug: string; name: string }>;
+}) {
+  const [mode, setMode] = useState<'new_article' | 'improve_destination'>('new_article');
+  const [topic, setTopic] = useState('');
+  const [destinationSlug, setDestinationSlug] = useState('');
+  const [desiredAngle, setDesiredAngle] = useState('');
+  const [priority, setPriority] = useState('0');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setError(null);
+    if (mode === 'new_article' && !topic.trim()) {
+      setError('Sujet requis');
+      return;
+    }
+    if (mode === 'improve_destination' && !destinationSlug) {
+      setError('Destination requise');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const r = await adminFetchRaw('/api/admin/seo/topics', {
+        method: 'POST',
+        body: JSON.stringify({
+          mode,
+          topic: topic.trim() || undefined,
+          destinationSlug: destinationSlug || undefined,
+          desiredAngle: desiredAngle.trim() || undefined,
+          priority: Number(priority) || 0,
+        }),
+      });
+      const json = await r.json();
+      if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+      setTopic('');
+      setDestinationSlug('');
+      setDesiredAngle('');
+      setPriority('0');
+      setMode('new_article');
+      await onAdded();
+    } catch (e: any) {
+      setError(e?.message || 'Erreur');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="px-5 py-4 border-b border-white/10 space-y-3 bg-white/[0.02]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <ModeCard
+          active={mode === 'new_article'}
+          onClick={() => setMode('new_article')}
+          title="Nouvel article"
+          description="Sujet libre avec destination optionnelle"
+        />
+        <ModeCard
+          active={mode === 'improve_destination'}
+          onClick={() => setMode('improve_destination')}
+          title="Approfondir destination"
+          description="Deep-dive éditorial sur une destination existante"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {mode === 'new_article' && (
+          <Field label="Sujet">
+            <input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="ex: Chef privé pour dîner CSP+++ à Paris"
+              className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
+            />
+          </Field>
+        )}
+        <Field label={mode === 'improve_destination' ? 'Destination (obligatoire)' : 'Destination (optionnel)'}>
+          <select
+            value={destinationSlug}
+            onChange={(e) => setDestinationSlug(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+          >
+            <option value="">— {mode === 'improve_destination' ? 'Choisir' : 'Aucune'} —</option>
+            {frDestinations.map((d) => (
+              <option key={d.slug} value={d.slug}>
+                {d.name} ({d.slug})
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Angle éditorial (optionnel)" hint="Si tu veux orienter le sujet">
+        <textarea
+          value={desiredAngle}
+          onChange={(e) => setDesiredAngle(e.target.value)}
+          rows={2}
+          className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+        />
+      </Field>
+
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <Field label="Priorité" hint="0 par défaut, plus élevé = traité en premier">
+          <input
+            type="number"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            className="w-24 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+          />
+        </Field>
+        {error && (
+          <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs text-red-200">
+            {error}
+          </div>
+        )}
+        <button
+          onClick={submit}
+          disabled={submitting}
+          className="inline-flex items-center px-4 py-2 rounded-xl bg-sky-400 text-sky-950 text-sm font-medium hover:bg-sky-300 disabled:opacity-50"
+        >
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+          Ajouter au backlog
+        </button>
       </div>
     </div>
   );
