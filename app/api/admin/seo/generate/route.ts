@@ -159,9 +159,10 @@ export async function POST(req: Request) {
         desiredAngle: desiredAngle?.trim() || undefined,
       }),
       schemaHint: ARTICLE_SCHEMA_HINT,
-      // 4500 tokens output = ~3000 mots max (avec JSON overhead) =
-      // articles de 800–1200 mots en pratique, génération ~30–60s.
-      maxTokens: 4500,
+      // 8000 tokens output = articles 1500-1800 mots avec FAQs structurées,
+      // alignés sur le standard de marché Montclair Chef. Génération
+      // ~60-120s en pratique, OK avec maxDuration=300.
+      maxTokens: 8000,
     });
     console.log('[seo/generate] Claude ok', {
       model: result.model,
