@@ -66,8 +66,11 @@ const STATUS_CLASS: Record<ArticleListItem['status'], string> = {
   archived: 'bg-white/10 text-white/55 border-white/15',
 };
 
+type GenerationMode = 'new_article' | 'improve_destination';
+
 export default function AdminSeoPage() {
   // Form state
+  const [mode, setMode] = useState<GenerationMode>('new_article');
   const [topic, setTopic] = useState('');
   const [destinationSlug, setDestinationSlug] = useState('');
   const [desiredAngle, setDesiredAngle] = useState('');
@@ -122,21 +125,34 @@ export default function AdminSeoPage() {
 
   async function handleGenerate() {
     setFormError(null);
-    if (!topic.trim()) {
+    if (mode === 'new_article' && !topic.trim()) {
       setFormError('Indique un sujet (ex: "Saint-Tropez villa été")');
+      return;
+    }
+    if (mode === 'improve_destination' && !destinationSlug) {
+      setFormError('Choisis une destination à approfondir.');
       return;
     }
     setGenerating(true);
     try {
+      const payload =
+        mode === 'improve_destination'
+          ? {
+              mode: 'improve_destination',
+              destinationSlug,
+              desiredAngle: desiredAngle.trim() || undefined,
+              persist: true,
+            }
+          : {
+              mode: 'new_article',
+              topic: topic.trim(),
+              destinationSlug: destinationSlug || undefined,
+              desiredAngle: desiredAngle.trim() || undefined,
+              persist: true,
+            };
       const r = await adminFetchRaw('/api/admin/seo/generate', {
         method: 'POST',
-        body: JSON.stringify({
-          mode: 'new_article',
-          topic: topic.trim(),
-          destinationSlug: destinationSlug || undefined,
-          desiredAngle: desiredAngle.trim() || undefined,
-          persist: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       // On lit en text d'abord pour pouvoir afficher l'erreur même si
@@ -283,27 +299,52 @@ export default function AdminSeoPage() {
       <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
         <h2 className="text-sm font-semibold text-white inline-flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-sky-300" />
-          Nouvel article
+          Générer un brouillon
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Field label="Sujet / mot-clé cible" hint="ex: « Chef privé Saint-Tropez villa été »">
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="Saint-Tropez villa été"
-              className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
-            />
-          </Field>
+        {/* Sélecteur de mode */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <ModeCard
+            active={mode === 'new_article'}
+            onClick={() => setMode('new_article')}
+            title="Nouvel article"
+            description="Article SEO 1500-1800 mots sur un sujet libre (avec destination optionnelle pour contextualiser)."
+          />
+          <ModeCard
+            active={mode === 'improve_destination'}
+            onClick={() => setMode('improve_destination')}
+            title="Approfondir une destination"
+            description="Deep-dive éditorial 1800-2200 mots qui enrichit une page destination existante (Cap-Ferrat, Mégève…). L'article publié maille vers /destinations/[slug]."
+          />
+        </div>
 
-          <Field label="Destination de référence" hint="Hydrate le contexte éditorial">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {mode === 'new_article' && (
+            <Field label="Sujet / mot-clé cible" hint="ex: « Chef privé Saint-Tropez villa été »">
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Saint-Tropez villa été"
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
+              />
+            </Field>
+          )}
+
+          <Field
+            label={mode === 'improve_destination' ? 'Destination à approfondir (obligatoire)' : 'Destination de référence'}
+            hint={
+              mode === 'improve_destination'
+                ? 'L\'article enrichira cette page destination.'
+                : 'Hydrate le contexte éditorial (optionnel)'
+            }
+          >
             <select
               value={destinationSlug}
               onChange={(e) => setDestinationSlug(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
             >
-              <option value="">— Aucune (texte libre) —</option>
+              <option value="">— {mode === 'improve_destination' ? 'Choisir' : 'Aucune (texte libre)'} —</option>
               {frDestinations.map((d) => (
                 <option key={d.slug} value={d.slug}>
                   {d.name} ({d.slug})
@@ -331,7 +372,7 @@ export default function AdminSeoPage() {
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-xs text-white/45">
-            Génération synchrone (~30–60s, soyez patient). Coût typique : 0,02 – 0,04 € par article.
+            Génération synchrone (~60–120s, soyez patient). Coût : 0,03 – 0,10 € par article selon longueur.
           </div>
           <button
             onClick={handleGenerate}
@@ -619,6 +660,37 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <span className="block text-[10px] text-white/35 mt-0.5">{hint}</span>}
     </label>
+  );
+}
+
+function ModeCard({
+  active,
+  onClick,
+  title,
+  description,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left rounded-xl border px-3 py-3 transition-colors ${
+        active
+          ? 'border-sky-400/50 bg-sky-400/10'
+          : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05]'
+      }`}
+    >
+      <div className={`text-sm font-medium ${active ? 'text-sky-100' : 'text-white/90'}`}>
+        {title}
+      </div>
+      <div className={`text-[11px] mt-1 leading-snug ${active ? 'text-sky-100/70' : 'text-white/55'}`}>
+        {description}
+      </div>
+    </button>
   );
 }
 

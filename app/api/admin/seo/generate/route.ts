@@ -3,7 +3,7 @@
 // POST /api/admin/seo/generate
 // Génère un article SEO via Claude pour Chefs Talents.
 //
-// Body :
+// Body (mode 'new_article') :
 //   {
 //     mode: 'new_article',
 //     topic: string,                  // sujet libre (ex: "Saint-Tropez", "Chef yacht été")
@@ -12,13 +12,20 @@
 //     persist?: boolean,              // défaut true : insère dans public.articles en status='draft'
 //   }
 //
+// Body (mode 'improve_destination') :
+//   {
+//     mode: 'improve_destination',
+//     destinationSlug: string,        // OBLIGATOIRE, doit exister dans lib/destinations.ts
+//     desiredAngle?: string,
+//     persist?: boolean,
+//   }
+//   → génère un article éditorial deep-dive qui enrichit la page destination
+//     existante. Le brouillon est lié via `target_destination_slug` et apparaîtra
+//     sur /insights une fois publié, avec un maillage interne vers /destinations/[slug].
+//
 // Renvoie :
 //   { ok: true, article: <row supabase>, generation: { inputTokens, outputTokens, costEur, model, cacheReadTokens } }
 //   ou { ok: false, error: string }
-//
-// La génération est synchrone (1 seul appel Claude). Pour un volume plus
-// important on passerait à une file de jobs, mais ici on reste simple :
-// l'admin lance manuellement, attend ~20-40s, voit le résultat.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +41,7 @@ import {
   SEO_AGENT_SYSTEM_PROMPT,
   ARTICLE_SCHEMA_HINT,
   buildNewArticlePrompt,
+  buildImproveDestinationPrompt,
 } from '@/lib/ai/seoAgentPrompts';
 import { getDestinationBySlug } from '@/lib/destinations';
 
@@ -106,13 +114,101 @@ export async function POST(req: Request) {
     persist = true,
   } = body || {};
 
-  if (mode !== 'new_article') {
+  if (mode !== 'new_article' && mode !== 'improve_destination') {
     return NextResponse.json(
-      { ok: false, error: `mode '${mode}' non supporté dans cette version (utiliser 'new_article')` },
+      { ok: false, error: `mode '${mode}' non supporté (utiliser 'new_article' ou 'improve_destination')` },
       { status: 400 },
     );
   }
 
+  // Sanity check : on veut une erreur 500 explicite plutôt que de planter
+  // dans le SDK Anthropic si la clé n'est pas set.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { ok: false, error: 'ANTHROPIC_API_KEY env var manquante sur le serveur' },
+      { status: 500 },
+    );
+  }
+
+  // ──────────────── Mode improve_destination ────────────────
+  if (mode === 'improve_destination') {
+    if (!destinationSlug || typeof destinationSlug !== 'string') {
+      return NextResponse.json(
+        { ok: false, error: 'destinationSlug obligatoire en mode improve_destination' },
+        { status: 400 },
+      );
+    }
+    const dest = getDestinationBySlug(destinationSlug);
+    if (!dest) {
+      return NextResponse.json(
+        { ok: false, error: `destination '${destinationSlug}' introuvable dans lib/destinations.ts` },
+        { status: 400 },
+      );
+    }
+    const ctx = buildDestinationContext(destinationSlug);
+    if (!ctx) {
+      return NextResponse.json(
+        { ok: false, error: `Contexte destination indisponible pour ${destinationSlug}` },
+        { status: 400 },
+      );
+    }
+
+    console.log('[seo/generate] start improve_destination', {
+      destinationSlug,
+      destinationName: dest.name,
+      admin: auth.user.email,
+    });
+
+    let result;
+    try {
+      result = await generateJSON<GeneratedArticle>({
+        systemPrompt: SEO_AGENT_SYSTEM_PROMPT,
+        userPrompt: buildImproveDestinationPrompt({
+          destinationName: dest.name,
+          destinationSlug,
+          destinationContext: ctx,
+          desiredAngle: desiredAngle?.trim() || undefined,
+        }),
+        schemaHint: ARTICLE_SCHEMA_HINT,
+        // Mode improve_destination : on cible 1800-2200 mots (deep-dive),
+        // donc on monte un peu le plafond.
+        maxTokens: 10000,
+      });
+      console.log('[seo/generate] Claude ok (improve)', {
+        model: result.model,
+        input: result.inputTokens,
+        output: result.outputTokens,
+        costEur: result.costEur,
+      });
+    } catch (e: any) {
+      console.error('[seo/generate] Claude error (improve)', {
+        message: e?.message,
+        status: e?.status,
+        stack: e?.stack?.split('\n').slice(0, 4).join('\n'),
+      });
+      return NextResponse.json(
+        { ok: false, error: e?.message || 'CLAUDE_ERROR' },
+        { status: 502 },
+      );
+    }
+
+    return await persistOrPreview({
+      generated: result.data,
+      rawText: result.rawText,
+      targetDestinationSlug: destinationSlug,
+      persist,
+      adminEmail: auth.user.email,
+      generationMeta: {
+        model: result.model,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        cacheReadTokens: result.cacheReadTokens,
+        costEur: result.costEur,
+      },
+    });
+  }
+
+  // ──────────────── Mode new_article (par défaut) ────────────────
   if (!topic || typeof topic !== 'string' || topic.trim().length < 3) {
     return NextResponse.json({ ok: false, error: 'topic_required' }, { status: 400 });
   }
@@ -130,15 +226,6 @@ export async function POST(req: Request) {
     }
     destinationContext = ctx;
     targetDestinationSlug = destinationSlug;
-  }
-
-  // Sanity check : on veut une erreur 500 explicite plutôt que de planter
-  // dans le SDK Anthropic si la clé n'est pas set.
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { ok: false, error: 'ANTHROPIC_API_KEY env var manquante sur le serveur' },
-      { status: 500 },
-    );
   }
 
   console.log('[seo/generate] start', {
@@ -183,7 +270,41 @@ export async function POST(req: Request) {
     );
   }
 
-  const generated = result.data;
+  return await persistOrPreview({
+    generated: result.data,
+    rawText: result.rawText,
+    targetDestinationSlug,
+    persist,
+    adminEmail: auth.user.email,
+    generationMeta: {
+      model: result.model,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      cacheReadTokens: result.cacheReadTokens,
+      costEur: result.costEur,
+    },
+  });
+}
+
+// ──────────────── Helpers ────────────────
+
+type PersistArgs = {
+  generated: GeneratedArticle;
+  rawText: string;
+  targetDestinationSlug: string | null;
+  persist: boolean;
+  adminEmail: string;
+  generationMeta: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    costEur: number;
+  };
+};
+
+async function persistOrPreview(args: PersistArgs) {
+  const { generated, rawText, targetDestinationSlug, persist, adminEmail, generationMeta } = args;
 
   // Validation minimale
   if (!generated?.title || !Array.isArray(generated?.blocks) || generated.blocks.length === 0) {
@@ -191,7 +312,7 @@ export async function POST(req: Request) {
       {
         ok: false,
         error: 'invalid_output',
-        rawText: result.rawText?.slice(0, 1000),
+        rawText: rawText?.slice(0, 1000),
       },
       { status: 502 },
     );
@@ -220,13 +341,7 @@ export async function POST(req: Request) {
         status: 'draft',
         ai_generated: true,
       },
-      generation: {
-        model: result.model,
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
-        cacheReadTokens: result.cacheReadTokens,
-        costEur: result.costEur,
-      },
+      generation: generationMeta,
     });
   }
 
@@ -261,11 +376,11 @@ export async function POST(req: Request) {
       target_destination_slug: targetDestinationSlug,
       status: 'draft',
       ai_generated: true,
-      ai_model: result.model,
-      ai_input_tokens: result.inputTokens,
-      ai_output_tokens: result.outputTokens,
-      ai_cost_eur: result.costEur,
-      created_by_admin_email: auth.user.email,
+      ai_model: generationMeta.model,
+      ai_input_tokens: generationMeta.inputTokens,
+      ai_output_tokens: generationMeta.outputTokens,
+      ai_cost_eur: generationMeta.costEur,
+      created_by_admin_email: adminEmail,
     })
     .select('*')
     .single();
@@ -281,12 +396,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     article: inserted,
-    generation: {
-      model: result.model,
-      inputTokens: result.inputTokens,
-      outputTokens: result.outputTokens,
-      cacheReadTokens: result.cacheReadTokens,
-      costEur: result.costEur,
-    },
+    generation: generationMeta,
   });
 }
