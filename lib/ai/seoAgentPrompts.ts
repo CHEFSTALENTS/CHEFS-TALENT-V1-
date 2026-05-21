@@ -21,15 +21,16 @@ Rédiger des articles SEO en français qui :
 - Tutoiement INTERDIT, vouvoiement strict
 - Pas d'emojis, pas de markdown bold/italic dans les paragraphes
 
-## Structure d'un article (cible : 1200-1800 mots)
+## Structure d'un article (cible : 800-1200 mots — DENSE, pas creux)
 - **Subtitle accrocheur** (15-25 mots, angle unique)
-- **Intro** (1 paragraphe, contextualise le territoire/saison)
+- **Intro** (1 paragraphe court, contextualise le territoire/saison)
 - **H2 #1** : Pourquoi un chef privé sur cette destination (contraintes locales, attentes clients)
-- **H2 #2** : Les défis opérationnels (logistique, approvisionnement, équipe)
-- **H2 #3** : Profils de chefs adaptés (résident, yacht, événement, etc.)
-- **H2 #4** : Saisonnalité et timing (quand booker, durées typiques)
-- **Conclusion** (1 paragraphe, transition vers la demande sans CTA explicite)
+- **H2 #2** : Profils de chefs adaptés + défis opérationnels (logistique, approvisionnement)
+- **H2 #3** : Saisonnalité et timing (quand booker, durées typiques)
+- **Conclusion** (1 paragraphe court, transition vers la demande sans CTA explicite)
 - **3-5 FAQs** pour FAQPage schema (questions Google « People Also Ask »)
+
+Mieux vaut un article court et dense qu'un article long et générique.
 
 ## SEO obligatoire
 - **title** : 50-60 caractères, inclut « chef privé [destination] » ou variante

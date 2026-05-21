@@ -22,7 +22,9 @@
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+// Vercel Pro max = 300s. La génération Claude prend 30–90s selon la longueur
+// de l'article (Sonnet ~50–100 tokens/sec, articles ~800–1200 mots).
+export const maxDuration = 300;
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -157,7 +159,9 @@ export async function POST(req: Request) {
         desiredAngle: desiredAngle?.trim() || undefined,
       }),
       schemaHint: ARTICLE_SCHEMA_HINT,
-      maxTokens: 8000,
+      // 4500 tokens output = ~3000 mots max (avec JSON overhead) =
+      // articles de 800–1200 mots en pratique, génération ~30–60s.
+      maxTokens: 4500,
     });
     console.log('[seo/generate] Claude ok', {
       model: result.model,

@@ -249,7 +249,7 @@ export default function AdminSeoPage() {
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-xs text-white/45">
-            Génération synchrone (~20–40s). Coût typique : 0,02 – 0,05 € par article.
+            Génération synchrone (~30–60s, soyez patient). Coût typique : 0,02 – 0,04 € par article.
           </div>
           <button
             onClick={handleGenerate}
