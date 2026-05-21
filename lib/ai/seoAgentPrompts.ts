@@ -46,6 +46,7 @@ Mieux vaut un article court et dense qu'un article long et générique.
 - ❌ Affirmations non vérifiables (« nous sommes les meilleurs »)
 - ❌ Listes à puces excessives (max 1 liste par H2)
 - ❌ Phrases génériques applicables à toute destination (chaque article doit avoir du contenu territoire-spécifique)
+- ❌ Mentions d'années passées comme si c'était l'avenir (ex: « pour la saison 2025 » alors qu'on est en 2026). La date courante te sera donnée dans le user prompt — utilise-la.
 
 ## Pour CHAQUE article tu DOIS produire un JSON STRICT
 Aucun texte hors du JSON. Pas de \`\`\`json wrapper si tu peux l'éviter.
@@ -70,14 +71,37 @@ export const ARTICLE_SCHEMA_HINT = `
 `.trim();
 
 /**
+ * Renvoie un repère temporel à injecter dans le user prompt pour caler Claude
+ * sur l'année courante (sinon il extrapole sur sa date de cutoff).
+ *
+ * Important : on ne met PAS la date dans le system prompt pour préserver
+ * le prompt caching d'Anthropic (le system prompt doit rester stable).
+ */
+function buildDateContext(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = now.toLocaleString('fr-FR', { month: 'long' });
+  const nextYear = year + 1;
+  return [
+    `## Repère temporel (date d'écriture)`,
+    `Nous sommes en **${month} ${year}**.`,
+    `- Pour la "saison actuelle" parler de l'été/hiver ${year}.`,
+    `- Pour la "prochaine saison" ou les conseils de réservation anticipée, parler de ${nextYear}.`,
+    `- N'écris JAMAIS d'année antérieure à ${year} comme si elle était à venir.`,
+  ].join('\n');
+}
+
+/**
  * Construit le user prompt pour générer un article SEO sur une destination.
  */
 export function buildNewArticlePrompt(input: {
   topic: string;                    // ex: "Saint-Tropez", "Chef yacht été Méditerranée"
   destinationContext?: string;      // contenu enrichi si destination existante
   desiredAngle?: string;            // angle particulier optionnel
+  now?: Date;                       // injectable pour tests
 }): string {
   const lines: string[] = [
+    buildDateContext(input.now),
+    '',
     `Rédige un article SEO complet sur le sujet : **${input.topic}**`,
   ];
   if (input.destinationContext) {
