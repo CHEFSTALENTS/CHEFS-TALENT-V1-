@@ -120,8 +120,23 @@ export default function AdminSeoPage() {
           persist: true,
         }),
       });
-      const json = await r.json();
-      if (!r.ok || !json.ok) {
+
+      // On lit en text d'abord pour pouvoir afficher l'erreur même si
+      // la réponse n'est pas du JSON (timeout Vercel = page HTML d'erreur).
+      const text = await r.text();
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        // Réponse non-JSON : probablement un timeout/crash serverless.
+        throw new Error(
+          `Réponse non-JSON (HTTP ${r.status}). ` +
+          `Vérifiez ANTHROPIC_API_KEY sur Vercel et les logs de la function. ` +
+          `Extrait : ${text.slice(0, 200)}`,
+        );
+      }
+
+      if (!r.ok || !json?.ok) {
         throw new Error(json?.error || `HTTP ${r.status}`);
       }
       setLastGeneration(json.generation);

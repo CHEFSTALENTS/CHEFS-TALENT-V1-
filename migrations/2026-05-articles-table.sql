@@ -80,7 +80,10 @@ create trigger trg_articles_updated_at
 alter table public.articles enable row level security;
 
 -- Public peut lire les articles publiés (pour SSR /insights/[slug])
-create policy if not exists "Public can read published articles"
+-- Note : PostgreSQL ne supporte pas `create policy if not exists`,
+-- on drop + recrée pour rester idempotent.
+drop policy if exists "Public can read published articles" on public.articles;
+create policy "Public can read published articles"
   on public.articles for select
   using (status = 'published');
 

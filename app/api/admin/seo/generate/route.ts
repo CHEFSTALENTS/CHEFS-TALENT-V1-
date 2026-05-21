@@ -69,11 +69,17 @@ function buildDestinationContext(slug: string): string | null {
   return parts.join('\n');
 }
 
+// Combining diacritical marks (U+0300 to U+036F).
+// Construit via new RegExp + \u escapes pour éviter d'avoir des
+// caractères combinants littéraux dans le code source (qui peuvent
+// foirer le parsing dans certains runtimes serverless).
+const DIACRITICS_RE = new RegExp('[\\u0300-\\u036f]', 'g');
+
 function slugify(input: string): string {
   return input
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(DIACRITICS_RE, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
@@ -124,6 +130,22 @@ export async function POST(req: Request) {
     targetDestinationSlug = destinationSlug;
   }
 
+  // Sanity check : on veut une erreur 500 explicite plutôt que de planter
+  // dans le SDK Anthropic si la clé n'est pas set.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { ok: false, error: 'ANTHROPIC_API_KEY env var manquante sur le serveur' },
+      { status: 500 },
+    );
+  }
+
+  console.log('[seo/generate] start', {
+    topic: topic.slice(0, 60),
+    destinationSlug,
+    hasContext: !!destinationContext,
+    admin: auth.user.email,
+  });
+
   // Appel Claude
   let result;
   try {
@@ -137,10 +159,21 @@ export async function POST(req: Request) {
       schemaHint: ARTICLE_SCHEMA_HINT,
       maxTokens: 8000,
     });
+    console.log('[seo/generate] Claude ok', {
+      model: result.model,
+      input: result.inputTokens,
+      output: result.outputTokens,
+      costEur: result.costEur,
+    });
   } catch (e: any) {
-    console.error('[seo/generate] Claude error', e);
+    console.error('[seo/generate] Claude error', {
+      message: e?.message,
+      status: e?.status,
+      type: e?.type,
+      stack: e?.stack?.split('\n').slice(0, 4).join('\n'),
+    });
     return NextResponse.json(
-      { ok: false, error: e?.message || 'CLAUDE_ERROR' },
+      { ok: false, error: e?.message || 'CLAUDE_ERROR', detail: e?.status ? `HTTP ${e.status}` : undefined },
       { status: 502 },
     );
   }
