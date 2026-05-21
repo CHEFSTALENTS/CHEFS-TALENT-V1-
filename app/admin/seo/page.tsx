@@ -20,6 +20,7 @@ import {
   CalendarClock,
   Plus,
   RotateCw,
+  Languages,
 } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
 import { destinations } from '@/lib/destinations';
@@ -336,6 +337,45 @@ export default function AdminSeoPage() {
     }
   }
 
+  async function handleTranslate(article: ArticleListItem) {
+    if (article.locale !== 'fr') {
+      alert('La traduction n\'est disponible que pour les articles FR.');
+      return;
+    }
+    if (!confirm(
+      `Générer la version EN de « ${article.title} » ?\n\n` +
+      `Claude va traduire et adapter le SEO (slug EN, meta EN, FAQs EN). ` +
+      `~60-90s. Coût ~0,04-0,07 €.\n\n` +
+      `La traduction sera créée en brouillon — vous pourrez la review/publier ensuite.`,
+    )) return;
+    setBusyId(article.id);
+    try {
+      const r = await adminFetchRaw(
+        `/api/admin/seo/articles/${encodeURIComponent(article.id)}/translate`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ targetLocale: 'en' }),
+        },
+      );
+      const text = await r.text();
+      let json: any = null;
+      try { json = text ? JSON.parse(text) : null; } catch {
+        throw new Error(`Réponse non-JSON (HTTP ${r.status}). ${text.slice(0, 200)}`);
+      }
+      if (!r.ok || !json?.ok) {
+        throw new Error(json?.error || `HTTP ${r.status}`);
+      }
+      await fetchArticles();
+      if (json.article?.id) {
+        openPreview(json.article.id);
+      }
+    } catch (e: any) {
+      alert(`Échec de la traduction : ${e?.message || 'Erreur'}`);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function handleArchive(article: ArticleListItem) {
     if (article.status === 'published') {
       alert('Dépubliez d\'abord l\'article avant de l\'archiver.');
@@ -540,6 +580,9 @@ export default function AdminSeoPage() {
                     <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_CLASS[a.status]}`}>
                       {STATUS_LABEL[a.status]}
                     </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-white/15 bg-white/5 text-white/65 font-mono uppercase">
+                      {a.locale || 'fr'}
+                    </span>
                     {a.ai_generated && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full border border-sky-400/25 bg-sky-400/15 text-sky-200">
                         IA
@@ -607,6 +650,20 @@ export default function AdminSeoPage() {
                       <Globe className="w-4 h-4" />
                     )}
                   </button>
+                  {a.locale === 'fr' && a.status === 'published' && (
+                    <button
+                      onClick={() => handleTranslate(a)}
+                      disabled={busyId === a.id}
+                      className="p-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 hover:bg-indigo-400/20 text-indigo-200 disabled:opacity-50"
+                      title="Traduire en EN"
+                    >
+                      {busyId === a.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Languages className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                   {a.status !== 'published' && a.status !== 'archived' && (
                     <button
                       onClick={() => handleArchive(a)}

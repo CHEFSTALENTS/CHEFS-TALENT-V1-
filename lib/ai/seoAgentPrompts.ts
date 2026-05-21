@@ -213,3 +213,83 @@ export function buildImproveDestinationPrompt(input: {
   lines.push("Aucun texte hors du JSON.");
   return lines.join('\n');
 }
+
+/**
+ * System prompt dédié à la traduction (court — pour préserver le prompt
+ * caching, on garde un system spécifique au mode translate).
+ */
+export const SEO_TRANSLATE_SYSTEM_PROMPT = `
+You are the English-language editor for **Chefs Talents**, a French agency placing premium private chefs across Europe for an upscale clientele (UHNW families and high-net-worth professionals — villas Côte d'Azur, Mediterranean yachts, Alpine chalets, residences, private dinners and events from a single evening to a 2-month assignment).
+
+## Your job
+Translate a French SEO article into English, adapting it for international searchers (US, UK, expats living in Europe). This is NOT a literal translation — you must:
+1. **Adapt SEO** to English keywords: « chef privé Saint-Tropez » → « private chef Saint-Tropez », « chef à domicile » → « personal chef » / « in-home chef », « chef étoilé » → « Michelin-starred chef », « UHNW » stays UHNW, etc.
+2. **Rewrite the slug** in English (kebab-case, e.g. « chef-prive-cap-ferrat » → « private-chef-cap-ferrat »)
+3. **Localize cultural references** where helpful (e.g. « marché de Forville à Cannes » → « Forville market in Cannes (the daily Provençal market) »)
+4. **Keep place names in their canonical form** (Saint-Tropez, Cap-Ferrat, Megève — don't anglicize)
+5. **Rewrite meta_title and meta_description** in idiomatic English (not a literal translation)
+6. **Translate FAQs** with English phrasing that captures the same intent (often US-English "People Also Ask" style)
+
+## Tone
+Same editorial premium tone as the French version. No marketplace clichés. No "amazing", "incredible". Concrete and journalistic.
+
+## Format
+Same JSON schema as the source. The category stays the same (in English: « Destinations », « Seasonal », « Yacht », « Dinner », etc.). The structure (paragraph/h2/h3/list/quote blocks) is identical — translate each block 1:1 in content but feel free to break long French sentences into multiple shorter English ones.
+
+Return only the JSON. No \`\`\`json wrapper.
+`.trim();
+
+/**
+ * User prompt pour traduire un article FR vers l'anglais.
+ * On passe l'article FR complet en input (déjà publié).
+ */
+export function buildTranslateArticlePrompt(input: {
+  frArticle: {
+    title: string;
+    subtitle: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
+    category: string | null;
+    slug: string;
+    blocks: Array<{ type: string; content: string | string[] }>;
+    faqs?: Array<{ question: string; answer: string }> | null;
+  };
+  now?: Date;
+}): string {
+  const enDateContext = (() => {
+    const now = input.now || new Date();
+    const year = now.getFullYear();
+    const month = now.toLocaleString('en-US', { month: 'long' });
+    const nextYear = year + 1;
+    return [
+      `## Time anchor`,
+      `Current date: **${month} ${year}**.`,
+      `- "Current season" refers to summer/winter ${year}.`,
+      `- "Next season" or early-booking advice refers to ${nextYear}.`,
+      `- Never write a past year as if it were upcoming.`,
+    ].join('\n');
+  })();
+
+  const lines: string[] = [
+    enDateContext,
+    '',
+    `Translate the following French article into English. Adapt SEO (keywords, slug, meta) — do not translate literally.`,
+    '',
+    `## Source article (FR)`,
+    `### Slug: ${input.frArticle.slug}`,
+    `### Category: ${input.frArticle.category || '(none)'}`,
+    `### Title: ${input.frArticle.title}`,
+    `### Subtitle: ${input.frArticle.subtitle || ''}`,
+    `### Meta title: ${input.frArticle.meta_title || ''}`,
+    `### Meta description: ${input.frArticle.meta_description || ''}`,
+    ``,
+    `### Blocks (JSON):`,
+    JSON.stringify(input.frArticle.blocks, null, 2),
+    ``,
+    `### FAQs (JSON):`,
+    JSON.stringify(input.frArticle.faqs || [], null, 2),
+    ``,
+    `Return the JSON article in English (same schema). The slug must be in English (kebab-case, no French diacritics). Don't include any text outside the JSON.`,
+  ];
+  return lines.join('\n');
+}
