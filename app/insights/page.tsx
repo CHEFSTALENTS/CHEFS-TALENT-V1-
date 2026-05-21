@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Section, Reveal, Marker, Label } from '../../components/ui';
-import { articles } from '../../data/articles';
+import { getAllPublishedArticles } from '@/lib/articles-store';
 import { ArrowRight } from 'lucide-react';
 import { Layout } from '../../components/Layout';
 import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
@@ -45,29 +45,6 @@ const blogJsonLd = {
   },
 };
 
-// CollectionPage + ItemList listant tous les articles publiés. Permet à
-// Google de comprendre la page comme un hub de contenu (et pas une page
-// orpheline avec quelques liens).
-const collectionPageJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: 'Guides Chef Privé — Le Journal Chefs Talents',
-  url: `${SITE_URL}/insights`,
-  description:
-    "Guides pour engager un chef privé en Europe : tarifs, destinations, types de mission, logistique.",
-  isPartOf: { '@type': 'WebSite', name: 'Chefs Talents', url: SITE_URL },
-  mainEntity: {
-    '@type': 'ItemList',
-    numberOfItems: articles.length,
-    itemListElement: articles.slice(0, 30).map((a, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      url: `${SITE_URL}/insights/${a.slug}`,
-      name: a.title,
-    })),
-  },
-};
-
 const breadcrumbJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -82,7 +59,32 @@ const breadcrumbJsonLd = {
   ],
 };
 
-export default function InsightsPage() {
+export default async function InsightsPage() {
+  const articles = await getAllPublishedArticles();
+
+  // CollectionPage + ItemList listant tous les articles publiés. Permet à
+  // Google de comprendre la page comme un hub de contenu (et pas une page
+  // orpheline avec quelques liens).
+  const collectionPageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Guides Chef Privé — Le Journal Chefs Talents',
+    url: `${SITE_URL}/insights`,
+    description:
+      "Guides pour engager un chef privé en Europe : tarifs, destinations, types de mission, logistique.",
+    isPartOf: { '@type': 'WebSite', name: 'Chefs Talents', url: SITE_URL },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: articles.length,
+      itemListElement: articles.slice(0, 30).map((a, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${SITE_URL}/insights/${a.slug}`,
+        name: a.title,
+      })),
+    },
+  };
+
   return (
     <Layout>
       <script

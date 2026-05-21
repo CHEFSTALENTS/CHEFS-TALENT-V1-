@@ -4,12 +4,20 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Section, Reveal, Marker, Button, Label } from '../../../components/ui';
-import { articles } from '../../../data/articles';
+import {
+  getArticleBySlug,
+  getAllPublishedArticles,
+  getAllPublishedSlugs,
+} from '@/lib/articles-store';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Layout } from '../../../components/Layout';
 import { DestinationsLinks } from '@/components/seo/DestinationsLinks';
 
 const SITE_URL = 'https://chefstalents.com';
+
+// Permet aux nouveaux slugs DB d'être rendus à la demande sans rebuild
+// (et invalidés via revalidatePath() lors d'un publish).
+export const dynamicParams = true;
 
 function toAbsoluteUrl(url: string): string {
   if (!url) return '';
@@ -25,8 +33,9 @@ function truncate(str: string, max = 160): string {
   return (lastSpace > 100 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
 }
 
-export function generateStaticParams() {
-  return articles.map((a) => ({ slug: a.slug }));
+export async function generateStaticParams() {
+  const slugs = await getAllPublishedSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata(
@@ -35,7 +44,7 @@ export async function generateMetadata(
   }
 ): Promise<Metadata> {
   const params = await props.params;
-  const article = articles.find((a) => a.slug === params.slug);
+  const article = await getArticleBySlug(params.slug);
   if (!article) return { title: 'Article introuvable' };
 
   const url = `${SITE_URL}/insights/${article.slug}`;
@@ -70,16 +79,19 @@ export default async function InsightPostPage(
   }
 ) {
   const params = await props.params;
-  const article = articles.find((a) => a.slug === params.slug);
+  const article = await getArticleBySlug(params.slug);
   if (!article) notFound();
 
   const url = `${SITE_URL}/insights/${article.slug}`;
   const image = toAbsoluteUrl(article.image);
 
-  const sameCategory = articles.filter(
+  // Articles liés : on charge la liste publiée et on cherche d'abord
+  // dans la même catégorie, puis fallback sur le reste.
+  const allPublished = await getAllPublishedArticles();
+  const sameCategory = allPublished.filter(
     (a) => a.slug !== article.slug && a.category === article.category,
   );
-  const fallback = articles.filter(
+  const fallback = allPublished.filter(
     (a) => a.slug !== article.slug && a.category !== article.category,
   );
   const related = [...sameCategory, ...fallback].slice(0, 3);
