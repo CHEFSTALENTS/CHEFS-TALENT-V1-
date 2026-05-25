@@ -6,6 +6,7 @@ import { getDestinationBySlug, getAllDestinationSlugs } from '@/lib/destinations
 import { FaqItem } from '@/app/destinations/_components/FaqItem';
 import { LangSwitcher } from '@/app/destinations/_components/LangSwitcher';
 import { RelatedArticles } from '@/components/seo/RelatedArticles';
+import { buildDestinationServiceSchema } from '@/lib/seo/schemas';
 
 export async function generateStaticParams() {
   return getAllDestinationSlugs().map((slug) => ({ slug }));
@@ -275,15 +276,21 @@ export default async function DestinationPage(props: { params: Promise<{ slug: s
     })),
   } : null;
 
-  const serviceSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'Service',
-    name: dest.heroTitle,
-    description: dest.metaDescription,
-    provider: { '@type': 'Organization', name: 'Chefs Talents', url: 'https://chefstalents.com' },
-    areaServed: { '@type': 'Place', name: dest.name },
-    offers: { '@type': 'Offer', description: dest.rateDetail, priceCurrency: 'EUR' },
-  };
+  // Schema Service enrichi : audience, hasOfferCatalog, areaServed[] avec zones,
+  // availableChannel, AggregateOffer. Beaucoup plus dense que le précédent
+  // Service basique → signal AI fort pour les LLMs sur les requêtes
+  // « chef privé [destination] [type de mission] ».
+  const serviceSchema = buildDestinationServiceSchema({
+    destinationName: dest.name,
+    destinationSlug: dest.slug,
+    heroTitle: dest.heroTitle,
+    metaDescription: dest.metaDescription,
+    rateRange: dest.rateRange,
+    rateDetail: dest.rateDetail,
+    zones: dest.zones,
+    missionTypes: dest.missionTypes,
+    season: dest.season,
+  });
 
   // Breadcrumb JSON-LD (langue-aware)
   const homeLabel = lang === 'en' ? 'Home' : lang === 'es' ? 'Inicio' : 'Accueil';

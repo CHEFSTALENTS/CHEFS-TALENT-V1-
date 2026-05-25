@@ -3,6 +3,11 @@ import Script from 'next/script';
 import './globals.css';
 import AnalyticsProvider from '@/lib/analytics/AnalyticsProvider';
 import LandingFloatingCTAs from '@/components/landing/LandingFloatingCTAs';
+import {
+  buildOrganizationSchema,
+  buildLocalBusinessSchema,
+  buildWebSiteSchema,
+} from '@/lib/seo/schemas';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chefstalents.com'),
@@ -34,16 +39,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <head>
+        {/*
+          Schemas globaux JSON-LD : Organization + LocalBusiness + WebSite.
+          Chargés au niveau root → présents sur toutes les pages, signal AI
+          fort pour les bots d'entraînement (GPTBot, ClaudeBot, Perplexity).
+
+          - Organization : identité morale (founder, sameAs, knowsAbout, areaServed)
+          - LocalBusiness : entité opérationnelle (adresse, telephone, openingHours, offerCatalog)
+          - WebSite : navigation + SearchAction (sitelinks searchbox Google)
+        */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify({
-            '@context': 'https://schema.org', '@type': 'LocalBusiness',
-            name: 'Chefs Talents', url: 'https://chefstalents.com',
-            telephone: '+33756827612', email: 'contact@chefstalents.com',
-            description: "Reseau de chefs prives selectionnes pour des clients exigeants en Europe.",
-            address: { '@type': 'PostalAddress', addressLocality: 'Bordeaux', addressCountry: 'FR' },
-            areaServed: { '@type': 'Place', name: 'Europe' }, priceRange: '€€€€',
-          }) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildOrganizationSchema()),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildLocalBusinessSchema()),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildWebSiteSchema()),
+          }}
         />
         <noscript>
           <img height="1" width="1" style={{ display: 'none' }}
