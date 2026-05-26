@@ -15,6 +15,7 @@ import {
   Mail,
   Send,
   Sparkles,
+  ShieldCheck,
   CreditCard,
   LogOut,
   Menu,
@@ -69,6 +70,7 @@ export function AdminSidebar({
         { label: 'Carte', href: '/admin/map', icon: Map, badge: badges?.chefsOnMap },
         { label: 'Proposals', href: '/admin/proposals', icon: FileText },
         { label: 'Missions', href: '/admin/missions', icon: Briefcase },
+        { label: 'NCC Partenaire', href: '/admin/ncc-partner', icon: ShieldCheck },
       ],
     },
     {
