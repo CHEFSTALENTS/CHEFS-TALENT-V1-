@@ -699,6 +699,57 @@ export function buildChefPortfolioHtmlV2(
       /* Cache la barre d'impression et tout élément marqué no-print */
       .no-print, .ct-printbar { display: none !important; }
 
+      /* CRITICAL : Re-force le grid 2-col du hero et la grid 3-col de
+         About pour le print, au cas où une règle responsive non-screen
+         se déclencherait dans certains contextes puppeteer. */
+      .ct-portfolio .ct-hero {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        min-height: 0 !important;
+      }
+      .ct-portfolio .ct-hero__image {
+        order: 0 !important;
+        height: auto !important;
+        max-height: 140mm;
+      }
+      .ct-portfolio .ct-hero__image img {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 140mm;
+        object-fit: cover;
+      }
+      .ct-portfolio .ct-about {
+        display: grid !important;
+        grid-template-columns: 30mm 1fr 50mm !important;
+      }
+      .ct-portfolio .ct-portrait {
+        width: 50mm !important;
+        max-width: 50mm !important;
+        height: 65mm !important;
+      }
+      .ct-portfolio .ct-portrait img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover;
+        object-position: center top;
+      }
+      .ct-portfolio .ct-info-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+      }
+      .ct-portfolio .ct-expertise {
+        display: grid !important;
+        grid-template-columns: 30mm 1fr !important;
+      }
+      .ct-portfolio .ct-why__inner {
+        display: grid !important;
+        grid-template-columns: 30mm 1fr !important;
+      }
+      .ct-portfolio .ct-gallery__header {
+        display: grid !important;
+        grid-template-columns: 30mm 1fr !important;
+      }
+
       /* Contenu prend toute la page sans marge interne (les marges
          viennent du CSS de chaque section pour garder la mise en page) */
       .ct-portfolio {
@@ -782,7 +833,7 @@ export function buildChefPortfolioHtmlV2(
     }
 
     /* ====== RESPONSIVE ====== */
-    @media (max-width: 880px) {
+    @media screen and (max-width: 880px) {
       .ct-portfolio .ct-header,
       .ct-portfolio .ct-section,
       .ct-portfolio .ct-why,
@@ -819,7 +870,7 @@ export function buildChefPortfolioHtmlV2(
       .ct-portfolio .ct-footer { flex-direction: column; gap: 20px; text-align: center; }
       .ct-portfolio .ct-footer__contact { text-align: center; }
     }
-    @media (max-width: 480px) {
+    @media screen and (max-width: 480px) {
       .ct-portfolio .ct-hero__title { font-size: 30px; }
       .ct-portfolio .ct-about__body .ct-lead { font-size: 16px; }
       .ct-portfolio .ct-signature__quote { font-size: 17px; }
