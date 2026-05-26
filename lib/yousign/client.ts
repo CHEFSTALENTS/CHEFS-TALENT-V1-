@@ -113,6 +113,59 @@ export function normalizePhoneE164(raw: string | null | undefined): string | nul
   return normalized;
 }
 
+/**
+ * Nettoie un prénom / nom pour le rendre conforme aux restrictions YouSign.
+ *
+ * YouSign v3 rejette `info.first_name` et `info.last_name` avec :
+ *   "This value has unauthorized chars"
+ * dès qu'un caractère hors de cet alphabet est présent :
+ *   - Lettres latines (avec accents)
+ *   - Espaces, tirets, apostrophes simples
+ *
+ * Cas observés en pratique (copier-coller depuis email ou PDF) :
+ *   - Apostrophes typographiques (’) → on remplace par '
+ *   - Tirets typographiques (— ou –) → on remplace par -
+ *   - Espaces insécables (U+00A0, U+202F) → espace normal
+ *   - Zero-width / soft-hyphen → strip
+ *   - Émojis, chiffres, ponctuation (./,;:) → strip
+ *
+ * Retourne null si après nettoyage le résultat est vide (le caller décide
+ * alors quoi faire — typiquement renvoyer une erreur explicite plutôt que
+ * d'envoyer une chaîne vide).
+ */
+export function normalizeYouSignName(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== 'string') return null;
+  let s = raw;
+
+  // 1. Normalisation Unicode (NFC) — pour que les accents composés et
+  //    précomposés finissent identiques.
+  s = s.normalize('NFC');
+
+  // 2. Remplace les variantes typographiques par leurs équivalents ASCII
+  //    autorisés par YouSign.
+  s = s
+    .replace(/[‘’‚‛′‵]/g, "'") // apostrophes typo
+    .replace(/[–—−]/g, '-')                    // tirets typo (en/em dash)
+    .replace(/[    ⁠]/g, ' ');       // espaces non-cassants
+
+  // 3. Strip les caractères invisibles / contrôle.
+  s = s.replace(/[​-‍­﻿]/g, '');
+
+  // 4. Whitelist : on ne garde que lettres latines (incluant accents Unicode
+  //    Letter), espaces, tirets, apostrophes simples.
+  //    `\p{L}` couvre toutes les lettres Unicode, `\p{M}` les marques
+  //    combinantes (accents non précomposés).
+  s = s.replace(/[^\p{L}\p{M} '-]/gu, '');
+
+  // 5. Compacte les espaces multiples / supprime espaces en bordure.
+  s = s.replace(/\s+/g, ' ').trim();
+
+  // 6. Sécurité : YouSign limite à ~150 chars par champ, on tronque à 80.
+  if (s.length > 80) s = s.slice(0, 80).trim();
+
+  return s || null;
+}
+
 async function yousignFetch<T = any>(path: string, opts: FetchOpts = {}): Promise<T> {
   const { apiKey, apiBase } = getConfig();
   const url = `${apiBase}${path.startsWith('/') ? path : '/' + path}`;
@@ -273,9 +326,22 @@ export async function addSigner(input: {
   // Construction défensive : on omet les clés undefined / vides plutôt que de
   // laisser JSON.stringify le faire — certaines versions de YouSign sont
   // strictes sur les types attendus (refus si null ou string vide).
+  //
+  // ⚠️ Sanitization YouSign-safe sur first_name et last_name :
+  // YouSign rejette toute valeur contenant des caractères hors de son
+  // alphabet (apostrophes typographiques, espaces insécables, ponctuation,
+  // chiffres, émojis, etc.) avec "info[first_name]: This value has
+  // unauthorized chars". On nettoie systématiquement via normalizeYouSignName.
+  const cleanedFirstName = normalizeYouSignName(input.signer.firstName);
+  const cleanedLastName = normalizeYouSignName(input.signer.lastName);
+  if (!cleanedFirstName || !cleanedLastName) {
+    throw new Error(
+      `Nom/prénom du signataire invalide après nettoyage (firstName="${input.signer.firstName}", lastName="${input.signer.lastName}").`,
+    );
+  }
   const info: Record<string, any> = {
-    first_name: input.signer.firstName,
-    last_name: input.signer.lastName,
+    first_name: cleanedFirstName,
+    last_name: cleanedLastName,
     email: input.signer.email,
     locale: 'fr',
   };
