@@ -41,8 +41,11 @@ const STATUS_CLASS: Record<string, string> = {
   error: 'bg-red-400/15 text-red-200 border-red-400/25',
 };
 
+type PartnerRole = 'client' | 'apporteur' | 'mixte';
+
 type FormState = {
   reference: string;
+  partnerRole: PartnerRole;
   clientCompany: string;
   clientSiret: string;
   clientRepFirstName: string;
@@ -55,6 +58,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   reference: '',
+  partnerRole: 'client',
   clientCompany: '',
   clientSiret: '',
   clientRepFirstName: '',
@@ -160,6 +164,31 @@ export default function AdminNccPartnerPage() {
           <FileSignature className="w-4 h-4 text-sky-300" />
           Nouveau NCC partenaire
         </h2>
+
+        {/* Sélecteur de rôle du Partenaire — détermine l'activation de la clause commission */}
+        <div className="space-y-2">
+          <div className="text-[10px] uppercase tracking-wider text-white/55">Rôle du partenaire</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <RoleCard
+              active={form.partnerRole === 'client'}
+              onClick={() => setForm((f) => ({ ...f, partnerRole: 'client' }))}
+              title="Client final"
+              description="Famille UHNW, family office, particulier qui commande des Missions directement. Pas de commission d'apport."
+            />
+            <RoleCard
+              active={form.partnerRole === 'apporteur'}
+              onClick={() => setForm((f) => ({ ...f, partnerRole: 'apporteur' }))}
+              title="Apporteur d'affaires"
+              description="Conciergerie, agence villa, wealth manager qui transmet des leads. Clause commission 5 % activée."
+            />
+            <RoleCard
+              active={form.partnerRole === 'mixte'}
+              onClick={() => setForm((f) => ({ ...f, partnerRole: 'mixte' }))}
+              title="Mixte (client + apporteur)"
+              description="Le partenaire peut être client final ET apporter des leads. Cumule les deux régimes."
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="Raison sociale *">
@@ -268,7 +297,8 @@ export default function AdminNccPartnerPage() {
 
         <div className="flex items-center justify-end gap-2 flex-wrap">
           <div className="text-xs text-white/45 mr-auto">
-            Sanction par défaut : 6 mois de commissions sur tarif journalier du Talent. Non-contournement : 24 mois.
+            Sanction : 30 % HT ou 30 000 € (le + élevé). Non-contournement 24 mois. Aligné NCC Mission.
+            {form.partnerRole !== 'client' && ' Commission apporteur 5 %.'}
           </div>
           <button
             onClick={() => call(true)}
@@ -403,5 +433,36 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <span className="block text-[10px] text-white/35 mt-0.5">{hint}</span>}
     </label>
+  );
+}
+
+function RoleCard({
+  active,
+  onClick,
+  title,
+  description,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left rounded-xl border px-3 py-3 transition-colors ${
+        active
+          ? 'border-sky-400/50 bg-sky-400/10'
+          : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05]'
+      }`}
+    >
+      <div className={`text-sm font-medium ${active ? 'text-sky-100' : 'text-white/90'}`}>
+        {title}
+      </div>
+      <div className={`text-[11px] mt-1 leading-snug ${active ? 'text-sky-100/70' : 'text-white/55'}`}>
+        {description}
+      </div>
+    </button>
   );
 }
