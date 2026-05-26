@@ -85,11 +85,12 @@ export function buildChefPortfolioHtmlV2(
     )
     .join('\n');
 
-  // Header : meta différent selon mode
+  // Header : logotype texte (élégant + 0 dépendance image)
+  // En whitelabel : aucune mention de la marque.
   const headerHtml = isBranded
     ? `
   <header class="ct-header">
-    <img src="${esc(BRANDED.logoUrl)}" alt="${esc(BRANDED.brandName)}" class="ct-header__logo">
+    <div class="ct-header__logotype">Chefs Talents<span class="ct-logotype-dot">.</span></div>
     <div class="ct-header__meta">
       <div>Private Chef Portfolio</div>
       <div>Ref. <span class="ct-ref">${esc(data.referenceCode)}</span></div>
@@ -106,14 +107,14 @@ export function buildChefPortfolioHtmlV2(
     </div>
   </header>`;
 
-  // Footer : différent selon mode
+  // Footer : logotype texte également
   const footerHtml = isBranded
     ? `
   <footer class="ct-footer">
-    <img src="${esc(BRANDED.logoUrl)}" alt="${esc(BRANDED.brandName)}" class="ct-footer__logo">
+    <div class="ct-footer__logotype">Chefs Talents<span class="ct-logotype-dot">.</span></div>
     <div class="ct-footer__contact">
       <div>${esc(BRANDED.contactEmail)}</div>
-      <div><a href="https://${esc(BRANDED.website)}">${esc(BRANDED.website)}</a></div>
+      <div>${esc(BRANDED.website)}</div>
     </div>
   </footer>`
     : `
@@ -220,10 +221,20 @@ export function buildChefPortfolioHtmlV2(
       padding: 32px 48px 24px;
       border-bottom: 1px solid var(--ct-line);
     }
-    .ct-portfolio .ct-header__logo {
-      height: 64px;
-      width: auto;
-      mix-blend-mode: multiply;
+    /* Logotype texte (remplace l'image logo qui n'existe pas en local) */
+    .ct-portfolio .ct-header__logotype,
+    .ct-portfolio .ct-footer__logotype {
+      font-family: 'Fraunces', serif;
+      font-weight: 400;
+      font-size: 26px;
+      color: var(--ct-ink);
+      letter-spacing: -0.015em;
+      line-height: 1;
+    }
+    .ct-portfolio .ct-footer__logotype { font-size: 18px; }
+    .ct-portfolio .ct-logotype-dot {
+      color: var(--ct-coral);
+      font-weight: 500;
     }
     .ct-portfolio .ct-header__brand-placeholder {
       font-family: 'Inter', sans-serif;
@@ -633,10 +644,6 @@ export function buildChefPortfolioHtmlV2(
       text-transform: uppercase;
       color: var(--ct-muted);
     }
-    .ct-portfolio .ct-footer__logo {
-      height: 48px;
-      mix-blend-mode: multiply;
-    }
     .ct-portfolio .ct-footer__brand {
       font-weight: 500;
       color: var(--ct-ink);
@@ -661,9 +668,114 @@ export function buildChefPortfolioHtmlV2(
       border-top: 1px dashed var(--ct-line);
     }
 
-    /* Whitelabel : cache toute trace de la marque */
-    .ct-portfolio.is-whitelabel .ct-header__logo,
-    .ct-portfolio.is-whitelabel .ct-footer__logo { display: none; }
+    /* Whitelabel : aucun logotype CT (déjà géré par la non-insertion
+       des éléments .ct-header__logotype / .ct-footer__logotype dans le HTML)
+       — règle conservée par sécurité au cas où le HTML évolue. */
+    .ct-portfolio.is-whitelabel .ct-header__logotype,
+    .ct-portfolio.is-whitelabel .ct-footer__logotype { display: none; }
+
+    /* ────────────────────────────────────────────────────────
+       PRINT-SPECIFIC RULES
+       Objectif : un PDF A4 unifié, sans header/footer browser,
+       proportions adaptées papier (max 2-3 pages), page-breaks
+       contrôlés (aucune section coupée).
+       ──────────────────────────────────────────────────────── */
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--ct-cream, #f4efe6);
+      }
+
+      /* Cache la barre d'impression et tout élément marqué no-print */
+      .no-print, .ct-printbar { display: none !important; }
+
+      /* Contenu prend toute la page sans marge interne (les marges
+         viennent du CSS de chaque section pour garder la mise en page) */
+      .ct-portfolio {
+        max-width: none !important;
+        margin: 0 auto !important;
+        width: 100%;
+        background: var(--ct-cream);
+        /* Force le rendu des couleurs (sinon le print enlève les
+           backgrounds et l'orange devient gris) */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
+      }
+
+      /* Force le rendu des backgrounds colorés sur ALL children */
+      .ct-portfolio *,
+      .ct-portfolio *::before,
+      .ct-portfolio *::after {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* Tailles ajustées pour A4 (210mm × 297mm) */
+      .ct-portfolio .ct-header { padding: 14mm 16mm 8mm; }
+      .ct-portfolio .ct-hero { min-height: 0; }
+      .ct-portfolio .ct-hero__text { padding: 16mm; }
+      .ct-portfolio .ct-hero__title { font-size: 36pt; line-height: 0.95; }
+      .ct-portfolio .ct-hero__subtitle { font-size: 11pt; }
+      .ct-portfolio .ct-hero__ornament { margin-top: 6mm; }
+
+      .ct-portfolio .ct-section { padding: 12mm 16mm; }
+      .ct-portfolio .ct-about__body .ct-lead { font-size: 14pt; }
+      .ct-portfolio .ct-about__body { font-size: 10.5pt; }
+      .ct-portfolio .ct-portrait { width: 50mm; height: 65mm; }
+
+      .ct-portfolio .ct-info-grid { margin: 0 16mm; }
+      .ct-portfolio .ct-info-cell { padding: 5mm; }
+      .ct-portfolio .ct-info-cell__value { font-size: 13pt; }
+
+      .ct-portfolio .ct-why { padding: 12mm 16mm; }
+      .ct-portfolio .ct-why__text { font-size: 11pt; }
+      .ct-portfolio .ct-gallery { padding: 12mm 16mm; }
+      .ct-portfolio .ct-gallery__title { font-size: 26pt; }
+      .ct-portfolio .ct-gallery__desc { font-size: 10pt; }
+
+      /* Dishes : hauteurs réduites pour tenir sur la page */
+      .ct-portfolio .ct-dishes-grid.ct-count-3 { grid-template-rows: 65mm 50mm; }
+      .ct-portfolio .ct-dishes-grid.ct-count-4 { grid-template-rows: 60mm 50mm; }
+      .ct-portfolio .ct-dishes-grid.ct-count-4 .ct-dish:nth-child(4) { height: 55mm; }
+      .ct-portfolio .ct-dishes-grid.ct-count-5 { grid-template-rows: 60mm 50mm; }
+
+      .ct-portfolio .ct-signature { padding: 12mm 20mm; }
+      .ct-portfolio .ct-signature__quote { font-size: 16pt; }
+
+      .ct-portfolio .ct-footer { padding: 8mm 16mm; }
+      .ct-portfolio .ct-confidential { padding: 4mm 16mm 8mm; }
+
+      /* Pas d'animation hover en print */
+      .ct-portfolio .ct-dish img { transition: none !important; }
+      .ct-portfolio .ct-dish:hover img { transform: none !important; }
+
+      /* Page breaks : on évite de couper au milieu d'une section */
+      .ct-portfolio .ct-hero,
+      .ct-portfolio .ct-section,
+      .ct-portfolio .ct-info-grid,
+      .ct-portfolio .ct-why,
+      .ct-portfolio .ct-gallery,
+      .ct-portfolio .ct-signature,
+      .ct-portfolio .ct-footer {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      /* Les dishes individuelles ne se coupent jamais */
+      .ct-portfolio .ct-dish { page-break-inside: avoid; break-inside: avoid; }
+
+      /* Le bloc "Why we recommend" démarre toujours sur une nouvelle page
+         pour aérer le rendu — ça donne un layout en 2 pages naturelles :
+         Page 1 : Hero + About + Info grid + Expertise
+         Page 2 : Why + Gallery + Signature + Footer */
+      .ct-portfolio .ct-why { page-break-before: always; break-before: page; }
+    }
 
     /* ====== RESPONSIVE ====== */
     @media (max-width: 880px) {
