@@ -3,6 +3,8 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { buildChefPortfolioHtmlV2, type PortfolioMode } from '@/lib/portfolio/templateV2';
+import { buildPortfolioV2InputFromProfile } from '@/lib/portfolio/buildFromProfile';
 
 const TABLE = 'chef_profiles';
 
@@ -89,10 +91,28 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
       ? 'Sur demande'
       : clean(p.availableFrom || '');
 
-  const html = buildPortfolioHtml({
-    bio, languages, cuisines, missionTypes,
-    years, availability, photoUrl, references, portfolioPhotos: allPhotos,
-  });
+  // Sélection du template via query :
+  //   ?template=v1 → ancien layout (sidebar + Profil Chef)
+  //   ?template=v2 (défaut) → nouveau layout éditorial Fraunces/Inter
+  //   ?mode=branded (défaut) | whitelabel → avec ou sans logo Chefs Talents
+  const url2 = new URL(req.url);
+  const templateVersion = url2.searchParams.get('template') === 'v1' ? 'v1' : 'v2';
+  const mode: PortfolioMode = url2.searchParams.get('mode') === 'whitelabel' ? 'whitelabel' : 'branded';
+
+  let html: string;
+  if (templateVersion === 'v1') {
+    html = buildPortfolioHtml({
+      bio, languages, cuisines, missionTypes,
+      years, availability, photoUrl, references, portfolioPhotos: allPhotos,
+    });
+  } else {
+    // Template v2 — éditorial, 2 modes (branded / whitelabel)
+    const v2Input = buildPortfolioV2InputFromProfile({
+      email: chefEmail,
+      profile: p,
+    });
+    html = buildChefPortfolioHtmlV2(v2Input, mode);
+  }
 
   return new NextResponse(html, {
     headers: {
