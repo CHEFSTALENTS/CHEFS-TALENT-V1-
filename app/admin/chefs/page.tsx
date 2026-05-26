@@ -221,6 +221,7 @@ export default function AdminChefsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [cityFilter, setCityFilter] = useState<string>(''); // '' = toutes
   const [source, setSource] = useState<'db' | 'localStorage'>('db');
   const [reminding, setReminding] = useState(false);
   const [remindResult, setRemindResult] = useState<RemindResult | null>(null);
@@ -334,7 +335,39 @@ export default function AdminChefsPage() {
   const view = useMemo(() => {
     const priority: Record<string, number> = { pending_validation: 0, approved: 1, active: 2 };
     const needle = q.trim().toLowerCase();
+    const cityNeedle = cityFilter.trim().toLowerCase();
     const getScore = (c: ApiChef) => computeChefScore(toChefProfileForScore((c as any).profile ?? c)).score ?? 0;
+
+    // Helper : extrait toutes les variantes de ville (city, baseCity,
+    // location.city, etc.) en un tableau de strings normalisées.
+    // Couvre les chefs dont le profil n'est pas encore actif (qui peuvent
+    // avoir des données partielles).
+    const extractCityStrings = (c: any): string[] => {
+      const { profile } = getNormalizedChef(c, null);
+      const out: string[] = [];
+      const push = (v: unknown) => {
+        if (!v) return;
+        const s = String(v).trim();
+        if (s) out.push(s);
+      };
+      push((c as any).city);
+      push((c as any).baseCity);
+      push((c as any).location);
+      push(profile?.city);
+      push(profile?.baseCity);
+      push((profile as any)?.location?.city);
+      push((profile as any)?.location?.baseCity);
+      // coverageZones (chefs mobiles : on cherche aussi par zone de couverture)
+      const zones = (profile as any)?.location?.coverageZones;
+      if (Array.isArray(zones)) {
+        for (const z of zones) {
+          if (typeof z === 'string') push(z);
+          else if (z && typeof z === 'object') { push(z.city); push(z.name); push(z.label); }
+        }
+      }
+      return out.map((s) => s.toLowerCase());
+    };
+
     return [...chefs]
       .filter((c) => {
         const st = String((c as any).status || '');
@@ -344,13 +377,26 @@ export default function AdminChefsPage() {
         return true;
       })
       .filter((c) => {
+        // Filtre par ville (dropdown). S'applique sur TOUS les statuts —
+        // y compris les chefs pas encore actifs (pending_validation, approved).
+        if (!cityNeedle) return true;
+        const cities = extractCityStrings(c);
+        return cities.some((s) => s.includes(cityNeedle));
+      })
+      .filter((c) => {
         if (!needle) return true;
         const { profile } = getNormalizedChef(c as any, null);
         const fn = String(((c as any).firstName || profile.firstName || '')).trim();
         const ln = String(((c as any).lastName || profile.lastName || '')).trim();
         const fullName = `${fn} ${ln}`.toLowerCase();
         const email = String(((c as any).email || profile.email || '')).toLowerCase();
-        return fullName.includes(needle) || email.includes(needle);
+        // La recherche text matche aussi la ville maintenant (en plus du
+        // dropdown dédié, pour permettre une recherche libre type
+        // "Lucas Saint-Tropez" ou juste "Cap-Ferrat").
+        const cities = extractCityStrings(c).join(' ');
+        return fullName.includes(needle)
+          || email.includes(needle)
+          || cities.includes(needle);
       })
       .sort((a, b) => {
         const pa = priority[String((a as any).status)] ?? 99;
@@ -364,7 +410,34 @@ export default function AdminChefsPage() {
         const db = new Date(String(cb || '')).getTime() || 0;
         return db - da;
       });
-  }, [chefs, q, filter]);
+  }, [chefs, q, filter, cityFilter]);
+
+  // Liste des villes uniques détectées chez tous les chefs (tous statuts).
+  // Sert à alimenter le dropdown ville.
+  const allCities = useMemo(() => {
+    const set = new Set<string>();
+    const push = (v: unknown) => {
+      if (!v) return;
+      const s = String(v).trim();
+      if (s) set.add(s);
+    };
+    for (const c of chefs) {
+      const { profile } = getNormalizedChef(c as any, null);
+      push((c as any).city);
+      push((c as any).baseCity);
+      push(profile?.city);
+      push(profile?.baseCity);
+      push((profile as any)?.location?.city);
+      push((profile as any)?.location?.baseCity);
+      // location parfois string ("Paris" / "Saint-Tropez, France")
+      const loc = (c as any).location ?? (profile as any)?.location;
+      if (typeof loc === 'string') {
+        // Si la string contient une virgule, on prend uniquement le premier segment (ville)
+        push(loc.split(',')[0]);
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [chefs]);
 
   return (
     <div className="space-y-4">
@@ -449,15 +522,36 @@ export default function AdminChefsPage() {
       </div>
 
       <Card className="p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher (nom ou email)…"
+            placeholder="Rechercher (nom, email ou ville)…"
             className="w-full lg:max-w-md px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-white/10"
           />
-          <div className="text-xs text-white/45">
-            Note : ouvrir <code>/api/admin/chefs</code> dans le navigateur renverra souvent "Unauthorized" (pas de header).
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] uppercase tracking-wider text-white/45">Ville :</label>
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-neutral-950/40 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/10"
+            >
+              <option value="">Toutes les villes ({allCities.length})</option>
+              {allCities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            {cityFilter && (
+              <button
+                onClick={() => setCityFilter('')}
+                className="text-xs text-white/55 hover:text-white underline underline-offset-2"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+          <div className="text-xs text-white/45 ml-auto">
+            Filtres cumulatifs (statut + ville + recherche). La ville s'applique aussi aux chefs non encore actifs.
           </div>
         </div>
       </Card>
