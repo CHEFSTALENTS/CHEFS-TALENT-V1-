@@ -1,10 +1,12 @@
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 import { buildChefPortfolioHtmlV2, type PortfolioMode } from '@/lib/portfolio/templateV2';
 import { buildPortfolioV2InputFromProfile } from '@/lib/portfolio/buildFromProfile';
+import { htmlToPdf } from '@/lib/pdf/htmlToPdf';
 
 const TABLE = 'chef_profiles';
 
@@ -94,10 +96,12 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   // Sélection du template via query :
   //   ?template=v1 → ancien layout (sidebar + Profil Chef)
   //   ?template=v2 (défaut) → nouveau layout éditorial Fraunces/Inter
-  //   ?mode=branded (défaut) | whitelabel → avec ou sans logo Chefs Talents
+  //   ?mode=branded (défaut) | whitelabel → avec/sans logotype Chefs Talents
+  //   ?format=pdf → génère le PDF côté serveur (download direct)
   const url2 = new URL(req.url);
   const templateVersion = url2.searchParams.get('template') === 'v1' ? 'v1' : 'v2';
   const mode: PortfolioMode = url2.searchParams.get('mode') === 'whitelabel' ? 'whitelabel' : 'branded';
+  const format = url2.searchParams.get('format') === 'pdf' ? 'pdf' : 'html';
 
   let html: string;
   if (templateVersion === 'v1') {
@@ -106,12 +110,46 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
       years, availability, photoUrl, references, portfolioPhotos: allPhotos,
     });
   } else {
-    // Template v2 — éditorial, 2 modes (branded / whitelabel)
     const v2Input = buildPortfolioV2InputFromProfile({
       email: chefEmail,
       profile: p,
     });
     html = buildChefPortfolioHtmlV2(v2Input, mode);
+  }
+
+  // ─── Mode PDF : génération serveur via puppeteer ────────────
+  // Clef du fix : viewport 794px (= A4 96dpi) + mediaType='screen' →
+  // le rendu est PIXEL-PERFECT 1:1 entre l'écran et le PDF, aucune
+  // media query print ne peut casser le layout.
+  if (format === 'pdf') {
+    try {
+      const pdfBuffer = await htmlToPdf(html, {
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '0', right: '0', bottom: '0', left: '0' },
+        mediaType: 'screen',       // ← critique : pas de media print
+        viewportWidth: 794,         // ← critique : largeur A4 exacte
+        viewportHeight: 1123,
+        waitForNetwork: true,       // attend images remote
+        waitForFonts: true,         // attend Fraunces + Inter loaded
+        ignoreCssPageSize: true,    // utilise le format A4 du options
+      });
+      const safeRef = chefEmail.split('@')[0].replace(/[^a-z0-9]+/gi, '-').slice(0, 40);
+      const filename = `portfolio-${mode === 'whitelabel' ? 'wl' : 'ct'}-${safeRef}.pdf`;
+      return new NextResponse(pdfBuffer as any, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    } catch (e: any) {
+      console.error('[portfolio] PDF generation failed', e?.message);
+      return NextResponse.json(
+        { error: 'PDF_GENERATION_FAILED', detail: e?.message },
+        { status: 500 },
+      );
+    }
   }
 
   return new NextResponse(html, {
