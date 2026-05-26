@@ -710,13 +710,18 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
   };
   const checklistOk = Object.values(checklist).filter(Boolean).length;
 
-  // ── Génération portfolio PDF ───────────────────────────────
-  const openPortfolio = async () => {
+  // ── Génération portfolio HTML/PDF ───────────────────────────
+  // Deux modes :
+  //   - 'branded'    : portfolio Chefs Talents (logo + footer contact)
+  //   - 'whitelabel' : portfolio anonyme (sans logo ni mention CT) —
+  //                    utilisable pour partage à un partenaire qui veut
+  //                    présenter le chef sous sa propre marque
+  const openPortfolio = async (mode: 'branded' | 'whitelabel' = 'branded') => {
     if (!email) return;
     setPortfolioLoading(true);
     try {
       const res = await adminFetchRaw(
-        `/api/admin/chefs/${encodeURIComponent(email)}/portfolio`,
+        `/api/admin/chefs/${encodeURIComponent(email)}/portfolio?mode=${mode}`,
       );
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const html = await res.text();
@@ -771,14 +776,30 @@ function ChefDrawer({ selected, detail, loading, onClose, onApprove, onActivate,
             Supprimer
           </button>
 
-          {/* ── BOUTON PORTFOLIO PDF ── */}
-          <button
-            onClick={openPortfolio}
-            disabled={portfolioLoading || !email}
-            className="px-3 py-2 rounded-xl border border-amber-500/20 bg-amber-500/10 text-sm text-amber-200 hover:bg-amber-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
-          >
-            {portfolioLoading ? '⏳ Génération…' : '📄 Portfolio PDF'}
-          </button>
+          {/* ── BOUTONS PORTFOLIO ─────────────────────────────
+              Deux modes :
+              - Chefs Talents : avec logo + contact (envoi client direct)
+              - Marque blanche : sans logo ni contact (partage à un
+                partenaire qui présente sous sa propre marque)
+              ────────────────────────────────────────────────────── */}
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={() => openPortfolio('branded')}
+              disabled={portfolioLoading || !email}
+              className="px-3 py-2 rounded-xl border border-amber-500/20 bg-amber-500/10 text-sm text-amber-200 hover:bg-amber-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Portfolio avec logo et contact Chefs Talents"
+            >
+              {portfolioLoading ? '⏳ Génération…' : '📄 Portfolio CT'}
+            </button>
+            <button
+              onClick={() => openPortfolio('whitelabel')}
+              disabled={portfolioLoading || !email}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Portfolio anonyme sans logo ni mention Chefs Talents"
+            >
+              {portfolioLoading ? '⏳ Génération…' : '📄 Marque blanche'}
+            </button>
+          </div>
         </div>
 
         {/* Sections */}
