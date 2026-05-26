@@ -75,34 +75,92 @@ export type HtmlToPdfOptions = {
    * de tables, sinon elles peuvent disparaître).
    */
   printBackground?: boolean;
+  /**
+   * Attend networkidle0 (utile pour Google Fonts + images remote).
+   * +3-8s. Par défaut false pour ne pas ralentir les contrats / NCC.
+   */
+  waitForNetwork?: boolean;
+  /**
+   * Attend document.fonts.ready avant capture. Garantit un rendu
+   * typographique parfait (pas de fallback en font système).
+   */
+  waitForFonts?: boolean;
+  /**
+   * Force le rendu en mode 'screen' au lieu du mode 'print' par défaut
+   * de puppeteer.pdf(). Indispensable pour les templates qui ont des
+   * media queries `(max-width: ...)` qui se déclencheraient en mode
+   * print (viewport ~794px) et casseraient le layout grid.
+   */
+  mediaType?: 'screen' | 'print';
+  /**
+   * Largeur de viewport en pixels avant capture. Default 1280.
+   * Important quand mediaType='screen' : si le template a un max-width
+   * de 1100px, set viewportWidth à 1100 ou plus pour éviter les
+   * breakpoints responsive.
+   */
+  viewportWidth?: number;
+  viewportHeight?: number;
+  /**
+   * Désactive l'utilisation des CSS @page rules (préfère le format
+   * passé en options). Default false (= utilise @page si défini).
+   */
+  ignoreCssPageSize?: boolean;
+  /**
+   * Échelle de rendu PDF (0.1 - 2). Default 1.
+   * Utile pour scaler un layout 1100px vers A4 (794px) : scale ~0.72
+   */
+  scale?: number;
 };
 
 /**
  * Convertit un HTML complet (avec <html><head><style>…</style></head><body>…</body></html>)
  * en Buffer PDF.
- *
- * Le HTML est rendu avec `waitUntil: 'networkidle0'` donc tu peux inclure
- * des polices @import. Les images http(s) sont supportées.
  */
 export async function htmlToPdf(html: string, opts: HtmlToPdfOptions = {}): Promise<Buffer> {
   const browser = await getBrowser();
   let page: Page | null = null;
   try {
     page = await browser.newPage();
-    await page.setContent(html, { waitUntil: ['load', 'domcontentloaded'], timeout: 30_000 });
+
+    // Set viewport AVANT setContent pour que les media queries soient
+    // évaluées avec la bonne largeur.
+    if (opts.viewportWidth || opts.viewportHeight) {
+      await page.setViewport({
+        width: opts.viewportWidth || 1280,
+        height: opts.viewportHeight || 1696,
+        deviceScaleFactor: 2, // x2 = rendu HD pour les images
+      });
+    }
+
+    // Force le mode 'screen' avant render → ignore les @media print.
+    // À appeler AVANT setContent pour que le rendu initial utilise
+    // le bon stylesheet.
+    if (opts.mediaType) {
+      await page.emulateMediaType(opts.mediaType);
+    }
+
+    const waitUntil: any = opts.waitForNetwork
+      ? ['load', 'networkidle0']
+      : ['load', 'domcontentloaded'];
+    await page.setContent(html, { waitUntil, timeout: 45_000 });
+
+    if (opts.waitForFonts) {
+      try {
+        await page.evaluate(() => (document as any).fonts?.ready);
+      } catch { /* ignore */ }
+    }
+
     const pdfBytes = await page.pdf({
       format: opts.format || 'A4',
       printBackground: opts.printBackground ?? true,
       margin: opts.margin || { top: '18mm', right: '16mm', bottom: '18mm', left: '16mm' },
-      preferCSSPageSize: true,
+      preferCSSPageSize: !opts.ignoreCssPageSize,
+      scale: opts.scale,
     });
-    // @sparticuz/chromium peut renvoyer Uint8Array — on normalise en Buffer
     return Buffer.isBuffer(pdfBytes) ? pdfBytes : Buffer.from(pdfBytes);
   } finally {
     if (page) {
       try { await page.close(); } catch { /* ignore */ }
     }
-    // On NE ferme PAS le browser : on le garde en cache pour réutilisation
-    // entre invocations chaudes de la function serverless.
   }
 }
