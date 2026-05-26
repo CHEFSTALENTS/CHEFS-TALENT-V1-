@@ -79,7 +79,7 @@ export function buildChefPortfolioHtmlV2(
   const dishesHtml = dishes
     .map(
       (d, i) => `      <figure class="ct-dish">
-        <img src="${esc(d.url)}" alt="${esc(d.name)}" crossorigin="anonymous" />
+        <img src="${esc(d.url)}" alt="${esc(d.name)}" referrerpolicy="no-referrer" loading="eager" />
         <figcaption class="ct-dish__num">${ROMANS[i] || ''}</figcaption>
       </figure>`,
     )
@@ -130,11 +130,15 @@ export function buildChefPortfolioHtmlV2(
   // en whitelabel on garde le code anonymisé tel quel (utile pour le suivi)
   const refCellValue = esc(data.referenceCode);
 
-  // Print bar (sticky en haut, ne s'imprime pas)
+  // Print bar (sticky en haut, ne s'imprime pas).
+  // Le bouton "Download as PDF" redirige vers la même URL avec ?format=pdf →
+  // le serveur génère le PDF via puppeteer et le télécharge directement,
+  // SANS passer par le print dialog du navigateur (donc plus de header/footer
+  // browser, polices intégrées, rendu identique partout).
   const printBarHtml = `
   <div class="ct-printbar no-print">
     <span class="ct-printbar__label">${isBranded ? 'Chef Portfolio · Confidential' : 'Private portfolio · Confidential'}</span>
-    <button class="ct-printbar__btn" onclick="window.print()">Download as PDF</button>
+    <a href="javascript:void(0)" onclick="downloadPortfolioPdf()" class="ct-printbar__btn">Download as PDF</a>
   </div>`;
 
   return `<!DOCTYPE html>
@@ -842,7 +846,7 @@ ${printBarHtml}
       </div>
     </div>
     <div class="ct-hero__image">
-      <img src="${esc(data.coverImageUrl)}" alt="Featured dish" crossorigin="anonymous">
+      <img src="${esc(data.coverImageUrl)}" alt="Featured dish" referrerpolicy="no-referrer" loading="eager">
     </div>
   </section>
 
@@ -857,7 +861,7 @@ ${printBarHtml}
       </div>
       <div>
         <div class="ct-portrait">
-          <img src="${esc(data.chefPhotoUrl)}" alt="The Chef" crossorigin="anonymous">
+          <img src="${esc(data.chefPhotoUrl)}" alt="The Chef" referrerpolicy="no-referrer" loading="eager">
         </div>
         <div class="ct-portrait-caption">The Chef · on location</div>
       </div>
@@ -953,7 +957,47 @@ ${dishesHtml}
 </article>
 
 <script>
-  // Auto-print si ?print=1
+  // ───────────────────────────────────────────────────────────
+  // Download PDF : appelle l'endpoint serveur ?format=pdf qui
+  // génère un PDF parfait (sans header/footer browser, polices
+  // intégrées) puis force le téléchargement.
+  // ───────────────────────────────────────────────────────────
+  function downloadPortfolioPdf() {
+    var btn = document.querySelector('.ct-printbar__btn');
+    var originalText = btn ? btn.textContent : '';
+    if (btn) { btn.textContent = 'Generating…'; btn.style.pointerEvents = 'none'; }
+
+    // L'URL courante est /api/admin/chefs/[id]/portfolio?mode=...
+    // On ajoute &format=pdf. Le navigateur déclenche le download.
+    var url = new URL(window.location.href);
+    url.searchParams.set('format', 'pdf');
+    // On utilise window.location pour respecter les cookies admin
+    // (sinon un fetch demanderait l'auth Bearer manuellement).
+    window.location.href = url.toString();
+
+    // Rétablit le bouton après 5s si l'utilisateur revient
+    setTimeout(function() {
+      if (btn) { btn.textContent = originalText; btn.style.pointerEvents = ''; }
+    }, 5000);
+  }
+
+  // Image fallback : si une image fail (404, network), on remplace par
+  // un placeholder gris uni pour ne pas casser le layout.
+  document.querySelectorAll('.ct-portfolio img').forEach(function(img) {
+    img.addEventListener('error', function() {
+      img.style.display = 'none';
+      var parent = img.parentElement;
+      if (parent && !parent.querySelector('.ct-img-fallback')) {
+        var fb = document.createElement('div');
+        fb.className = 'ct-img-fallback';
+        fb.style.cssText = 'width:100%;height:100%;background:linear-gradient(135deg,#ebe4d6 0%,#d9d1bf 100%);display:flex;align-items:center;justify-content:center;color:#6b6358;font-family:Fraunces,serif;font-style:italic;font-size:14px;';
+        fb.textContent = 'Image unavailable';
+        parent.appendChild(fb);
+      }
+    });
+  });
+
+  // Auto-print si ?print=1 (legacy, conservé pour compat)
   if (new URLSearchParams(window.location.search).get('print') === '1') {
     window.addEventListener('load', () => setTimeout(() => window.print(), 600));
   }

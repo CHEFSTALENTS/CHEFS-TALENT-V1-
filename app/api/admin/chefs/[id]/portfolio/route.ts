@@ -1,10 +1,12 @@
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 import { buildChefPortfolioHtmlV2, type PortfolioMode } from '@/lib/portfolio/templateV2';
 import { buildPortfolioV2InputFromProfile } from '@/lib/portfolio/buildFromProfile';
+import { htmlToPdf } from '@/lib/pdf/htmlToPdf';
 
 const TABLE = 'chef_profiles';
 
@@ -95,9 +97,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   //   ?template=v1 → ancien layout (sidebar + Profil Chef)
   //   ?template=v2 (défaut) → nouveau layout éditorial Fraunces/Inter
   //   ?mode=branded (défaut) | whitelabel → avec ou sans logo Chefs Talents
+  //   ?format=pdf → génère un PDF côté serveur (Content-Disposition: attachment)
+  //                  → l'utilisateur télécharge directement le PDF parfait
+  //                  → sans format → HTML inline (aperçu navigateur, print manuel possible)
   const url2 = new URL(req.url);
   const templateVersion = url2.searchParams.get('template') === 'v1' ? 'v1' : 'v2';
   const mode: PortfolioMode = url2.searchParams.get('mode') === 'whitelabel' ? 'whitelabel' : 'branded';
+  const format = url2.searchParams.get('format') === 'pdf' ? 'pdf' : 'html';
 
   let html: string;
   if (templateVersion === 'v1') {
@@ -114,6 +120,41 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
     html = buildChefPortfolioHtmlV2(v2Input, mode);
   }
 
+  // ─── Mode PDF : génération serveur via puppeteer ────────────
+  // Avantage : aucun header/footer browser parasitaire, polices
+  // intégrées, rendu identique pour tous (peu importe le navigateur
+  // de l'utilisateur), téléchargement direct propre.
+  if (format === 'pdf') {
+    try {
+      const pdfBuffer = await htmlToPdf(html, {
+        format: 'A4',
+        printBackground: true,
+        // Marges à 0 : le template gère ses propres marges en mm via @page
+        // (cohérent avec le rendu écran de la version HTML).
+        margin: { top: '0', right: '0', bottom: '0', left: '0' },
+        // Attend Google Fonts + images remote avant capture → rendu parfait
+        waitForNetwork: true,
+        waitForFonts: true,
+      });
+      const safeRef = chefEmail.split('@')[0].replace(/[^a-z0-9]+/gi, '-').slice(0, 40);
+      const filename = `portfolio-${mode === 'whitelabel' ? 'wl' : 'ct'}-${safeRef}.pdf`;
+      return new NextResponse(pdfBuffer as any, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    } catch (e: any) {
+      console.error('[portfolio] PDF generation failed', e?.message);
+      return NextResponse.json(
+        { error: 'PDF_GENERATION_FAILED', detail: e?.message },
+        { status: 500 },
+      );
+    }
+  }
+
+  // ─── Mode HTML (défaut) : aperçu inline navigateur ─────────
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',

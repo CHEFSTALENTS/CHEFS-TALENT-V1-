@@ -75,6 +75,18 @@ export type HtmlToPdfOptions = {
    * de tables, sinon elles peuvent disparaître).
    */
   printBackground?: boolean;
+  /**
+   * Attend que tout le réseau soit idle (utile pour Google Fonts +
+   * images remote). Plus lent (+3-8s) mais garantit que les polices
+   * et images sont chargées avant capture PDF. Par défaut false pour
+   * ne pas ralentir les contrats / NCC (HTML inline).
+   */
+  waitForNetwork?: boolean;
+  /**
+   * Attend que document.fonts.ready résolve avant capture. Combiné
+   * avec waitForNetwork, garantit un rendu typographique parfait.
+   */
+  waitForFonts?: boolean;
 };
 
 /**
@@ -89,7 +101,20 @@ export async function htmlToPdf(html: string, opts: HtmlToPdfOptions = {}): Prom
   let page: Page | null = null;
   try {
     page = await browser.newPage();
-    await page.setContent(html, { waitUntil: ['load', 'domcontentloaded'], timeout: 30_000 });
+    const waitUntil: any = opts.waitForNetwork
+      ? ['load', 'networkidle0']
+      : ['load', 'domcontentloaded'];
+    await page.setContent(html, { waitUntil, timeout: 45_000 });
+
+    // Attend que les @font-face soient toutes chargées (utile pour
+    // les portfolios qui dépendent de Google Fonts — sans ça, le PDF
+    // peut être généré avant le swap, en font système fallback).
+    if (opts.waitForFonts) {
+      try {
+        await page.evaluate(() => (document as any).fonts?.ready);
+      } catch { /* ignore */ }
+    }
+
     const pdfBytes = await page.pdf({
       format: opts.format || 'A4',
       printBackground: opts.printBackground ?? true,
