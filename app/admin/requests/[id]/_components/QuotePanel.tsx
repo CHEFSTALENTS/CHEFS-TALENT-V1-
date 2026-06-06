@@ -4,10 +4,12 @@
 // - Si pas de devis : bouton "Générer un devis" (pré-rempli depuis la request)
 // - Si devis existe : affiche le statut + boutons (éditer, télécharger PDF, supprimer)
 // - Éditeur de sections en modal : intitulé, profils tarifaires, conditions, etc.
+// - PHASE 1 AGENT COMMERCIAL : affichage de la marge par option tarifaire
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus } from 'lucide-react';
+import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus, TrendingUp, TrendingDown } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { computeMarginsPerOption, computeTotalCosts, getMarginTone, fmtEur } from '@/lib/quotes/margin';
 
 type TariffOption = {
   label: string;
@@ -44,6 +46,12 @@ type Quote = {
   admin_notes: string | null;
   sent_at: string | null;
   created_at: string;
+  // Phase 1 marge — internes
+  chef_cost_eur: number | null;
+  chef_travel_cost_eur: number | null;
+  butler_required: boolean;
+  butler_cost_eur: number | null;
+  margin_notes: string | null;
 };
 
 const STATUS_LABEL: Record<Quote['status'], string> = {
@@ -178,19 +186,9 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
         </div>
       </div>
 
-      {/* Tariff preview */}
+      {/* Tariff preview + marge par option */}
       {Array.isArray(quote.tariff_options) && quote.tariff_options.length > 0 && (
-        <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-1 text-xs">
-          <div className="text-[10px] uppercase tracking-wider text-white/55 mb-1">Options tarifaires</div>
-          {quote.tariff_options.map((t, i) => (
-            <div key={i} className="flex items-center justify-between text-white/75">
-              <span>{t.label}</span>
-              <span className="font-mono">
-                {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2 }).format(t.ttc_eur)} EUR TTC
-              </span>
-            </div>
-          ))}
-        </div>
+        <MarginPreview quote={quote} />
       )}
 
       {/* Actions */}
@@ -272,6 +270,12 @@ function QuoteEditor({
     conditions: (quote.conditions || []).join('\n'),
     validity_date: quote.validity_date || '',
     status: quote.status,
+    // ─── Phase 1 marge — coûts internes ───
+    chef_cost_eur: quote.chef_cost_eur != null ? String(quote.chef_cost_eur) : '',
+    chef_travel_cost_eur: quote.chef_travel_cost_eur != null ? String(quote.chef_travel_cost_eur) : '',
+    butler_required: !!quote.butler_required,
+    butler_cost_eur: quote.butler_cost_eur != null ? String(quote.butler_cost_eur) : '',
+    margin_notes: quote.margin_notes || '',
   });
   const [tariffs, setTariffs] = useState<TariffOption[]>(quote.tariff_options || []);
   const [saving, setSaving] = useState(false);
@@ -302,12 +306,26 @@ function QuoteEditor({
     setError(null);
     setSaving(true);
     try {
+      // Convertit les inputs textuels de coûts en numbers (ou null si vide)
+      const num = (s: string): number | null => {
+        const t = s.trim().replace(',', '.');
+        if (!t) return null;
+        const n = Number(t);
+        return Number.isFinite(n) ? n : null;
+      };
+
       const body = {
         ...form,
         validity_date: form.validity_date || null,
         destinataire_adresse: form.destinataire_adresse.trim() || null,
         conditions: form.conditions.split('\n').map((s) => s.trim()).filter(Boolean),
         tariff_options: tariffs,
+        // Coûts internes
+        chef_cost_eur: num(form.chef_cost_eur),
+        chef_travel_cost_eur: num(form.chef_travel_cost_eur),
+        butler_required: form.butler_required,
+        butler_cost_eur: form.butler_required ? num(form.butler_cost_eur) : null,
+        margin_notes: form.margin_notes.trim() || null,
       };
       const r = await adminFetchRaw(`/api/admin/quotes/${quote.id}`, {
         method: 'PATCH',
@@ -386,7 +404,79 @@ function QuoteEditor({
             <Field label="Adresse (optionnel)"><input type="text" value={form.destinataire_adresse} onChange={(e) => setForm((f) => ({ ...f, destinataire_adresse: e.target.value }))} className={inpCls} /></Field>
           </Section>
 
-          <Section title="Options tarifaires" right={
+          {/* ─── COÛTS INTERNES (Phase 1 marge) ─────────────────
+              Données JAMAIS exposées au client dans le PDF.
+              Servent à calculer la marge nette par option tarifaire. */}
+          <Section title="Coûts internes (marge)" right={
+            <span className="text-[10px] text-red-200/70 italic">jamais exposés au client</span>
+          }>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Field label="Coût chef HT (€)" hint="Tarif négocié avec le chef pour la mission">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.chef_cost_eur}
+                  onChange={(e) => setForm((f) => ({ ...f, chef_cost_eur: e.target.value }))}
+                  placeholder="ex: 2500"
+                  className={inpCls + ' font-mono'}
+                />
+              </Field>
+              <Field label="Frais de déplacement chef (€)" hint="Train, avion, essence">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.chef_travel_cost_eur}
+                  onChange={(e) => setForm((f) => ({ ...f, chef_travel_cost_eur: e.target.value }))}
+                  placeholder="ex: 250"
+                  className={inpCls + ' font-mono'}
+                />
+              </Field>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.butler_required}
+                  onChange={(e) => setForm((f) => ({ ...f, butler_required: e.target.checked }))}
+                  className="w-4 h-4 rounded border-white/20 bg-white/5"
+                />
+                <span className="text-sm text-white/85">Butler requis pour cette mission</span>
+              </label>
+              {form.butler_required && (
+                <Field label="Coût butler HT (€)">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={form.butler_cost_eur}
+                    onChange={(e) => setForm((f) => ({ ...f, butler_cost_eur: e.target.value }))}
+                    placeholder="ex: 1200"
+                    className={inpCls + ' font-mono'}
+                  />
+                </Field>
+              )}
+            </div>
+
+            <Field label="Notes internes sur la marge (optionnel)" hint="Négociation, contraintes, contexte — jamais exposé">
+              <textarea
+                rows={2}
+                value={form.margin_notes}
+                onChange={(e) => setForm((f) => ({ ...f, margin_notes: e.target.value }))}
+                className={inpCls}
+              />
+            </Field>
+
+            {/* Aperçu de la marge en temps réel pendant l'édition */}
+            <LiveMarginPreview
+              tariffs={tariffs}
+              chefCost={form.chef_cost_eur}
+              chefTravel={form.chef_travel_cost_eur}
+              butlerRequired={form.butler_required}
+              butlerCost={form.butler_cost_eur}
+            />
+          </Section>
+
+          <Section title="Options tarifaires (prix vendus au client)" right={
             <button onClick={addTariff} className="text-xs text-sky-300 hover:text-sky-200">+ Ajouter</button>
           }>
             <div className="space-y-2">
@@ -439,6 +529,94 @@ function QuoteEditor({
   );
 }
 
+// ────────────────────────────────────────────────────────────
+// MarginPreview — résumé des coûts internes + marge par option tarifaire
+// ────────────────────────────────────────────────────────────
+
+const TONE_CLASS: Record<ReturnType<typeof getMarginTone>, string> = {
+  great: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/25',
+  good: 'bg-sky-500/15 text-sky-200 border-sky-500/25',
+  ok: 'bg-amber-500/15 text-amber-200 border-amber-500/25',
+  low: 'bg-red-400/15 text-red-200 border-red-400/25',
+  loss: 'bg-red-600/25 text-red-100 border-red-500/40 font-semibold',
+  unknown: 'bg-white/5 text-white/45 border-white/10',
+};
+
+function MarginPreview({ quote }: { quote: Quote }) {
+  const totalCosts = computeTotalCosts({
+    chefCostEur: quote.chef_cost_eur,
+    chefTravelCostEur: quote.chef_travel_cost_eur,
+    butlerRequired: quote.butler_required,
+    butlerCostEur: quote.butler_cost_eur,
+  });
+  const margins = computeMarginsPerOption(quote.tariff_options || [], {
+    chefCostEur: quote.chef_cost_eur,
+    chefTravelCostEur: quote.chef_travel_cost_eur,
+    butlerRequired: quote.butler_required,
+    butlerCostEur: quote.butler_cost_eur,
+  });
+  const hasCostsConfigured = totalCosts.totalCostsEur > 0;
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-2 text-xs">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] uppercase tracking-wider text-white/55">
+          Options tarifaires {hasCostsConfigured && <span className="text-white/40 normal-case tracking-normal">· marge interne calculée</span>}
+        </div>
+        {hasCostsConfigured && (
+          <div className="text-[10px] text-white/45 font-mono">
+            Coûts : {fmtEur(totalCosts.totalCostsEur)}
+          </div>
+        )}
+      </div>
+      {!hasCostsConfigured && (
+        <div className="text-[11px] text-white/40 italic">
+          Renseigne le coût chef pour voir la marge nette par option ↓ (bouton « Éditer les sections »)
+        </div>
+      )}
+      {hasCostsConfigured && (
+        <div className="text-[10px] text-white/40 space-x-2 font-mono">
+          {quote.chef_cost_eur ? <span>Chef {fmtEur(Number(quote.chef_cost_eur))}</span> : null}
+          {quote.chef_travel_cost_eur ? <span>· Déplacement {fmtEur(Number(quote.chef_travel_cost_eur))}</span> : null}
+          {quote.butler_required && quote.butler_cost_eur ? <span>· Butler {fmtEur(Number(quote.butler_cost_eur))}</span> : null}
+        </div>
+      )}
+      <div className="divide-y divide-white/[0.04]">
+        {margins.map((m, i) => {
+          const tone = getMarginTone(m.marginPct);
+          return (
+            <div key={i} className="flex items-center justify-between py-1.5">
+              <div className="flex-1 min-w-0">
+                <div className="text-white/80 truncate">{m.label}</div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="font-mono text-white/75 text-right">
+                  <div className="leading-tight">{fmtEur(m.htEur)} <span className="text-white/40 text-[10px]">HT</span></div>
+                </div>
+                {hasCostsConfigured && (
+                  <div className={`font-mono text-[10px] px-2 py-0.5 rounded border ${TONE_CLASS[tone]} text-right min-w-[105px] flex items-center justify-end gap-1`}>
+                    {m.marginEur >= 0 ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    <span>
+                      {fmtEur(m.marginEur)}
+                      {m.marginPct !== null && (
+                        <span className="opacity-70"> · {m.marginPct >= 0 ? '+' : ''}{m.marginPct}%</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const inpCls = 'w-full px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -448,6 +626,71 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <span className="block text-[10px] text-white/35 mt-0.5">{hint}</span>}
     </label>
+  );
+}
+
+// Aperçu live de la marge dans l'éditeur — recalcule à chaque saisie
+function LiveMarginPreview({
+  tariffs,
+  chefCost,
+  chefTravel,
+  butlerRequired,
+  butlerCost,
+}: {
+  tariffs: TariffOption[];
+  chefCost: string;
+  chefTravel: string;
+  butlerRequired: boolean;
+  butlerCost: string;
+}) {
+  const num = (s: string): number => {
+    const t = s.trim().replace(',', '.');
+    const n = Number(t);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const costs = computeTotalCosts({
+    chefCostEur: num(chefCost),
+    chefTravelCostEur: num(chefTravel),
+    butlerRequired,
+    butlerCostEur: num(butlerCost),
+  });
+  if (costs.totalCostsEur === 0 || tariffs.length === 0) return null;
+
+  const margins = computeMarginsPerOption(
+    tariffs.map((t) => ({ label: t.label, ht_eur: Number(t.ht_eur) || 0 })),
+    {
+      chefCostEur: num(chefCost),
+      chefTravelCostEur: num(chefTravel),
+      butlerRequired,
+      butlerCostEur: num(butlerCost),
+    },
+  );
+
+  return (
+    <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 p-3 space-y-1.5 text-xs">
+      <div className="text-[10px] uppercase tracking-wider text-emerald-200/80 font-semibold">
+        Aperçu marge en temps réel
+      </div>
+      <div className="text-[10px] text-emerald-100/55 font-mono">
+        Coût total interne : {fmtEur(costs.totalCostsEur)}
+      </div>
+      <div className="space-y-1 pt-1">
+        {margins.map((m, i) => {
+          const tone = getMarginTone(m.marginPct);
+          return (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-white/75">{m.label}</span>
+              <span className={`font-mono text-[11px] px-2 py-0.5 rounded border ${TONE_CLASS[tone]}`}>
+                {fmtEur(m.marginEur)}
+                {m.marginPct !== null && (
+                  <span className="opacity-70"> · {m.marginPct >= 0 ? '+' : ''}{m.marginPct}%</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
