@@ -566,7 +566,8 @@ export default function AdminDashboardPage() {
                 <div className="grid grid-cols-1 gap-2">
                   <QuickLink href="/admin/requests" title="Demandes" desc="Inbox & matching" icon={<IconInbox />} />
                   <QuickLink href="/admin/chefs" title="Chefs" desc="Validation & profils" icon={<IconChefHat />} />
-                  <QuickLink href="/admin/proposals" title="Missions" desc="Suivi & offres" icon={<IconBolt />} />
+                  <QuickLink href="/admin/quotes" title="Devis" desc="Pipeline commercial" icon={<IconBolt />} />
+                  <QuickLink href="/admin/missions" title="Missions" desc="Suivi & paiements" icon={<IconBolt />} />
                 </div>
               </Panel>
             </div>
