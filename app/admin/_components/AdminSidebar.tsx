@@ -69,6 +69,7 @@ export function AdminSidebar({
         { label: 'Chefs', href: '/admin/chefs', icon: Users, badge: badges?.chefsPending },
         { label: 'Carte', href: '/admin/map', icon: Map, badge: badges?.chefsOnMap },
         { label: 'Proposals', href: '/admin/proposals', icon: FileText },
+        { label: 'Devis', href: '/admin/quotes', icon: FileText, badge: badges?.quotesAlive },
         { label: 'Missions', href: '/admin/missions', icon: Briefcase },
         { label: 'NCC Partenaire', href: '/admin/ncc-partner', icon: ShieldCheck },
       ],

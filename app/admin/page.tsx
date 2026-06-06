@@ -8,6 +8,7 @@ import type { ChefUser, RequestEntity, Mission } from '@/types';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import MissionsPipelinePanel from './_components/MissionsPipelinePanel';
 import CashflowWidget from './_components/CashflowWidget';
+import QuotesWidget from './_components/QuotesWidget';
 
 type StatusKey = 'new' | 'in_review' | 'assigned' | 'closed';
 
@@ -396,6 +397,9 @@ export default function AdminDashboardPage() {
               href="/admin/revenue"
             />
           </div>
+
+          {/* 📄 Devis — pipeline commercial */}
+          <QuotesWidget />
 
           {/* 💰 Cashflow — échéances à venir + retards à relancer (mission_payments) */}
           <CashflowWidget />
