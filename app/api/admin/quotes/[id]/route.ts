@@ -51,6 +51,10 @@ const EDITABLE_FIELDS = [
   'destinataire_nom', 'destinataire_type', 'destinataire_adresse',
   'tariff_options', 'courses_text', 'courses_provision_text',
   'conditions', 'tva_rate_pct', 'currency', 'admin_notes',
+  // ─── Coûts internes (Phase 1 marge — JAMAIS exposés au client) ───
+  'chef_cost_eur', 'chef_travel_cost_eur',
+  'butler_required', 'butler_cost_eur',
+  'margin_notes',
 ] as const;
 
 const ALLOWED_STATUS = new Set(['draft', 'sent', 'accepted', 'declined', 'expired', 'cancelled']);
