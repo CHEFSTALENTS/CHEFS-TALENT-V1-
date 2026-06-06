@@ -11,6 +11,7 @@ import AssignMissionModal from '@/components/AssignMissionModal';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import ProposalsList from './_components/ProposalsList';
 import NccPanel from './_components/NccPanel';
+import QuotePanel from './_components/QuotePanel';
 import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
@@ -339,6 +340,17 @@ export default function AdminRequestDetailPage() {
               }}
             />
           </Panel>
+
+          {/* Devis — éditable section par section, PDF téléchargeable
+              (DA bleu marine + or + crème, format A4) */}
+          <div id="quote" className="scroll-mt-24">
+            <Panel
+              title="Devis"
+              subtitle="Génère + édite les sections (intitulé, profils tarifaires, conditions) + télécharge PDF"
+            >
+              <QuotePanel requestId={id} />
+            </Panel>
+          </div>
 
           {/* NCC concierge — accord de non-contournement à 4 parties (apporteur, chef, client, Thomas) */}
           <div id="ncc" className="scroll-mt-24">

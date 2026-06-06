@@ -62,19 +62,22 @@ async function getBrowser(): Promise<Browser> {
 }
 
 export type HtmlToPdfOptions = {
-  /**
-   * Format papier — A4 par défaut, comme les CGV et contrats actuels.
-   */
   format?: 'A4' | 'Letter';
-  /**
-   * Marges en mm (string CSS valide aussi : "20mm", "0.5in"…)
-   */
   margin?: { top: string; right: string; bottom: string; left: string };
-  /**
-   * Inclure les arrière-plans CSS dans le PDF (utile pour les bordures
-   * de tables, sinon elles peuvent disparaître).
-   */
   printBackground?: boolean;
+  /** Attend networkidle0 (utile pour Google Fonts + images remote). */
+  waitForNetwork?: boolean;
+  /** Attend document.fonts.ready avant capture (rendu typo parfait). */
+  waitForFonts?: boolean;
+  /** Force 'screen' au lieu du mode 'print' par défaut de pdf(). */
+  mediaType?: 'screen' | 'print';
+  /** Viewport en pixels avant capture (default 1280). */
+  viewportWidth?: number;
+  viewportHeight?: number;
+  /** Désactive CSS @page rules (force le format passé en options). */
+  ignoreCssPageSize?: boolean;
+  /** Échelle de rendu PDF (0.1 - 2). Default 1. */
+  scale?: number;
 };
 
 /**
@@ -89,12 +92,36 @@ export async function htmlToPdf(html: string, opts: HtmlToPdfOptions = {}): Prom
   let page: Page | null = null;
   try {
     page = await browser.newPage();
-    await page.setContent(html, { waitUntil: ['load', 'domcontentloaded'], timeout: 30_000 });
+
+    if (opts.viewportWidth || opts.viewportHeight) {
+      await page.setViewport({
+        width: opts.viewportWidth || 1280,
+        height: opts.viewportHeight || 1696,
+        deviceScaleFactor: 2,
+      });
+    }
+
+    if (opts.mediaType) {
+      await page.emulateMediaType(opts.mediaType);
+    }
+
+    const waitUntil: any = opts.waitForNetwork
+      ? ['load', 'networkidle0']
+      : ['load', 'domcontentloaded'];
+    await page.setContent(html, { waitUntil, timeout: 45_000 });
+
+    if (opts.waitForFonts) {
+      try {
+        await page.evaluate(() => (document as any).fonts?.ready);
+      } catch { /* ignore */ }
+    }
+
     const pdfBytes = await page.pdf({
       format: opts.format || 'A4',
       printBackground: opts.printBackground ?? true,
       margin: opts.margin || { top: '18mm', right: '16mm', bottom: '18mm', left: '16mm' },
-      preferCSSPageSize: true,
+      preferCSSPageSize: !opts.ignoreCssPageSize,
+      scale: opts.scale,
     });
     // @sparticuz/chromium peut renvoyer Uint8Array — on normalise en Buffer
     return Buffer.isBuffer(pdfBytes) ? pdfBytes : Buffer.from(pdfBytes);
