@@ -18,11 +18,28 @@ function mapRowToRequestEntity(x: any): RequestEntity {
   const userType: RequestEntity['userType'] =
     x.client_type === 'concierge' || x.user_type === 'b2b' ? 'b2b' : 'b2c';
   const mode: RequestEntity['mode'] = 'concierge';
+
+  // ── BUG BUDGET FIX ─────────────────────────────────────────
+  // En demande manuelle admin, on saisit `budget_amount` (numérique) +
+  // `budget_unit` ('total' par défaut) mais `budget_range` reste NULL.
+  // Avant ce fix, le dashboard ne lisait que `budget_range` → budget vide.
+  // Maintenant on dérive le range depuis amount + unit quand range est null.
+  const budgetAmount = x.budget_amount ?? x.budgetAmount ?? null;
+  const budgetUnit = x.budget_unit ?? x.budgetUnit ?? null;
+  const derivedFromAmount = budgetAmount
+    ? budgetUnit === 'pers'
+      ? `${budgetAmount}€ / pers`
+      : budgetUnit === 'jour' || budgetUnit === 'day'
+      ? `${budgetAmount}€ / jour`
+      : `${budgetAmount}€` // total ou autre
+    : null;
   const budgetRange =
     x.budget_range ?? x.budgetRange ??
+    derivedFromAmount ??
     (x.budget_per_person ? `${x.budget_per_person}€ / pers` : null) ??
     (x.budget_per_day ? `${x.budget_per_day}€ / jour` : null) ??
     (x.budget ? String(x.budget) : null) ?? '';
+
   return {
     id: x.id,
     status: (x.status ?? 'new') as any,
@@ -39,12 +56,29 @@ function mapRowToRequestEntity(x: any): RequestEntity {
       allergies: x.dietary_restrictions ?? x.dietaryRestrictions ?? '',
       languages: x.preferred_language ?? x.preferredLanguage ?? '',
     },
-    notes: x.message ?? x.notes ?? null,
+    notes: x.notes ?? null,
+    // Le `message` est le brief auto-généré côté client. On le distingue
+    // des `notes` admin pour qu'on puisse afficher les deux distinctement
+    // (avant ce fix, notes admin étaient écrasées par message).
+    message: x.message ?? null,
     contact: {
       name: x.full_name ?? x.fullName ?? x.first_name ?? x.firstName ?? 'Client',
       company: x.company_name ?? x.companyName ?? '',
       email: x.email ?? '', phone: x.phone ?? '',
     } as any,
+    // ── CHAMPS DB additionnels (avant ce fix : perdus dans le mapping)
+    // Exposés via la prop _raw pour affichage dans la section "Détails complets".
+    _raw: {
+      clientType: x.client_type ?? x.clientType ?? null,
+      dateMode: x.date_mode ?? x.dateMode ?? null,
+      budgetAmount,
+      budgetUnit,
+      serviceRhythm: x.service_rhythm ?? x.serviceRhythm ?? null,
+      missionCategory: x.mission_category ?? x.missionCategory ?? null,
+      mealPlan: x.meal_plan ?? x.mealPlan ?? null,
+      replacementNeeded: x.replacement_needed ?? x.replacementNeeded ?? null,
+      source: x.source ?? null,
+    },
   } as RequestEntity;
 }
 
@@ -266,6 +300,8 @@ export default function AdminRequestDetailPage() {
         <Panel title="Fiche demande" subtitle="Résumé client + décomposition tarifaire" className="xl:col-span-1" right={<StatusBadge status={String(req.status || '')} />}>
           <div className="space-y-2 text-sm">
             <Row label="Client" value={req.contact?.company || req.contact?.name || '—'} />
+            <Row label="Email" value={String((req.contact as any)?.email || '—')} />
+            <Row label="Téléphone" value={String((req.contact as any)?.phone || '—')} />
             <Row label="Lieu" value={req.location || '—'} />
             <Row label="Dates" value={formatDates(req)} />
             <Row label="Pax" value={String(req.guestCount ?? '—')} />
@@ -276,6 +312,12 @@ export default function AdminRequestDetailPage() {
             <Row label="Restrictions" value={String(req.preferences?.allergies || '—')} />
             <Row label="Langues" value={String(req.preferences?.languages || '—')} />
           </div>
+
+          {/* ── DÉTAILS COMPLETS — champs précédemment perdus du dashboard
+              (mais bien sauvegardés en base). Affichés ici pour ne plus
+              perdre d'info entre la demande client/admin et ce que tu vois. */}
+          <DetailsCompletsSection req={req} />
+
           <BriefSection req={req} />
         </Panel>
 
@@ -367,6 +409,87 @@ function Panel({ title, subtitle, right, children, className = '' }: { title: st
         {right}
       </div>
       <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+// Section qui affiche TOUS les champs DB précédemment perdus du dashboard.
+// Repliable (ouvert par défaut) pour que la fiche ne devienne pas un mur de texte.
+function DetailsCompletsSection({ req }: { req: any }) {
+  const [open, setOpen] = useState(true);
+  const raw = req?._raw || {};
+  const rawNotes = req?.notes || null;        // notes admin (rentrées via NewRequestModal)
+  const rawMessage = req?.message || null;    // brief auto-généré côté client
+
+  // Labels lisibles pour les valeurs codées en base
+  const CLIENT_TYPE_LABEL: Record<string, string> = {
+    private: 'Particulier', concierge: 'Conciergerie', company: 'Société',
+    b2b: 'B2B', b2c: 'B2C',
+  };
+  const RHYTHM_LABEL: Record<string, string> = {
+    daily: 'Quotidien', weekly: 'Hebdomadaire', occasional: 'Ponctuel',
+  };
+  const MISSION_CAT_LABEL: Record<string, string> = {
+    yacht: 'Yacht', residence: 'Résidence', event: 'Événement',
+    dinner: 'Dîner ponctuel', wedding: 'Mariage', longterm: 'Mission longue',
+  };
+  const REPLACEMENT_LABEL: Record<string, string> = {
+    yes: 'Oui', no: 'Non', urgent: 'Urgent',
+  };
+
+  const hasAnyExtra =
+    raw.clientType || raw.dateMode || raw.budgetAmount || raw.budgetUnit ||
+    raw.serviceRhythm || raw.missionCategory || raw.mealPlan ||
+    raw.replacementNeeded || raw.source || rawNotes;
+
+  if (!hasAnyExtra && !rawMessage) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-2.5 flex items-center justify-between text-left text-xs font-semibold text-white/70 uppercase tracking-wide hover:bg-white/[0.03] transition"
+      >
+        <span>Détails complets ({Object.values(raw).filter(Boolean).length + (rawNotes ? 1 : 0)} champs)</span>
+        <span className="text-white/40">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2 text-sm border-t border-white/5 pt-3">
+          {raw.clientType && (
+            <Row label="Type client" value={CLIENT_TYPE_LABEL[raw.clientType] || raw.clientType} />
+          )}
+          {raw.missionCategory && (
+            <Row label="Catégorie mission" value={MISSION_CAT_LABEL[raw.missionCategory] || raw.missionCategory} />
+          )}
+          {raw.serviceRhythm && (
+            <Row label="Rythme du service" value={RHYTHM_LABEL[raw.serviceRhythm] || raw.serviceRhythm} />
+          )}
+          {raw.mealPlan && <Row label="Plan repas" value={raw.mealPlan} />}
+          {raw.replacementNeeded && (
+            <Row label="Remplacement" value={REPLACEMENT_LABEL[raw.replacementNeeded] || raw.replacementNeeded} />
+          )}
+          {raw.dateMode && <Row label="Mode dates" value={raw.dateMode === 'multi' ? 'Multi-jours' : 'Date unique'} />}
+          {raw.budgetAmount !== null && raw.budgetAmount !== undefined && (
+            <Row
+              label="Budget précis"
+              value={`${Number(raw.budgetAmount).toLocaleString('fr-FR')} €${raw.budgetUnit ? ` / ${raw.budgetUnit}` : ''}`}
+            />
+          )}
+          {raw.source && <Row label="Source" value={raw.source} />}
+          {rawNotes && (
+            <div className="pt-2 border-t border-white/5 mt-2">
+              <div className="text-white/55 text-xs uppercase tracking-wide mb-1">Notes admin</div>
+              <div className="text-white/85 text-sm whitespace-pre-wrap">{rawNotes}</div>
+            </div>
+          )}
+          {rawMessage && rawMessage !== rawNotes && (
+            <div className="pt-2 border-t border-white/5 mt-2">
+              <div className="text-white/55 text-xs uppercase tracking-wide mb-1">Brief généré</div>
+              <pre className="text-white/70 text-xs whitespace-pre-wrap font-mono leading-relaxed">{rawMessage}</pre>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
