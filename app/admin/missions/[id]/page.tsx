@@ -10,6 +10,7 @@ import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
 import ChefReplacementPanel from './_components/ChefReplacementPanel';
 import ChefPaidModal from './_components/ChefPaidModal';
+import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
 import MissionEditor from './_components/MissionEditor';
 import type { ContractsData } from './_lib/contracts';
 import {
@@ -909,31 +910,15 @@ export default function AdminMissionDetailPage() {
    Subcomponents
    ================================================================ */
 
-function Panel({
-  title,
-  subtitle,
-  right,
-  children,
-}: {
+// Wrapper vers CollapsiblePanel — chaque section devient pliable, état persisté
+// par titre (préfixe mission: pour isoler des autres fiches).
+function Panel(props: {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/10 flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold text-white">{title}</div>
-          {subtitle && (
-            <div className="text-xs text-white/45 mt-0.5">{subtitle}</div>
-          )}
-        </div>
-        {right}
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  );
+  return <CollapsiblePanel {...props} persistKey={`mission:${props.title}`} />;
 }
 
 function Field({

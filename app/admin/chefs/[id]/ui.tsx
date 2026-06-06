@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import VipAdminControl from './_components/VipAdminControl';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
 
 type MissionRow = {
   id: string;
@@ -744,16 +745,10 @@ export default function ChefProfileClient({
 
 /* ---------------- UI ---------------- */
 
-function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
-      <div className="mb-3">
-        <div className="text-sm font-semibold text-white">{title}</div>
-        {subtitle ? <div className="text-xs text-white/45 mt-0.5">{subtitle}</div> : null}
-      </div>
-      {children}
-    </div>
-  );
+// Wrapper vers CollapsiblePanel — chaque section devient pliable, état persisté
+// par titre (préfixe chef: pour isoler des autres fiches).
+function Panel(props: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return <CollapsiblePanel {...props} persistKey={`chef:${props.title}`} />;
 }
 
 function Kpi({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {

@@ -11,6 +11,7 @@ import AssignMissionModal from '@/components/AssignMissionModal';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import ProposalsList from './_components/ProposalsList';
 import NccPanel from './_components/NccPanel';
+import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
 
@@ -401,16 +402,11 @@ export default function AdminRequestDetailPage() {
 
 /* ─── UI Components ─── */
 
-function Panel({ title, subtitle, right, children, className = '' }: { title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode; className?: string; }) {
-  return (
-    <div className={`border border-white/10 rounded-2xl bg-white/5 backdrop-blur overflow-hidden ${className}`}>
-      <div className="p-4 border-b border-white/10 flex items-start justify-between gap-3">
-        <div><div className="text-sm font-semibold text-white">{title}</div>{subtitle ? <div className="text-xs text-white/45 mt-0.5">{subtitle}</div> : null}</div>
-        {right}
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  );
+// Panel = wrapper autour de CollapsiblePanel. Permet le drop-in : toutes
+// les utilisations existantes deviennent pliables (ouvertes par défaut)
+// + état mémorisé en localStorage par titre.
+function Panel(props: { title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode; className?: string; }) {
+  return <CollapsiblePanel {...props} persistKey={`request:${props.title}`} />;
 }
 
 // Section qui affiche TOUS les champs DB précédemment perdus du dashboard.
