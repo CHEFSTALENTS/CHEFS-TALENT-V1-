@@ -75,9 +75,10 @@ export default function AdminNccPartnerPage() {
 
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
-  const fetchList = useCallback(async () => {
-    setLoadingList(true);
+  const fetchList = useCallback(async (silent = false) => {
+    if (!silent) setLoadingList(true);
     try {
       const json = await adminFetch<{ ok: boolean; signatures: Signature[] }>(
         '/api/admin/ncc-partner/list?limit=100',
@@ -86,13 +87,58 @@ export default function AdminNccPartnerPage() {
     } catch (e: any) {
       console.error('[ncc-partner] list', e);
     } finally {
-      setLoadingList(false);
+      if (!silent) setLoadingList(false);
     }
   }, []);
 
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  // ─── Polling auto pour actualiser les statuts ─────────────
+  // Toutes les 15s, on refetch silencieusement la liste tant qu'au moins
+  // une signature est en cours (ongoing/draft). Une fois toutes signées
+  // ou en état final (done/declined/expired/cancelled), on arrête le poll.
+  useEffect(() => {
+    const hasPending = signatures.some(
+      (s) => s.yousign_status === 'ongoing' || s.yousign_status === 'draft',
+    );
+    if (!hasPending) return;
+    const interval = setInterval(() => fetchList(true), 15_000);
+    return () => clearInterval(interval);
+  }, [signatures, fetchList]);
+
+  // ─── Refresh on focus ─────────────────────────────────────
+  // Quand l'utilisateur revient sur la tab (ex: après avoir signé côté
+  // YouSign dans un autre onglet), on refetch tout de suite.
+  useEffect(() => {
+    const onFocus = () => fetchList(true);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchList]);
+
+  // ─── Force sync YouSign → DB pour une row ──────────────────
+  // Si le webhook YouSign a échoué (réseau, deploy en cours, etc.) ou
+  // si le polling n'est pas assez réactif, l'admin peut forcer la synchro
+  // d'une row précise.
+  async function forceSync(id: string) {
+    setSyncingId(id);
+    try {
+      const r = await adminFetchRaw(
+        `/api/admin/signature-requests/${encodeURIComponent(id)}/sync`,
+        { method: 'POST' },
+      );
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok || !json.ok) {
+        throw new Error(json?.error || `HTTP ${r.status}`);
+      }
+      await fetchList(true);
+    } catch (e: any) {
+      alert(`Sync impossible : ${e?.message || 'Erreur'}`);
+    } finally {
+      setSyncingId(null);
+    }
+  }
 
   async function call(previewOnly: boolean) {
     setError(null);
@@ -319,9 +365,18 @@ export default function AdminNccPartnerPage() {
           <h2 className="text-sm font-semibold text-white inline-flex items-center gap-2">
             <FileSignature className="w-4 h-4 text-white/55" />
             NCC partenaires envoyés ({signatures.length})
+            {signatures.some((s) => s.yousign_status === 'ongoing' || s.yousign_status === 'draft') && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] text-amber-200 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full ml-1"
+                title="Au moins une signature est en cours — la liste se rafraîchit automatiquement toutes les 15 secondes"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                Auto-refresh actif
+              </span>
+            )}
           </h2>
           <button
-            onClick={fetchList}
+            onClick={() => fetchList()}
             disabled={loadingList}
             className="inline-flex items-center px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-white/85 hover:bg-white/10"
           >
@@ -374,6 +429,24 @@ export default function AdminNccPartnerPage() {
                     )}
                   </div>
                   <div className="shrink-0 flex items-center gap-1">
+                    {/* Bouton "Force sync" : utile si le webhook YouSign a
+                        failed ou si on n'a pas patienté le polling auto.
+                        Visible uniquement tant qu'on n'est pas en état final
+                        (done/declined/expired/cancelled). */}
+                    {(s.yousign_status === 'ongoing' || s.yousign_status === 'draft') && (
+                      <button
+                        onClick={() => forceSync(s.id)}
+                        disabled={syncingId === s.id}
+                        className="p-1.5 rounded-lg border border-sky-500/20 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200 disabled:opacity-50"
+                        title="Forcer la synchronisation avec YouSign"
+                      >
+                        {syncingId === s.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
                     {s.signed_pdf_url && (
                       <a
                         href={s.signed_pdf_url}
