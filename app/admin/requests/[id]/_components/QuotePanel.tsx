@@ -7,9 +7,10 @@
 // - PHASE 1 AGENT COMMERCIAL : affichage de la marge par option tarifaire
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import { computeMarginsPerOption, computeTotalCosts, getMarginTone, fmtEur } from '@/lib/quotes/margin';
+import QuoteAgentChat from './QuoteAgentChat';
 
 type TariffOption = {
   label: string;
@@ -77,6 +78,7 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [chatting, setChatting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuote = useCallback(async () => {
@@ -216,6 +218,14 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
           <PenSquare className="w-3.5 h-3.5 mr-1.5" />
           Éditer les sections
         </button>
+        <button
+          onClick={() => setChatting(true)}
+          className="inline-flex items-center px-3 py-1.5 rounded-lg border border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20 text-xs text-emerald-200"
+          title="Travaille le devis avec l'assistant commercial (Claude). Il pose des questions, propose des valeurs, et apprend de tes choix."
+        >
+          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+          Discuter avec l'agent
+        </button>
         {quote.status !== 'cancelled' && (
           <button
             onClick={remove}
@@ -235,6 +245,14 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
             setEditing(false);
             await fetchQuote();
           }}
+        />
+      )}
+
+      {chatting && (
+        <QuoteAgentChat
+          quoteId={quote.id}
+          onClose={() => setChatting(false)}
+          onQuoteUpdated={fetchQuote}
         />
       )}
     </div>
