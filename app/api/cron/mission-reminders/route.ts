@@ -37,6 +37,7 @@ type MissionRow = {
   status: string | null;
   reminder_30d_sent_at: string | null;
   reminder_7d_sent_at: string | null;
+  reminder_3d_sent_at: string | null;
   reminder_dday_sent_at: string | null;
 };
 
@@ -69,6 +70,9 @@ function pickVariantsToSend(
 
   if (!m.reminder_30d_sent_at && daysUntil >= 29 && daysUntil <= 31) out.push('30d');
   if (!m.reminder_7d_sent_at && daysUntil >= 6 && daysUntil <= 8) out.push('7d');
+  // J-3 : nouveau variant (2026-06). Fenêtre tolérante 2-4 jours pour
+  // gérer les décalages de cron / timezones.
+  if (!m.reminder_3d_sent_at && daysUntil >= 2 && daysUntil <= 4) out.push('3d');
   if (!m.reminder_dday_sent_at && daysUntil === 0) out.push('d_day');
 
   return out;
@@ -77,6 +81,7 @@ function pickVariantsToSend(
 function variantToColumn(v: MissionReminderVariant): keyof MissionRow {
   if (v === '30d') return 'reminder_30d_sent_at';
   if (v === '7d') return 'reminder_7d_sent_at';
+  if (v === '3d') return 'reminder_3d_sent_at';
   return 'reminder_dday_sent_at';
 }
 
