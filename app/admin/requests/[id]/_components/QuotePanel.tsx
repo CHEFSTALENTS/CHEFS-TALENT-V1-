@@ -55,6 +55,58 @@ type Quote = {
   margin_notes: string | null;
 };
 
+// ────────────────────────────────────────────────────────────
+// Helpers téléchargement — fetchent via adminFetchRaw (Bearer auto)
+// puis créent un blob + déclenchent download/open. Un simple <a href>
+// ne marche pas car le navigateur n'envoie pas le token Bearer.
+// ────────────────────────────────────────────────────────────
+
+async function openQuoteHtml(
+  quoteId: string,
+  setBusy: (v: 'pdf' | 'html' | null) => void,
+): Promise<void> {
+  setBusy('html');
+  try {
+    const r = await adminFetchRaw(`/api/admin/quotes/${quoteId}/pdf?format=html`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const html = await r.text();
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    if (!win) alert('Autorisez les popups pour ouvrir l\'aperçu.');
+  } catch (e: any) {
+    alert(`Impossible d'ouvrir l'aperçu : ${e?.message || 'erreur inconnue'}`);
+  } finally {
+    setBusy(null);
+  }
+}
+
+async function downloadQuotePdf(
+  quoteId: string,
+  reference: string,
+  setBusy: (v: 'pdf' | 'html' | null) => void,
+): Promise<void> {
+  setBusy('pdf');
+  try {
+    const r = await adminFetchRaw(`/api/admin/quotes/${quoteId}/pdf?format=pdf`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${reference || 'devis'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  } catch (e: any) {
+    alert(`Impossible de télécharger le PDF : ${e?.message || 'erreur inconnue'}`);
+  } finally {
+    setBusy(null);
+  }
+}
+
 const STATUS_LABEL: Record<Quote['status'], string> = {
   draft: 'Brouillon',
   sent: 'Envoyé',
@@ -79,6 +131,7 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [chatting, setChatting] = useState(false);
+  const [downloading, setDownloading] = useState<'pdf' | 'html' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuote = useCallback(async () => {
@@ -195,22 +248,26 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        <a
-          href={`/api/admin/quotes/${quote.id}/pdf?format=html`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/85"
+        <button
+          onClick={() => void openQuoteHtml(quote.id, setDownloading)}
+          disabled={downloading !== null}
+          className="inline-flex items-center px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/85 disabled:opacity-50"
         >
-          <Eye className="w-3.5 h-3.5 mr-1.5" />
+          {downloading === 'html'
+            ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            : <Eye className="w-3.5 h-3.5 mr-1.5" />}
           Aperçu HTML
-        </a>
-        <a
-          href={`/api/admin/quotes/${quote.id}/pdf?format=pdf`}
-          className="inline-flex items-center px-3 py-1.5 rounded-lg border border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20 text-xs text-emerald-200"
+        </button>
+        <button
+          onClick={() => void downloadQuotePdf(quote.id, quote.reference, setDownloading)}
+          disabled={downloading !== null}
+          className="inline-flex items-center px-3 py-1.5 rounded-lg border border-emerald-400/30 bg-emerald-400/10 hover:bg-emerald-400/20 text-xs text-emerald-200 disabled:opacity-50"
         >
-          <Download className="w-3.5 h-3.5 mr-1.5" />
+          {downloading === 'pdf'
+            ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+            : <Download className="w-3.5 h-3.5 mr-1.5" />}
           Télécharger PDF
-        </a>
+        </button>
         <button
           onClick={() => setEditing(true)}
           className="inline-flex items-center px-3 py-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 hover:bg-sky-400/20 text-xs text-sky-200"
