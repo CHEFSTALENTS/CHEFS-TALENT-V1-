@@ -130,6 +130,8 @@ export async function POST(
     .select('*')
     .single();
 
+  let finalQuote = created;
+
   if (insErr) {
     // Gestion conflit unique reference (rare mais possible si double-clic)
     if (String(insErr.message || '').toLowerCase().includes('unique')) {
@@ -142,10 +144,26 @@ export async function POST(
       if (r2.error) {
         return NextResponse.json({ ok: false, error: r2.error.message }, { status: 500 });
       }
-      return NextResponse.json({ ok: true, quote: r2.data });
+      finalQuote = r2.data;
+    } else {
+      return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
     }
-    return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, quote: created });
+  // 5. Faire passer la request en 'in_review' si elle est encore 'new'.
+  //    Cohérent avec /api/admin/proposals qui fait déjà la même chose,
+  //    pour qu'une demande qui a un devis ne soit plus dans "À traiter".
+  if (request.status === 'new') {
+    const { error: updErr } = await supabase
+      .from('client_requests')
+      .update({ status: 'in_review' })
+      .eq('id', requestId)
+      .eq('status', 'new'); // guard contre race condition
+    if (updErr) {
+      console.warn('[quote/POST] failed to mark request in_review', updErr.message);
+      // Non bloquant : le devis a été créé, on continue.
+    }
+  }
+
+  return NextResponse.json({ ok: true, quote: finalQuote });
 }
