@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 import { escapeHtml } from '@/lib/escapeHtml';
+import { chefNotificationsEnabled, logChefNotificationSkipped } from '@/lib/email/chefNotifications';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -240,6 +241,12 @@ async function sendProposalEmailToChef(params: {
     : null;
   const firstName = (chefName || 'Chef').split(' ')[0];
   const respondUrl = `${process.env.NEXT_PUBLIC_APP_URL}/chef/missions`;
+
+  // ⚠️ Kill switch global — voir lib/email/chefNotifications.ts
+  if (!chefNotificationsEnabled()) {
+    logChefNotificationSkipped('proposals/notify', chefEmail);
+    return;
+  }
 
   await resend.emails.send({
     from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
