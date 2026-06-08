@@ -3,16 +3,23 @@
 // GET /api/cron/mission-reminders
 //
 // Cron quotidien (vercel.json) qui scan les missions confirmées et envoie
-// les rappels chef à J-30, J-7 et J0 selon la date de début.
+// les rappels chef à J-30, J-7, J-3 et J0 selon la date de début.
 //
-// Tracking : 3 colonnes sur missions (reminder_30d_sent_at /
-// reminder_7d_sent_at / reminder_dday_sent_at) garantissent qu'un rappel
-// donné n'est envoyé qu'une seule fois par mission.
+// Tracking : 4 colonnes sur missions (reminder_30d_sent_at /
+// reminder_7d_sent_at / reminder_3d_sent_at / reminder_dday_sent_at)
+// garantissent qu'un rappel donné n'est envoyé qu'une seule fois par mission.
 //
 // Tolérance ±1 jour pour rattraper les missions oubliées en cas de
 // downtime Vercel.
 //
 // Auth : Bearer ${CRON_SECRET}.
+//
+// ⚠️ KILL SWITCH (juin 2026) — Les rappels chef sont désactivés tant que
+// MISSION_REMINDERS_ENABLED ≠ "1". Le cron a aussi été retiré de
+// vercel.json. Pour réactiver :
+//   1. Remettre l'entrée { path: "/api/cron/mission-reminders", schedule: "0 9 * * *" }
+//      dans vercel.json
+//   2. Set MISSION_REMINDERS_ENABLED=1 dans les env vars Vercel
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -86,6 +93,19 @@ function variantToColumn(v: MissionReminderVariant): keyof MissionRow {
 }
 
 export async function GET(req: Request) {
+  // ⚠️ Kill switch — désactivé par défaut depuis juin 2026.
+  // Aucun mail n'est envoyé aux chefs tant que cette env var n'est pas
+  // explicitement remise à "1". Voir l'en-tête du fichier pour réactiver.
+  if (process.env.MISSION_REMINDERS_ENABLED !== '1') {
+    console.log('[cron/mission-reminders] disabled via MISSION_REMINDERS_ENABLED env');
+    return NextResponse.json({
+      ok: true,
+      disabled: true,
+      message: 'Mission reminders are disabled (MISSION_REMINDERS_ENABLED != "1")',
+      scanned: 0, sent: 0, failed: 0, skipped: 0,
+    });
+  }
+
   // Auth
   const expected = process.env.CRON_SECRET;
   const authHeader = req.headers.get('authorization') || '';
