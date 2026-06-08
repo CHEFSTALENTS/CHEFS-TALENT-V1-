@@ -15,11 +15,12 @@
 // Auth : Bearer ${CRON_SECRET}.
 //
 // ⚠️ KILL SWITCH (juin 2026) — Les rappels chef sont désactivés tant que
-// MISSION_REMINDERS_ENABLED ≠ "1". Le cron a aussi été retiré de
-// vercel.json. Pour réactiver :
+// CHEF_NOTIFICATIONS_ENABLED ≠ "1" (var globale partagée avec les autres
+// mails sortants vers les chefs). Le cron a aussi été retiré de vercel.json.
+// Pour réactiver :
 //   1. Remettre l'entrée { path: "/api/cron/mission-reminders", schedule: "0 9 * * *" }
 //      dans vercel.json
-//   2. Set MISSION_REMINDERS_ENABLED=1 dans les env vars Vercel
+//   2. Set CHEF_NOTIFICATIONS_ENABLED=1 dans les env vars Vercel
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendMissionReminder, type MissionReminderVariant } from '@/lib/email/sendMissionReminder';
+import { chefNotificationsEnabled } from '@/lib/email/chefNotifications';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -96,12 +98,12 @@ export async function GET(req: Request) {
   // ⚠️ Kill switch — désactivé par défaut depuis juin 2026.
   // Aucun mail n'est envoyé aux chefs tant que cette env var n'est pas
   // explicitement remise à "1". Voir l'en-tête du fichier pour réactiver.
-  if (process.env.MISSION_REMINDERS_ENABLED !== '1') {
-    console.log('[cron/mission-reminders] disabled via MISSION_REMINDERS_ENABLED env');
+  if (!chefNotificationsEnabled()) {
+    console.log('[cron/mission-reminders] disabled via CHEF_NOTIFICATIONS_ENABLED env');
     return NextResponse.json({
       ok: true,
       disabled: true,
-      message: 'Mission reminders are disabled (MISSION_REMINDERS_ENABLED != "1")',
+      message: 'Mission reminders are disabled (CHEF_NOTIFICATIONS_ENABLED != "1")',
       scanned: 0, sent: 0, failed: 0, skipped: 0,
     });
   }

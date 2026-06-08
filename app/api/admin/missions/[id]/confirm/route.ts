@@ -16,6 +16,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
+import { chefNotificationsEnabled, logChefNotificationSkipped } from '@/lib/email/chefNotifications';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -105,6 +106,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     const finalContractUrl = contractUrl || mission.contract_url;
 
+    // ⚠️ Kill switch global — voir lib/email/chefNotifications.ts
+    if (!chefNotificationsEnabled()) {
+      logChefNotificationSkipped('missions/confirm', mission.chef_email);
+      // On retourne quand même OK : la mission est passée en 'confirmed'
+      // côté DB, seul l'email au chef est skippé.
+    } else {
     try {
       await resend.emails.send({
         from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
@@ -218,6 +225,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     } catch (e: any) {
       console.error('[admin/missions/confirm] email error', e?.message || e);
     }
+    } // end else (chefNotificationsEnabled)
 
     return NextResponse.json({ ok: true, status: 'confirmed' });
   } catch (err: any) {

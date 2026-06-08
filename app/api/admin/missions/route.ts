@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { requireAdminOr401 } from '@/lib/auth/requireAdmin';
 import { escapeHtml } from '@/lib/escapeHtml';
+import { chefNotificationsEnabled, logChefNotificationSkipped } from '@/lib/email/chefNotifications';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -111,6 +112,10 @@ export async function POST(req: Request) {
       });
     }
 
+    // ⚠️ Kill switch global — voir lib/email/chefNotifications.ts
+    if (!chefNotificationsEnabled()) {
+      logChefNotificationSkipped('missions/POST', chefEmail);
+    } else {
     try {
       await resend.emails.send({
         from: 'Thomas — Chefs Talents <contact@chefstalents.com>',
@@ -167,6 +172,7 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error('[admin/missions] email error', e);
     }
+    } // end else (chefNotificationsEnabled)
 
     if (emailOk) {
       await supabase
