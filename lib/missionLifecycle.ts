@@ -27,8 +27,12 @@ export type MissionForLifecycle = {
 
 /**
  * Calcule la phase auto d'une mission selon ses dates.
- * NB : si la mission est cancelled/declined/expired, on retourne 'cancelled'
- * (le statut DB prime sur la date).
+ *
+ * NB : le statut DB prime sur la date pour les états terminaux :
+ *   - cancelled/declined/expired → 'cancelled'
+ *   - completed/done             → 'completed' (même si end_date est dans le futur,
+ *                                  cas d'une mission marquée terminée manuellement
+ *                                  par l'admin, ex: événement raccourci)
  */
 export function computeMissionLifecyclePhase(
   m: MissionForLifecycle,
@@ -37,6 +41,14 @@ export function computeMissionLifecyclePhase(
   const status = String(m.status || '').toLowerCase();
   if (['cancelled', 'canceled', 'declined', 'expired'].includes(status)) {
     return 'cancelled';
+  }
+
+  // ✅ Le status DB 'completed'/'done' prime sur les dates : si l'admin
+  // a explicitement marqué la mission comme terminée, on respecte ce
+  // choix même si end_date n'est pas encore atteinte (mission écourtée,
+  // marquage anticipé, etc.).
+  if (['completed', 'done'].includes(status)) {
+    return 'completed';
   }
 
   // Pas encore confirmée → 'draft'
