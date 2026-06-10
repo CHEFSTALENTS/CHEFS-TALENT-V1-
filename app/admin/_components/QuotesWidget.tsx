@@ -16,6 +16,8 @@ import { adminFetch } from '@/lib/adminFetch';
 
 type Stats = {
   total: number;
+  totalActive?: number;
+  truncated?: boolean;
   byStatus: Record<string, number>;
   acceptanceRate: number | null;
   potentialRevenueTtc: number;
@@ -60,9 +62,14 @@ export default function QuotesWidget() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
       <header className="px-5 py-3 border-b border-white/10 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <FileText className="w-4 h-4 text-sky-300 shrink-0" />
           <h3 className="text-sm font-semibold text-white">Devis (90 derniers jours)</h3>
+          {stats?.truncated && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-200" title="Plafond atteint — les KPIs sont sous-estimés.">
+              ⚠ tronqué
+            </span>
+          )}
         </div>
         <Link
           href="/admin/quotes"
@@ -89,14 +96,14 @@ export default function QuotesWidget() {
         <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/10">
           <Tile
             label="Pipeline en vie"
-            value={fmtEurCompact(stats.potentialRevenueTtc)}
-            sub={`${alive} devis (TTC)`}
+            value={`${fmtEurCompact(stats.potentialRevenueTtc)} TTC`}
+            sub={`${alive} devis (draft + sent)`}
             tone="sky"
           />
           <Tile
             label="CA gagné"
-            value={fmtEurCompact(stats.wonRevenueHt)}
-            sub={`${stats.byStatus.accepted || 0} acceptés (HT)`}
+            value={`${fmtEurCompact(stats.wonRevenueHt)} HT`}
+            sub={`${stats.byStatus.accepted || 0} devis acceptés`}
             tone="emerald"
           />
           <Tile
@@ -108,7 +115,7 @@ export default function QuotesWidget() {
           <Tile
             label="Marge moy."
             value={stats.avgMarginPct !== null ? `${stats.avgMarginPct}%` : '—'}
-            sub="sur devis gagnés"
+            sub="sur devis gagnés (HT)"
             tone={
               stats.avgMarginPct === null ? 'mute' :
               stats.avgMarginPct >= 35 ? 'emerald' :

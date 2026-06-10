@@ -58,12 +58,18 @@ type RevenueData = {
   manualEntries?: {
     periodHtEur: number;
     periodVatEur: number;
+    periodTtcEur?: number;
     periodCount: number;
     periodByCategory: Record<string, { htEur: number; count: number }>;
     ytdHtEur: number;
     ytdVatEur: number;
+    ytdTtcEur?: number;
     ytdCount: number;
   };
+  // CA réellement en caisse (encaissé) TTC
+  cashTtc?: { periodEur: number; ytdEur: number };
+  // Commission brute CT (intermédiation) HT
+  commissionHt?: { periodEur: number; ytdEur: number };
   totals: { periodEur: number; ytdEur: number };
 };
 
@@ -180,12 +186,14 @@ export default function AdminDashboardPage() {
   const [revenuePeriod, setRevenuePeriod] = useState<PeriodKey>('current_month');
   const [revenueLoading, setRevenueLoading] = useState(false);
 
-  const refresh = async () => {
+  const refresh = async (opts?: { fresh?: boolean }) => {
     setLoading(true);
     try {
+      // Le bouton "Rafraîchir" passe fresh=true pour bypasser le cache 30s
+      const revUrl = `/api/admin/revenue?period=${revenuePeriod}${opts?.fresh ? '&fresh=1' : ''}`;
       const [reqJson, revJson] = await Promise.all([
         adminFetchRaw('/api/admin/requests').then((r) => r.json()),
-        adminFetchRaw(`/api/admin/revenue?period=${revenuePeriod}`)
+        adminFetchRaw(revUrl)
           .then((r) => r.json())
           .catch(() => null),
       ]);
@@ -224,11 +232,15 @@ export default function AdminDashboardPage() {
   }, []);
 
   // Re-fetch revenue seul quand la période change (le reste ne dépend pas).
-  async function refreshRevenue(nextPeriod: PeriodKey) {
+  // Option `fresh` bypasse le cache 30s côté serveur — utilisé par le
+  // bouton Rafraîchir du dashboard pour voir l'effet d'une vente saisie.
+  async function refreshRevenue(nextPeriod: PeriodKey, opts?: { fresh?: boolean }) {
     setRevenuePeriod(nextPeriod);
     setRevenueLoading(true);
     try {
-      const json = await adminFetchRaw(`/api/admin/revenue?period=${nextPeriod}`)
+      const params = new URLSearchParams({ period: nextPeriod });
+      if (opts?.fresh) params.set('fresh', '1');
+      const json = await adminFetchRaw(`/api/admin/revenue?${params.toString()}`)
         .then((r) => r.json())
         .catch(() => null);
       if (json?.ok) setRevenue(json as RevenueData);
@@ -366,7 +378,7 @@ export default function AdminDashboardPage() {
             Voir demandes
           </Link>
           <button
-            onClick={refresh}
+            onClick={() => refresh({ fresh: true })}
             className="px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition"
           >
             Rafraîchir
@@ -378,22 +390,61 @@ export default function AdminDashboardPage() {
         <div className="text-sm text-white/60">Chargement…</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+          {/* Ligne 1 — opérationnel */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
             <KpiCard title="À traiter" value={kpi.todo} subtitle="new + in_review" tone="amber" right={<DeltaBadge value={kpi.reqDeltaPct} label="7j" />} href="/admin/requests?status=new" />
             <KpiCard title="B2B (new)" value={kpi.b2bNew} subtitle="concierge" tone="amber" href="/admin/requests?type=b2b&status=new" />
             <KpiCard title="B2C (new)" value={kpi.b2cNew} subtitle="private" tone="blue" href="/admin/requests?type=b2c&status=new" />
             <KpiCard title="Chefs pending" value={kpi.chefsPending} subtitle="à valider" tone="violet" href="/admin/chefs" />
+          </div>
+
+          {/* Ligne 2 — financier (toujours visible, HT/TTC explicite) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
             <KpiCard
-              title={`CA ${revenue?.period.label.toLowerCase() ?? 'mois'}`}
-              value={money(revenue?.totals.periodEur ?? kpi.revenueMonth)}
+              title="CA en caisse"
+              value={
+                revenueLoading
+                  ? '…'
+                  : revenue?.cashTtc
+                    ? `${money(revenue.cashTtc.periodEur)} TTC`
+                    : revenue
+                      ? '— (recalculer)'
+                      : '— (indispo)'
+              }
+              subtitle={`encaissé · ${revenue?.period.label.toLowerCase() ?? 'mois'} · Stripe + missions payées + ventes`}
+              tone="green"
+              href="/admin/revenue"
+            />
+            <KpiCard
+              title="Commission CT"
+              value={
+                revenueLoading
+                  ? '…'
+                  : revenue?.commissionHt
+                    ? `${money(revenue.commissionHt.periodEur)} HT`
+                    : revenue
+                      ? '— (recalculer)'
+                      : '— (indispo)'
+              }
+              subtitle={`marge brute · ${revenue?.period.label.toLowerCase() ?? 'mois'} · missions confirmées`}
+              tone="violet"
+              href="/admin/revenue"
+            />
+            <KpiCard
+              title={`CA total ${revenue?.period.label.toLowerCase() ?? 'mois'}`}
+              value={
+                revenueLoading
+                  ? '…'
+                  : revenue
+                    ? `${money(revenue.totals.periodEur)} mixte`
+                    : '— (indispo)'
+              }
               subtitle={
                 revenue
-                  ? (revenue.manualEntries?.periodCount ?? 0) > 0
-                    ? 'Stripe + missions + ventes'
-                    : 'Stripe + missions'
-                  : 'missions (local)'
+                  ? 'Stripe TTC + commission HT + ventes HT'
+                  : 'Données revenue non chargées — clique Rafraîchir'
               }
-              tone="green"
+              tone="blue"
               href="/admin/revenue"
             />
           </div>
@@ -433,46 +484,46 @@ export default function AdminDashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <RevSubKpi
                   label="MRR"
-                  value={money(revenue.stripe.mrrEur)}
+                  value={`${money(revenue.stripe.mrrEur)} TTC`}
                   subtitle={`${revenue.stripe.activeSubscriptions} abonnement${revenue.stripe.activeSubscriptions > 1 ? 's' : ''} actif${revenue.stripe.activeSubscriptions > 1 ? 's' : ''}`}
                   tone="green"
                 />
                 <RevSubKpi
-                  label="Stripe"
-                  value={money(revenue.stripe.chargesPeriodEur)}
+                  label="Stripe (hors missions)"
+                  value={`${money(revenue.stripe.chargesPeriodEur)} TTC`}
                   subtitle={`${revenue.stripe.chargesPeriodCount} paiement${revenue.stripe.chargesPeriodCount > 1 ? 's' : ''}`}
                   tone="blue"
                 />
                 <RevSubKpi
-                  label="Missions confirmées"
-                  value={money(revenue.missions.commissionPeriodEur)}
+                  label="Commission missions"
+                  value={`${money(revenue.missions.commissionPeriodEur)} HT`}
                   subtitle={`${revenue.missions.confirmedPeriod} confirmée${revenue.missions.confirmedPeriod > 1 ? 's' : ''}`}
                   tone="violet"
                 />
                 <RevSubKpi
                   label="Missions encaissées"
-                  value={money(revenue.missions.paidCommissionPeriodEur ?? 0)}
+                  value={`${money(revenue.missions.paidCommissionPeriodEur ?? 0)} HT`}
                   subtitle={
                     (revenue.missions.paidPeriod ?? 0) > 0
-                      ? `${revenue.missions.paidPeriod} encaissée${(revenue.missions.paidPeriod ?? 0) > 1 ? 's' : ''} · ${money(revenue.missions.paidAmountPeriodEur ?? 0)} reçu client`
+                      ? `${revenue.missions.paidPeriod} encaissée${(revenue.missions.paidPeriod ?? 0) > 1 ? 's' : ''} · ${money(revenue.missions.paidAmountPeriodEur ?? 0)} TTC reçu`
                       : 'Aucune encaissée'
                   }
                   tone="green"
                 />
                 <RevSubKpi
                   label="Ventes manuelles"
-                  value={money(revenue.manualEntries?.periodHtEur ?? 0)}
+                  value={`${money(revenue.manualEntries?.periodHtEur ?? 0)} HT`}
                   subtitle={
                     (revenue.manualEntries?.periodCount ?? 0) > 0
-                      ? `${revenue.manualEntries?.periodCount} entrée${(revenue.manualEntries?.periodCount ?? 0) > 1 ? 's' : ''} HT · ${money(revenue.manualEntries?.periodVatEur ?? 0)} TVA`
-                      : 'Aucune (HT)'
+                      ? `${revenue.manualEntries?.periodCount} entrée${(revenue.manualEntries?.periodCount ?? 0) > 1 ? 's' : ''} · ${money(revenue.manualEntries?.periodVatEur ?? 0)} TVA`
+                      : 'Aucune'
                   }
                   tone="amber"
                 />
                 <RevSubKpi
                   label="Total YTD"
-                  value={money(revenue.totals.ytdEur)}
-                  subtitle={`${revenue.stripe.chargesYtdCount + revenue.missions.confirmedYtd + (revenue.manualEntries?.ytdCount ?? 0)} entrées année`}
+                  value={`${money(revenue.totals.ytdEur)} mixte`}
+                  subtitle={`${revenue.stripe.chargesYtdCount + revenue.missions.confirmedYtd + (revenue.manualEntries?.ytdCount ?? 0)} entrées · Stripe TTC + comm. HT + ventes HT`}
                   tone="amber"
                 />
               </div>

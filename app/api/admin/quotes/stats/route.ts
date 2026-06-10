@@ -25,6 +25,7 @@ type QuoteRow = {
   id: string;
   status: string;
   created_at: string;
+  issued_at: string;
   sent_at: string | null;
   accepted_at: string | null;
   tariff_options: Array<{ ht_eur?: number; ttc_eur?: number }> | null;
@@ -39,6 +40,30 @@ type QuoteRow = {
   final_amount_ttc_eur: number | null;
   is_external: boolean | null;
 };
+
+const HARD_LIMIT = 1000;
+
+/**
+ * Mois "comptable" du revenu d'un devis accepté :
+ * - accepted_at quand renseigné (le CA tombe le mois de l'acceptation)
+ * - sinon issued_at (pour les devis externes saisis a posteriori)
+ * - sinon created_at en dernier recours
+ */
+function revenueMonthKey(q: QuoteRow): string {
+  if (q.accepted_at) return q.accepted_at.slice(0, 7);
+  if (q.is_external && q.issued_at) return q.issued_at.slice(0, 7);
+  return q.created_at.slice(0, 7);
+}
+
+/**
+ * Date de référence pour le tri/volume d'un devis (axe "création").
+ * Pour les devis externes saisis a posteriori, on prend issued_at
+ * (date réelle d'émission) plutôt que created_at (date d'import).
+ */
+function effectiveCreationKey(q: QuoteRow): string {
+  if (q.is_external && q.issued_at) return q.issued_at.slice(0, 7);
+  return q.created_at.slice(0, 7);
+}
 
 function fromIsoForRange(range: string): string | null {
   const now = new Date();
@@ -101,15 +126,39 @@ export async function GET(req: Request) {
   let q = supabase
     .from('quotes')
     .select(
-      'id, status, created_at, sent_at, accepted_at, tariff_options, chef_cost_eur, chef_travel_cost_eur, butler_required, butler_cost_eur, destinataire_nom, lieu, final_amount_ht_eur, final_amount_ttc_eur, is_external',
+      'id, status, created_at, issued_at, sent_at, accepted_at, tariff_options, chef_cost_eur, chef_travel_cost_eur, butler_required, butler_cost_eur, destinataire_nom, lieu, final_amount_ht_eur, final_amount_ttc_eur, is_external',
     )
     .order('created_at', { ascending: false })
-    .limit(500);
-  if (fromIso) q = q.gte('created_at', fromIso);
+    .limit(HARD_LIMIT);
+  // Pour les devis internes, on filtre sur created_at. Pour les devis
+  // externes (qui peuvent être saisis longtemps après l'événement),
+  // on récupère tout puis on filtre côté JS sur issued_at — cf. plus bas.
+  if (fromIso) {
+    // OR clause : created_at >= fromIso, OU is_external (on récupère
+    // les externes même hors fenêtre, on les filtre ensuite par issued_at)
+    q = q.or(`created_at.gte.${fromIso},is_external.eq.true`);
+  }
 
   const { data, error } = await q;
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  const quotes = (data || []) as QuoteRow[];
+  let quotes = (data || []) as QuoteRow[];
+
+  // Re-filtrage côté JS : pour les externes, on ne garde que ceux dont
+  // issued_at >= fromIso (la date d'émission, pas d'import).
+  if (fromIso) {
+    const fromDay = fromIso.slice(0, 10);
+    quotes = quotes.filter((qr) => {
+      if (qr.is_external) {
+        return (qr.issued_at || qr.created_at).slice(0, 10) >= fromDay;
+      }
+      return true; // les internes ont déjà été filtrés côté SQL
+    });
+  }
+
+  const truncated = quotes.length >= HARD_LIMIT;
+  if (truncated) {
+    console.warn(`[quotes/stats] HARD_LIMIT atteint (${HARD_LIMIT}) — KPIs potentiellement sous-estimés`);
+  }
 
   // ─── Compteurs par statut ───
   const byStatus = {
@@ -161,20 +210,29 @@ export async function GET(req: Request) {
     : null;
 
   // ─── Volume par mois (12 derniers mois) ───
+  //   - "created" = mois d'émission effectif (issued_at pour les externes,
+  //     created_at sinon), EXCLUT les cancelled
+  //   - "accepted" + "revenueHt" = mois d'acceptation (accepted_at)
   const monthly: Record<string, { created: number; accepted: number; revenueHt: number }> = {};
   for (const q of quotes) {
-    const m = q.created_at.slice(0, 7); // YYYY-MM
-    if (!monthly[m]) monthly[m] = { created: 0, accepted: 0, revenueHt: 0 };
-    monthly[m].created += 1;
+    if (q.status === 'cancelled') continue; // pas de bruit dans le volume
+
+    const createdKey = effectiveCreationKey(q);
+    if (!monthly[createdKey]) monthly[createdKey] = { created: 0, accepted: 0, revenueHt: 0 };
+    monthly[createdKey].created += 1;
+
     if (q.status === 'accepted') {
-      monthly[m].accepted += 1;
-      monthly[m].revenueHt += effectiveHt(q);
+      const revKey = revenueMonthKey(q);
+      if (!monthly[revKey]) monthly[revKey] = { created: 0, accepted: 0, revenueHt: 0 };
+      monthly[revKey].accepted += 1;
+      monthly[revKey].revenueHt += effectiveHt(q);
     }
   }
 
-  // ─── Top destinataires par volume + revenue gagné ───
+  // ─── Top destinataires par volume + revenue gagné (exclut cancelled) ───
   const byDest: Record<string, { count: number; won: number; revenueHt: number }> = {};
   for (const q of quotes) {
+    if (q.status === 'cancelled') continue;
     const name = (q.destinataire_nom || '—').trim() || '—';
     if (!byDest[name]) byDest[name] = { count: 0, won: 0, revenueHt: 0 };
     byDest[name].count += 1;
@@ -188,20 +246,25 @@ export async function GET(req: Request) {
     .sort((a, b) => b.revenueHt - a.revenueHt)
     .slice(0, 8);
 
+  // Total effectif (exclut cancelled) pour affichage volume
+  const totalActive = quotes.filter((q) => q.status !== 'cancelled').length;
+
   return NextResponse.json({
     ok: true,
     range,
     fromIso,
-    total: quotes.length,
+    total: quotes.length,        // y compris cancelled (pour compat existant)
+    totalActive,                 // hors cancelled (pour affichage volume)
+    truncated,                   // true si HARD_LIMIT atteint
     byStatus,
-    acceptanceRate,             // %
-    potentialRevenueTtc,        // €
-    wonRevenueHt,               // €
-    wonRevenueTtc,              // €
-    avgMarginEur,               // €
-    avgMarginPct,               // %
-    avgResponseDays,            // jours
-    monthly,                    // { '2026-06': {created, accepted, revenueHt} }
-    topDestinataires,
+    acceptanceRate,              // %
+    potentialRevenueTtc,         // € TTC
+    wonRevenueHt,                // € HT
+    wonRevenueTtc,               // € TTC
+    avgMarginEur,                // € HT
+    avgMarginPct,                // %
+    avgResponseDays,             // jours
+    monthly,                     // { '2026-06': {created, accepted, revenueHt(HT)} }
+    topDestinataires,            // revenueHt en € HT
   });
 }
