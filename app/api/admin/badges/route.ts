@@ -45,23 +45,27 @@ export async function GET(req: Request) {
       .select('id', { count: 'exact', head: true })
       .in('status', ['draft', 'sent']),
 
-    // Missions confirmées qui démarrent dans ≤7j ET pas marqué contract_signed_at.
-    // (Le check fin "signature_requests chef+client = done" est fait dans
-    // /api/admin/missions/at-risk pour le widget ; ici on garde un proxy léger.)
+    // Missions confirmées qui démarrent dans ≤7j. On ne filtre PAS par
+    // contract_signed_at ici car la colonne peut ne pas exister sur tous
+    // les environnements ; le check fin (contrat + NCC) est fait dans
+    // /api/admin/missions/at-risk pour le widget. Ici on prend une borne
+    // haute (toutes les missions imminentes) — c'est un signal de "à
+    // surveiller" plutôt qu'un compteur exact de risque.
     supabase
       .from('missions')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'confirmed')
       .gte('start_date', todayIso)
-      .lte('start_date', in7d)
-      .is('contract_signed_at', null),
+      .lte('start_date', in7d),
   ]);
 
+  // En cas d'erreur sur un compteur, on renvoie 0 — un badge à 0 vaut
+  // mieux qu'une 500 qui casse toute la sidebar.
   return NextResponse.json({
     ok: true,
-    requestsNew: reqRes.count ?? 0,
-    quotesAlive: quotesRes.count ?? 0,
-    missionsRisk: missionsRes.count ?? 0,
+    requestsNew: reqRes.error ? 0 : (reqRes.count ?? 0),
+    quotesAlive: quotesRes.error ? 0 : (quotesRes.count ?? 0),
+    missionsRisk: missionsRes.error ? 0 : (missionsRes.count ?? 0),
     generatedAt: new Date().toISOString(),
   });
 }

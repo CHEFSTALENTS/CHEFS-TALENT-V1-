@@ -21,7 +21,7 @@ type MissionAtRisk = {
   end_date: string | null;
   client_amount: number | null;
   chef_amount: number | null;
-  contract_signed_at: string | null;
+  contract_signed_at?: string | null;
   daysUntilStart: number;
   contractSigned: boolean;
   nccSigned: boolean;
