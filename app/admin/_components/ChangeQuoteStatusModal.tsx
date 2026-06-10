@@ -124,7 +124,7 @@ export default function ChangeQuoteStatusModal({
           {/* Choix du statut */}
           <div>
             <label className="block text-xs text-white/55 mb-2">Nouveau statut</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {STATUS_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 const active = status === opt.value;
@@ -194,7 +194,7 @@ export default function ChangeQuoteStatusModal({
                 Si la négo a changé le montant accepté vs les options initiales, saisis-le ici.
                 Sinon, laisse vide — le calcul utilisera la moyenne des options.
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[10px] text-white/45 mb-0.5">HT (€)</label>
                   <input
@@ -203,7 +203,7 @@ export default function ChangeQuoteStatusModal({
                     value={finalHt}
                     onChange={(e) => setFinalHt(e.target.value)}
                     placeholder="ex: 4500"
-                    className="w-full px-2 py-1.5 rounded-md border border-white/10 bg-white/5 text-sm text-white font-mono placeholder:text-white/25"
+                    className="w-full px-3 py-2.5 rounded-md border border-white/10 bg-white/5 text-sm text-white font-mono placeholder:text-white/25"
                   />
                 </div>
                 <div>
@@ -214,7 +214,7 @@ export default function ChangeQuoteStatusModal({
                     value={finalTtc}
                     onChange={(e) => setFinalTtc(e.target.value)}
                     placeholder="ex: 5400"
-                    className="w-full px-2 py-1.5 rounded-md border border-white/10 bg-white/5 text-sm text-white font-mono placeholder:text-white/25"
+                    className="w-full px-3 py-2.5 rounded-md border border-white/10 bg-white/5 text-sm text-white font-mono placeholder:text-white/25"
                   />
                 </div>
               </div>
@@ -233,16 +233,16 @@ export default function ChangeQuoteStatusModal({
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-3 py-1.5 text-xs text-white/75 hover:text-white"
+            className="px-4 py-2.5 text-sm text-white/75 hover:text-white"
           >
             Annuler
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center px-4 py-1.5 rounded-lg bg-sky-400 text-sky-950 text-xs font-medium hover:bg-sky-300 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-sky-400 text-sky-950 text-sm font-medium hover:bg-sky-300 disabled:opacity-50"
           >
-            {saving && <Loader2 className="w-3 h-3 animate-spin mr-1.5" />}
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
             Enregistrer
           </button>
         </footer>

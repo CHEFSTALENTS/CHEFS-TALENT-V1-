@@ -93,7 +93,7 @@ export default function QuotesWidget() {
           Aucun devis sur les 90 derniers jours.
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 divide-y sm:divide-x sm:divide-y-0 divide-white/10">
           <Tile
             label="Pipeline en vie"
             value={`${fmtEurCompact(stats.potentialRevenueTtc)} TTC`}
@@ -150,7 +150,7 @@ function Tile({
   return (
     <div className="px-5 py-4">
       <div className="text-[10px] text-white/45 uppercase tracking-wider">{label}</div>
-      <div className={`text-xl font-semibold mt-1 ${toneCls}`}>{value}</div>
+      <div className={`text-lg sm:text-xl font-semibold mt-1 ${toneCls}`}>{value}</div>
       <div className="text-[10px] text-white/40 mt-0.5">{sub}</div>
     </div>
   );

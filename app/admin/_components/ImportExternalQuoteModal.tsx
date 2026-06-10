@@ -127,7 +127,7 @@ export default function ImportExternalQuoteModal({
         <div className="p-5 space-y-4 overflow-y-auto">
           {/* Identité */}
           <Section title="Destinataire">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Nom du destinataire *" required>
                 <input value={destinataire} onChange={(e) => setDestinataire(e.target.value)}
                   placeholder="Ex: Conciergerie X / M. Dupont"
@@ -153,7 +153,7 @@ export default function ImportExternalQuoteModal({
 
           {/* Mission */}
           <Section title="Mission">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label="Lieu">
                 <input value={lieu} onChange={(e) => setLieu(e.target.value)} className="ct-input" />
               </Field>
@@ -170,7 +170,7 @@ export default function ImportExternalQuoteModal({
 
           {/* Statut + date */}
           <Section title="Statut">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Statut actuel *" required>
                 <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className="ct-input">
                   {STATUS_OPTS.map((s) => (
@@ -190,7 +190,7 @@ export default function ImportExternalQuoteModal({
 
           {/* Montants */}
           <Section title="Montants (utilisés dans les KPIs)">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Montant HT (€) *" required>
                 <input type="number" step="0.01" value={amountHt} onChange={(e) => setAmountHt(e.target.value)}
                   placeholder="4500" className="ct-input font-mono" />
@@ -204,7 +204,7 @@ export default function ImportExternalQuoteModal({
 
           {/* Coûts internes */}
           <Section title="Coûts internes (optionnel — pour la marge)">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Rémunération chef (€)">
                 <input type="number" step="0.01" value={chefCost} onChange={(e) => setChefCost(e.target.value)}
                   className="ct-input font-mono" />
@@ -255,12 +255,12 @@ export default function ImportExternalQuoteModal({
         </div>
 
         <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 shrink-0">
-          <button onClick={onClose} disabled={saving} className="px-3 py-1.5 text-xs text-white/75 hover:text-white">
+          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
             Annuler
           </button>
           <button onClick={handleSave} disabled={!canSave}
-            className="inline-flex items-center px-4 py-1.5 rounded-lg bg-amber-400 text-amber-950 text-xs font-medium hover:bg-amber-300 disabled:opacity-50">
-            {saving && <Loader2 className="w-3 h-3 animate-spin mr-1.5" />}
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-amber-400 text-amber-950 text-sm font-medium hover:bg-amber-300 disabled:opacity-50">
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
             Importer le devis
           </button>
         </footer>

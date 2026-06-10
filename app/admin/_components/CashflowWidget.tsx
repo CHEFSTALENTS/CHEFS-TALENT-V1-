@@ -192,29 +192,39 @@ function CashflowRow({ item, overdue }: { item: CashflowItem; overdue?: boolean 
   const chefName = mission?.chefName || '—';
   const location = mission?.location || '—';
 
+  // Wrapper Link sur toute la ligne quand on a une mission (tap-target = card entière).
+  // Si pas de mission, on garde un div statique.
+  const Wrapper = (props: { children: React.ReactNode }) =>
+    missionLink ? (
+      <Link href={missionLink} className={`block px-3 py-2.5 rounded-lg ${overdue ? 'bg-red-400/[0.04] hover:bg-red-400/[0.08]' : 'bg-white/[0.02] hover:bg-white/[0.05]'} transition`}>
+        {props.children}
+      </Link>
+    ) : (
+      <div className={`block px-3 py-2.5 rounded-lg ${overdue ? 'bg-red-400/[0.04]' : 'bg-white/[0.02]'}`}>
+        {props.children}
+      </div>
+    );
+
   return (
-    <div className={`grid grid-cols-[auto_1fr_auto_auto] gap-3 items-center px-2 py-2 rounded-lg ${overdue ? 'bg-red-400/[0.04]' : 'bg-white/[0.02]'}`}>
-      <div className="text-xs font-mono text-white/70 min-w-[60px]">{fmtDate(item.dueDate)}</div>
-      <div className="min-w-0">
-        <div className="text-sm text-white truncate">
-          {chefName} · <span className="text-white/55">{location}</span>
+    <Wrapper>
+      {/* Ligne 1 : date + montant (toujours côte à côte, lisibles d'un coup d'œil) */}
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-xs font-mono text-white/70">{fmtDate(item.dueDate)}</div>
+        <div className={`text-sm font-semibold ${overdue ? 'text-red-200' : 'text-white'}`}>
+          {fmtEur(item.amountEur)}
         </div>
-        {item.label && <div className="text-[10px] text-white/40 truncate">{item.label}</div>}
-        {overdue && (
-          <div className="text-[10px] text-red-300 mt-0.5">
-            +{item.daysOverdue}j de retard
-            {item.reminderCount > 0 && ` · ${item.reminderCount} relance${item.reminderCount > 1 ? 's' : ''} déjà envoyée${item.reminderCount > 1 ? 's' : ''}`}
-          </div>
-        )}
       </div>
-      <div className={`text-sm font-semibold ${overdue ? 'text-red-200' : 'text-white'}`}>
-        {fmtEur(item.amountEur)}
+      {/* Ligne 2 : chef · lieu */}
+      <div className="text-sm text-white/85 truncate mt-0.5">
+        {chefName} <span className="text-white/45">·</span> <span className="text-white/55">{location}</span>
       </div>
-      {missionLink && (
-        <Link href={missionLink} className="text-[11px] text-white/55 hover:text-white inline-flex items-center gap-0.5">
-          Mission <ArrowRight className="w-3 h-3" />
-        </Link>
+      {item.label && <div className="text-[10px] text-white/40 truncate">{item.label}</div>}
+      {overdue && (
+        <div className="text-[10px] text-red-300 mt-0.5">
+          +{item.daysOverdue}j de retard
+          {item.reminderCount > 0 && ` · ${item.reminderCount} relance${item.reminderCount > 1 ? 's' : ''} déjà envoyée${item.reminderCount > 1 ? 's' : ''}`}
+        </div>
       )}
-    </div>
+    </Wrapper>
   );
 }
