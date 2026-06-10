@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import MarkPaidModal from '../_components/MarkPaidModal';
+import MarkContractSignedModal from './_components/MarkContractSignedModal';
 import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
@@ -59,6 +60,10 @@ type MissionRow = {
   commission_amount: number | null;
   contract_url: string | null;
   contract_signed_at: string | null;
+  contract_signed_method?: 'manual' | 'external_link' | 'external_pdf' | null;
+  contract_signed_url?: string | null;
+  contract_signed_file_url?: string | null;
+  contract_signed_notes?: string | null;
   offered_at: string | null;
   offer_email_sent_at: string | null;
   confirmed_at: string | null;
@@ -128,6 +133,7 @@ export default function AdminMissionDetailPage() {
   const [showClientEditor, setShowClientEditor] = useState(false);
   const [showChefPaidModal, setShowChefPaidModal] = useState(false);
   const [showMissionEditor, setShowMissionEditor] = useState(false);
+  const [showContractSignedModal, setShowContractSignedModal] = useState(false);
 
   // Signature requests (pour validation auto « Contrat signé » dans timeline)
   const [signatureRequests, setSignatureRequests] = useState<Array<{ kind: string; status: string; completedAt: string | null }>>([]);
@@ -262,10 +268,25 @@ export default function AdminMissionDetailPage() {
   const toggleContractSigned = async () => {
     if (!mission) return;
     if (mission.contract_signed_at) {
-      if (!confirm('Annuler la signature du contrat ?')) return;
-      await patch({ contractSignedAt: null }, 'contract-signed');
+      // Annulation : DELETE l'endpoint dédié (nettoie aussi le PDF stocké)
+      if (!confirm('Annuler le marquage « contrat signé » ?')) return;
+      setActionLoading('contract-signed');
+      try {
+        const r = await adminFetchRaw(
+          `/api/admin/missions/${encodeURIComponent(mission.id)}/contract-signed`,
+          { method: 'DELETE' },
+        );
+        const json = await r.json();
+        if (!r.ok || !json.ok) throw new Error(json?.error || `HTTP ${r.status}`);
+        await refresh();
+      } catch (e: any) {
+        alert(e?.message || 'Erreur serveur');
+      } finally {
+        setActionLoading(null);
+      }
     } else {
-      await patch({ contractSignedAt: true }, 'contract-signed');
+      // Marquage : ouvre la modal qui propose lien / PDF / juste cocher
+      setShowContractSignedModal(true);
     }
   };
 
@@ -615,6 +636,47 @@ export default function AdminMissionDetailPage() {
                 </button>
               </div>
             )}
+
+            {/* Affichage du contrat signé hors plateforme (lien ou PDF uploadé) */}
+            {mission.contract_signed_at && (mission.contract_signed_url || mission.contract_signed_file_url || mission.contract_signed_method) && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wider text-emerald-300/85">
+                  ✓ Contrat signé (hors YouSign)
+                </div>
+                {mission.contract_signed_url && (
+                  <a
+                    href={mission.contract_signed_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-sky-200 hover:text-sky-100"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="truncate">{mission.contract_signed_url}</span>
+                  </a>
+                )}
+                {mission.contract_signed_file_url && (
+                  <a
+                    href={mission.contract_signed_file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-sky-200 hover:text-sky-100"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    PDF du contrat signé
+                  </a>
+                )}
+                {mission.contract_signed_method === 'manual' && (
+                  <div className="text-xs text-white/55 italic">
+                    Marqué signé manuellement (contrat conservé hors plateforme)
+                  </div>
+                )}
+                {mission.contract_signed_notes && (
+                  <div className="text-[11px] text-white/55 italic">
+                    « {mission.contract_signed_notes} »
+                  </div>
+                )}
+              </div>
+            )}
           </Panel>
 
           {/* Bloc Timeline */}
@@ -832,6 +894,18 @@ export default function AdminMissionDetailPage() {
           onClose={() => setShowPaidModal(false)}
           onSuccess={() => {
             setShowPaidModal(false);
+            refresh();
+          }}
+        />
+      )}
+
+      {/* Modal Marquer contrat signé hors YouSign (lien externe / PDF / juste cocher) */}
+      {showContractSignedModal && (
+        <MarkContractSignedModal
+          missionId={mission.id}
+          onClose={() => setShowContractSignedModal(false)}
+          onSaved={() => {
+            setShowContractSignedModal(false);
             refresh();
           }}
         />
