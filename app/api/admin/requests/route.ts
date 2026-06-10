@@ -66,7 +66,7 @@ export async function GET(req: Request) {
       `
       )
       .order('created_at', { ascending: false })
-      .limit(500);
+      .limit(2000);
 
     if (error) throw error;
 
@@ -77,7 +77,14 @@ export async function GET(req: Request) {
       status: x.status ?? 'new',
     }));
 
-    return NextResponse.json({ items });
+    // Warn (visible Vercel logs) si la limite est atteinte — les KPIs
+    // dashboard se basent sur cette liste, donc une troncature passe
+    // silencieuse côté UI.
+    if (items.length >= 2000) {
+      console.warn('[admin/requests] HARD_LIMIT 2000 atteint — paginer ou augmenter');
+    }
+
+    return NextResponse.json({ items, truncated: items.length >= 2000 });
   } catch (e: any) {
     console.error('GET /api/admin/requests error', e);
     return NextResponse.json(

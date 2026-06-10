@@ -42,6 +42,8 @@ type QuoteListItem = {
 
 type Stats = {
   total: number;
+  totalActive?: number;
+  truncated?: boolean;
   byStatus: Record<string, number>;
   acceptanceRate: number | null;
   potentialRevenueTtc: number;
@@ -189,19 +191,30 @@ export default function AdminQuotesDashboardPage() {
         </div>
       </header>
 
+      {/* Banner si stats tronquées */}
+      {stats?.truncated && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2.5 text-xs text-amber-100 flex items-center gap-2">
+          <span>⚠</span>
+          <span>
+            Beaucoup de devis sur cette plage — l'agrégation a été tronquée à 1000 lignes.
+            Les KPIs sont sous-estimés. Réduis la plage temporelle ou ping-moi pour paginer.
+          </span>
+        </div>
+      )}
+
       {/* KPIs */}
       {stats && (
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard
             label="Pipeline en vie"
-            value={fmtEurCompact(stats.potentialRevenueTtc)}
+            value={`${fmtEurCompact(stats.potentialRevenueTtc)} TTC`}
             sub={`${(stats.byStatus.draft || 0) + (stats.byStatus.sent || 0)} devis (draft+sent)`}
             tone="sky"
           />
           <KpiCard
             label="CA gagné"
-            value={fmtEurCompact(stats.wonRevenueHt)}
-            sub={`${stats.byStatus.accepted || 0} devis acceptés (HT)`}
+            value={`${fmtEurCompact(stats.wonRevenueHt)} HT`}
+            sub={`${stats.byStatus.accepted || 0} devis acceptés`}
             tone="emerald"
           />
           <KpiCard
@@ -213,7 +226,7 @@ export default function AdminQuotesDashboardPage() {
           <KpiCard
             label="Marge moyenne"
             value={stats.avgMarginPct !== null ? `${stats.avgMarginPct}%` : '—'}
-            sub={stats.avgMarginEur !== null ? `≈ ${fmtEurCompact(stats.avgMarginEur)} / devis gagné` : 'Pas de données'}
+            sub={stats.avgMarginEur !== null ? `≈ ${fmtEurCompact(stats.avgMarginEur)} HT / devis gagné` : 'Pas de données'}
             tone={
               stats.avgMarginPct === null ? 'mute' :
               stats.avgMarginPct >= 35 ? 'emerald' :

@@ -117,14 +117,22 @@ async function computeStripeMrr(): Promise<{
 /**
  * Somme les charges Stripe (paiements réels encaissés) sur une fenêtre.
  * Utilise charges.list avec created.gte. Limit 100/page, paginé.
+ *
+ * ⚠️ Exclut les charges dont metadata.source === 'mission' pour éviter
+ * un double comptage avec sumMissionsCommission. Si un jour Stripe est
+ * branché aux missions, c'est ce flag qui empêche le doublon.
+ *
+ * Tous les montants Stripe sont en TTC (Stripe encaisse du TTC).
  */
 async function sumStripeCharges(sinceMs: number): Promise<{
-  totalEur: number;
+  totalTtcEur: number;
   count: number;
+  skippedMissionLinked: number;
 }> {
   const since = Math.floor(sinceMs / 1000);
   let totalCents = 0;
   let count = 0;
+  let skippedMissionLinked = 0;
 
   for await (const charge of stripe.charges.list({
     limit: 100,
@@ -132,6 +140,16 @@ async function sumStripeCharges(sinceMs: number): Promise<{
   })) {
     if (charge.status !== 'succeeded') continue;
     if (charge.refunded) continue;
+
+    // Si la charge est explicitement liée à une mission, on la skippe :
+    // la commission de cette mission est déjà comptée par
+    // sumMissionsCommission / sumMissionsPaid pour éviter le doublon.
+    const meta = (charge.metadata ?? {}) as Record<string, string>;
+    if (meta.source === 'mission' || meta.mission_id) {
+      skippedMissionLinked++;
+      continue;
+    }
+
     // Charge.amount est en cents. On retire le refunded amount au cas où.
     const net = (charge.amount ?? 0) - (charge.amount_refunded ?? 0);
     if (net <= 0) continue;
@@ -139,7 +157,11 @@ async function sumStripeCharges(sinceMs: number): Promise<{
     count++;
   }
 
-  return { totalEur: Math.round(totalCents) / 100, count };
+  return {
+    totalTtcEur: Math.round(totalCents) / 100,
+    count,
+    skippedMissionLinked,
+  };
 }
 
 /**
@@ -297,7 +319,7 @@ async function sumManualEntries(sinceIso: string): Promise<{
 // vente manuelle et qu'on veut voir le total à jour immédiatement).
 type RevenueCacheEntry = { at: number; payload: any };
 const revenueCache = new Map<string, RevenueCacheEntry>();
-const REVENUE_CACHE_TTL_MS = 60_000;
+const REVENUE_CACHE_TTL_MS = 30_000;
 
 export async function GET(req: Request) {
   const auth = await requireAdminOr401(req);
@@ -350,10 +372,34 @@ export async function GET(req: Request) {
       sumManualEntries(new Date(yearStartMs).toISOString()),
     ]);
 
+    // ─── Total CA "comptabilisé" (mix TTC + commission HT) ───
+    // Stripe TTC + commission missions HT + ventes manuelles HT.
+    // Note : Stripe est en TTC, le reste en HT — c'est volontairement
+    // une vue *comptable* unifiée (≈ ce que CT a généré), pas une vue cash.
     const totalPeriod =
-      chargesPeriod.totalEur + missionsPeriod.commissionEur + manualPeriod.htEur;
+      chargesPeriod.totalTtcEur + missionsPeriod.commissionEur + manualPeriod.htEur;
     const totalYtd =
-      chargesYtd.totalEur + missionsYtd.commissionEur + manualYtd.htEur;
+      chargesYtd.totalTtcEur + missionsYtd.commissionEur + manualYtd.htEur;
+
+    // ─── CA en caisse TTC (effectivement encaissé) ─────────────────
+    // Stripe encaissé hors-missions + missions payées (TTC, le chef est
+    // payé en TTC) + ventes manuelles encaissées TTC.
+    // NB : les ventes manuelles ne distinguent pas encore paid/non-paid
+    // → on inclut le TTC. Si Thomas ajoute un champ paid_at plus tard,
+    // on filtrera ici.
+    const manualPeriodTtc = manualPeriod.htEur + manualPeriod.vatEur;
+    const manualYtdTtc = manualYtd.htEur + manualYtd.vatEur;
+    const cashPeriodTtc =
+      chargesPeriod.totalTtcEur + missionsPaidPeriod.paidAmountEur + manualPeriodTtc;
+    const cashYtdTtc =
+      chargesYtd.totalTtcEur + missionsPaidYtd.paidAmountEur + manualYtdTtc;
+
+    // ─── Commission brute HT (intermédiation CT) ───────────────────
+    // client_amount - chef_amount sur missions confirmées (statut
+    // 'confirmed'). Inclut les missions facturées même si pas encore
+    // encaissées : c'est la marge brute "théorique" sur la période.
+    const commissionPeriodHt = missionsPeriod.commissionEur;
+    const commissionYtdHt = missionsYtd.commissionEur;
 
     const payload = {
       ok: true,
@@ -367,33 +413,56 @@ export async function GET(req: Request) {
       stripe: {
         mrrEur: mrr.mrrEur,
         activeSubscriptions: mrr.activeCount,
-        chargesPeriodEur: chargesPeriod.totalEur,
+        chargesPeriodTtcEur: chargesPeriod.totalTtcEur,
         chargesPeriodCount: chargesPeriod.count,
-        chargesYtdEur: chargesYtd.totalEur,
+        chargesPeriodSkippedMission: chargesPeriod.skippedMissionLinked,
+        chargesYtdTtcEur: chargesYtd.totalTtcEur,
         chargesYtdCount: chargesYtd.count,
+        // Compat : alias historiques (sans suffixe TTC)
+        chargesPeriodEur: chargesPeriod.totalTtcEur,
+        chargesYtdEur: chargesYtd.totalTtcEur,
       },
       missions: {
         // Confirmées (facturées, pas forcément encaissées) sur la période
         confirmedPeriod: missionsPeriod.count,
-        commissionPeriodEur: missionsPeriod.commissionEur,
+        commissionPeriodHtEur: missionsPeriod.commissionEur,
         confirmedYtd: missionsYtd.count,
-        commissionYtdEur: missionsYtd.commissionEur,
+        commissionYtdHtEur: missionsYtd.commissionEur,
         // Payées (encaissées chef) — basé sur paid_at + payment_status='paid'
         paidPeriod: missionsPaidPeriod.count,
+        paidAmountPeriodTtcEur: missionsPaidPeriod.paidAmountEur,
+        paidCommissionPeriodHtEur: missionsPaidPeriod.commissionEur,
+        paidYtd: missionsPaidYtd.count,
+        paidAmountYtdTtcEur: missionsPaidYtd.paidAmountEur,
+        paidCommissionYtdHtEur: missionsPaidYtd.commissionEur,
+        // Compat : alias historiques
+        commissionPeriodEur: missionsPeriod.commissionEur,
+        commissionYtdEur: missionsYtd.commissionEur,
         paidAmountPeriodEur: missionsPaidPeriod.paidAmountEur,
         paidCommissionPeriodEur: missionsPaidPeriod.commissionEur,
-        paidYtd: missionsPaidYtd.count,
         paidAmountYtdEur: missionsPaidYtd.paidAmountEur,
         paidCommissionYtdEur: missionsPaidYtd.commissionEur,
       },
       manualEntries: {
         periodHtEur: manualPeriod.htEur,
         periodVatEur: manualPeriod.vatEur,
+        periodTtcEur: Math.round(manualPeriodTtc * 100) / 100,
         periodCount: manualPeriod.count,
         periodByCategory: manualPeriod.byCategory,
         ytdHtEur: manualYtd.htEur,
         ytdVatEur: manualYtd.vatEur,
+        ytdTtcEur: Math.round(manualYtdTtc * 100) / 100,
         ytdCount: manualYtd.count,
+      },
+      // CA en caisse (effectivement encaissé) TTC
+      cashTtc: {
+        periodEur: Math.round(cashPeriodTtc * 100) / 100,
+        ytdEur: Math.round(cashYtdTtc * 100) / 100,
+      },
+      // Commission brute (marge intermédiation CT) HT
+      commissionHt: {
+        periodEur: Math.round(commissionPeriodHt * 100) / 100,
+        ytdEur: Math.round(commissionYtdHt * 100) / 100,
       },
       totals: {
         periodEur: Math.round(totalPeriod * 100) / 100,
@@ -401,7 +470,7 @@ export async function GET(req: Request) {
       },
     };
 
-    // Stocke en cache (TTL 60s)
+    // Stocke en cache (TTL 30s — réduit pour Thomas qui rafraîchit souvent)
     revenueCache.set(cacheKey, { at: Date.now(), payload });
 
     return NextResponse.json(payload, {
