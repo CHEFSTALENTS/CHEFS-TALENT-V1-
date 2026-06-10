@@ -135,33 +135,33 @@ export default function UpcomingMissionsRiskPanel() {
             const href = `/admin/missions/${encodeURIComponent(m.id)}`;
             return (
               <li key={m.id}>
-                <Link href={href} className={`block px-5 py-3 ${tone.bg} hover:bg-white/[0.05] transition border-l-2 ${tone.border}`}>
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="min-w-0 flex-1 space-y-0.5">
+                <Link href={href} className={`block px-4 sm:px-5 py-3 ${tone.bg} hover:bg-white/[0.05] transition border-l-2 ${tone.border}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${tone.text} font-semibold`}>
+                        <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${tone.text} font-semibold`}>
                           {tone.label}
                         </span>
                         <span className="text-xs text-white/65">
                           <Calendar className="w-3 h-3 inline mr-1" />
                           {fmtDate(m.start_date)}{m.end_date && m.end_date !== m.start_date ? ` → ${fmtDate(m.end_date)}` : ''}
                         </span>
-                        <span className="text-xs text-white/85 truncate">
-                          {m.location || '—'} · {m.chef_name || 'Chef non assigné'}
-                        </span>
                       </div>
-                      <div className="flex items-center gap-3 text-[10px]">
+                      <div className="text-xs text-white/85 truncate">
+                        {m.location || '—'} · {m.chef_name || 'Chef non assigné'}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                         <span className={`inline-flex items-center gap-1 ${m.contractSigned ? 'text-emerald-300' : 'text-red-300'}`}>
                           <FileSignature className="w-3 h-3" />
-                          Contrat {m.contractSigned ? '✓ signé' : '✗ NON signé'}
+                          Contrat {m.contractSigned ? '✓' : '✗'}
                         </span>
                         <span className={`inline-flex items-center gap-1 ${m.nccSigned ? 'text-emerald-300' : 'text-red-300'}`}>
                           <ShieldCheck className="w-3 h-3" />
-                          NCC {m.nccSigned ? '✓ signé' : '✗ NON signé'}
+                          NCC {m.nccSigned ? '✓' : '✗'}
                         </span>
                       </div>
                     </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-white/35 shrink-0" />
+                    <ArrowRight className="w-3.5 h-3.5 text-white/35 shrink-0 hidden sm:block" />
                   </div>
                 </Link>
               </li>

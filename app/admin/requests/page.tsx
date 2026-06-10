@@ -234,8 +234,57 @@ export default function AdminRequestsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border border-white/10 rounded-2xl bg-white/5 overflow-hidden">
+      {/* Cards mobile (< md) — version touch-friendly de la table */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <div className="px-4 py-6 text-sm text-white/60 border border-white/10 rounded-2xl bg-white/5 text-center">Chargement…</div>
+        ) : view.length === 0 ? (
+          <div className="px-4 py-6 text-sm text-white/60 border border-white/10 rounded-2xl bg-white/5 text-center">Aucune demande.</div>
+        ) : (
+          view.map((r) => (
+            <div key={r.id} className="border border-white/10 rounded-2xl bg-white/5">
+              <Link
+                href={`/admin/requests/${encodeURIComponent(r.id)}`}
+                className="block p-4 hover:bg-white/[0.07] transition rounded-2xl"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Badge tone={r.userType === 'b2b' ? 'dark' : 'stone'}>{r.userType === 'b2b' ? 'B2B' : 'B2C'}</Badge>
+                    <StatusBadge status={String(r.status || '')} />
+                  </div>
+                </div>
+                <div className="text-white font-medium leading-tight">
+                  {shortText(r.contact?.company || r.contact?.name || 'Client', 40)}
+                </div>
+                <div className="text-xs text-white/55 mt-0.5 truncate">
+                  {r.location || '—'} · {formatDates(r)} · {r.guestCount ?? '—'} pers
+                </div>
+                <div className="text-xs text-white/45 mt-0.5">{formatBudget(r.budgetRange)}</div>
+              </Link>
+              {(r.status === 'new' || r.status === 'in_review') && (
+                <div className="px-4 pb-3 pt-1 border-t border-white/10 flex justify-end">
+                  <button
+                    onClick={() => refuseRequest(r.id)}
+                    disabled={refusingId === r.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-500/20 bg-red-500/5 text-xs text-red-200 hover:bg-red-500/10 transition disabled:opacity-50"
+                  >
+                    {refusingId === r.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <XIcon className="w-3.5 h-3.5" />
+                    )}
+                    Refuser
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+        <div className="text-xs text-white/45 px-2">{view.length} résultat(s)</div>
+      </div>
+
+      {/* Table desktop (≥ md) */}
+      <div className="hidden md:block border border-white/10 rounded-2xl bg-white/5 overflow-hidden">
         <div className="overflow-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-white/5">

@@ -72,7 +72,7 @@ export default function ChefPaidModal({ missionId, chefName, defaultAmount, onCl
           Chef : <strong className="text-white">{chefName || '—'}</strong>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <label className="block">
             <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1">Montant versé (€)</span>
             <input
@@ -81,7 +81,7 @@ export default function ChefPaidModal({ missionId, chefName, defaultAmount, onCl
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+              className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
             />
           </label>
           <label className="block">
@@ -90,7 +90,7 @@ export default function ChefPaidModal({ missionId, chefName, defaultAmount, onCl
               type="date"
               value={paidAt}
               onChange={(e) => setPaidAt(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+              className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
             />
           </label>
         </div>
@@ -100,7 +100,7 @@ export default function ChefPaidModal({ missionId, chefName, defaultAmount, onCl
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
+            className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white"
           >
             {Object.entries(METHOD_LABELS).map(([k, v]) => (
               <option key={k} value={k} className="bg-neutral-900">{v}</option>
@@ -115,7 +115,7 @@ export default function ChefPaidModal({ missionId, chefName, defaultAmount, onCl
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             placeholder="n° virement, ID transaction..."
-            className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
+            className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25"
           />
         </label>
 

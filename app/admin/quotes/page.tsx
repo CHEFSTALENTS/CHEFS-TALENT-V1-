@@ -267,33 +267,35 @@ export default function AdminQuotesDashboardPage() {
             </div>
           </div>
 
-          {/* Volume par mois (mini bar chart) */}
+          {/* Volume par mois (mini bar chart) — scrollable horizontalement sur mobile */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
             <div className="text-xs text-white/55 uppercase tracking-wider mb-3">Volume par mois</div>
-            <div className="flex items-end gap-1 h-20">
-              {monthlyEntries.length === 0 ? (
-                <div className="text-xs text-white/40 italic">Pas de données</div>
-              ) : (
-                monthlyEntries.map(([month, m]) => {
-                  const totalH = Math.round((m.created / monthlyMax) * 100);
-                  const acceptedH = Math.round((m.accepted / monthlyMax) * 100);
-                  return (
-                    <div key={month} className="flex-1 flex flex-col items-center gap-0.5" title={`${month} : ${m.created} créés / ${m.accepted} acceptés / ${fmtEurCompact(m.revenueHt)} HT`}>
-                      <div className="w-full flex-1 flex items-end relative">
-                        <div
-                          className="w-full bg-white/15 rounded-t-sm absolute bottom-0"
-                          style={{ height: `${totalH}%` }}
-                        />
-                        <div
-                          className="w-full bg-emerald-400/65 rounded-t-sm absolute bottom-0"
-                          style={{ height: `${acceptedH}%` }}
-                        />
+            <div className="overflow-x-auto -mx-1 px-1">
+              <div className="flex items-end gap-1 h-20 min-w-[360px]">
+                {monthlyEntries.length === 0 ? (
+                  <div className="text-xs text-white/40 italic">Pas de données</div>
+                ) : (
+                  monthlyEntries.map(([month, m]) => {
+                    const totalH = Math.round((m.created / monthlyMax) * 100);
+                    const acceptedH = Math.round((m.accepted / monthlyMax) * 100);
+                    return (
+                      <div key={month} className="flex-1 min-w-[24px] flex flex-col items-center gap-0.5" title={`${month} : ${m.created} créés / ${m.accepted} acceptés / ${fmtEurCompact(m.revenueHt)} HT`}>
+                        <div className="w-full flex-1 flex items-end relative">
+                          <div
+                            className="w-full bg-white/15 rounded-t-sm absolute bottom-0"
+                            style={{ height: `${totalH}%` }}
+                          />
+                          <div
+                            className="w-full bg-emerald-400/65 rounded-t-sm absolute bottom-0"
+                            style={{ height: `${acceptedH}%` }}
+                          />
+                        </div>
+                        <div className="text-[10px] text-white/40 font-mono">{month.slice(5)}</div>
                       </div>
-                      <div className="text-[9px] text-white/40 font-mono">{month.slice(5)}</div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
             <div className="text-[10px] text-white/40 mt-2 flex items-center gap-3">
               <span className="inline-flex items-center gap-1">
@@ -344,7 +346,7 @@ export default function AdminQuotesDashboardPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Rechercher (réf, destinataire, lieu, intitulé)…"
-              className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-white placeholder:text-white/30 w-64"
+              className="px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-white placeholder:text-white/30 w-full sm:w-64"
             />
             {statusFilter && (
               <button
