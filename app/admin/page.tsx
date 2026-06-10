@@ -9,6 +9,7 @@ import { adminFetchRaw } from '@/lib/adminFetch';
 import MissionsPipelinePanel from './_components/MissionsPipelinePanel';
 import CashflowWidget from './_components/CashflowWidget';
 import QuotesWidget from './_components/QuotesWidget';
+import UpcomingMissionsRiskPanel from './_components/UpcomingMissionsRiskPanel';
 
 type StatusKey = 'new' | 'in_review' | 'assigned' | 'closed';
 
@@ -448,6 +449,9 @@ export default function AdminDashboardPage() {
               href="/admin/revenue"
             />
           </div>
+
+          {/* 🚨 Missions imminentes — risque opérationnel (contrat/NCC manquants) */}
+          <UpcomingMissionsRiskPanel />
 
           {/* 📄 Devis — pipeline commercial */}
           <QuotesWidget />
