@@ -7,10 +7,12 @@
 // - PHASE 1 AGENT COMMERCIAL : affichage de la marge par option tarifaire
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus, TrendingUp, TrendingDown, Sparkles, Paperclip, CheckCircle2 } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import { computeMarginsPerOption, computeTotalCosts, getMarginTone, fmtEur } from '@/lib/quotes/margin';
 import QuoteAgentChat from './QuoteAgentChat';
+import ChangeQuoteStatusModal from '@/app/admin/_components/ChangeQuoteStatusModal';
+import QuoteDocumentsPanel from '@/app/admin/_components/QuoteDocumentsPanel';
 
 type TariffOption = {
   label: string;
@@ -53,6 +55,12 @@ type Quote = {
   butler_required: boolean;
   butler_cost_eur: number | null;
   margin_notes: string | null;
+  // Workflow / négo
+  final_amount_ht_eur?: number | null;
+  final_amount_ttc_eur?: number | null;
+  status_reason?: string | null;
+  is_external?: boolean | null;
+  external_origin?: string | null;
 };
 
 // ────────────────────────────────────────────────────────────
@@ -132,6 +140,8 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
   const [editing, setEditing] = useState(false);
   const [chatting, setChatting] = useState(false);
   const [downloading, setDownloading] = useState<'pdf' | 'html' | null>(null);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuote = useCallback(async () => {
@@ -218,17 +228,48 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
 
   return (
     <div className="space-y-3">
-      {/* Status + ref */}
+      {/* Status + ref + bouton changer statut */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_CLASS[quote.status]}`}>
           {STATUS_LABEL[quote.status]}
         </span>
+        <button
+          onClick={() => setChangingStatus(true)}
+          className="text-[10px] px-2 py-0.5 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 text-white/65 hover:text-white"
+          title="Modifier le statut, la date d'événement, le motif, ou le montant final négocié"
+        >
+          <CheckCircle2 className="w-3 h-3 inline mr-1" />
+          Changer
+        </button>
         <span className="text-xs text-white/55 font-mono">{quote.reference}</span>
+        {quote.is_external && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-200" title={quote.external_origin || 'Devis importé hors plateforme'}>
+            externe
+          </span>
+        )}
         <span className="text-[10px] text-white/40">émis le {quote.issued_at}</span>
         {quote.validity_date && (
           <span className="text-[10px] text-white/40">· valide jusqu'au {quote.validity_date}</span>
         )}
       </div>
+
+      {/* Motif statut + montant final si renseigné */}
+      {(quote.status_reason || quote.final_amount_ht_eur !== null) && (
+        <div className="rounded-lg border border-white/10 bg-white/[0.015] p-2.5 text-xs space-y-0.5">
+          {quote.final_amount_ht_eur !== null && quote.final_amount_ht_eur !== undefined && (
+            <div className="text-white/85">
+              <span className="text-white/45">Montant final négocié :</span>{' '}
+              <span className="font-mono">{fmtEur(Number(quote.final_amount_ht_eur))} HT</span>
+              {quote.final_amount_ttc_eur !== null && quote.final_amount_ttc_eur !== undefined && (
+                <> · <span className="font-mono">{fmtEur(Number(quote.final_amount_ttc_eur))} TTC</span></>
+              )}
+            </div>
+          )}
+          {quote.status_reason && (
+            <div className="text-white/55 italic">« {quote.status_reason} »</div>
+          )}
+        </div>
+      )}
 
       {/* Résumé infos */}
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-1 text-sm">
@@ -283,6 +324,17 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
           <Sparkles className="w-3.5 h-3.5 mr-1.5" />
           Discuter avec l'agent
         </button>
+        <button
+          onClick={() => setShowDocs((v) => !v)}
+          className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-xs ${
+            showDocs
+              ? 'border-indigo-400/40 bg-indigo-400/15 text-indigo-100'
+              : 'border-indigo-400/30 bg-indigo-400/10 hover:bg-indigo-400/20 text-indigo-200'
+          }`}
+        >
+          <Paperclip className="w-3.5 h-3.5 mr-1.5" />
+          Documents
+        </button>
         {quote.status !== 'cancelled' && (
           <button
             onClick={remove}
@@ -293,6 +345,16 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
           </button>
         )}
       </div>
+
+      {/* Panneau Documents (toggle) */}
+      {showDocs && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.015] p-3 space-y-2">
+          <div className="text-[10px] uppercase tracking-wider text-white/45 font-semibold">
+            Documents (devis signé, contre-propositions, échanges, brief…)
+          </div>
+          <QuoteDocumentsPanel quoteId={quote.id} />
+        </div>
+      )}
 
       {editing && (
         <QuoteEditor
@@ -310,6 +372,21 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
           quoteId={quote.id}
           onClose={() => setChatting(false)}
           onQuoteUpdated={fetchQuote}
+        />
+      )}
+
+      {changingStatus && (
+        <ChangeQuoteStatusModal
+          quoteId={quote.id}
+          currentStatus={quote.status}
+          currentReason={quote.status_reason || null}
+          currentFinalHt={quote.final_amount_ht_eur ?? null}
+          currentFinalTtc={quote.final_amount_ttc_eur ?? null}
+          onClose={() => setChangingStatus(false)}
+          onSaved={async () => {
+            setChangingStatus(false);
+            await fetchQuote();
+          }}
         />
       )}
     </div>

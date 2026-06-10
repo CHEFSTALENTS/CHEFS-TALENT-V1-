@@ -34,6 +34,10 @@ type QuoteRow = {
   butler_cost_eur: number | null;
   destinataire_nom: string | null;
   lieu: string | null;
+  // Workflow / négo
+  final_amount_ht_eur: number | null;
+  final_amount_ttc_eur: number | null;
+  is_external: boolean | null;
 };
 
 function fromIsoForRange(range: string): string | null {
@@ -58,6 +62,25 @@ function avgTtc(opts: QuoteRow['tariff_options']): number {
   return sum / opts.length;
 }
 
+/**
+ * Pour les KPIs CA / marge : préfère le montant FINAL négocié quand
+ * il est renseigné (cas devis accepté à un prix différent, ou devis
+ * externe importé), sinon fallback sur la moyenne des tariff_options.
+ */
+function effectiveHt(q: QuoteRow): number {
+  if (q.final_amount_ht_eur !== null && q.final_amount_ht_eur !== undefined) {
+    return Number(q.final_amount_ht_eur);
+  }
+  return avgHt(q.tariff_options);
+}
+
+function effectiveTtc(q: QuoteRow): number {
+  if (q.final_amount_ttc_eur !== null && q.final_amount_ttc_eur !== undefined) {
+    return Number(q.final_amount_ttc_eur);
+  }
+  return avgTtc(q.tariff_options);
+}
+
 function totalCost(q: QuoteRow): number {
   return (
     Number(q.chef_cost_eur || 0) +
@@ -78,7 +101,7 @@ export async function GET(req: Request) {
   let q = supabase
     .from('quotes')
     .select(
-      'id, status, created_at, sent_at, accepted_at, tariff_options, chef_cost_eur, chef_travel_cost_eur, butler_required, butler_cost_eur, destinataire_nom, lieu',
+      'id, status, created_at, sent_at, accepted_at, tariff_options, chef_cost_eur, chef_travel_cost_eur, butler_required, butler_cost_eur, destinataire_nom, lieu, final_amount_ht_eur, final_amount_ttc_eur, is_external',
     )
     .order('created_at', { ascending: false })
     .limit(500);
@@ -98,23 +121,27 @@ export async function GET(req: Request) {
   const decided = byStatus.accepted + byStatus.declined + byStatus.expired;
   const acceptanceRate = decided > 0 ? Math.round((byStatus.accepted / decided) * 1000) / 10 : null;
 
-  // ─── CA potentiel (somme moy. TTC des devis encore vivants : draft + sent) ───
+  // ─── CA potentiel (somme TTC des devis encore vivants : draft + sent) ───
+  // Pour les devis vivants on prend la moyenne des tariff_options (montant
+  // final pas encore fixé).
   const aliveQuotes = quotes.filter((q) => q.status === 'draft' || q.status === 'sent');
-  const potentialRevenueTtc = aliveQuotes.reduce((sum, q) => sum + avgTtc(q.tariff_options), 0);
+  const potentialRevenueTtc = aliveQuotes.reduce((sum, q) => sum + effectiveTtc(q), 0);
 
-  // ─── CA gagné (devis accepted, somme moy. HT car commission CT plus claire en HT) ───
+  // ─── CA gagné (devis accepted) — préfère le montant final négocié ─────
+  // Si la négo a réduit/augmenté le montant à l'acceptation, c'est ce
+  // chiffre qui compte. Sinon fallback sur la moyenne des tariff_options.
   const wonQuotes = quotes.filter((q) => q.status === 'accepted');
-  const wonRevenueHt = wonQuotes.reduce((sum, q) => sum + avgHt(q.tariff_options), 0);
-  const wonRevenueTtc = wonQuotes.reduce((sum, q) => sum + avgTtc(q.tariff_options), 0);
+  const wonRevenueHt = wonQuotes.reduce((sum, q) => sum + effectiveHt(q), 0);
+  const wonRevenueTtc = wonQuotes.reduce((sum, q) => sum + effectiveTtc(q), 0);
 
-  // ─── Marge moyenne sur devis acceptés (vs option moyenne) ───
+  // ─── Marge moyenne sur devis acceptés ───
   const marginRows = wonQuotes
     .map((q) => {
-      const avgHtVal = avgHt(q.tariff_options);
+      const htVal = effectiveHt(q);
       const cost = totalCost(q);
-      if (avgHtVal <= 0) return null;
-      const marginEur = avgHtVal - cost;
-      const marginPct = (marginEur / avgHtVal) * 100;
+      if (htVal <= 0) return null;
+      const marginEur = htVal - cost;
+      const marginPct = (marginEur / htVal) * 100;
       return { marginEur, marginPct };
     })
     .filter((x): x is { marginEur: number; marginPct: number } => x !== null);
@@ -141,7 +168,7 @@ export async function GET(req: Request) {
     monthly[m].created += 1;
     if (q.status === 'accepted') {
       monthly[m].accepted += 1;
-      monthly[m].revenueHt += avgHt(q.tariff_options);
+      monthly[m].revenueHt += effectiveHt(q);
     }
   }
 
@@ -153,7 +180,7 @@ export async function GET(req: Request) {
     byDest[name].count += 1;
     if (q.status === 'accepted') {
       byDest[name].won += 1;
-      byDest[name].revenueHt += avgHt(q.tariff_options);
+      byDest[name].revenueHt += effectiveHt(q);
     }
   }
   const topDestinataires = Object.entries(byDest)
