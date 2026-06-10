@@ -5,9 +5,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, RefreshCw, FileText, Sparkles, TrendingUp, Filter, Brain } from 'lucide-react';
+import { Loader2, RefreshCw, FileText, Sparkles, TrendingUp, Filter, Brain, Plus, MoreHorizontal } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
 import { computeMarginsPerOption, computeTotalCosts, getMarginTone, fmtEur } from '@/lib/quotes/margin';
+import ChangeQuoteStatusModal from '@/app/admin/_components/ChangeQuoteStatusModal';
+import ImportExternalQuoteModal from '@/app/admin/_components/ImportExternalQuoteModal';
 
 type QuoteListItem = {
   id: string;
@@ -30,6 +32,12 @@ type QuoteListItem = {
   sent_at: string | null;
   accepted_at: string | null;
   created_at: string;
+  // Workflow / négo
+  final_amount_ht_eur?: number | null;
+  final_amount_ttc_eur?: number | null;
+  status_reason?: string | null;
+  is_external?: boolean | null;
+  external_origin?: string | null;
 };
 
 type Stats = {
@@ -87,6 +95,8 @@ export default function AdminQuotesDashboardPage() {
   const [range, setRange] = useState<string>('90d');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchInput, setSearchInput] = useState<string>('');
+  const [importingExternal, setImportingExternal] = useState(false);
+  const [statusEditFor, setStatusEditFor] = useState<QuoteListItem | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -152,6 +162,14 @@ export default function AdminQuotesDashboardPage() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setImportingExternal(true)}
+            className="inline-flex items-center px-3 py-1.5 rounded-xl border border-amber-400/30 bg-amber-400/10 text-xs text-amber-200 hover:bg-amber-400/20"
+            title="Tracker dans les KPIs un devis traité hors plateforme (Word, téléphone, etc.)"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Importer un devis externe
+          </button>
           <Link
             href="/admin/quotes/memories"
             className="inline-flex items-center px-3 py-1.5 rounded-xl border border-indigo-400/30 bg-indigo-400/10 text-xs text-indigo-200 hover:bg-indigo-400/20"
@@ -338,11 +356,38 @@ export default function AdminQuotesDashboardPage() {
         ) : (
           <ul className="divide-y divide-white/10">
             {quotes.map((q) => (
-              <QuoteRow key={q.id} q={q} />
+              <QuoteRow key={q.id} q={q} onChangeStatus={() => setStatusEditFor(q)} />
             ))}
           </ul>
         )}
       </section>
+
+      {/* Modal : changer statut */}
+      {statusEditFor && (
+        <ChangeQuoteStatusModal
+          quoteId={statusEditFor.id}
+          currentStatus={statusEditFor.status}
+          currentReason={statusEditFor.status_reason || null}
+          currentFinalHt={statusEditFor.final_amount_ht_eur ?? null}
+          currentFinalTtc={statusEditFor.final_amount_ttc_eur ?? null}
+          onClose={() => setStatusEditFor(null)}
+          onSaved={() => {
+            setStatusEditFor(null);
+            fetchAll();
+          }}
+        />
+      )}
+
+      {/* Modal : importer un devis externe */}
+      {importingExternal && (
+        <ImportExternalQuoteModal
+          onClose={() => setImportingExternal(false)}
+          onCreated={() => {
+            setImportingExternal(false);
+            fetchAll();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -379,7 +424,7 @@ function KpiCard({
   );
 }
 
-function QuoteRow({ q }: { q: QuoteListItem }) {
+function QuoteRow({ q, onChangeStatus }: { q: QuoteListItem; onChangeStatus: () => void }) {
   const margins = useMemo(() => {
     return computeMarginsPerOption(q.tariff_options || [], {
       chefCostEur: q.chef_cost_eur,
@@ -399,52 +444,85 @@ function QuoteRow({ q }: { q: QuoteListItem }) {
     : null;
   const tone = getMarginTone(avgMargin);
 
-  const Wrapper = q.request_id
-    ? ({ children }: { children: React.ReactNode }) => (
-        <Link
-          href={`/admin/requests/${encodeURIComponent(q.request_id!)}#quote`}
-          className="block hover:bg-white/[0.03] transition"
-        >
-          {children}
-        </Link>
-      )
-    : ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+  // Montant à afficher : final négocié si dispo, sinon moyenne TTC tariff_options
+  const displayAmount = q.final_amount_ttc_eur ?? (
+    q.tariff_options && q.tariff_options.length > 0
+      ? q.tariff_options.reduce((s, o) => s + (Number(o.ttc_eur) || 0), 0) / q.tariff_options.length
+      : null
+  );
+  const amountLabel = q.final_amount_ttc_eur !== null && q.final_amount_ttc_eur !== undefined ? 'TTC final' : 'TTC moy.';
+
+  const detailHref = q.request_id ? `/admin/requests/${encodeURIComponent(q.request_id)}#quote` : null;
 
   return (
-    <li>
-      <Wrapper>
-        <div className="px-5 py-3 flex items-center justify-between gap-3">
+    <li className="px-5 py-3 hover:bg-white/[0.03] transition">
+      <div className="flex items-center justify-between gap-3">
+        {/* Bloc texte (cliquable → fiche request) */}
+        {detailHref ? (
+          <Link href={detailHref} className="min-w-0 flex-1 space-y-0.5">
+            <RowContent q={q} />
+          </Link>
+        ) : (
           <div className="min-w-0 flex-1 space-y-0.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_CLASS[q.status]}`}>
-                {STATUS_LABEL[q.status]}
-              </span>
-              <span className="text-[10px] text-white/45 font-mono">{q.reference}</span>
-              <span className="text-[10px] text-white/40">
-                {new Date(q.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-              </span>
-            </div>
-            <div className="text-sm text-white/85 truncate">{q.intitule || '—'}</div>
-            <div className="text-[11px] text-white/55">
-              {[q.destinataire_nom, q.lieu, q.dates_text, q.convives_text].filter(Boolean).join(' · ') || '—'}
-            </div>
+            <RowContent q={q} />
           </div>
-          <div className="shrink-0 text-right">
-            {q.tariff_options && q.tariff_options.length > 0 && (
-              <div className="font-mono text-xs text-white/75">
-                {fmtEurCompact(q.tariff_options.reduce((s, o) => s + (Number(o.ttc_eur) || 0), 0) / q.tariff_options.length)}
-                <span className="text-white/40 text-[10px] ml-1">TTC moy.</span>
-              </div>
-            )}
-            {costs.totalCostsEur > 0 && avgMargin !== null && (
-              <div className={`font-mono text-[10px] ${TONE_CLASS[tone]} mt-0.5`}>
-                marge {Math.round(avgMargin * 10) / 10}%
-              </div>
-            )}
-          </div>
+        )}
+
+        {/* Montant + marge */}
+        <div className="shrink-0 text-right">
+          {displayAmount !== null && (
+            <div className="font-mono text-xs text-white/75">
+              {fmtEurCompact(displayAmount)}
+              <span className="text-white/40 text-[10px] ml-1">{amountLabel}</span>
+            </div>
+          )}
+          {costs.totalCostsEur > 0 && avgMargin !== null && (
+            <div className={`font-mono text-[10px] ${TONE_CLASS[tone]} mt-0.5`}>
+              marge {Math.round(avgMargin * 10) / 10}%
+            </div>
+          )}
         </div>
-      </Wrapper>
+
+        {/* Bouton changer statut */}
+        <button
+          onClick={onChangeStatus}
+          className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-white/55 hover:text-white"
+          title="Changer le statut"
+        >
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
+      </div>
     </li>
+  );
+}
+
+function RowContent({ q }: { q: QuoteListItem }) {
+  return (
+    <>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_CLASS[q.status]}`}>
+          {STATUS_LABEL[q.status]}
+        </span>
+        <span className="text-[10px] text-white/45 font-mono">{q.reference}</span>
+        {q.is_external && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-200" title={q.external_origin || 'Devis importé hors plateforme'}>
+            ext.
+          </span>
+        )}
+        <span className="text-[10px] text-white/40">
+          {new Date(q.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+        </span>
+      </div>
+      <div className="text-sm text-white/85 truncate">{q.intitule || '—'}</div>
+      <div className="text-[11px] text-white/55">
+        {[q.destinataire_nom, q.lieu, q.dates_text, q.convives_text].filter(Boolean).join(' · ') || '—'}
+      </div>
+      {q.status_reason && (
+        <div className="text-[10px] text-white/45 italic mt-0.5 truncate" title={q.status_reason}>
+          « {q.status_reason} »
+        </div>
+      )}
+    </>
   );
 }
 

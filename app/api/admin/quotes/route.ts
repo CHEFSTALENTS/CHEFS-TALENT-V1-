@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   let q = supabase
     .from('quotes')
     .select(
-      'id, reference, request_id, status, issued_at, validity_date, intitule, lieu, dates_text, convives_text, destinataire_nom, destinataire_type, tariff_options, chef_cost_eur, chef_travel_cost_eur, butler_required, butler_cost_eur, sent_at, accepted_at, created_at',
+      'id, reference, request_id, status, issued_at, validity_date, intitule, lieu, dates_text, convives_text, destinataire_nom, destinataire_type, tariff_options, chef_cost_eur, chef_travel_cost_eur, butler_required, butler_cost_eur, sent_at, accepted_at, declined_at, expired_at, cancelled_at, status_reason, final_amount_ht_eur, final_amount_ttc_eur, is_external, external_origin, created_at',
     )
     .order('created_at', { ascending: false })
     .limit(limit);
