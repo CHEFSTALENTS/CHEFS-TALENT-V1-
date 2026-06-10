@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { adminFetch } from '@/lib/adminFetch';
 import {
   LayoutDashboard,
   Inbox,
@@ -36,12 +37,46 @@ type NavSection = {
 };
 
 export function AdminSidebar({
-  badges,
+  badges: badgesProp,
 }: {
   badges?: Record<string, string | number>;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ── Badges auto-fetch (fallback si non passés en prop) ──
+  // Le layout n'a pas à les fournir : la sidebar les récupère et les
+  // rafraîchit toutes les 90s. Pause quand l'onglet est en arrière-plan.
+  const [autoBadges, setAutoBadges] = useState<Record<string, number>>({});
+  const fetchBadges = useCallback(async () => {
+    try {
+      const json = await adminFetch<{ ok: boolean; requestsNew: number; quotesAlive: number; missionsRisk: number }>(
+        '/api/admin/badges',
+      );
+      setAutoBadges({
+        requestsNew: json.requestsNew || 0,
+        quotesAlive: json.quotesAlive || 0,
+        missionsRisk: json.missionsRisk || 0,
+      });
+    } catch (e) {
+      // Silencieux : si l'API plante on n'affiche juste pas les badges
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBadges();
+    const onVisible = () => { if (!document.hidden) fetchBadges(); };
+    document.addEventListener('visibilitychange', onVisible);
+    const id = setInterval(() => {
+      if (!document.hidden) fetchBadges();
+    }, 90_000);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [fetchBadges]);
+
+  const badges = { ...autoBadges, ...(badgesProp ?? {}) };
 
   // Auto-close du drawer mobile quand la route change (navigation réussie)
   useEffect(() => {
@@ -69,7 +104,7 @@ export function AdminSidebar({
         { label: 'Chefs', href: '/admin/chefs', icon: Users, badge: badges?.chefsPending },
         { label: 'Carte', href: '/admin/map', icon: Map, badge: badges?.chefsOnMap },
         { label: 'Devis', href: '/admin/quotes', icon: FileText, badge: badges?.quotesAlive },
-        { label: 'Missions', href: '/admin/missions', icon: Briefcase },
+        { label: 'Missions', href: '/admin/missions', icon: Briefcase, badge: badges?.missionsRisk },
         { label: 'NCC Partenaire', href: '/admin/ncc-partner', icon: ShieldCheck },
       ],
     },

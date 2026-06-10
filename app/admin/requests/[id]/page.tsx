@@ -288,6 +288,34 @@ export default function AdminRequestDetailPage() {
           <div className="text-sm text-white/55 mt-1">{formatDates(req)} • {req.guestCount ?? '—'} pers • {formatBudget(req.budgetRange)}</div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Raccourci primaire : crée le devis (ou y atterrit) en 1 clic.
+              Évite à Thomas de devoir scroller jusqu'au QuotePanel à chaque fois. */}
+          <button
+            onClick={async () => {
+              // Si le devis n'existe pas encore, on le POST direct (pré-rempli depuis la request).
+              // Si 409 = existe déjà, on ignore et on scroll.
+              try {
+                const r = await adminFetchRaw(`/api/admin/requests/${encodeURIComponent(id)}/quote`, { method: 'POST' });
+                if (r.status === 409) {
+                  // déjà existant → ok
+                } else if (!r.ok) {
+                  const j = await r.json().catch(() => ({} as any));
+                  alert(`Création devis impossible : ${j?.error || `HTTP ${r.status}`}`);
+                  return;
+                }
+              } catch (e: any) {
+                alert(`Création devis impossible : ${e?.message || 'erreur'}`);
+                return;
+              }
+              // Scroll vers le panel devis + reload pour qu'il refetch
+              window.location.hash = '#quote';
+              window.location.reload();
+            }}
+            className="px-3 py-2 rounded-xl border border-sky-400/40 bg-sky-400/15 text-sm text-sky-100 font-medium hover:bg-sky-400/25 transition"
+            title="Génère un devis pré-rempli depuis cette demande (ou y atterrit s'il existe)"
+          >
+            📄 Devis →
+          </button>
           <Link href={`/admin/requests?status=${encodeURIComponent(String(req.status || ''))}`} className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition">
             Statut : {String(req.status || '—')}
           </Link>
