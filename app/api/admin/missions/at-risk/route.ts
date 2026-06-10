@@ -35,7 +35,7 @@ type MissionAtRisk = {
   end_date: string | null;
   client_amount: number | null;
   chef_amount: number | null;
-  contract_signed_at: string | null;
+  contract_signed_at?: string | null;
   daysUntilStart: number;
   contractSigned: boolean;
   nccSigned: boolean;
@@ -52,19 +52,40 @@ export async function GET(req: Request) {
   const todayIso = now.toISOString().slice(0, 10);
   const horizon = new Date(now.getTime() + WINDOW_DAYS * 86400000).toISOString().slice(0, 10);
 
-  // 1. Récupère missions confirmées dans la fenêtre
-  const { data: missions, error: missErr } = await supabase
+  // 1. Récupère missions confirmées dans la fenêtre.
+  //    On tente d'abord avec contract_signed_at, fallback sans si la
+  //    colonne n'existe pas sur cet environnement (migration partielle).
+  const baseSelect = 'id, request_id, chef_name, location, start_date, end_date, client_amount, chef_amount';
+  let useContractSignedColumn = true;
+  let firstAttempt: { data: any[] | null; error: any } = await supabase
     .from('missions')
-    .select(
-      'id, request_id, chef_name, location, start_date, end_date, client_amount, chef_amount, contract_signed_at',
-    )
+    .select(`${baseSelect}, contract_signed_at`)
     .eq('status', 'confirmed')
     .gte('start_date', todayIso)
     .lte('start_date', horizon)
     .order('start_date', { ascending: true });
 
-  if (missErr) return NextResponse.json({ ok: false, error: missErr.message }, { status: 500 });
-  const rows = (missions || []) as Array<{
+  if (firstAttempt.error) {
+    const msg = String(firstAttempt.error.message || '').toLowerCase();
+    if (msg.includes('contract_signed_at') || msg.includes('does not exist') || msg.includes('column')) {
+      // Fallback : colonne legacy absente → on s'appuiera uniquement
+      // sur les signature_requests pour le check contrat.
+      useContractSignedColumn = false;
+      firstAttempt = await supabase
+        .from('missions')
+        .select(baseSelect)
+        .eq('status', 'confirmed')
+        .gte('start_date', todayIso)
+        .lte('start_date', horizon)
+        .order('start_date', { ascending: true });
+    }
+  }
+
+  if (firstAttempt.error) {
+    return NextResponse.json({ ok: false, error: firstAttempt.error.message }, { status: 500 });
+  }
+
+  const rows = (firstAttempt.data || []) as Array<{
     id: string;
     request_id: string | null;
     chef_name: string | null;
@@ -73,16 +94,19 @@ export async function GET(req: Request) {
     end_date: string | null;
     client_amount: number | null;
     chef_amount: number | null;
-    contract_signed_at: string | null;
+    contract_signed_at?: string | null;
   }>;
 
   if (rows.length === 0) {
     return NextResponse.json({ ok: true, missions: [] });
   }
 
-  // 2. Pour les missions où contract_signed_at est null, on regarde
-  //    les signature_requests liées (target_kind='mission', kind∈{chef,client})
-  const missionIds = rows.filter((r) => !r.contract_signed_at).map((r) => r.id);
+  // 2. Pour les missions où contract_signed_at est null (ou absent du
+  //    schéma), on regarde les signature_requests liées
+  //    (target_kind='mission', kind∈{chef,client})
+  const missionIds = rows
+    .filter((r) => useContractSignedColumn ? !r.contract_signed_at : true)
+    .map((r) => r.id);
   let sigByMission: Record<string, { chef: boolean; client: boolean }> = {};
   if (missionIds.length > 0) {
     const { data: sigs } = await supabase
