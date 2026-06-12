@@ -466,7 +466,7 @@ export default function ChefTalentsHome() {
                 <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Pourquoi j'ai monté ça</p>
                 <h2 className="text-[2.2rem] font-serif leading-[1.04] text-[#161616] md:text-4xl mb-6">Thomas Delcroix</h2>
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-4 max-w-2xl">
-                  J'ai été chef privé pendant trois ans avant de monter Chefs Talents. Plus de 200 missions, sur la Côte d'Azur, en Méditerranée à bord de yachts privés, dans des chalets l'hiver.
+                  Chef privé depuis 2019. Plus de 200 missions ponctuelles, une dizaine de contrats longs entre 2023 et 2025 — dont plus de 6 mois passés sur des yachts en Méditerranée.
                 </p>
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-8 max-w-2xl">
                   J'ai monté Chefs Talents en juin 2023 pour qu'il existe un endroit où, quand vous appelez, vous parlez à quelqu'un qui connaît personnellement chaque chef de la liste.

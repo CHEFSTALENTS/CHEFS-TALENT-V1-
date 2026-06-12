@@ -74,19 +74,19 @@ export default function AboutPage() {
                 Mon parcours
               </p>
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                Premier service comme chef privé en 2020, dans une villa au Cap Ferrat. En parallèle, mes classes dans deux tables étoilées parisiennes. Ce qui m'a attiré dans le privé : le client est dans la pièce d'à côté, pas derrière un pass — on cuisine pour quelqu'un, pas pour un service.
+                Chef privé depuis 2019. Plus de 200 missions ponctuelles : dîners privés, séjours en villa, week-ends, événements familiaux. Ce qui m'a attiré dans le privé : le client est dans la pièce d'à côté, pas derrière un pass — on cuisine pour quelqu'un, pas pour un service.
               </p>
             </div>
 
             <div>
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                Puis le yachting. Plusieurs mois en Méditerranée, sur des motoryachts de 50 à 70 mètres. Tu apprends vite quand tu n'as pas de poissonnier à 200 mètres et que ton frigo fait quatre fois un frigo de restaurant. L'espace est compté, les attentes sont hautes, les imprévus quotidiens.
+                Entre 2023 et 2025, une dizaine de contrats longs — dont plus de 6 mois passés sur des yachts en Méditerranée. Tu apprends vite quand tu n'as pas de poissonnier à 200 mètres et que ton espace est compté. Les attentes sont hautes, les imprévus quotidiens.
               </p>
             </div>
 
             <div>
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                Plus de 200 missions plus tard — villas Côte d'Azur, chalets aux Alpes, résidences en Espagne, week-ends à Monaco — j'ai vu le même problème partout : les très bons chefs existent, mais personne ne sait comment les trouver. Et les clients tombent souvent sur des gens qui ont menti sur leur CV.
+                À chaque mission, le même constat : les très bons chefs existent, mais personne ne sait comment les trouver. Et les clients tombent souvent sur des gens qui ont menti sur leur CV.
               </p>
             </div>
 

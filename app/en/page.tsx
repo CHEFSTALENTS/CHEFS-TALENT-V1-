@@ -58,18 +58,24 @@ export default function HomeEN() {
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${WHATSAPP_PREFILL}`;
 
   return (
-    <div className="bg-[#f4efe8] text-[#161616] flex flex-col min-h-screen">
+    <div className="bg-white text-[#161616] flex flex-col min-h-screen">
 
       {/* ── HERO ── */}
       <section className="relative h-[90vh] min-h-[680px] w-full overflow-hidden">
-        <motion.img
-          src="/images/editorial/hero-chef-talents.jpg"
-          alt="Private chef"
+        <motion.video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          poster="/images/editorial/hero-poster.jpg"
           className="absolute inset-0 h-full w-full object-cover object-center"
           initial={{ scale: 1.06, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
-        />
+        >
+          <source src="/videos/hero.mp4" type="video/mp4" />
+        </motion.video>
         <motion.div className="absolute inset-0 bg-black/58" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2 }} />
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/28 to-black/10" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/42 via-transparent to-black/10" />
@@ -353,7 +359,7 @@ export default function HomeEN() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="bg-[#ebe4d9] px-6 py-24 md:px-10 lg:px-16">
+      <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-10 text-white md:px-14 md:py-16">
           <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Single request</p>
           <h2 className="mt-4 max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
