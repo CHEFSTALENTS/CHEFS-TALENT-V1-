@@ -334,15 +334,15 @@ export default function ChefTalentsHome() {
               sizes="(max-width: 1280px) 100vw, 1200px"
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-black/18" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+            <div className="absolute inset-0 bg-black/35" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/10" />
             <div className="absolute inset-0 flex items-end">
               <div className="max-w-3xl px-8 pb-10 md:px-12 md:pb-14">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/80">Sur place</p>
-                <h3 className="mt-3 text-[2.2rem] font-serif leading-[1.06] text-white md:text-5xl">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white">Sur place</p>
+                <h3 className="mt-3 text-[2.2rem] font-serif leading-[1.06] text-white md:text-5xl drop-shadow-md">
                   Le chef arrive, vous l'avez choisi, il connaît votre famille.
                 </h3>
-                <p className="mt-4 max-w-[23rem] text-[17px] font-light leading-8 text-white/88 md:max-w-2xl md:text-lg md:leading-relaxed">
+                <p className="mt-4 max-w-[23rem] text-[17px] font-light leading-8 text-white md:max-w-2xl md:text-lg md:leading-relaxed drop-shadow">
                   Tenue impeccable. Présence discrète. Anglais si besoin. Si vous avez du personnel de salle, il s'intègre. Si vous n'en avez pas, il fait avec.
                 </p>
               </div>
@@ -495,11 +495,11 @@ export default function ChefTalentsHome() {
       {/* ── CTA ───────────────────────────────────────────── */}
       <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-10 text-white md:px-14 md:py-16">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Vous appelez</p>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-white/90">Vous appelez</p>
           <h2 className="mt-4 max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
             Décrivez-nous votre besoin.<br />On revient sous 6 heures.
           </h2>
-          <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-white/86 md:max-w-3xl md:text-xl md:leading-relaxed">
+          <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-white md:max-w-3xl md:text-xl md:leading-relaxed">
             Trois lignes suffisent — lieu, dates, nombre de couverts. Si on peut vous aider, on revient avec des noms. Si on ne peut pas, on vous le dit dans le même délai.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
