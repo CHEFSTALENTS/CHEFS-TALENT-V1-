@@ -74,25 +74,27 @@ export default function AboutPage() {
                 Mon parcours
               </p>
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                J'ai commencé comme chef privé en 2020, en France, dans des résidences haut de gamme et en parallèle j'ai fait mes classes dans des tables étoilées. Ce qui m'a toujours attiré, c'est l'environnement privé : la relation directe avec le client, l'exigence du quotidien, la cuisine comme service et non comme spectacle.
+                Premier service comme chef privé en 2020, dans une villa au Cap Ferrat. En parallèle, mes classes dans deux tables étoilées parisiennes. Ce qui m'a attiré dans le privé : le client est dans la pièce d'à côté, pas derrière un pass — on cuisine pour quelqu'un, pas pour un service.
               </p>
             </div>
 
             <div>
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                J'ai ensuite rejoint le monde du yachting privé, plusieurs mois en Méditerranée, à bord de motoryachts. Une école incomparable : l'espace contraint, les approvisionnements complexes, les clients internationaux, les standards UHNW. On apprend vite ce que signifie l'exigence sans compromis.
+                Puis le yachting. Plusieurs mois en Méditerranée, sur des motoryachts de 50 à 70 mètres. Tu apprends vite quand tu n'as pas de poissonnier à 200 mètres et que ton frigo fait quatre fois un frigo de restaurant. L'espace est compté, les attentes sont hautes, les imprévus quotidiens.
               </p>
             </div>
 
             <div>
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                En parallèle, j'ai accumulé plus de 200 missions ponctuelles : villas en Côte d'Azur, chalets dans les Alpes, résidences familiales en Espagne, événements privés à Monaco. À chaque mission, le même constat : les bons chefs existent, mais les clients ne savent pas comment les trouver, et les chefs ne savent pas comment accéder aux bonnes missions.
+                Plus de 200 missions plus tard — villas Côte d'Azur, chalets aux Alpes, résidences en Espagne, week-ends à Monaco — j'ai vu le même problème partout : les très bons chefs existent, mais personne ne sait comment les trouver. Et les clients tombent souvent sur des gens qui ont menti sur leur CV.
               </p>
             </div>
 
             <div>
+              {/* TODO Thomas — Si tu as une anecdote précise (mission ratée, moment "déclic"),
+                  insère-la ici. Format : date + lieu + ce qui a mal tourné + ce que tu as compris. */}
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                C'est pour ça que j'ai créé Chefs Talents en 2023. Pas une marketplace. Pas un annuaire. Une mise en relation structurée, avec une vraie connaissance des deux côtés : le client qui cherche un niveau d'excellence, et le chef qui mérite des missions à la hauteur de son talent.
+                Juin 2023, j'ai monté Chefs Talents. L'idée tient en une phrase : un endroit où, quand vous appelez, vous parlez à quelqu'un qui connaît personnellement chaque chef de la liste. Pas une marketplace. Pas un algorithme. Trois personnes au téléphone.
               </p>
             </div>
 
@@ -129,13 +131,13 @@ export default function AboutPage() {
           </div>
           <div className="lg:col-span-8 space-y-6">
             <p className="text-[19px] font-light leading-9 text-white/80">
-              Le monde du chef privé est opaque. Les clients ne comprennent pas les tarifs, les chefs sous-estiment leur valeur, et les mises en relation se font encore par bouche-à-oreille. Chefs Talents existe pour changer ça.
+              Le métier de chef privé est opaque. Les tarifs varient du simple au triple sans logique apparente. Les clients ne savent pas ce qu'ils paient. Les chefs sérieux sous-facturent. Et la mise en relation se fait par bouche-à-oreille dans un cercle fermé. Je veux casser ce truc.
             </p>
             <p className="text-[19px] font-light leading-9 text-white/80">
-              J'ai construit un réseau de chefs que je connais personnellement ou par recommandation directe. Des profils que j'ai croisés en cuisine, sur un yacht, ou dans une résidence privée. Des gens sérieux, discrets, qui savent ce que signifie intervenir dans un environnement privé de haut niveau.
+              Notre réseau, c'est des chefs que j'ai rencontrés en cuisine, sur un yacht, ou dans une villa où je travaillais. Pas des candidatures spontanées triées par un algorithme. Quand je vous présente quelqu'un, je peux vous raconter d'où il vient, ce qu'il cuisine bien, et où il a déjà foiré.
             </p>
             <p className="text-[19px] font-light leading-9 text-white/80">
-              Ce que je propose à mes clients, c'est ce que j'aurais voulu trouver quand j'étais chef : quelqu'un qui connaît le terrain, qui comprend les deux parties, et qui fait le lien sans friction.
+              Ce que je vends à mes clients, c'est ce que j'aurais voulu trouver quand j'étais chef : un interlocuteur qui connaît le terrain des deux côtés, qui ne vend pas du rêve, et qui répond au téléphone — y compris à 22h un samedi.
             </p>
           </div>
         </div>
@@ -158,8 +160,8 @@ export default function AboutPage() {
                 text: 'La majorité des chefs du réseau ont été rencontrés directement : en cuisine, sur un yacht, dans une villa. Pas des inconnus filtrés par un algorithme.',
               },
               {
-                title: 'Formés aux standards du luxe',
-                text: 'Tables étoilées, palaces, superyachts : chaque profil a une expérience validée en environnement premium. L\'exigence est le critère d\'entrée, pas l\'exception.',
+                title: 'Cinq ans de pro minimum',
+                text: 'Tables étoilées, palaces, yachts. On exige cinq ans en cuisine pro dont deux en privé. On appelle au moins trois anciens employeurs avant de valider.',
               },
               {
                 title: 'Couvrant toute l\'Europe',
