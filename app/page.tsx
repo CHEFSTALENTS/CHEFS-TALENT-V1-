@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import ProcessTimeline from '@/components/landing/ProcessTimeline';
 
 const SUPPORT_EMAIL = 'contact@chefstalents.com';
 const WHATSAPP_NUMBER_E164 = '33756827612';
@@ -22,7 +23,7 @@ const FAQ_ITEMS = [
   {
     title: "Est-ce que je choisis le chef ?",
     content:
-      "Oui. Chefs Talents fonctionne comme un intermédiaire curateur : nous présélectionnons des profils adaptés, et vous choisissez celui qui correspond le mieux à votre style, vos contraintes et votre niveau d'exigence.",
+      "Oui. Chefs Talents fonctionne comme un intermédiaire qui présélectionne deux ou trois profils. Vous choisissez celui qui colle le mieux à votre style et à vos contraintes.",
   },
   {
     title: "Quand le paiement est-il effectué ?",
@@ -149,10 +150,10 @@ export default function ChefTalentsHome() {
           >
             <p className="mb-5 text-[10px] uppercase tracking-[0.35em] text-white/78 md:mb-6">Chefs Talents</p>
             <h1 className="max-w-[900px] text-[2.75rem] leading-[0.98] tracking-tight text-white md:text-6xl lg:text-[5rem]">
-              Des chefs privés,<br />pour des missions<br /><span className="italic">d'exception.</span>
+              Le chef qu'il vous faut,<br />sur place,<br /><span className="italic">sans surprise.</span>
             </h1>
             <p className="mt-6 max-w-[620px] text-[17px] leading-8 text-white/90 md:text-lg md:leading-relaxed">
-              Un réseau de chefs sélectionnés pour des clients exigeants. Villas, yachts, résidences privées. Une exécution sans friction, partout en Europe.
+              On place des chefs privés dans des villas, des yachts et des résidences en Europe depuis 2023. Sélection à la main. Aucun annuaire, aucune marketplace.
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <Link href="/request" className="inline-flex min-h-[56px] w-full items-center justify-center rounded-full bg-white px-8 text-sm font-medium text-black transition hover:bg-white/85 sm:w-auto">
@@ -171,10 +172,10 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {[
-              { value: '400+', label: 'Chefs sélectionnés', sub: 'formés aux standards du luxe' },
-              { value: '400+', label: 'Missions réalisées', sub: 'depuis 2023' },
-              { value: '50+', label: 'Destinations', sub: "à travers l'Europe" },
-              { value: '< 6h', label: 'Délai de réponse', sub: 'une personne dédiée' },
+              { value: '400+', label: 'Chefs dans notre réseau', sub: 'rencontrés un par un' },
+              { value: '400+', label: 'Missions réalisées', sub: 'depuis juin 2023' },
+              { value: '50+', label: 'Destinations couvertes', sub: 'Europe, Méditerranée, Alpes' },
+              { value: '< 6h', label: 'Délai de réponse', sub: 'Thomas ou un membre de l\'équipe' },
             ].map((stat, i) => (
               <motion.div key={i} className="text-center" initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}>
                 <p className="font-serif text-[2.8rem] leading-none text-white md:text-5xl">{stat.value}</p>
@@ -190,9 +191,9 @@ export default function ChefTalentsHome() {
       <section className="px-6 pb-20 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl border-b border-[#d8d1c7] py-8">
           <div className="grid gap-8 md:grid-cols-3">
-            <MiniTrust title="Sélection rigoureuse" text="Des profils choisis pour leur niveau, leur posture et leur fiabilité sur le terrain." />
-            <MiniTrust title="Couverture européenne" text="Des chefs mobiles, habitués aux résidences privées, villas, chalets et yachts." />
-            <MiniTrust title="Coordination maîtrisée" text="Un interlocuteur unique pour cadrer, sécuriser et suivre les missions sensibles." />
+            <MiniTrust title="On choisit à la main" text="Chaque chef du réseau a été rencontré, testé, validé. Aucune candidature spontanée acceptée." />
+            <MiniTrust title="On est sur le terrain" text="Côte d'Azur, Baléares, Alpes, Méditerranée. Nos chefs vivent là où ils travaillent." />
+            <MiniTrust title="Vous nous appelez, pas le chef" text="Un seul interlocuteur du premier message à la fin de mission. Pas de mail perdu." />
           </div>
         </div>
       </section>
@@ -201,17 +202,17 @@ export default function ChefTalentsHome() {
       <section className="px-6 py-10 md:px-10 lg:px-16">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
           <div className="lg:col-span-3">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Notre approche</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Comment on travaille</p>
           </div>
           <div className="lg:col-span-9">
             <h2 className="max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
-              Plus qu'une réservation.<br />Une mise en relation maîtrisée.
+              On n'est pas une marketplace.<br />On est trois au téléphone.
             </h2>
             <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-2xl md:leading-relaxed">
-              Chefs Talents a été pensé pour les situations où la qualité, la continuité et la confiance priment sur la rapidité.
+              Aucun moteur de recherche, aucune liste à parcourir. Vous nous racontez votre mission, on revient avec deux ou trois noms qu'on connaît personnellement.
             </p>
             <p className="mt-5 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-xl md:leading-relaxed">
-              Nous ne proposons pas un simple annuaire. Chaque demande est qualifiée, cadrée et traitée avec précision afin d'identifier le bon profil, au bon endroit, au bon moment.
+              Si on n'a pas le bon profil — ça arrive — on vous le dit franchement et on vous oriente vers un confrère qu'on respecte.
             </p>
           </div>
         </div>
@@ -222,12 +223,12 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Couverture</p>
+              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Où on opère</p>
               <h2 className="text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
-                Partout où<br />vous êtes.
+                Là où vous<br />passez l'été.
               </h2>
               <p className="mt-6 text-[17px] font-light leading-8 text-[#59544d]">
-                De la Côte d'Azur aux Alpes, d'Ibiza à Mykonos — nos chefs opèrent dans plus de 50 destinations premium à travers l'Europe et au-delà.
+                Côte d'Azur, Baléares, Riviera italienne, Mykonos, Sardaigne, Corfou. Pour la saison d'hiver : Courchevel, Megève, Verbier, Saint-Moritz. 50 destinations couvertes, mais surtout — un chef qui connaît déjà le coin.
               </p>
               <Link href="/destinations" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-[#161616] underline underline-offset-4 hover:opacity-70 transition">
                 Voir toutes les destinations <ArrowRight className="h-4 w-4" />
@@ -258,22 +259,22 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl rounded-[32px] border border-[#d8d1c7] bg-white px-8 py-10 md:px-12 md:py-14">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Exigence</p>
+              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Ce qu'on attend d'un chef</p>
               <h2 className="text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
-                Un réseau pensé pour les environnements premium.
+                Six critères<br />qu'on ne lâche pas.
               </h2>
             </div>
             <div className="lg:col-span-8">
               <p className="max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-xl md:leading-relaxed">
-                Nos 400 chefs sont sélectionnés selon leur expérience, leur mobilité, leur capacité d'adaptation et leur exigence opérationnelle dans des contextes privés haut de gamme.
+                Pas de candidature spontanée. On rencontre chaque chef, on appelle ses anciens employeurs, on goûte sa cuisine. Voilà ce qu'on vérifie.
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-2">
-                <ValueCard text="400 chefs sélectionnés, formés aux standards du luxe" />
-                <ValueCard text="Couverture européenne avec expertise locale" />
-                <ValueCard text="Gestion de la continuité et des remplacements" />
-                <ValueCard text="Chefs multilingues, habitués aux standards UHNW" />
-                <ValueCard text="Un interlocuteur unique pour les missions complexes" />
-                <ValueCard text="Relation discrète, structurée et maîtrisée" />
+                <ValueCard text="Minimum 5 ans en cuisine pro, dont 2 ans en privé ou yacht" />
+                <ValueCard text="Au moins 3 références vérifiables qu'on a appelées" />
+                <ValueCard text="Français + anglais courants. Espagnol ou italien selon le terrain" />
+                <ValueCard text="Capacité à gérer seul : sourcing, courses, mise en place, service" />
+                <ValueCard text="Tenue et posture irréprochables — on en parle ouvertement avec eux" />
+                <ValueCard text="Discrétion absolue. Aucune photo client sur leurs réseaux" />
               </div>
               <div className="mt-10">
                 <Link href="/conciergeries" className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-[#161616] px-7 py-4 text-sm font-medium text-white transition hover:bg-black sm:w-auto">
@@ -289,17 +290,17 @@ export default function ChefTalentsHome() {
       <section className="bg-[#161616] px-6 py-24 text-white md:px-10 lg:px-16">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Confidentialité</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Ce qu'on ne dit pas</p>
             <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
-              La discrétion<br />n'est pas une option.
+              Vous ne verrez aucun<br />témoignage ici.
             </h2>
           </div>
           <div className="lg:col-span-8">
             <p className="max-w-[24rem] text-[18px] font-light leading-8 text-white/88 md:max-w-3xl md:text-2xl md:leading-relaxed">
-              Nos chefs interviennent dans les villas, chalets, yachts et résidences privées à travers l'Europe. Les lieux, les clients et les missions ne sont jamais rendus publics.
+              C'est volontaire. Nos clients préfèrent. Ni photo de villa, ni prénom de famille, ni post Instagram qui géolocalise leur été.
             </p>
             <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-white/78 md:max-w-3xl md:text-xl md:leading-relaxed">
-              Les références sont partagées de manière sélective. La confidentialité fait partie intégrante de notre manière de travailler.
+              Si vous voulez des références, on en transmet en direct au téléphone — souvent une conciergerie partenaire ou un confrère que vous connaissez déjà. Pas avant le premier appel.
             </p>
             <a href={mailtoHref} className="mt-10 inline-flex min-h-[60px] w-full items-center justify-center rounded-full border border-white/28 px-7 py-4 text-sm font-medium text-white transition hover:bg-white/6 sm:w-auto">
               Nous écrire
@@ -323,12 +324,12 @@ export default function ChefTalentsHome() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
             <div className="absolute inset-0 flex items-end">
               <div className="max-w-3xl px-8 pb-10 md:px-12 md:pb-14">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/80">Exécution</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/80">Sur place</p>
                 <h3 className="mt-3 text-[2.2rem] font-serif leading-[1.06] text-white md:text-5xl">
-                  Une présence discrète, une exécution constante, un niveau de service tenu.
+                  Le chef arrive, vous l'avez choisi, il connaît votre famille.
                 </h3>
                 <p className="mt-4 max-w-[23rem] text-[17px] font-light leading-8 text-white/88 md:max-w-2xl md:text-lg md:leading-relaxed">
-                  Des interventions calibrées pour répondre à des standards élevés, sans friction et avec une vraie continuité opérationnelle.
+                  Tenue impeccable. Présence discrète. Anglais si besoin. Si vous avez du personnel de salle, il s'intègre. Si vous n'en avez pas, il fait avec.
                 </p>
               </div>
             </div>
@@ -336,17 +337,44 @@ export default function ChefTalentsHome() {
         </div>
       </section>
 
-      {/* ── PROCESS ───────────────────────────────────────── */}
+      {/* ── PROCESS — timeline animée 7 étapes ─────────────── */}
+      <ProcessTimeline />
+
+      {/* ── CE QU'ON NE FAIT PAS ──────────────────────────── */}
+      {/* TODO Thomas — Remplir les chiffres réels (X demandes/mois, Y refusées,
+          3 raisons concrètes). Plus c'est précis, plus c'est crédible. */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Méthode</p>
-          <h2 className="mt-4 max-w-3xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
-            Une demande simple.<br />Un traitement structuré.
-          </h2>
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            <StepCard number="01" title="Qualification" text="Nous analysons le lieu, les dates, le niveau de service, le format de mission et le budget indicatif." />
-            <StepCard number="02" title="Sélection" text="Nous identifions les profils les plus pertinents selon la mission, l'environnement et les exigences exprimées." />
-            <StepCard number="03" title="Coordination" text="Une fois le profil validé, nous cadrons la mission et restons le point de contact pour son bon déroulement." />
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Ce qu'on ne fait pas</p>
+              <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
+                Quatre demandes<br />sur dix, on dit non.
+              </h2>
+            </div>
+            <div className="lg:col-span-8 space-y-6">
+              <p className="text-[18px] font-light leading-8 text-[#59544d] md:text-xl md:leading-relaxed">
+                {/* TODO Thomas : adapter le ratio réel */}
+                On reçoit environ 80 demandes par mois. On en traite 45. Voici pourquoi on dit non aux autres.
+              </p>
+              <ul className="space-y-4">
+                <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
+                  <p className="font-medium text-[#161616] mb-1">Pas de missions de moins de 4 jours hors yacht.</p>
+                  <p className="text-[15px] text-[#59544d] leading-7">Sur un dîner unique, vous avez besoin d'un traiteur, pas d'un chef privé. On vous oriente vers le bon prestataire.</p>
+                </li>
+                <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
+                  <p className="font-medium text-[#161616] mb-1">Pas de mariages.</p>
+                  <p className="text-[15px] text-[#59544d] leading-7">Ce n'est pas notre métier. Les contraintes événementielles sont différentes — on connaît des wedding planners qui font ça mieux que nous.</p>
+                </li>
+                <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
+                  <p className="font-medium text-[#161616] mb-1">Pas de mission qu'on ne peut pas honorer dignement.</p>
+                  <p className="text-[15px] text-[#59544d] leading-7">Pas de chef libre sur les dates, lieu hors zone de nos profils, budget trop tendu pour qu'un chef vive correctement la mission. On préfère décliner que mal exécuter.</p>
+                </li>
+              </ul>
+              <p className="text-[15px] italic text-[#7d756a] pt-2">
+                Quand on refuse, on dit pourquoi. Et si possible, on vous oriente vers un confrère.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -399,13 +427,19 @@ export default function ChefTalentsHome() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-black/5" />
               </div>
               <div className="lg:col-span-8 px-8 py-10 md:px-12 md:py-14 flex flex-col justify-center">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Fondateur</p>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Pourquoi j'ai monté ça</p>
                 <h2 className="text-[2.2rem] font-serif leading-[1.04] text-[#161616] md:text-4xl mb-6">Thomas Delcroix</h2>
+                {/* TODO Thomas — Remplacer le bloc anecdote par TON moment réel.
+                    Format : une date précise + un lieu précis + ce qui a mal tourné
+                    + ce que tu as compris. Du concret, pas joli. */}
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-4 max-w-2xl">
-                  Chef privé depuis 2020, passionné par le monde du luxe et de la gastronomie privée. J'ai exercé dans des tables étoilées en France, navigué plusieurs mois en yachting privé en Méditerranée, et réalisé plus de 200 missions dans des villas, chalets et résidences à travers l'Europe.
+                  J'ai été chef privé pendant trois ans avant de monter Chefs Talents. Plus de 200 missions, sur la Côte d'Azur, en Méditerranée à bord de yachts privés, dans des chalets l'hiver.
+                </p>
+                <p className="text-[18px] font-light leading-8 text-[#59544d] mb-4 max-w-2xl italic">
+                  [TODO Thomas — Insère ici l'anecdote précise : « Été 2022, on m'appelle en urgence sur un yacht à [lieu] parce que le chef envoyé par la conciergerie n'avait jamais bossé en cuisine pro. C'est là que j'ai compris : personne ne vérifie rien dans ce métier. »]
                 </p>
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-8 max-w-2xl">
-                  J'ai fondé Chefs Talents en 2023 pour mettre ce réseau : des chefs rencontrés dans des cuisines étoilées et à bord de superyachts : au service de clients qui exigent l'excellence.
+                  J'ai monté Chefs Talents en juin 2023 pour qu'il existe un endroit où, quand vous appelez, vous parlez à quelqu'un qui connaît personnellement chaque chef de la liste.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link href="/about" className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[#d4cdc2] px-7 text-sm font-medium text-[#3f3a34] transition hover:bg-[#f4efe8] sm:w-auto">
@@ -425,12 +459,12 @@ export default function ChefTalentsHome() {
       {/* ── CTA ───────────────────────────────────────────── */}
       <section className="bg-[#ebe4d9] px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-10 text-white md:px-14 md:py-16">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Demande unique</p>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Vous appelez</p>
           <h2 className="mt-4 max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
-            Une seule demande.<br />La bonne réponse.
+            Décrivez-nous votre besoin.<br />On revient sous 6 heures.
           </h2>
           <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-white/86 md:max-w-3xl md:text-xl md:leading-relaxed">
-            Dîner privé, séjour, résidence longue, yacht ou demande plus complexe : vous remplissez une seule demande, notre équipe qualifie ensuite le besoin et construit la meilleure réponse.
+            Trois lignes suffisent — lieu, dates, nombre de couverts. Si on peut vous aider, on revient avec des noms. Si on ne peut pas, on vous le dit dans le même délai.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link href="/request" className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-medium text-[#161616] transition hover:bg-[#ece6dc] sm:w-auto">
@@ -451,7 +485,7 @@ export default function ChefTalentsHome() {
           <p className="mt-6 text-[18px] font-light leading-8 text-[#59544d] md:text-lg">L'essentiel, avant de nous transmettre votre brief.</p>
           <div className="mt-12 border-t border-[#d8d1c7]">
             <FaqItem title="Que se passe-t-il après l'envoi de ma demande ?" content="Nous analysons votre brief (lieu, dates, attentes, budget), puis nous revenons vers vous avec une sélection de chefs disponibles et pertinents dans les 6 heures. Vous validez un profil, et nous coordonnons ensuite l'ensemble de la mission." isDefaultOpen />
-            <FaqItem title="Est-ce que je choisis le chef ?" content="Oui. Chefs Talents fonctionne comme un intermédiaire curateur : nous présélectionnons des profils adaptés, et vous choisissez celui qui correspond le mieux à votre style, vos contraintes et votre niveau d'exigence." />
+            <FaqItem title="Est-ce que je choisis le chef ?" content="Oui. Chefs Talents fonctionne comme un intermédiaire qui présélectionne deux ou trois profils. Vous choisissez celui qui colle le mieux à votre style et à vos contraintes." />
             <FaqItem title="Quand le paiement est-il effectué ?" content="Le paiement dépend de la nature et de la durée de la mission. Pour certaines prestations ponctuelles, le règlement intervient une fois le chef sélectionné afin de confirmer la mission. Pour les missions plus longues ou plus complexes, les modalités sont précisées en amont avec transparence." />
             <FaqItem title="Pourquoi des frais de service sont-ils demandés ?" content="Les frais de service couvrent la sélection des chefs, la coordination, la sécurisation de la mission et le suivi opérationnel." />
             <FaqItem title="Que se passe-t-il si le chef annule ou ne peut pas assurer la mission ?" content="En cas d'indisponibilité du chef, nous activons immédiatement une solution de remplacement avec un profil équivalent." />
