@@ -87,7 +87,7 @@ export default function ProcessTimeline() {
   const lineHeight = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
 
   return (
-    <section className="bg-[#f4efe8] px-6 py-24 md:px-10 lg:px-16">
+    <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
       <div className="mx-auto max-w-6xl">
         {/* Header section */}
         <div className="mb-16 md:mb-20 max-w-3xl">
@@ -139,7 +139,7 @@ function Step({ step, index }: { step: Step; index: number }) {
       transition={{ duration: 0.6, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Pastille étape (avec icône) */}
-      <div className="hidden sm:flex absolute left-0 top-0 h-[62px] w-[62px] items-center justify-center rounded-full border bg-[#f4efe8] z-10
+      <div className="hidden sm:flex absolute left-0 top-0 h-[62px] w-[62px] items-center justify-center rounded-full border bg-white z-10
         transition-colors duration-700"
         style={{
           borderColor: inView ? '#161616' : '#d8d1c7',

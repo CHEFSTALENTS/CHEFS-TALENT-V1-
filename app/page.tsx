@@ -112,7 +112,7 @@ export default function ChefTalentsHome() {
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${WHATSAPP_PREFILL}`;
 
   return (
-    <div className="bg-[#f4efe8] text-[#161616] flex flex-col min-h-screen">
+    <div className="bg-white text-[#161616] flex flex-col min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -220,7 +220,7 @@ export default function ChefTalentsHome() {
           </div>
           <div className="lg:col-span-9">
             <h2 className="max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-6xl">
-              On n'est pas une marketplace.<br />On est trois au téléphone.
+              On n'est pas une marketplace.<br />Un interlocuteur unique.
             </h2>
             <p className="mt-6 max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-2xl md:leading-relaxed">
               Aucun moteur de recherche, aucune liste à parcourir. Vous nous racontez votre mission, on revient avec deux ou trois noms qu'on connaît personnellement.
@@ -355,7 +355,7 @@ export default function ChefTalentsHome() {
       <ProcessTimeline />
 
       {/* ── CTA INTERMÉDIAIRE — après la timeline ────────── */}
-      <section className="bg-[#f4efe8] px-6 pb-24 md:px-10 lg:px-16">
+      <section className="bg-white px-6 pb-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-4xl text-center">
           <p className="text-[18px] font-light leading-8 text-[#59544d] md:text-xl">
             Vous voyez le déroulé. Reste à nous dire ce dont vous avez besoin.
@@ -493,7 +493,7 @@ export default function ChefTalentsHome() {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────── */}
-      <section className="bg-[#ebe4d9] px-6 py-24 md:px-10 lg:px-16">
+      <section className="bg-white px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-6xl rounded-[32px] bg-[#161616] px-8 py-10 text-white md:px-14 md:py-16">
           <p className="text-[11px] uppercase tracking-[0.24em] text-white/72">Vous appelez</p>
           <h2 className="mt-4 max-w-4xl text-[2.55rem] font-serif leading-[1.04] text-white md:text-6xl">
