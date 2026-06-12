@@ -7,7 +7,7 @@
 
 import { useRef } from 'react';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
-import { Phone, ClipboardList, Users, Video, FileText, ChefHat, Sparkles } from 'lucide-react';
+import { Phone, ClipboardList, FileText, Users, MousePointerClick, FileSignature, Handshake, Sparkles } from 'lucide-react';
 
 type Step = {
   number: string;
@@ -22,7 +22,7 @@ const STEPS: Step[] = [
     number: '01',
     duration: '< 6h',
     title: 'Vous remplissez le formulaire, on répond',
-    body: "Lieu, dates, nombre de couverts, type d'événement. Trois lignes suffisent. On vous répond sous 6 heures avec les bonnes questions — ou avec un retour franc si on ne peut pas faire.",
+    body: "Lieu, dates, nombre de couverts, type d'événement. Trois lignes suffisent. On vous répond sous 6 heures — ou avec un retour franc si on ne peut pas faire.",
     icon: Phone,
   },
   {
@@ -35,36 +35,43 @@ const STEPS: Step[] = [
   {
     number: '03',
     duration: '24h',
-    title: 'On présente 2 ou 3 chefs',
-    body: "Pas une liste de 50 profils. Deux, parfois trois. Chacun choisi à la main pour votre mission précise — son parcours, sa cuisine, son tempérament. Vous avez les CVs, les références, et un appel possible avec chacun.",
-    icon: Users,
-  },
-  {
-    number: '04',
-    duration: 'Optionnel',
-    title: 'Vous échangez avec le chef ou faites un essai',
-    body: "Soit un call de 20 minutes avec le chef que vous préférez (menu, vins, allergies, ambiance). Soit un essai en cuisine, sur place ou en repas dégustation. À vous de voir — selon votre niveau d'enjeu.",
-    icon: Video,
-  },
-  {
-    number: '05',
-    duration: 'À la signature',
-    title: 'On cadre le contrat',
-    body: "Devis détaillé, NCC (accord de non-contournement), contrat chef signé électroniquement. Acompte à la signature. Tout est tracé, rien ne reste verbal.",
+    title: 'On vous envoie un devis',
+    body: "Devis détaillé : honoraires chef, frais de coordination, conditions de paiement, durée d'engagement. Aucune zone grise. Vous savez exactement ce que vous payez et à qui ça va.",
     icon: FileText,
   },
   {
+    number: '04',
+    duration: '24h',
+    title: 'On vous présente 2 ou 3 profils',
+    body: "Pas une liste de 50 chefs. Deux, parfois trois. Chacun choisi à la main pour votre mission précise. Vous recevez les CVs, parcours, références — sur dossier.",
+    icon: Users,
+  },
+  {
+    number: '05',
+    duration: 'À votre rythme',
+    title: 'Vous sélectionnez un profil',
+    body: "À cette étape, vous ne parlez pas encore au chef directement. C'est volontaire — sans contrat signé, pas de mise en relation. Si vous voulez creuser un profil, on organise un call à trois (vous, le chef, moi).",
+    icon: MousePointerClick,
+  },
+  {
     number: '06',
-    duration: 'J-7',
-    title: 'Le chef prépare',
-    body: "Menu finalisé avec vous. Liste de courses, fournisseurs locaux, logistique transport. On reste l'interlocuteur unique — si quelque chose change côté client, vous nous appelez, pas le chef.",
-    icon: ChefHat,
+    duration: 'Le jour même',
+    title: 'On signe : contrat de prestation ou contrat d\'essai',
+    body: "Contrat de prestation pour les missions confirmées. Contrat d'essai pour les missions longues où vous voulez tester avant d'engager. Dans les deux cas : signature électronique, NCC (accord de non-contournement), conditions claires.",
+    icon: FileSignature,
   },
   {
     number: '07',
-    duration: 'Sur place',
-    title: 'Le chef arrive et exécute. On coordonne tout.',
-    body: "Présence discrète, exécution cadrée. Tenue irréprochable, anglais si besoin, gestion de l'équipe de salle si vous en avez une. On reste joignable pendant toute la mission. Solde versé au chef sous 4 jours après fin de mission.",
+    duration: 'Après paiement',
+    title: 'Paiement reçu → mise en relation directe',
+    body: "Une fois l'acompte versé, je vous mets en contact direct avec le chef. Vous échangez sur le menu, les vins, les allergies, la logistique. C'est à ce moment-là que la relation chef-client commence — pas avant.",
+    icon: Handshake,
+  },
+  {
+    number: '08',
+    duration: 'Avant + pendant',
+    title: 'Le chef opère. On supervise la logistique.',
+    body: "Le chef gère sa cuisine — menu, courses, équipement, exécution sur place. Nous, on suit la logistique en parallèle : transport, hébergement chef, paiements, ajustements de dernière minute. On reste joignable pendant toute la mission.",
     icon: Sparkles,
   },
 ];
