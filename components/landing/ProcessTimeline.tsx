@@ -21,20 +21,20 @@ const STEPS: Step[] = [
   {
     number: '01',
     duration: '< 6h',
-    title: 'Vous nous appelez ou écrivez',
-    body: "WhatsApp, mail, formulaire. Vous me racontez ce dont vous avez besoin — dates, lieu, nombre de couverts, type d'événement. Pas de questionnaire à rallonge.",
+    title: 'Vous remplissez le formulaire, on répond',
+    body: "Lieu, dates, nombre de couverts, type d'événement. Trois lignes suffisent. On vous répond sous 6 heures avec les bonnes questions — ou avec un retour franc si on ne peut pas faire.",
     icon: Phone,
   },
   {
     number: '02',
     duration: '15 min',
     title: 'On qualifie ensemble',
-    body: "Un appel rapide pour cadrer : niveau de service attendu, contraintes du lieu (cuisine équipée ou pas, distance courses), habitudes alimentaires, langues parlées. On vous dit immédiatement si on peut faire ou si on doit décliner.",
+    body: "Un appel rapide pour cadrer : niveau de service attendu, contraintes du lieu (cuisine équipée ou pas, distance courses), habitudes alimentaires, langues parlées, format de mission (dîner unique, séjour, résidence longue, remplacement).",
     icon: ClipboardList,
   },
   {
     number: '03',
-    duration: '24-48h',
+    duration: '24h',
     title: 'On présente 2 ou 3 chefs',
     body: "Pas une liste de 50 profils. Deux, parfois trois. Chacun choisi à la main pour votre mission précise — son parcours, sa cuisine, son tempérament. Vous avez les CVs, les références, et un appel possible avec chacun.",
     icon: Users,
@@ -42,13 +42,13 @@ const STEPS: Step[] = [
   {
     number: '04',
     duration: 'Optionnel',
-    title: 'Vous échangez avec le chef',
-    body: "Si vous le souhaitez, on cale un call de 20 minutes entre vous et le chef que vous préférez. Vous parlez menu, vins, allergies, ambiance. Souvent, vous savez à la fin du call.",
+    title: 'Vous échangez avec le chef ou faites un essai',
+    body: "Soit un call de 20 minutes avec le chef que vous préférez (menu, vins, allergies, ambiance). Soit un essai en cuisine, sur place ou en repas dégustation. À vous de voir — selon votre niveau d'enjeu.",
     icon: Video,
   },
   {
     number: '05',
-    duration: 'Le jour J du brief',
+    duration: 'À la signature',
     title: 'On cadre le contrat',
     body: "Devis détaillé, NCC (accord de non-contournement), contrat chef signé électroniquement. Acompte à la signature. Tout est tracé, rien ne reste verbal.",
     icon: FileText,
@@ -63,8 +63,8 @@ const STEPS: Step[] = [
   {
     number: '07',
     duration: 'Sur place',
-    title: 'Le chef arrive et exécute',
-    body: "Présence discrète, exécution cadrée. Tenue irréprochable, anglais si besoin, gestion de l'équipe de salle si vous en avez une. Solde versé au chef sous 4 jours après fin de mission.",
+    title: 'Le chef arrive et exécute. On coordonne tout.',
+    body: "Présence discrète, exécution cadrée. Tenue irréprochable, anglais si besoin, gestion de l'équipe de salle si vous en avez une. On reste joignable pendant toute la mission. Solde versé au chef sous 4 jours après fin de mission.",
     icon: Sparkles,
   },
 ];

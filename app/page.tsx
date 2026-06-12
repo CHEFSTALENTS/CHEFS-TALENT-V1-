@@ -340,39 +340,36 @@ export default function ChefTalentsHome() {
       {/* ── PROCESS — timeline animée 7 étapes ─────────────── */}
       <ProcessTimeline />
 
-      {/* ── CE QU'ON NE FAIT PAS ──────────────────────────── */}
-      {/* TODO Thomas — Remplir les chiffres réels (X demandes/mois, Y refusées,
-          3 raisons concrètes). Plus c'est précis, plus c'est crédible. */}
+      {/* ── CE QU'ON FAIT (le vrai spectre) ───────────────── */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Ce qu'on ne fait pas</p>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Ce qu'on couvre</p>
               <h2 className="mt-4 text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
-                Quatre demandes<br />sur dix, on dit non.
+                Du dîner unique<br />à la saison entière.
               </h2>
             </div>
             <div className="lg:col-span-8 space-y-6">
               <p className="text-[18px] font-light leading-8 text-[#59544d] md:text-xl md:leading-relaxed">
-                {/* TODO Thomas : adapter le ratio réel */}
-                On reçoit environ 80 demandes par mois. On en traite 45. Voici pourquoi on dit non aux autres.
+                On accompagne tout le spectre. Le format change, l'exigence reste la même.
               </p>
               <ul className="space-y-4">
                 <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
-                  <p className="font-medium text-[#161616] mb-1">Pas de missions de moins de 4 jours hors yacht.</p>
-                  <p className="text-[15px] text-[#59544d] leading-7">Sur un dîner unique, vous avez besoin d'un traiteur, pas d'un chef privé. On vous oriente vers le bon prestataire.</p>
+                  <p className="font-medium text-[#161616] mb-1">Création d'événement sur mesure</p>
+                  <p className="text-[15px] text-[#59544d] leading-7">Déjeuner privé, dîner d'anniversaire, soirée à thème. Menu construit avec vous, chef sélectionné pour son style, gestion complète du jour J.</p>
                 </li>
                 <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
-                  <p className="font-medium text-[#161616] mb-1">Pas de mariages.</p>
-                  <p className="text-[15px] text-[#59544d] leading-7">Ce n'est pas notre métier. Les contraintes événementielles sont différentes — on connaît des wedding planners qui font ça mieux que nous.</p>
+                  <p className="font-medium text-[#161616] mb-1">Missions résidentielles</p>
+                  <p className="text-[15px] text-[#59544d] leading-7">Villa l'été, chalet l'hiver, yacht en Méditerranée. De quelques jours à plusieurs semaines, avec un chef intégré au quotidien de la maison.</p>
                 </li>
                 <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
-                  <p className="font-medium text-[#161616] mb-1">Pas de mission qu'on ne peut pas honorer dignement.</p>
-                  <p className="text-[15px] text-[#59544d] leading-7">Pas de chef libre sur les dates, lieu hors zone de nos profils, budget trop tendu pour qu'un chef vive correctement la mission. On préfère décliner que mal exécuter.</p>
+                  <p className="font-medium text-[#161616] mb-1">Remplacements et missions ponctuelles</p>
+                  <p className="text-[15px] text-[#59544d] leading-7">Votre chef habituel est indisponible ? On trouve un remplaçant aligné sur son style sous 48h. Aussi pour les besoins ponctuels (week-end, événement familial).</p>
                 </li>
               </ul>
               <p className="text-[15px] italic text-[#7d756a] pt-2">
-                Quand on refuse, on dit pourquoi. Et si possible, on vous oriente vers un confrère.
+                Si on ne peut pas faire — pas le bon chef sur les dates, lieu hors zone — on vous le dit franchement et on vous oriente.
               </p>
             </div>
           </div>
