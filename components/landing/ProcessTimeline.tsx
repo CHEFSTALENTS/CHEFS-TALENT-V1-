@@ -157,7 +157,7 @@ function Step({ step, index }: { step: Step; index: number }) {
       </div>
 
       {/* Carte de contenu */}
-      <div className="rounded-[24px] border border-[#d8d1c7] bg-white p-6 md:p-8 transition-colors duration-700"
+      <div className="rounded-[24px] border border-[#c9bfb1] bg-[#f6f1ea] p-6 md:p-8 transition-colors duration-700"
         style={{
           borderColor: inView ? '#a09890' : '#d8d1c7',
         }}

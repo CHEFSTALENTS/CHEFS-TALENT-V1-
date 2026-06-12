@@ -254,7 +254,7 @@ export default function ChefTalentsHome() {
                   <motion.div key={dest.name} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }}>
                     <Link
                       href={`/destinations/chef-prive-${dest.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/'/g, '-')}`}
-                      className="group flex flex-col items-start rounded-[20px] border border-[#d8d1c7] bg-white px-4 py-4 transition hover:border-[#a09890] hover:shadow-sm"
+                      className="group flex flex-col items-start rounded-[20px] border border-[#c9bfb1] bg-[#f6f1ea] px-4 py-4 transition hover:border-[#8a7f73] hover:shadow-sm"
                     >
                       <span className="text-xl mb-2">{dest.emoji}</span>
                       <p className="text-[14px] font-medium text-[#161616] group-hover:text-[#3f3a34]">{dest.name}</p>
@@ -270,7 +270,7 @@ export default function ChefTalentsHome() {
 
       {/* ── WHY US ────────────────────────────────────────── */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
-        <div className="mx-auto max-w-7xl rounded-[32px] border border-[#d8d1c7] bg-white px-8 py-10 md:px-12 md:py-14">
+        <div className="mx-auto max-w-7xl rounded-[32px] border border-[#c9bfb1] bg-[#f6f1ea] px-8 py-10 md:px-12 md:py-14">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
               <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Comment on valide un chef</p>
@@ -386,15 +386,15 @@ export default function ChefTalentsHome() {
                 On accompagne tout le spectre. Le format change, l'exigence reste la même.
               </p>
               <ul className="space-y-4">
-                <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
+                <li className="rounded-[20px] border border-[#c9bfb1] bg-[#f6f1ea] p-5">
                   <p className="font-medium text-[#161616] mb-1">Création d'événement sur mesure</p>
                   <p className="text-[15px] text-[#59544d] leading-7">Déjeuner privé, dîner d'anniversaire, soirée à thème. Menu construit avec vous, chef sélectionné pour son style, gestion complète du jour J.</p>
                 </li>
-                <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
+                <li className="rounded-[20px] border border-[#c9bfb1] bg-[#f6f1ea] p-5">
                   <p className="font-medium text-[#161616] mb-1">Missions résidentielles</p>
                   <p className="text-[15px] text-[#59544d] leading-7">Villa l'été, chalet l'hiver, yacht en Méditerranée. De quelques jours à plusieurs semaines, avec un chef intégré au quotidien de la maison.</p>
                 </li>
-                <li className="rounded-[20px] border border-[#d8d1c7] bg-white p-5">
+                <li className="rounded-[20px] border border-[#c9bfb1] bg-[#f6f1ea] p-5">
                   <p className="font-medium text-[#161616] mb-1">Remplacements et missions ponctuelles</p>
                   <p className="text-[15px] text-[#59544d] leading-7">Votre chef habituel est indisponible ? On trouve un remplaçant aligné sur son style sous 48h. Aussi pour les besoins ponctuels (week-end, événement familial).</p>
                 </li>
@@ -450,7 +450,7 @@ export default function ChefTalentsHome() {
       {/* ── À PROPOS ──────────────────────────────────────── */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
         <div className="mx-auto max-w-7xl">
-          <div className="rounded-[32px] border border-[#d8d1c7] bg-white overflow-hidden">
+          <div className="rounded-[32px] border border-[#c9bfb1] bg-[#f6f1ea] overflow-hidden">
             <div className="grid lg:grid-cols-12">
               <div className="lg:col-span-4 relative h-72 lg:h-auto min-h-[320px]">
                 <Image
@@ -616,18 +616,18 @@ function MiniTrust({ title, text }: { title: string; text: string }) {
 
 function ValueCard({ text }: { text: string }) {
   return (
-    <div className="rounded-[24px] border border-[#d8d1c7] bg-[#fcfbf9] px-6 py-7">
-      <p className="text-[17px] font-light leading-8 text-[#3f3a34]">{text}</p>
+    <div className="rounded-[24px] border border-[#c9bfb1] bg-[#f6f1ea] px-6 py-7">
+      <p className="text-[17px] font-light leading-8 text-[#2a2620]">{text}</p>
     </div>
   );
 }
 
 function StepCard({ number, title, text }: { number: string; title: string; text: string }) {
   return (
-    <div className="rounded-[28px] border border-[#d8d1c7] bg-white px-6 py-8">
-      <p className="text-[11px] uppercase tracking-[0.24em] text-[#8a7f73]">{number}</p>
+    <div className="rounded-[28px] border border-[#c9bfb1] bg-[#f6f1ea] px-6 py-8">
+      <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b6357]">{number}</p>
       <h3 className="mt-4 text-[2rem] font-serif leading-tight text-[#161616]">{title}</h3>
-      <p className="mt-4 text-[17px] font-light leading-8 text-[#59544d]">{text}</p>
+      <p className="mt-4 text-[17px] font-light leading-8 text-[#3f3a34]">{text}</p>
     </div>
   );
 }
