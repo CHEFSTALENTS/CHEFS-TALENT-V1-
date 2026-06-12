@@ -123,14 +123,9 @@ export default function ChefTalentsHome() {
 
       {/* ── HERO ──────────────────────────────────────────── */}
       <section className="relative h-[90vh] min-h-[680px] w-full overflow-hidden">
-        {/* Vidéo humaine — TODO Thomas : déposer le fichier dans public/videos/hero.mp4
-            (et idéalement aussi public/videos/hero.webm pour l'optimisation).
-            Le poster est l'ancienne image, qui sert de fallback :
-              - pendant le chargement de la vidéo
-              - sur les navigateurs qui désactivent l'autoplay (iOS low power mode, etc.)
-              - quand le fichier vidéo est absent.
-            Une fois la vidéo en place, tu peux remplacer le poster par une frame
-            extraite de ta vidéo (ffmpeg : `ffmpeg -i hero.mp4 -vf "select=eq(n\,30)" -vframes 1 hero-poster.jpg`).
+        {/* Vidéo hero — extraite et compressée depuis 0612.mov (33 MB → 1.3 MB)
+            Poster = frame extraite de la vidéo (cohérence visuelle dès le chargement).
+            autoplay+muted+playsInline = compat iOS, preload metadata = LCP léger.
         */}
         <motion.video
           autoPlay
@@ -138,14 +133,13 @@ export default function ChefTalentsHome() {
           muted
           playsInline
           preload="metadata"
-          poster="/images/editorial/hero-chef-talents.jpg"
+          poster="/images/editorial/hero-poster.jpg"
           className="absolute inset-0 h-full w-full object-cover object-center"
           initial={{ scale: 1.06, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
         >
           <source src="/videos/hero.mp4" type="video/mp4" />
-          <source src="/videos/hero.webm" type="video/webm" />
         </motion.video>
         <motion.div
           className="absolute inset-0 bg-black/58"
