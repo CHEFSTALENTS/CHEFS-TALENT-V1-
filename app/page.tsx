@@ -465,14 +465,8 @@ export default function ChefTalentsHome() {
               <div className="lg:col-span-8 px-8 py-10 md:px-12 md:py-14 flex flex-col justify-center">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-[#7d756a] mb-4">Pourquoi j'ai monté ça</p>
                 <h2 className="text-[2.2rem] font-serif leading-[1.04] text-[#161616] md:text-4xl mb-6">Thomas Delcroix</h2>
-                {/* TODO Thomas — Remplacer le bloc anecdote par TON moment réel.
-                    Format : une date précise + un lieu précis + ce qui a mal tourné
-                    + ce que tu as compris. Du concret, pas joli. */}
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-4 max-w-2xl">
                   J'ai été chef privé pendant trois ans avant de monter Chefs Talents. Plus de 200 missions, sur la Côte d'Azur, en Méditerranée à bord de yachts privés, dans des chalets l'hiver.
-                </p>
-                <p className="text-[18px] font-light leading-8 text-[#59544d] mb-4 max-w-2xl italic">
-                  [TODO Thomas — Insère ici l'anecdote précise : « Été 2022, on m'appelle en urgence sur un yacht à [lieu] parce que le chef envoyé par la conciergerie n'avait jamais bossé en cuisine pro. C'est là que j'ai compris : personne ne vérifie rien dans ce métier. »]
                 </p>
                 <p className="text-[18px] font-light leading-8 text-[#59544d] mb-8 max-w-2xl">
                   J'ai monté Chefs Talents en juin 2023 pour qu'il existe un endroit où, quand vous appelez, vous parlez à quelqu'un qui connaît personnellement chaque chef de la liste.

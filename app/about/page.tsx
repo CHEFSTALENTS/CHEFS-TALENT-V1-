@@ -91,10 +91,8 @@ export default function AboutPage() {
             </div>
 
             <div>
-              {/* TODO Thomas — Si tu as une anecdote précise (mission ratée, moment "déclic"),
-                  insère-la ici. Format : date + lieu + ce qui a mal tourné + ce que tu as compris. */}
               <p className="text-[20px] font-light leading-9 text-[#59544d]">
-                Juin 2023, j'ai monté Chefs Talents. L'idée tient en une phrase : un endroit où, quand vous appelez, vous parlez à quelqu'un qui connaît personnellement chaque chef de la liste. Pas une marketplace. Pas un algorithme. Trois personnes au téléphone.
+                Juin 2023, j'ai monté Chefs Talents. L'idée tient en une phrase : un endroit où, quand vous appelez, vous parlez à quelqu'un qui connaît personnellement chaque chef de la liste. Pas une marketplace. Pas un algorithme. Un interlocuteur unique.
               </p>
             </div>
 
