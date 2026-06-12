@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import ProcessTimeline from '@/components/landing/ProcessTimeline';
+import FloatingCTA from '@/components/landing/FloatingCTA';
 
 const SUPPORT_EMAIL = 'contact@chefstalents.com';
 const WHATSAPP_NUMBER_E164 = '33756827612';
@@ -117,16 +118,35 @@ export default function ChefTalentsHome() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
+      {/* CTA flottant mobile — apparaît au scroll, donne toujours un point d'action */}
+      <FloatingCTA whatsappHref={whatsappHref} />
+
       {/* ── HERO ──────────────────────────────────────────── */}
       <section className="relative h-[90vh] min-h-[680px] w-full overflow-hidden">
-        <motion.img
-          src="/images/editorial/hero-chef-talents.jpg"
-          alt="Chef privé"
+        {/* Vidéo humaine — TODO Thomas : déposer le fichier dans public/videos/hero.mp4
+            (et idéalement aussi public/videos/hero.webm pour l'optimisation).
+            Le poster est l'ancienne image, qui sert de fallback :
+              - pendant le chargement de la vidéo
+              - sur les navigateurs qui désactivent l'autoplay (iOS low power mode, etc.)
+              - quand le fichier vidéo est absent.
+            Une fois la vidéo en place, tu peux remplacer le poster par une frame
+            extraite de ta vidéo (ffmpeg : `ffmpeg -i hero.mp4 -vf "select=eq(n\,30)" -vframes 1 hero-poster.jpg`).
+        */}
+        <motion.video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          poster="/images/editorial/hero-chef-talents.jpg"
           className="absolute inset-0 h-full w-full object-cover object-center"
           initial={{ scale: 1.06, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
-        />
+        >
+          <source src="/videos/hero.mp4" type="video/mp4" />
+          <source src="/videos/hero.webm" type="video/webm" />
+        </motion.video>
         <motion.div
           className="absolute inset-0 bg-black/58"
           initial={{ opacity: 0 }}
@@ -259,22 +279,22 @@ export default function ChefTalentsHome() {
         <div className="mx-auto max-w-7xl rounded-[32px] border border-[#d8d1c7] bg-white px-8 py-10 md:px-12 md:py-14">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Ce qu'on attend d'un chef</p>
+              <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#7d756a]">Comment on valide un chef</p>
               <h2 className="text-[2.55rem] font-serif leading-[1.04] text-[#161616] md:text-5xl">
-                Six critères<br />qu'on ne lâche pas.
+                Un process<br />de vérification.
               </h2>
             </div>
             <div className="lg:col-span-8">
               <p className="max-w-[24rem] text-[18px] font-light leading-8 text-[#59544d] md:max-w-3xl md:text-xl md:leading-relaxed">
-                Pas de candidature spontanée. On rencontre chaque chef, on appelle ses anciens employeurs, on goûte sa cuisine. Voilà ce qu'on vérifie.
+                Pas de candidature acceptée d'office. Chaque chef passe par un process d'évaluation avant d'intégrer le réseau.
               </p>
               <div className="mt-8 grid gap-4 md:grid-cols-2">
-                <ValueCard text="Minimum 5 ans en cuisine pro, dont 2 ans en privé ou yacht" />
-                <ValueCard text="Au moins 3 références vérifiables qu'on a appelées" />
-                <ValueCard text="Français + anglais courants. Espagnol ou italien selon le terrain" />
-                <ValueCard text="Capacité à gérer seul : sourcing, courses, mise en place, service" />
-                <ValueCard text="Tenue et posture irréprochables — on en parle ouvertement avec eux" />
-                <ValueCard text="Discrétion absolue. Aucune photo client sur leurs réseaux" />
+                <ValueCard text="Vérification du background professionnel et du parcours" />
+                <ValueCard text="Évaluation du niveau cuisine (CV, références, cas pratiques)" />
+                <ValueCard text="NDA signé — confidentialité contractuelle dès l'entrée" />
+                <ValueCard text="Vérification des langues parlées et de la mobilité" />
+                <ValueCard text="Statut professionnel en règle (micro-entreprise, salariat, KBIS)" />
+                <ValueCard text="Engagement écrit sur la discrétion réseaux sociaux" />
               </div>
               <div className="mt-10">
                 <Link href="/conciergeries" className="inline-flex min-h-[60px] w-full items-center justify-center rounded-full bg-[#161616] px-7 py-4 text-sm font-medium text-white transition hover:bg-black sm:w-auto">
@@ -337,8 +357,25 @@ export default function ChefTalentsHome() {
         </div>
       </section>
 
-      {/* ── PROCESS — timeline animée 7 étapes ─────────────── */}
+      {/* ── PROCESS — timeline animée 8 étapes ─────────────── */}
       <ProcessTimeline />
+
+      {/* ── CTA INTERMÉDIAIRE — après la timeline ────────── */}
+      <section className="bg-[#f4efe8] px-6 pb-24 md:px-10 lg:px-16">
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="text-[18px] font-light leading-8 text-[#59544d] md:text-xl">
+            Vous voyez le déroulé. Reste à nous dire ce dont vous avez besoin.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link href="/request" className="inline-flex min-h-[56px] w-full items-center justify-center rounded-full bg-[#161616] px-8 text-sm font-medium text-white transition hover:bg-black sm:w-auto">
+              Décrire mon besoin <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <a href={whatsappHref} target="_blank" rel="noreferrer" className="inline-flex min-h-[56px] w-full items-center justify-center rounded-full border border-[#161616]/20 px-8 text-sm font-medium text-[#161616] transition hover:bg-[#161616]/5 sm:w-auto">
+              WhatsApp — Thomas
+            </a>
+          </div>
+        </div>
+      </section>
 
       {/* ── CE QU'ON FAIT (le vrai spectre) ───────────────── */}
       <section className="px-6 py-24 md:px-10 lg:px-16">
@@ -371,6 +408,14 @@ export default function ChefTalentsHome() {
               <p className="text-[15px] italic text-[#7d756a] pt-2">
                 Si on ne peut pas faire — pas le bon chef sur les dates, lieu hors zone — on vous le dit franchement et on vous oriente.
               </p>
+              <div className="pt-4 flex flex-col gap-3 sm:flex-row">
+                <Link href="/request" className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-[#161616] px-7 text-sm font-medium text-white transition hover:bg-black sm:w-auto">
+                  Démarrer une demande <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                <Link href="/conciergeries" className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-[#161616]/20 px-7 text-sm font-medium text-[#161616] transition hover:bg-[#161616]/5 sm:w-auto">
+                  Accès conciergeries
+                </Link>
+              </div>
             </div>
           </div>
         </div>
