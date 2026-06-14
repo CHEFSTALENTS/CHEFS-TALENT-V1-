@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import MarkPaidModal from '../_components/MarkPaidModal';
 import MarkContractSignedModal from './_components/MarkContractSignedModal';
+import ChefBriefModal from './_components/ChefBriefModal';
 import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
@@ -64,6 +65,12 @@ type MissionRow = {
   contract_signed_url?: string | null;
   contract_signed_file_url?: string | null;
   contract_signed_notes?: string | null;
+  // Brief chef (rappel J-1, non bloquant)
+  brief_chef_content?: string | null;
+  brief_chef_sent_at?: string | null;
+  brief_chef_channel?: 'email' | 'whatsapp' | null;
+  brief_chef_rc_pro_url?: string | null;
+  brief_chef_rc_pro_file_path?: string | null;
   offered_at: string | null;
   offer_email_sent_at: string | null;
   confirmed_at: string | null;
@@ -134,6 +141,7 @@ export default function AdminMissionDetailPage() {
   const [showChefPaidModal, setShowChefPaidModal] = useState(false);
   const [showMissionEditor, setShowMissionEditor] = useState(false);
   const [showContractSignedModal, setShowContractSignedModal] = useState(false);
+  const [showChefBriefModal, setShowChefBriefModal] = useState(false);
 
   // Signature requests (pour validation auto « Contrat signé » dans timeline)
   const [signatureRequests, setSignatureRequests] = useState<Array<{ kind: string; status: string; completedAt: string | null }>>([]);
@@ -356,6 +364,12 @@ export default function AdminMissionDetailPage() {
           </button>
         </div>
       )}
+
+      {/* Bandeau brief chef — rappel J-1 (NON BLOQUANT) ou confirmation envoyé */}
+      <ChefBriefBanner
+        mission={mission}
+        onOpen={() => setShowChefBriefModal(true)}
+      />
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -911,6 +925,21 @@ export default function AdminMissionDetailPage() {
         />
       )}
 
+      {/* Modal Brief chef (générer + éditer + marquer envoyé) */}
+      {showChefBriefModal && (
+        <ChefBriefModal
+          missionId={mission.id}
+          chefName={mission.chef_name}
+          chefEmail={mission.chef_email}
+          chefPhone={null}
+          onClose={() => setShowChefBriefModal(false)}
+          onSaved={() => {
+            setShowChefBriefModal(false);
+            refresh();
+          }}
+        />
+      )}
+
       {/* Modal Marquer chef payé — montant pré-rempli = chef_amount */}
       {showChefPaidModal && (
         <ChefPaidModal
@@ -1078,6 +1107,106 @@ function ContactLine({
       {external && <ExternalLink className="w-3 h-3 text-white/35 flex-none" />}
     </a>
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+// CHEF BRIEF BANNER — Rappel J-1 (non bloquant)
+//
+// Affiche un bandeau ambre quand :
+//   - mission status='confirmed' ET payment_status='paid'
+//   - ET start_date dans ≤1 jour
+//   - ET brief_chef_sent_at IS NULL
+//
+// Affiche un bandeau vert (succès) si brief_chef_sent_at non null.
+// Aucun bandeau quand pas applicable.
+// ─────────────────────────────────────────────────────────────
+function ChefBriefBanner({
+  mission,
+  onOpen,
+}: {
+  mission: MissionRow;
+  onOpen: () => void;
+}) {
+  const isConfirmed = mission.status === 'confirmed' || mission.status === 'completed';
+  const isPaid = mission.payment_status === 'paid' || mission.payment_status === 'partial';
+
+  // Calcule J-X (nombre de jours avant le start_date)
+  const startMs = mission.start_date ? new Date(mission.start_date).getTime() : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysUntilStart = startMs
+    ? Math.ceil((startMs - today.getTime()) / 86400000)
+    : null;
+
+  const briefSent = !!mission.brief_chef_sent_at;
+  const briefShouldRemind = isConfirmed && isPaid && daysUntilStart !== null && daysUntilStart <= 1 && !briefSent;
+
+  if (briefSent) {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3 flex items-start gap-3">
+        <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-emerald-100 inline-flex items-center gap-1.5">
+            🟢 Brief chef envoyé
+          </div>
+          <div className="text-[11px] text-emerald-200/75 mt-0.5">
+            Envoyé via {mission.brief_chef_channel === 'whatsapp' ? 'WhatsApp' : 'email'} · {mission.brief_chef_sent_at ? new Date(mission.brief_chef_sent_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+          </div>
+        </div>
+        <button
+          onClick={onOpen}
+          className="flex-shrink-0 text-[11px] text-emerald-200/85 hover:text-emerald-100 underline underline-offset-2"
+        >
+          Voir / éditer
+        </button>
+      </div>
+    );
+  }
+
+  if (briefShouldRemind) {
+    const dayLabel = daysUntilStart === 0 ? 'aujourd\'hui' : daysUntilStart === 1 ? 'demain' : `dans ${daysUntilStart} jours`;
+    return (
+      <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse mt-1.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-amber-100">
+            🟠 Brief chef à envoyer
+          </div>
+          <div className="text-[11px] text-amber-200/85 mt-0.5">
+            La mission démarre {dayLabel}. Pense à envoyer le brief au chef ({mission.chef_name || mission.chef_email}) avant le jour J. Outil de rappel — non bloquant.
+          </div>
+        </div>
+        <button
+          onClick={onOpen}
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-amber-950 text-xs font-semibold hover:bg-amber-400 transition inline-flex items-center gap-1.5"
+        >
+          <Sparkles className="w-3 h-3" />
+          Générer le brief
+        </button>
+      </div>
+    );
+  }
+
+  // Mission confirmée + payée mais on n'est pas encore à J-1 : on affiche
+  // un bouton discret pour permettre la préparation à l'avance.
+  if (isConfirmed && isPaid && daysUntilStart !== null && daysUntilStart > 1 && daysUntilStart <= 14) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 flex items-center gap-3">
+        <Sparkles className="w-3.5 h-3.5 text-white/45 flex-shrink-0" />
+        <div className="flex-1 text-[11px] text-white/55">
+          Mission dans {daysUntilStart} jours — tu peux préparer le brief chef dès maintenant.
+        </div>
+        <button
+          onClick={onOpen}
+          className="flex-shrink-0 text-[11px] text-white/65 hover:text-white underline underline-offset-2"
+        >
+          Préparer le brief
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function ActionBtn({
