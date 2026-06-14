@@ -7,6 +7,7 @@ import { adminFetchRaw } from '@/lib/adminFetch';
 import MarkPaidModal from '../_components/MarkPaidModal';
 import MarkContractSignedModal from './_components/MarkContractSignedModal';
 import ChefBriefModal from './_components/ChefBriefModal';
+import MarkSentManuallyChip from '@/app/admin/_components/MarkSentManuallyChip';
 import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
@@ -369,6 +370,7 @@ export default function AdminMissionDetailPage() {
       <ChefBriefBanner
         mission={mission}
         onOpen={() => setShowChefBriefModal(true)}
+        onRefresh={refresh}
       />
 
       {/* Header */}
@@ -1123,9 +1125,11 @@ function ContactLine({
 function ChefBriefBanner({
   mission,
   onOpen,
+  onRefresh,
 }: {
   mission: MissionRow;
   onOpen: () => void;
+  onRefresh: () => void;
 }) {
   const isConfirmed = mission.status === 'confirmed' || mission.status === 'completed';
   const isPaid = mission.payment_status === 'paid' || mission.payment_status === 'partial';
@@ -1176,13 +1180,21 @@ function ChefBriefBanner({
             La mission démarre {dayLabel}. Pense à envoyer le brief au chef ({mission.chef_name || mission.chef_email}) avant le jour J. Outil de rappel — non bloquant.
           </div>
         </div>
-        <button
-          onClick={onOpen}
-          className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-amber-950 text-xs font-semibold hover:bg-amber-400 transition inline-flex items-center gap-1.5"
-        >
-          <Sparkles className="w-3 h-3" />
-          Générer le brief
-        </button>
+        <div className="flex-shrink-0 flex items-center gap-2">
+          <MarkSentManuallyChip
+            endpoint={`/api/admin/missions/${encodeURIComponent(mission.id)}/brief-sent`}
+            onMarked={onRefresh}
+            label="Déjà envoyé"
+            buttonClassName="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-400/30 bg-amber-500/5 text-amber-200 text-xs font-medium hover:bg-amber-500/15 transition"
+          />
+          <button
+            onClick={onOpen}
+            className="px-3 py-1.5 rounded-lg bg-amber-500 text-amber-950 text-xs font-semibold hover:bg-amber-400 transition inline-flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3 h-3" />
+            Générer le brief
+          </button>
+        </div>
       </div>
     );
   }
@@ -1196,12 +1208,20 @@ function ChefBriefBanner({
         <div className="flex-1 text-[11px] text-white/55">
           Mission dans {daysUntilStart} jours — tu peux préparer le brief chef dès maintenant.
         </div>
-        <button
-          onClick={onOpen}
-          className="flex-shrink-0 text-[11px] text-white/65 hover:text-white underline underline-offset-2"
-        >
-          Préparer le brief
-        </button>
+        <div className="flex-shrink-0 flex items-center gap-2">
+          <MarkSentManuallyChip
+            endpoint={`/api/admin/missions/${encodeURIComponent(mission.id)}/brief-sent`}
+            onMarked={onRefresh}
+            label="Déjà envoyé"
+            buttonClassName="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-white/65 hover:text-white hover:bg-white/5 transition"
+          />
+          <button
+            onClick={onOpen}
+            className="text-[11px] text-white/65 hover:text-white underline underline-offset-2"
+          >
+            Préparer le brief
+          </button>
+        </div>
       </div>
     );
   }

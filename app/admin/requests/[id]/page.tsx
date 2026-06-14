@@ -13,6 +13,7 @@ import ProposalsList from './_components/ProposalsList';
 import NccPanel from './_components/NccPanel';
 import QuotePanel from './_components/QuotePanel';
 import QualifyClientModal from './_components/QualifyClientModal';
+import MarkSentManuallyChip from '@/app/admin/_components/MarkSentManuallyChip';
 import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
@@ -314,6 +315,14 @@ export default function AdminRequestDetailPage() {
           >
             ✨ Qualifier client
           </button>
+
+          {/* Si Thomas a déjà contacté le client hors plateforme : marquer envoyé */}
+          <MarkSentManuallyChip
+            endpoint={`/api/admin/requests/${encodeURIComponent(id)}/send-qualification`}
+            onMarked={refresh}
+            label="Déjà qualifié"
+            buttonClassName="px-3 py-2 rounded-xl border border-white/15 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition inline-flex items-center gap-1.5"
+          />
 
           {/* Raccourci primaire : crée le devis (ou y atterrit) en 1 clic.
               Évite à Thomas de devoir scroller jusqu'au QuotePanel à chaque fois. */}
