@@ -12,6 +12,7 @@ import { adminFetchRaw } from '@/lib/adminFetch';
 import ProposalsList from './_components/ProposalsList';
 import NccPanel from './_components/NccPanel';
 import QuotePanel from './_components/QuotePanel';
+import QualifyClientModal from './_components/QualifyClientModal';
 import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
 
 type MatchedChef = import('@/services/matching').MatchedChefV2;
@@ -163,6 +164,9 @@ export default function AdminRequestDetailPage() {
     id: string; email: string; name: string; phone?: string | null;
   } | null>(null);
 
+  // ✅ State pour la modal de qualification client (Claude génère + envoi)
+  const [showQualifyModal, setShowQualifyModal] = useState(false);
+
   // Compteur incrémenté à chaque création/modif de proposal pour forcer
   // le refresh du composant ProposalsList (passé en `key`).
   const [proposalsBump, setProposalsBump] = useState(0);
@@ -280,6 +284,20 @@ export default function AdminRequestDetailPage() {
         />
       )}
 
+      {/* ✅ MODAL — Qualifier client (Claude génère + envoi email/WhatsApp) */}
+      {showQualifyModal && req && (
+        <QualifyClientModal
+          requestId={id}
+          clientHasEmail={!!(req.contact as any)?.email}
+          clientHasPhone={!!(req.contact as any)?.phone}
+          onClose={() => setShowQualifyModal(false)}
+          onSent={() => {
+            // Refresh : la request passe automatiquement en in_review
+            refresh();
+          }}
+        />
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
         <div>
@@ -288,6 +306,15 @@ export default function AdminRequestDetailPage() {
           <div className="text-sm text-white/55 mt-1">{formatDates(req)} • {req.guestCount ?? '—'} pers • {formatBudget(req.budgetRange)}</div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Qualifier en 1 clic — Claude rédige + envoi email ou WhatsApp */}
+          <button
+            onClick={() => setShowQualifyModal(true)}
+            className="px-3 py-2 rounded-xl border border-amber-400/40 bg-amber-400/15 text-sm text-amber-100 font-medium hover:bg-amber-400/25 transition"
+            title="Génère un message court (email + WhatsApp) pour qualifier ce client en 1 clic"
+          >
+            ✨ Qualifier client
+          </button>
+
           {/* Raccourci primaire : crée le devis (ou y atterrit) en 1 clic.
               Évite à Thomas de devoir scroller jusqu'au QuotePanel à chaque fois. */}
           <button
