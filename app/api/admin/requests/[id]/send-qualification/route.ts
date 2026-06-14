@@ -60,13 +60,20 @@ export async function POST(
   const channel = body.channel === 'whatsapp' ? 'whatsapp' : body.channel === 'email' ? 'email' : null;
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   const edited = !!body.edited;
+  // ✅ manual=true → Thomas indique avoir DÉJÀ envoyé hors plateforme.
+  // On skip l'envoi Resend / le deeplink WhatsApp, on trace juste en DB.
+  const manual = body.manual === true;
 
   if (!channel) {
     return NextResponse.json({ ok: false, error: 'CHANNEL_REQUIRED (email | whatsapp)' }, { status: 400 });
   }
-  if (!content) {
+  // En mode manuel, content peut être vide → on stocke un marqueur.
+  if (!manual && !content) {
     return NextResponse.json({ ok: false, error: 'CONTENT_REQUIRED' }, { status: 400 });
   }
+  const tracedContent = manual
+    ? (content || '(Marqué envoyé manuellement hors plateforme)')
+    : content;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,7 +92,10 @@ export async function POST(
   // ─── Envoi selon canal ────────────────────────────────────────
   let whatsappDeeplink: string | null = null;
 
-  if (channel === 'email') {
+  // Mode manuel → on saute complètement l'envoi, on trace juste en DB
+  if (manual) {
+    // ne fait rien — on passe directement à la trace ci-dessous
+  } else if (channel === 'email') {
     const to = request.email;
     if (!to) {
       return NextResponse.json({ ok: false, error: 'CLIENT_EMAIL_MISSING' }, { status: 400 });
@@ -122,7 +132,7 @@ export async function POST(
   const updates: Record<string, any> = {
     qualified_contact_sent_at: nowIso,
     qualified_contact_channel: channel,
-    qualified_contact_message: content,
+    qualified_contact_message: tracedContent,
     qualified_contact_edited: edited,
   };
 

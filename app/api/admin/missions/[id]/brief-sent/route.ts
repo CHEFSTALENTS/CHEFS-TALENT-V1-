@@ -41,13 +41,20 @@ export async function POST(
   const channel = body.channel === 'whatsapp' ? 'whatsapp' : body.channel === 'email' ? 'email' : null;
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   const edited = !!body.edited;
+  // ✅ manual=true → Thomas indique avoir DÉJÀ envoyé le brief hors plateforme.
+  // Aucun envoi à faire (cet endpoint n'envoie rien de toute façon) — on
+  // accepte juste un content vide et on stocke un marqueur.
+  const manual = body.manual === true;
 
   if (!channel) {
     return NextResponse.json({ ok: false, error: 'CHANNEL_REQUIRED (email | whatsapp)' }, { status: 400 });
   }
-  if (!content) {
+  if (!manual && !content) {
     return NextResponse.json({ ok: false, error: 'CONTENT_REQUIRED' }, { status: 400 });
   }
+  const tracedContent = manual
+    ? (content || '(Marqué envoyé manuellement hors plateforme)')
+    : content;
 
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -55,7 +62,7 @@ export async function POST(
     .update({
       brief_chef_sent_at: new Date().toISOString(),
       brief_chef_channel: channel,
-      brief_chef_content: content,
+      brief_chef_content: tracedContent,
       brief_chef_edited: edited,
       updated_at: new Date().toISOString(),
     })
