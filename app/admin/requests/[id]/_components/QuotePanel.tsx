@@ -11,6 +11,7 @@ import { Loader2, FileText, Download, Eye, PenSquare, Trash2, FilePlus, Trending
 import { adminFetchRaw } from '@/lib/adminFetch';
 import { computeMarginsPerOption, computeTotalCosts, getMarginTone, fmtEur } from '@/lib/quotes/margin';
 import QuoteAgentChat from './QuoteAgentChat';
+import ImportPdfQuoteModal from './ImportPdfQuoteModal';
 import ChangeQuoteStatusModal from '@/app/admin/_components/ChangeQuoteStatusModal';
 import QuoteDocumentsPanel from '@/app/admin/_components/QuoteDocumentsPanel';
 
@@ -142,6 +143,7 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
   const [downloading, setDownloading] = useState<'pdf' | 'html' | null>(null);
   const [changingStatus, setChangingStatus] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
+  const [importingPdf, setImportingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuote = useCallback(async () => {
@@ -324,6 +326,16 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
           <Sparkles className="w-3.5 h-3.5 mr-1.5" />
           Discuter avec l'agent
         </button>
+        {quote.status === 'draft' && (
+          <button
+            onClick={() => setImportingPdf(true)}
+            className="inline-flex items-center px-3 py-1.5 rounded-lg border border-indigo-400/30 bg-indigo-400/10 hover:bg-indigo-400/20 text-xs text-indigo-200"
+            title="Charge un PDF de devis : Claude le lit et reporte les chiffres dans ce brouillon. Possible uniquement en statut draft."
+          >
+            <FilePlus className="w-3.5 h-3.5 mr-1.5" />
+            Lire un PDF de devis
+          </button>
+        )}
         <button
           onClick={() => setShowDocs((v) => !v)}
           className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-xs ${
@@ -372,6 +384,17 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
           quoteId={quote.id}
           onClose={() => setChatting(false)}
           onQuoteUpdated={fetchQuote}
+        />
+      )}
+
+      {importingPdf && (
+        <ImportPdfQuoteModal
+          quoteId={quote.id}
+          onClose={() => setImportingPdf(false)}
+          onApplied={async () => {
+            setImportingPdf(false);
+            await fetchQuote();
+          }}
         />
       )}
 
