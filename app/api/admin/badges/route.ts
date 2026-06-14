@@ -34,23 +34,25 @@ export async function GET(req: Request) {
   const in7d = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
 
   // Lance en parallèle pour rester rapide.
-  const [reqRes, quotesRes, missionsRes] = await Promise.all([
+  const [reqRes, reqPitchedRes, quotesRes, missionsRes] = await Promise.all([
     supabase
       .from('client_requests')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'new'),
+
+    // Pitched = chefs envoyés au client, on attend sa réponse. Compté
+    // séparément pour que Thomas voie distinctement "5 en attente
+    // client" vs "3 à qualifier".
+    supabase
+      .from('client_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pitched'),
 
     supabase
       .from('quotes')
       .select('id', { count: 'exact', head: true })
       .in('status', ['draft', 'sent']),
 
-    // Missions confirmées qui démarrent dans ≤7j. On ne filtre PAS par
-    // contract_signed_at ici car la colonne peut ne pas exister sur tous
-    // les environnements ; le check fin (contrat + NCC) est fait dans
-    // /api/admin/missions/at-risk pour le widget. Ici on prend une borne
-    // haute (toutes les missions imminentes) — c'est un signal de "à
-    // surveiller" plutôt qu'un compteur exact de risque.
     supabase
       .from('missions')
       .select('id', { count: 'exact', head: true })
@@ -64,6 +66,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     requestsNew: reqRes.error ? 0 : (reqRes.count ?? 0),
+    requestsPitched: reqPitchedRes.error ? 0 : (reqPitchedRes.count ?? 0),
     quotesAlive: quotesRes.error ? 0 : (quotesRes.count ?? 0),
     missionsRisk: missionsRes.error ? 0 : (missionsRes.count ?? 0),
     generatedAt: new Date().toISOString(),

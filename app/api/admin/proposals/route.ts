@@ -175,13 +175,23 @@ export async function POST(req: Request) {
       }
     }
 
-    // Met à jour la request en 'in_review' si elle est encore 'new'
+    // Auto-transition du statut de la request :
+    // - Si la proposal est créée en 'pitched' (brief envoyé au chef → on
+    //   présente le chef au client) → request passe en 'pitched' (sauf
+    //   si déjà assigned/closed/declined)
+    // - Sinon (proposal juste shortlisted) → on garde 'in_review' minimum
+    //   pour sortir de "À traiter"
     if (requestId) {
+      const targetStatus = status === 'pitched' ? 'pitched' : 'in_review';
+      const fromStatuses = status === 'pitched'
+        ? ['new', 'in_review']  // promote depuis new ou in_review vers pitched
+        : ['new'];               // shortlisted ne fait que sortir de 'new'
+
       await supabase
         .from('client_requests')
-        .update({ status: 'in_review' })
+        .update({ status: targetStatus })
         .eq('id', requestId)
-        .eq('status', 'new');
+        .in('status', fromStatuses);
     }
 
     return NextResponse.json({
