@@ -9,7 +9,7 @@ import { adminFetchRaw } from '@/lib/adminFetch';
 import NewRequestModal from './_components/NewRequestModal';
 
 type TypeFilter = 'all' | 'b2b' | 'b2c';
-type StatusGroup = 'todo' | 'active' | 'closed';
+type StatusGroup = 'todo' | 'qualified' | 'pitched' | 'active' | 'closed';
 
 export default function AdminRequestsPage() {
   const [loading, setLoading] = useState(true);
@@ -98,9 +98,13 @@ export default function AdminRequestsPage() {
   };
 
   const counts = useMemo(() => {
-    const isTodo = (r: RequestEntity) => r.status === 'new' || r.status === 'in_review';
+    // "À traiter" = uniquement 'new' (l'action est de notre côté : qualifier)
+    const isTodo = (r: RequestEntity) => r.status === 'new';
+    // "Qualifiées" = in_review (en cours côté CT, parler au client / matcher)
+    const isQualified = (r: RequestEntity) => r.status === 'in_review';
+    // "En attente client" = pitched (chefs envoyés, on attend retour client)
+    const isPitched = (r: RequestEntity) => (r.status as string) === 'pitched';
     const isActive = (r: RequestEntity) => r.status === 'assigned';
-    // Le bucket "Clos" inclut maintenant aussi les demandes refusées.
     const isClosed = (r: RequestEntity) =>
       r.status === 'closed' || (r.status as string) === 'declined';
 
@@ -114,6 +118,8 @@ export default function AdminRequestsPage() {
 
     return {
       todo: base.filter(isTodo).length,
+      qualified: base.filter(isQualified).length,
+      pitched: base.filter(isPitched).length,
       active: base.filter(isActive).length,
       closed: base.filter(isClosed).length,
       all: base.length,
@@ -130,7 +136,9 @@ export default function AdminRequestsPage() {
     };
 
     const matchStatusGroup = (r: RequestEntity) => {
-      if (statusGroup === 'todo') return r.status === 'new' || r.status === 'in_review';
+      if (statusGroup === 'todo') return r.status === 'new';
+      if (statusGroup === 'qualified') return r.status === 'in_review';
+      if (statusGroup === 'pitched') return (r.status as string) === 'pitched';
       if (statusGroup === 'active') return r.status === 'assigned';
       // Clos : closed + declined
       return r.status === 'closed' || (r.status as string) === 'declined';
@@ -153,8 +161,9 @@ export default function AdminRequestsPage() {
     const priority = (r: RequestEntity) => {
       if (r.status === 'new') return 0;
       if (r.status === 'in_review') return 1;
-      if (r.status === 'assigned') return 2;
-      return 3;
+      if ((r.status as string) === 'pitched') return 2;
+      if (r.status === 'assigned') return 3;
+      return 4;
     };
 
     return [...requests]
@@ -202,11 +211,13 @@ export default function AdminRequestsPage() {
         </div>
       </div>
 
-      {/* KPI quick */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <Kpi title="À traiter" value={counts.todo} hint="new + in_review" active={statusGroup === 'todo'} onClick={() => setStatusGroup('todo')} />
-        <Kpi title="En cours" value={counts.active} hint="assigned" active={statusGroup === 'active'} onClick={() => setStatusGroup('active')} />
-        <Kpi title="Clos" value={counts.closed} hint="closed" active={statusGroup === 'closed'} onClick={() => setStatusGroup('closed')} />
+      {/* KPI quick — 5 buckets : à qualifier / qualifiées / en attente client / confirmées / clos */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+        <Kpi title="À qualifier" value={counts.todo} hint="new — action requise" active={statusGroup === 'todo'} onClick={() => setStatusGroup('todo')} />
+        <Kpi title="Qualifiées" value={counts.qualified} hint="in_review — sélection chefs" active={statusGroup === 'qualified'} onClick={() => setStatusGroup('qualified')} />
+        <Kpi title="En attente client" value={counts.pitched} hint="pitched — chefs envoyés" active={statusGroup === 'pitched'} onClick={() => setStatusGroup('pitched')} />
+        <Kpi title="Confirmées" value={counts.active} hint="assigned" active={statusGroup === 'active'} onClick={() => setStatusGroup('active')} />
+        <Kpi title="Clos" value={counts.closed} hint="closed + declined" active={statusGroup === 'closed'} onClick={() => setStatusGroup('closed')} />
       </div>
 
       {/* Toolbar */}

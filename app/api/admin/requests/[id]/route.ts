@@ -59,6 +59,7 @@ export async function GET(
 const ALLOWED_STATUSES = new Set([
   'new',
   'in_review',
+  'pitched',
   'assigned',
   'closed',
   'declined',

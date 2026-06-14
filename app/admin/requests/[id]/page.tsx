@@ -568,8 +568,25 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const s = (status || '').toLowerCase();
-  const cls = s === 'new' ? 'bg-amber-500/15 text-amber-200 border-amber-500/20' : s === 'in_review' ? 'bg-sky-500/15 text-sky-200 border-sky-500/20' : s === 'assigned' ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20' : 'bg-white/10 text-white/60 border-white/10';
-  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{s || '—'}</span>;
+  // 'new' = action requise immédiate (rouge), 'in_review' = qualifié,
+  // 'pitched' = en attente client (orange/ambre distinct), 'assigned' = gagné
+  const cls =
+    s === 'new'        ? 'bg-red-500/15 text-red-200 border-red-500/30 font-semibold'
+  : s === 'in_review'  ? 'bg-sky-500/15 text-sky-200 border-sky-500/20'
+  : s === 'pitched'    ? 'bg-amber-500/20 text-amber-200 border-amber-500/30'
+  : s === 'assigned'   ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/20'
+  : s === 'closed'     ? 'bg-white/5 text-white/45 border-white/10'
+  : s === 'declined'   ? 'bg-stone-500/10 text-stone-400 border-stone-500/20'
+  :                      'bg-white/10 text-white/60 border-white/10';
+  const label =
+    s === 'new'        ? 'à qualifier'
+  : s === 'in_review'  ? 'qualifié'
+  : s === 'pitched'    ? '⏳ en attente client'
+  : s === 'assigned'   ? '✓ confirmée'
+  : s === 'closed'     ? 'clôturée'
+  : s === 'declined'   ? 'refusée'
+  : (s || '—');
+  return <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs border ${cls}`}>{label}</span>;
 }
 
 function SmallBadge({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'ok' | 'warn' | 'bad'; }) {
