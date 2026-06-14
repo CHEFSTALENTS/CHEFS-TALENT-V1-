@@ -121,6 +121,11 @@ export async function POST(
     tva_rate_pct: 20.0,
     currency: 'EUR',
 
+    // CRM : propage l'apporteur + canal depuis la request si présents.
+    // Ça matérialise le funnel demande → devis → mission sans saisie manuelle.
+    partner_id: request.partner_id || null,
+    source: request.acquisition_channel || null,
+
     created_by_admin_email: auth.user.email,
   };
 

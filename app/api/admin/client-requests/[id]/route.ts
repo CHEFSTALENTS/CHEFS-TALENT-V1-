@@ -71,6 +71,22 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
       patch.notes = strOrNull(body.notes);
     }
 
+    // CRM : apporteur + canal d'acquisition
+    if (body.partnerId !== undefined) {
+      patch.partner_id = body.partnerId || null;
+    }
+    if (body.acquisitionChannel !== undefined) {
+      const allowed = ['partner', 'google_ads', 'direct', 'word_of_mouth', 'press', 'other'];
+      const v = body.acquisitionChannel;
+      if (v === null || v === '') {
+        patch.acquisition_channel = null;
+      } else if (!allowed.includes(String(v).toLowerCase())) {
+        return NextResponse.json({ error: `Invalid acquisitionChannel: ${v}` }, { status: 400 });
+      } else {
+        patch.acquisition_channel = String(v).toLowerCase();
+      }
+    }
+
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: 'No valid field to update' }, { status: 400 });
     }
@@ -80,7 +96,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
       .from(TABLE)
       .update(patch)
       .eq('id', id)
-      .select('id, email, full_name, first_name, phone, company_name, client_type, notes')
+      .select('id, email, full_name, first_name, phone, company_name, client_type, notes, partner_id, acquisition_channel')
       .single();
 
     if (error) {
@@ -103,6 +119,8 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
         companyName: data.company_name,
         clientType: data.client_type,
         notes: data.notes,
+        partnerId: data.partner_id,
+        acquisitionChannel: data.acquisition_channel,
       },
     });
   } catch (e: any) {

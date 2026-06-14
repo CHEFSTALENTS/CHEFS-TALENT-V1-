@@ -50,11 +50,36 @@ export async function POST(req: Request) {
       ? Number(clientAmount) - Number(chefAmount)
       : null;
 
+    // 0. Propagation CRM : si requestId est fourni, on récupère
+    //    partner_id + acquisition_channel pour les recopier sur la
+    //    mission (chaîne demande → devis → mission cohérente).
+    //    Permet à body.partnerId/source de surcharger si besoin.
+    let propagatedPartnerId: string | null = body.partnerId || null;
+    let propagatedSource: string | null = null;
+    if (body.source !== undefined) {
+      const allowed = ['partner', 'google_ads', 'direct', 'word_of_mouth', 'press', 'other'];
+      const s = body.source ? String(body.source).toLowerCase() : null;
+      propagatedSource = s && allowed.includes(s) ? s : null;
+    }
+    if (requestId && !propagatedPartnerId) {
+      const { data: req } = await supabase
+        .from('client_requests')
+        .select('partner_id, acquisition_channel')
+        .eq('id', requestId)
+        .maybeSingle();
+      if (req) {
+        propagatedPartnerId = req.partner_id || null;
+        if (!propagatedSource) propagatedSource = req.acquisition_channel || null;
+      }
+    }
+
     // 1. Créer la mission
     const { data: mission, error } = await supabase
       .from('missions')
       .insert({
         request_id: requestId || null,
+        partner_id: propagatedPartnerId,
+        source: propagatedSource,
         chef_id: chefId,
         chef_email: chefEmail,
         chef_name: chefName || null,
