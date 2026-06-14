@@ -144,6 +144,9 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
   const [changingStatus, setChangingStatus] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
   const [importingPdf, setImportingPdf] = useState(false);
+  // Flag : si true, ouvrir le modal d'import PDF dès que le brouillon
+  // est créé (pour le bouton "Lire un PDF" du panneau "pas encore de devis").
+  const [pendingPdfImport, setPendingPdfImport] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchQuote = useCallback(async () => {
@@ -165,6 +168,15 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
   }, [requestId]);
 
   useEffect(() => { fetchQuote(); }, [fetchQuote]);
+
+  // Quand un brouillon est créé via le flow "Lire un PDF direct", on
+  // ouvre le modal d'import dès que le devis est en place.
+  useEffect(() => {
+    if (quote && pendingPdfImport) {
+      setImportingPdf(true);
+      setPendingPdfImport(false);
+    }
+  }, [quote, pendingPdfImport]);
 
   async function generate() {
     setError(null);
@@ -209,21 +221,35 @@ export default function QuotePanel({ requestId }: { requestId: string }) {
     return (
       <div className="space-y-3">
         <p className="text-sm text-white/65">
-          Aucun devis pour cette demande. Génère-le pré-rempli depuis les infos de la demande, tu pourras éditer les sections après.
+          Aucun devis pour cette demande. Génère-le pré-rempli depuis la demande, ou importe directement un PDF que tu as déjà.
         </p>
         {error && (
           <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">
             {error}
           </div>
         )}
-        <button
-          onClick={generate}
-          disabled={creating}
-          className="inline-flex items-center px-4 py-2 rounded-xl bg-sky-400 text-sky-950 text-sm font-medium hover:bg-sky-300 disabled:opacity-50"
-        >
-          {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FilePlus className="w-4 h-4 mr-2" />}
-          {creating ? 'Génération…' : 'Générer un devis'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={generate}
+            disabled={creating}
+            className="inline-flex items-center px-4 py-2 rounded-xl bg-sky-400 text-sky-950 text-sm font-medium hover:bg-sky-300 disabled:opacity-50"
+          >
+            {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FilePlus className="w-4 h-4 mr-2" />}
+            {creating ? 'Génération…' : 'Générer un devis'}
+          </button>
+          <button
+            onClick={async () => {
+              setPendingPdfImport(true);
+              await generate();
+            }}
+            disabled={creating}
+            className="inline-flex items-center px-4 py-2 rounded-xl border border-indigo-400/30 bg-indigo-400/10 hover:bg-indigo-400/20 text-sm text-indigo-200 disabled:opacity-50"
+            title="Crée un brouillon vide et ouvre directement la lecture du PDF. Idéal si tu as déjà rédigé le devis ailleurs."
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Lire un PDF de devis
+          </button>
+        </div>
       </div>
     );
   }
