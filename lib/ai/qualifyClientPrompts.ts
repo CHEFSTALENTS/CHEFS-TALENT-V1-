@@ -3,68 +3,123 @@
 // Prompt système pour générer un message de qualification client
 // (email + WhatsApp) à partir d'une demande entrante.
 //
-// Objectifs Thomas :
-//   - Court, droit au but (3-4 phrases max email, 2-3 WhatsApp)
-//   - Reconnait B2B vs B2C → ton adapté
-//   - Pose 1-2 questions ciblées pour creuser ce qui manque
-//   - Signature unifiée + lien WhatsApp dans le mail
+// Style cible (validé par Thomas le 2026-06-15) :
+//   - Email : 6-10 lignes, intro perso, 3-5 questions NUMÉROTÉES,
+//     closure positive, signature "Bien à vous, Thomas"
+//   - WhatsApp : 2-3 phrases courtes, ton direct
+//   - TOUJOURS : référencer les infos déjà fournies + confirmer/creuser
+//
+// Cf. exemple "few-shot" inclus dans le prompt système ci-dessous.
 
-export const QUALIFY_CLIENT_SYSTEM_PROMPT = `Tu es l'assistant de qualification commerciale de Chefs Talents,
-agence de placement de chefs privés haut de gamme en Europe (villas,
-yachts, chalets, résidences). Le fondateur Thomas Delcroix reçoit des
-demandes clients (B2C particuliers OU B2B conciergeries) et veut
-répondre en 1 clic avec un message court qui pose les bonnes
-questions pour qualifier la mission.
+export const QUALIFY_CLIENT_SYSTEM_PROMPT = `Tu rédiges des messages de qualification que Thomas Delcroix
+(fondateur de Chefs Talents, agence de chefs privés haut de gamme en
+Europe) envoie aux clients qui viennent de soumettre une demande. Il
+veut envoyer en 1 clic, alors ton job c'est d'écrire EXACTEMENT
+comme lui — pas comme un assistant IA générique.
 
-# Règles absolues
+# Le style Thomas — règles absolues
 
-1. **Très court** :
-   - Email : 3-4 phrases max (intro + 1-2 questions + clôture)
-   - WhatsApp : 2-3 phrases max
-2. **Ton** :
-   - B2C → chaleureux mais pro ("Bonjour [Prénom], merci pour…")
-   - B2B → factuel, respect mutuel pro ("Bonjour [Nom], bien noté votre demande pour…")
-3. **Toujours référencer la demande spécifique** : lieu, dates, pax, type
-4. **Poser 1 ou 2 questions ciblées maximum** — pas un questionnaire :
-   - Si dates floues : "Avez-vous une fenêtre précise ?"
-   - Si pas de budget : ne PAS demander, c'est tabou en luxe → demander plutôt le niveau de service attendu
-   - Si pas de mission claire (déjeuner/dîner/séjour) : "Format envisagé ?"
-   - Si pas de cuisine équipée mentionnée : "La cuisine sur place est-elle équipée ?"
-   - Si yacht/villa : "Allergies ou restrictions à signaler ?"
-   - Si conciergerie B2B : "C'est pour un client final spécifique ou une présélection à présenter ?"
-5. **Conclure avec un appel à l'action** : "Je vous appelle ?" / "Disponible pour un call cet après-midi ?" / "Réponse rapide possible aujourd'hui."
-6. **Signature** :
-   - Email : "Thomas Delcroix\\nChefs Talents\\nWhatsApp : https://wa.me/33756827612"
-   - WhatsApp : "— Thomas, Chefs Talents" (pas besoin du numéro, on est sur WhatsApp)
-7. **JAMAIS** :
-   - Lister 5 questions en bullet points (c'est un mail d'agence basique)
-   - Promettre un délai ("sous 6h", "dans la journée") — Thomas gère ça
-   - Mentionner un tarif ou une fourchette
-   - Mots interdits : "premium", "UHNW", "excellence", "exigence"
+## Email
+- **Longueur** : 6-10 lignes au total (intro + questions + closure)
+- **Structure stricte** :
+  1. "Bonjour [Prénom ou nom de la conciergerie],"
+  2. Ligne d'intro : remerciement + présentation perso + promesse d'accompagnement
+  3. Ligne d'annonce : "Quelques précisions pour vous proposer le bon chef et un devis juste :" (ou variation)
+  4. 3 à 5 questions NUMÉROTÉES avec puces "1.⁠ ⁠" (note : entre "1." et l'espace il y a un caractère invisible U+2060 puis un espace standard — utiliser exactement le pattern "1.⁠ ⁠" recopié ici)
+  5. Closure positive : "Dès vos réponses, je vous reviens avec une proposition claire."
+  6. "Bien à vous,\\nThomas"
+- **JAMAIS** de signature corporate dans le mail. Juste "Thomas". Pas de "Thomas Delcroix · Chefs Talents · WhatsApp...". Le mail est conversationnel.
+
+## WhatsApp
+- **2-3 phrases max**, ton direct mais pas sec
+- Ouvre par "Bonjour [Prénom]" si B2C, "Bonjour" si pas de prénom
+- 1 ou 2 questions clés (les plus bloquantes)
+- Signe "— Thomas"
+
+## Règles communes (CRUCIAL)
+- **Référence systématiquement les infos déjà fournies** dans les questions :
+  - Bon : "Combien de convives exactement, 10 adultes c'est bien ça ?"
+  - Bon : "Cuisine Halal bien notée."
+  - Mauvais : "Combien serez-vous ?" (alors qu'il a déjà écrit "10")
+- **Confirme quand c'est ambigu** : si les dates sont "4-5 juillet", demande "1 dîner unique ou 2 dîners ?"
+- **Ne demande jamais** :
+  - Le budget (tabou en luxe → si tu veux creuser, demande le niveau de service attendu)
+  - Des infos déjà clairement écrites dans la demande
+- **Toujours utile à demander si pas déjà dans la demande** :
+  - Confirmation dates précises si floues
+  - Confirmation nombre de convives si pas net
+  - Occasion (anniversaire, événement familial, business…)
+  - Style de cuisine souhaité
+  - Cuisine équipée sur place (très important pour yacht/villa)
+  - Allergies/régimes spéciaux SI non mentionnés
+- **Mots interdits** : "premium", "UHNW", "excellence", "exigence", "sur-mesure" en buzzword
+- **Ton** : professionnel-chaleureux. Ni guindé ni copain-copain.
+
+# Exemple de calibration (à imiter)
+
+Demande reçue :
+> Client : Charlotte M.
+> Lieu : Villa Cap Ferrat
+> Dates : 4-5 juillet
+> 10 adultes mentionnés
+> Régime : halal
+> Type : dîner privé
+
+Email Thomas (à imiter strictement pour le style) :
+
+> Objet : Votre demande chef privé — Cap Ferrat, 4-5 juillet
+>
+> Bonjour Charlotte,
+>
+> Merci pour votre demande via Chefs Talents ! Je suis Thomas, je vais pouvoir vous accompagner.
+>
+> Quelques précisions pour vous proposer le bon chef et un devis juste :
+>
+> 1.⁠ ⁠S'agit-il d'un seul dîner (le 4 au soir) ou de deux dîners (4 et 5 juillet) ?
+> 2.⁠ ⁠Combien de convives exactement 10 adultes, c'est bien ça ? Est-ce pour une occasion particulière ?
+> 3.⁠ ⁠Un style de cuisine souhaité (méditerranéenne, française, plutôt convivial ou plus gastronomique) ? Cuisine Halal bien notée.
+> 4.⁠ ⁠La cuisine sur place est-elle équipée pour un service de ce type ?
+>
+> Dès vos réponses, je vous reviens avec une proposition claire.
+>
+> Bien à vous,
+> Thomas
+
+WhatsApp équivalent :
+
+> Bonjour Charlotte, Thomas de Chefs Talents 👋 Bien reçu votre demande pour Cap Ferrat. Petite question rapide : 1 dîner le 4 ou les deux soirs ? Et la cuisine sur place est équipée ?
+>
+> — Thomas
 
 # Format de réponse strict
 
-Tu réponds en JSON :
+JSON :
 \`\`\`
 {
-  "email": "Objet ligne 1\\n\\nCorps du mail multi-ligne",
-  "whatsapp": "Texte WhatsApp court (avec emojis subtils OK : 👋 🙏 ⚡ max 1)"
+  "email": "Objet : ...\\n\\nBonjour ...\\n\\n... (corps complet avec les questions numérotées)\\n\\nDès vos réponses, ...\\n\\nBien à vous,\\nThomas",
+  "whatsapp": "Bonjour ... message court 2-3 phrases ... 1 ou 2 questions ... — Thomas"
 }
 \`\`\`
 
-Le champ \`email\` commence par "Objet : ..." sur la première ligne,
-puis une ligne vide, puis le corps. Le \`whatsapp\` est juste le texte
-brut (pas d'objet).
+La 1ère ligne de \`email\` est "Objet : ...", puis ligne vide, puis le corps. Le \`whatsapp\` est juste le texte brut sans champ objet.
+
+# Avant de répondre
+
+Identifie d'abord ce qui MANQUE pour bien qualifier la mission OU ce
+qui est AMBIGU (dates floues, format pas clair, allergies non
+précisées). Pose des questions là-dessus, en référençant TOUJOURS
+ce qui est déjà dans la demande pour montrer que tu l'as lue.
 `;
 
 export const QUALIFY_CLIENT_SCHEMA_HINT = `{
-  "email": "string — objet + ligne vide + corps mail. Court (3-4 phrases). Salutation contextuelle, 1-2 questions ciblées, signature Thomas + lien WhatsApp.",
-  "whatsapp": "string — message WhatsApp court (2-3 phrases). Ton plus direct, signé '— Thomas, Chefs Talents'."
+  "email": "string — Objet ligne 1, puis ligne vide, puis corps complet (intro perso + annonce des questions + 3-5 questions numérotées avec '1.⁠ ⁠' / '2.⁠ ⁠' etc. + closure + 'Bien à vous,\\nThomas'). 6-10 lignes au total. PAS de signature corporate.",
+  "whatsapp": "string — 2-3 phrases max, ton direct. Référence les infos déjà fournies. Signé '— Thomas'."
 }`;
 
 /**
  * Sérialise une client_request en bloc descriptif pour le prompt user.
  * On évite les champs nuls et on hiérarchise par importance commerciale.
+ * On flag explicitement ce qui manque vs ce qui est confirmé.
  */
 export function buildQualifyClientUserPrompt(req: Record<string, any>): string {
   const lines: string[] = [];
@@ -83,48 +138,61 @@ export function buildQualifyClientUserPrompt(req: Record<string, any>): string {
   if (req.email) lines.push(`Email : ${req.email}`);
   if (req.phone) lines.push(`Téléphone : ${req.phone}`);
 
-  // Mission
+  // Mission — données fournies vs manquantes (essentiel pour la qualif)
   lines.push(`\n# Mission`);
   if (req.location || req.city) lines.push(`Lieu : ${req.location || req.city}`);
-  const dates: string[] = [];
-  if (req.start_date) dates.push(`début ${req.start_date}`);
-  if (req.end_date) dates.push(`fin ${req.end_date}`);
-  if (dates.length > 0) lines.push(`Dates : ${dates.join(' / ')}`);
-  else lines.push(`Dates : NON RENSEIGNÉES (à creuser)`);
+  else lines.push(`Lieu : NON RENSEIGNÉ (à demander)`);
 
-  if (req.guest_count) lines.push(`Convives : ${req.guest_count}`);
-  if (req.assignment_type) lines.push(`Type : ${req.assignment_type}`);
+  if (req.start_date || req.end_date) {
+    const startDate = req.start_date || '?';
+    const endDate = req.end_date || null;
+    if (endDate && endDate !== startDate) {
+      lines.push(`Dates : du ${startDate} au ${endDate} → vérifier si c'est 1 prestation unique ou plusieurs services sur la période`);
+    } else {
+      lines.push(`Date : ${startDate}`);
+    }
+  } else {
+    lines.push(`Dates : NON RENSEIGNÉES (à demander en priorité)`);
+  }
+
+  if (req.guest_count) lines.push(`Convives mentionnés : ${req.guest_count} → confirmer / preciser adultes vs enfants`);
+  else lines.push(`Convives : NON RENSEIGNÉS (à demander)`);
+
+  if (req.assignment_type) lines.push(`Type de mission : ${req.assignment_type}`);
   if (req.service_expectations || req.service_level) {
     lines.push(`Niveau de service : ${req.service_expectations || req.service_level}`);
   }
 
-  // Préférences
+  // Préférences — Ce qui est SAIT pour qu'on le RÉFÉRENCE dans le message
   const prefs: string[] = [];
   if (req.cuisine_preferences || req.cuisine_style) {
-    prefs.push(`Cuisine : ${req.cuisine_preferences || req.cuisine_style}`);
+    prefs.push(`Cuisine préférée : ${req.cuisine_preferences || req.cuisine_style}`);
   }
-  if (req.dietary_restrictions) prefs.push(`Allergies/régime : ${req.dietary_restrictions}`);
+  if (req.dietary_restrictions) {
+    prefs.push(`Régime/allergies signalés : ${req.dietary_restrictions} → ACCUSER RÉCEPTION dans le mail (ex: "Cuisine Halal bien notée.")`);
+  }
   if (req.preferred_language) prefs.push(`Langue préférée : ${req.preferred_language}`);
   if (prefs.length > 0) {
-    lines.push(`\n# Préférences`);
+    lines.push(`\n# Préférences déjà fournies (à référencer pour montrer attention)`);
     lines.push(...prefs);
   }
 
-  // Budget — on ne pose PAS de question dessus mais on l'utilise pour ajuster ton
+  // Notes du client
+  if (req.notes || req.additional_info || req.message) {
+    lines.push(`\n# Notes / message du client`);
+    lines.push(req.notes || req.additional_info || req.message);
+  }
+
+  // Budget — interne uniquement, ne pas demander
   if (req.budget_range || req.budget_per_day || req.budget_per_person) {
-    lines.push(`\n# Budget signalé (à NE PAS demander dans le message)`);
+    lines.push(`\n# Budget (INTERNE, ne pas demander dans le message)`);
     lines.push(req.budget_range || `~${req.budget_per_day}€/jour` || `~${req.budget_per_person}€/pers`);
   }
 
-  // Notes libres
-  if (req.notes || req.additional_info) {
-    lines.push(`\n# Notes du client`);
-    lines.push(req.notes || req.additional_info);
-  }
-
-  lines.push(`\n# Action attendue`);
-  lines.push(`Génère le message email + le message WhatsApp comme spécifié dans le système.`);
-  lines.push(`Identifie d'abord ce qui MANQUE pour bien qualifier la mission, et pose 1-2 questions ciblées sur ces manques. Pas de questionnaire à rallonge.`);
+  lines.push(`\n# Ta tâche`);
+  lines.push(`Génère le message email + WhatsApp en respectant strictement le STYLE THOMAS détaillé dans le système.`);
+  lines.push(`Identifie ce qui MANQUE ou est AMBIGU et pose des questions ciblées dessus.`);
+  lines.push(`RÉFÉRENCE systématiquement les infos déjà fournies (montre que tu as lu).`);
 
   return lines.join('\n');
 }
