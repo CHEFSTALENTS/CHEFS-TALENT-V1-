@@ -165,6 +165,18 @@ export async function POST(req: Request) {
       message: strOrNull(body.message),
       // marqueur de provenance pour différencier des demandes formulaire
       source: strOrNull(body.source) || 'admin',
+
+      // CRM : qui a apporté ce lead + canal d'acquisition
+      // partner_id : FK partners (optionnel)
+      // acquisition_channel : enum CRM (partner/google_ads/direct/...)
+      partner_id: strOrNull(body.partnerId),
+      acquisition_channel: (() => {
+        const allowed = ['partner', 'google_ads', 'direct', 'word_of_mouth', 'press', 'other'];
+        const v = strOrNull(body.acquisitionChannel);
+        if (!v) return null;
+        const low = v.toLowerCase();
+        return allowed.includes(low) ? low : null;
+      })(),
     };
 
     const { data, error } = await supabaseAdmin

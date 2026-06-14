@@ -102,7 +102,16 @@ export default function AdminPartnerDetailPage() {
     );
   }
 
-  const { partner, missions, quotes, interactions, stats } = data;
+  const { partner, missions, quotes, interactions, requests, stats } = data;
+
+  // Helper local : montant HT d'un devis (final ou première option)
+  const quoteHt = (q: any): number => {
+    const final = Number(q.final_amount_ht_eur || 0);
+    if (final > 0) return final;
+    const first = Array.isArray(q.tariff_options) && q.tariff_options[0]
+      ? Number(q.tariff_options[0].ht_eur || 0) : 0;
+    return first;
+  };
 
   return (
     <div className="space-y-6">
@@ -163,7 +172,25 @@ export default function AdminPartnerDetailPage() {
         <KpiCard label="Missions apportées" value={stats.missionsCount} sub="hors annulées" />
         <KpiCard label="Commission HT" value={fmtEur(stats.totalCommissionHtEur)} sub="cumul" tone="violet" />
         <KpiCard label="CA client HT" value={fmtEur(stats.totalClientHtEur)} sub="cumul" tone="emerald" />
-        <KpiCard label="Interactions" value={stats.interactionsCount} sub={partner.last_contact_at ? `dernier ${fmtDate(partner.last_contact_at)}` : 'aucune'} tone="sky" />
+        <KpiCard label="Pipeline devis HT" value={fmtEur(stats.pipelineHtEur)} sub={`${stats.quotesSent} devis envoyés`} tone="sky" />
+      </section>
+
+      {/* Funnel : entrées → devis → acceptés → missions */}
+      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="text-xs text-white/55 uppercase tracking-wider font-semibold mb-3">
+          Funnel apporteur · {stats.requestsCount} demandes → {stats.quotesCount} devis → {stats.missionsCount} missions
+        </div>
+        <div className="grid grid-cols-4 gap-2 text-center">
+          <FunnelStep label="Demandes" value={stats.funnel.requests} />
+          <FunnelStep label="Devis envoyés" value={stats.funnel.quotes_sent_or_more} pct={stats.conversion.request_to_quote} />
+          <FunnelStep label="Acceptés" value={stats.funnel.quotes_accepted} pct={stats.conversion.quote_to_accept} />
+          <FunnelStep label="Missions confirmées" value={stats.funnel.missions_confirmed} pct={stats.conversion.accept_to_mission} accent />
+        </div>
+        {(stats.quotesDeclined > 0 || stats.quotesExpired > 0) && (
+          <div className="mt-3 text-[10px] text-white/45 text-right">
+            {stats.quotesDeclined} refusés · {stats.quotesExpired} expirés
+          </div>
+        )}
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -285,9 +312,41 @@ export default function AdminPartnerDetailPage() {
                   <li key={q.id} className="flex items-center justify-between gap-3 py-2 text-xs">
                     <div className="min-w-0">
                       <div className="text-white/85 truncate">{q.reference} — {q.destinataire_nom || '—'}</div>
-                      <div className="text-[10px] text-white/40">{q.lieu || '—'} · {q.status}</div>
+                      <div className="text-[10px] text-white/40">
+                        {q.lieu || '—'} · <span className={`px-1.5 py-0.5 rounded ${QUOTE_STATUS_TONE[q.status] || 'bg-white/5 text-white/60'}`}>{q.status}</span>
+                        {q.issued_at && ` · ${fmtDate(q.issued_at)}`}
+                      </div>
                     </div>
-                    <div className="font-mono text-emerald-200">{fmtEur(Number(q.final_amount_ht_eur || 0))}</div>
+                    <div className="text-right">
+                      <div className="font-mono text-emerald-200">{fmtEur(quoteHt(q))}</div>
+                      <div className="text-[10px] text-white/40">HT</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
+          {/* Demandes liées */}
+          {requests && requests.length > 0 && (
+            <Panel title={`Demandes apportées (${requests.length})`}>
+              <ul className="divide-y divide-white/10">
+                {requests.map((r: any) => (
+                  <li key={r.id}>
+                    <Link
+                      href={`/admin/requests/${encodeURIComponent(r.id)}`}
+                      className="flex items-center justify-between gap-3 px-2 py-2 hover:bg-white/[0.03] rounded-lg"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-white truncate">
+                          {r.full_name || r.email} {r.client_type === 'b2b' && r.company_name ? `· ${r.company_name}` : ''}
+                        </div>
+                        <div className="text-[10px] text-white/45">
+                          {fmtDate(r.created_at)}{r.location && ` · ${r.location}`}
+                          {r.status && ` · ${r.status}`}
+                        </div>
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -311,6 +370,31 @@ export default function AdminPartnerDetailPage() {
           onClose={() => setShowInteractionModal(false)}
           onCreated={() => { setShowInteractionModal(false); fetchData(); }}
         />
+      )}
+    </div>
+  );
+}
+
+const QUOTE_STATUS_TONE: Record<string, string> = {
+  draft: 'bg-white/5 text-white/65 border border-white/10',
+  sent: 'bg-sky-400/15 text-sky-200 border border-sky-400/25',
+  accepted: 'bg-emerald-400/15 text-emerald-200 border border-emerald-400/25',
+  declined: 'bg-red-400/15 text-red-200 border border-red-400/25',
+  expired: 'bg-amber-400/15 text-amber-200 border border-amber-400/25',
+  cancelled: 'bg-white/5 text-white/40 border border-white/10',
+};
+
+function FunnelStep({
+  label, value, pct, accent,
+}: {
+  label: string; value: number; pct?: number; accent?: boolean;
+}) {
+  return (
+    <div className={`rounded-xl border p-3 ${accent ? 'border-emerald-400/30 bg-emerald-400/[0.06]' : 'border-white/10 bg-white/[0.02]'}`}>
+      <div className="text-[10px] text-white/55 uppercase tracking-wider">{label}</div>
+      <div className={`text-2xl font-semibold mt-0.5 ${accent ? 'text-emerald-200' : 'text-white'}`}>{value}</div>
+      {pct !== undefined && (
+        <div className="text-[10px] text-white/45 mt-0.5">{pct}% conv.</div>
       )}
     </div>
   );

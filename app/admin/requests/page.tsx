@@ -211,6 +211,9 @@ export default function AdminRequestsPage() {
         </div>
       </div>
 
+      {/* Bandeau "À deviser" si applicable */}
+      <ToQuoteBanner />
+
       {/* KPI quick — 5 buckets : à qualifier / qualifiées / en attente client / confirmées / clos */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         <Kpi title="À qualifier" value={counts.todo} hint="new — action requise" active={statusGroup === 'todo'} onClick={() => setStatusGroup('todo')} />
@@ -394,6 +397,54 @@ export default function AdminRequestsPage() {
 }
 
 /* ---------------- UI components ---------------- */
+
+function ToQuoteBanner() {
+  const [data, setData] = useState<{ count: number; items: any[] } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const r = await adminFetchRaw('/api/admin/requests/to-quote?since=2&list=1');
+        const json = await r.json();
+        if (mounted && json?.ok && json.count > 0) {
+          setData({ count: json.count, items: json.items || [] });
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  if (!data || data.count === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-4">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-[10px] uppercase tracking-wider text-amber-200 font-semibold bg-amber-400/15 px-2 py-0.5 rounded-full">
+          À deviser · {data.count}
+        </span>
+        <span className="text-xs text-white/65">
+          demande{data.count > 1 ? 's' : ''} en attente d'un devis depuis ≥ 2 jours
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {data.items.slice(0, 6).map((r: any) => (
+          <a
+            key={r.id}
+            href={`/admin/requests/${encodeURIComponent(r.id)}`}
+            className="text-xs px-2 py-1 rounded-md border border-amber-400/25 bg-amber-400/[0.05] text-amber-100 hover:bg-amber-400/15"
+          >
+            {r.full_name || r.email || '—'}
+            {r.company_name && ` · ${r.company_name}`}
+          </a>
+        ))}
+        {data.count > 6 && (
+          <span className="text-[10px] text-white/45 self-center">+ {data.count - 6} autres</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Kpi({ title, value, hint, active, onClick }: { title: string; value: number; hint?: string; active?: boolean; onClick?: () => void; }) {
   return (

@@ -10,6 +10,7 @@ import MissionsPipelinePanel from './_components/MissionsPipelinePanel';
 import CashflowWidget from './_components/CashflowWidget';
 import QuotesWidget from './_components/QuotesWidget';
 import UpcomingMissionsRiskPanel from './_components/UpcomingMissionsRiskPanel';
+import TopPartnersMini from './_components/TopPartnersMini';
 
 type StatusKey = 'new' | 'in_review' | 'assigned' | 'closed';
 
@@ -455,6 +456,9 @@ export default function AdminDashboardPage() {
 
           {/* 📄 Devis — pipeline commercial */}
           <QuotesWidget />
+
+          {/* 👥 Top apporteurs · 30 derniers jours */}
+          <TopPartnersMini />
 
           {/* 💰 Cashflow — échéances à venir + retards à relancer (mission_payments) */}
           <CashflowWidget />

@@ -79,6 +79,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'AMOUNT_HT_REQUIRED' }, { status: 400 });
   }
 
+  // Règle CRM : un devis externe SANS request_id doit obligatoirement
+  // tracer son origine. Évite les devis orphelins qui se baladent sans
+  // contexte (impossible de reconstituer après coup d'où ça vient).
+  if (!body.requestId && (!body.origin || !String(body.origin).trim())) {
+    return NextResponse.json(
+      { ok: false, error: 'ORIGIN_REQUIRED_WHEN_NO_REQUEST',
+        message: 'Pour un devis externe sans demande liée, précise l\'origine (ex: « Reçu par mail le 12/05, conciergerie X »).' },
+      { status: 400 },
+    );
+  }
+
   // Date événement
   let eventDateIso = new Date().toISOString();
   if (body.eventDate) {

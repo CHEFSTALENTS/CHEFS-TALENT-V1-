@@ -47,8 +47,11 @@ export async function GET(req: Request) {
   } catch {}
   const dormantThresholdIso = new Date(Date.now() - dormantDays * 86400000).toISOString();
 
+  // Cutoff "à deviser" : demande en attente d'un devis depuis >= 2 jours
+  const toQuoteCutoffIso = new Date(Date.now() - 2 * 86400000).toISOString();
+
   // Lance en parallèle pour rester rapide.
-  const [reqRes, reqPitchedRes, quotesRes, missionsRes, partnersDormantRes] = await Promise.all([
+  const [reqRes, reqPitchedRes, quotesRes, missionsRes, partnersDormantRes, quotedReqsRes, toQuoteCandidatesRes] = await Promise.all([
     supabase
       .from('client_requests')
       .select('id', { count: 'exact', head: true })
@@ -81,7 +84,31 @@ export async function GET(req: Request) {
       .select('id', { count: 'exact', head: true })
       .neq('status', 'archived')
       .or(`last_contact_at.lt.${dormantThresholdIso},last_contact_at.is.null`),
+
+    // À deviser : on récupère les request_id qui ont un devis non-cancelled
+    // pour les exclure côté calcul.
+    supabase
+      .from('quotes')
+      .select('request_id')
+      .neq('status', 'cancelled')
+      .not('request_id', 'is', null),
+
+    // Candidats : requests in_review / pitched / qualified plus vieux que 2j
+    supabase
+      .from('client_requests')
+      .select('id')
+      .in('status', ['in_review', 'pitched', 'qualified'])
+      .lt('created_at', toQuoteCutoffIso),
   ]);
+
+  // Compteur "À deviser" : candidats - ceux qui ont déjà un devis
+  const quotedSet = new Set<string>();
+  for (const q of (quotedReqsRes.data || []) as any[]) {
+    if (q.request_id) quotedSet.add(q.request_id);
+  }
+  const requestsToQuote = ((toQuoteCandidatesRes.data || []) as any[])
+    .filter((r) => !quotedSet.has(r.id))
+    .length;
 
   // En cas d'erreur sur un compteur, on renvoie 0 — un badge à 0 vaut
   // mieux qu'une 500 qui casse toute la sidebar.
@@ -92,6 +119,7 @@ export async function GET(req: Request) {
     quotesAlive: quotesRes.error ? 0 : (quotesRes.count ?? 0),
     missionsRisk: missionsRes.error ? 0 : (missionsRes.count ?? 0),
     partnersDormant: partnersDormantRes.error ? 0 : (partnersDormantRes.count ?? 0),
+    requestsToQuote,
     generatedAt: new Date().toISOString(),
   });
 }
