@@ -8,6 +8,7 @@ import MarkPaidModal from '../_components/MarkPaidModal';
 import MarkContractSignedModal from './_components/MarkContractSignedModal';
 import ChefBriefModal from './_components/ChefBriefModal';
 import MarkSentManuallyChip from '@/app/admin/_components/MarkSentManuallyChip';
+import MissionPartnerSourcePanel from './_components/MissionPartnerSourcePanel';
 import ClientEditor from './_components/ClientEditor';
 import ContractsPanel from './_components/ContractsPanel';
 import PaymentPlanPanel from './_components/PaymentPlanPanel';
@@ -72,6 +73,9 @@ type MissionRow = {
   brief_chef_channel?: 'email' | 'whatsapp' | null;
   brief_chef_rc_pro_url?: string | null;
   brief_chef_rc_pro_file_path?: string | null;
+  // CRM apporteur
+  partner_id?: string | null;
+  source?: string | null;
   offered_at: string | null;
   offer_email_sent_at: string | null;
   confirmed_at: string | null;
@@ -694,6 +698,14 @@ export default function AdminMissionDetailPage() {
               </div>
             )}
           </Panel>
+
+          {/* CRM — Apporteur / Source */}
+          <MissionPartnerSourcePanel
+            missionId={mission.id}
+            initialPartnerId={mission.partner_id || null}
+            initialSource={mission.source || null}
+            onSaved={refresh}
+          />
 
           {/* Bloc Timeline */}
           <Panel title="Historique" subtitle="Cycle de vie de la mission">

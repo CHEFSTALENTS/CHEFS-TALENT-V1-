@@ -33,8 +33,22 @@ export async function GET(req: Request) {
   const todayIso = now.toISOString().slice(0, 10);
   const in7d = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
 
+  // Seuil dormant paramétrable (defaut 90 jours)
+  let dormantDays = 90;
+  try {
+    const { data: setting } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'crm.partner_dormant_days')
+      .maybeSingle();
+    const v = (setting as any)?.value;
+    const n = typeof v === 'number' ? v : Number(v);
+    if (Number.isFinite(n) && n > 0) dormantDays = n;
+  } catch {}
+  const dormantThresholdIso = new Date(Date.now() - dormantDays * 86400000).toISOString();
+
   // Lance en parallèle pour rester rapide.
-  const [reqRes, reqPitchedRes, quotesRes, missionsRes] = await Promise.all([
+  const [reqRes, reqPitchedRes, quotesRes, missionsRes, partnersDormantRes] = await Promise.all([
     supabase
       .from('client_requests')
       .select('id', { count: 'exact', head: true })
@@ -59,6 +73,14 @@ export async function GET(req: Request) {
       .eq('status', 'confirmed')
       .gte('start_date', todayIso)
       .lte('start_date', in7d),
+
+    // Apporteurs dormants : partners actifs avec last_contact_at < seuil
+    // (ou jamais). On exclut les archivés.
+    supabase
+      .from('partners')
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'archived')
+      .or(`last_contact_at.lt.${dormantThresholdIso},last_contact_at.is.null`),
   ]);
 
   // En cas d'erreur sur un compteur, on renvoie 0 — un badge à 0 vaut
@@ -69,6 +91,7 @@ export async function GET(req: Request) {
     requestsPitched: reqPitchedRes.error ? 0 : (reqPitchedRes.count ?? 0),
     quotesAlive: quotesRes.error ? 0 : (quotesRes.count ?? 0),
     missionsRisk: missionsRes.error ? 0 : (missionsRes.count ?? 0),
+    partnersDormant: partnersDormantRes.error ? 0 : (partnersDormantRes.count ?? 0),
     generatedAt: new Date().toISOString(),
   });
 }

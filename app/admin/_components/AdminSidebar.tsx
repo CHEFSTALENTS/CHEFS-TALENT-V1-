@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Inbox,
   Users,
+  UserCheck,
   Map,
   FileText,
   Briefcase,
@@ -50,13 +51,18 @@ export function AdminSidebar({
   const [autoBadges, setAutoBadges] = useState<Record<string, number>>({});
   const fetchBadges = useCallback(async () => {
     try {
-      const json = await adminFetch<{ ok: boolean; requestsNew: number; quotesAlive: number; missionsRisk: number }>(
-        '/api/admin/badges',
-      );
+      const json = await adminFetch<{
+        ok: boolean;
+        requestsNew: number;
+        quotesAlive: number;
+        missionsRisk: number;
+        partnersDormant?: number;
+      }>('/api/admin/badges');
       setAutoBadges({
         requestsNew: json.requestsNew || 0,
         quotesAlive: json.quotesAlive || 0,
         missionsRisk: json.missionsRisk || 0,
+        partnersDormant: json.partnersDormant || 0,
       });
     } catch (e) {
       // Silencieux : si l'API plante on n'affiche juste pas les badges
@@ -105,6 +111,7 @@ export function AdminSidebar({
         { label: 'Carte', href: '/admin/map', icon: Map, badge: badges?.chefsOnMap },
         { label: 'Devis', href: '/admin/quotes', icon: FileText, badge: badges?.quotesAlive },
         { label: 'Missions', href: '/admin/missions', icon: Briefcase, badge: badges?.missionsRisk },
+        { label: 'Apporteurs', href: '/admin/partners', icon: UserCheck, badge: badges?.partnersDormant },
         { label: 'NCC Partenaire', href: '/admin/ncc-partner', icon: ShieldCheck },
       ],
     },

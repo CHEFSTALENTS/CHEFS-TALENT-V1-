@@ -218,6 +218,19 @@ export async function PATCH(
     if (body.chefAmount !== undefined) patch.chef_amount = body.chefAmount;
     if (body.clientAmount !== undefined) patch.client_amount = body.clientAmount;
     if (body.contractsData !== undefined) patch.contracts_data = body.contractsData;
+    // CRM : rattachement à un apporteur + canal d'acquisition
+    if (body.partnerId !== undefined) patch.partner_id = body.partnerId || null;
+    if (body.source !== undefined) {
+      const allowed = ['partner', 'google_ads', 'direct', 'word_of_mouth', 'press', 'other'];
+      const s = String(body.source).toLowerCase();
+      if (body.source === null || body.source === '') {
+        patch.source = null;
+      } else if (!allowed.includes(s)) {
+        return NextResponse.json({ error: `Invalid source: ${s}` }, { status: 400 });
+      } else {
+        patch.source = s;
+      }
+    }
 
     if (
       body.chefAmount !== undefined &&
