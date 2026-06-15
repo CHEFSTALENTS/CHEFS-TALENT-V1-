@@ -5,8 +5,9 @@
 // de la demande. Thomas peut éditer avant envoi.
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, X, Mail, MessageCircle, Send, RefreshCw, ExternalLink, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, MessageCircle, Send, RefreshCw, ExternalLink, Sparkles, CheckCircle2 } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Tab = 'email' | 'whatsapp';
 
@@ -94,25 +95,51 @@ export default function QualifyClientModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl flex flex-col max-h-[92vh]">
-        {/* Header */}
-        <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-white/10 shrink-0">
-          <div>
-            <h3 className="text-sm font-semibold text-white inline-flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              Qualifier ce client en 1 clic
-            </h3>
-            <p className="text-[11px] text-white/45">Message court rédigé par Claude, éditable, envoi direct</p>
-          </div>
-          <button onClick={onClose} disabled={sending} className="p-1.5 rounded-lg hover:bg-white/10 text-white/55">
-            <X className="w-4 h-4" />
-          </button>
-        </header>
+  const footerContent = sentChannel ? (
+    <button onClick={onClose} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
+      Fermer
+    </button>
+  ) : (
+    <>
+      <button onClick={onClose} disabled={sending} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
+        Annuler
+      </button>
+      <button
+        onClick={handleSend}
+        disabled={sending || loading || !currentContent.trim()}
+        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-50 ${
+          tab === 'email'
+            ? 'bg-sky-400 text-sky-950 hover:bg-sky-300'
+            : 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300'
+        }`}
+      >
+        {sending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+        {tab === 'email' ? (
+          <>
+            <Send className="w-3.5 h-3.5" />
+            Envoyer l'email
+          </>
+        ) : (
+          <>
+            <MessageCircle className="w-3.5 h-3.5" />
+            Ouvrir dans WhatsApp
+          </>
+        )}
+      </button>
+    </>
+  );
 
+  return (
+    <AdminModal
+      title="Qualifier ce client en 1 clic"
+      subtitle="Message court rédigé par Claude, éditable, envoi direct"
+      size="md"
+      onClose={onClose}
+      footer={footerContent}
+    >
+      <div className="space-y-4">
         {/* Tabs Email / WhatsApp */}
-        <div className="px-5 pt-4 shrink-0">
+        <div>
           <div className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 p-0.5">
             <button
               onClick={() => setTab('email')}
@@ -144,7 +171,7 @@ export default function QualifyClientModal({
         </div>
 
         {/* Body */}
-        <div className="p-5 overflow-y-auto flex-1">
+        <div>
           {loading ? (
             <div className="py-10 text-center text-sm text-white/55">
               <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
@@ -209,46 +236,7 @@ export default function QualifyClientModal({
             </>
           )}
         </div>
-
-        {/* Footer */}
-        {!sentChannel && (
-          <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 shrink-0">
-            <button onClick={onClose} disabled={sending} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
-              Annuler
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={sending || loading || !currentContent.trim()}
-              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-50 ${
-                tab === 'email'
-                  ? 'bg-sky-400 text-sky-950 hover:bg-sky-300'
-                  : 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300'
-              }`}
-            >
-              {sending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {tab === 'email' ? (
-                <>
-                  <Send className="w-3.5 h-3.5" />
-                  Envoyer l'email
-                </>
-              ) : (
-                <>
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  Ouvrir dans WhatsApp
-                </>
-              )}
-            </button>
-          </footer>
-        )}
-
-        {sentChannel && (
-          <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 shrink-0">
-            <button onClick={onClose} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
-              Fermer
-            </button>
-          </footer>
-        )}
       </div>
-    </div>
+    </AdminModal>
   );
 }
