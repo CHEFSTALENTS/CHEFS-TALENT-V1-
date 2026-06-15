@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
 import { destinations } from '@/lib/destinations';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type ArticleListItem = {
   id: string;
@@ -759,31 +760,14 @@ function PreviewModal({
   onClose: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-3xl bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl max-h-[96vh] overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0f0f10]/95 backdrop-blur z-10">
-          <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
-            <Eye className="w-5 h-5 text-sky-300" />
-            Aperçu
-          </h3>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-xs text-white/85 hover:bg-white/10"
-          >
-            Fermer
-          </button>
-        </div>
-
+    <AdminModal title="Aperçu" size="lg" onClose={onClose}>
         {loading || !article ? (
-          <div className="px-5 py-10 text-center text-white/55">
+          <div className="py-10 text-center text-white/55">
             <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
             Chargement…
           </div>
         ) : (
-          <article className="px-5 py-5 space-y-4 text-stone-200">
+          <article className="space-y-4 text-stone-200">
             <header className="space-y-1">
               <div className="text-[10px] uppercase tracking-wider text-white/45">
                 {article.category || 'Article'} · /{article.slug}
@@ -842,8 +826,7 @@ function PreviewModal({
             )}
           </article>
         )}
-      </div>
-    </div>
+    </AdminModal>
   );
 }
 
@@ -979,32 +962,41 @@ function EditModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
+    <AdminModal
+      title="Éditer l'article"
+      size="lg"
+      onClose={onClose}
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
+      footer={
+        !loading && article ? (
+          <>
+            <button
+              onClick={onClose}
+              disabled={saving}
+              className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </>
+        ) : null
+      }
     >
-      <div className="w-full max-w-4xl bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl max-h-[96vh] overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0f0f10]/95 backdrop-blur z-10">
-          <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
-            <PenSquare className="w-5 h-5 text-sky-300" />
-            Éditer l'article
-          </h3>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-xs text-white/85 hover:bg-white/10 disabled:opacity-50"
-          >
-            Fermer
-          </button>
-        </div>
-
         {loading || !article ? (
-          <div className="px-5 py-10 text-center text-white/55">
+          <div className="py-10 text-center text-white/55">
             <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
             Chargement…
           </div>
         ) : (
-          <div className="px-5 py-5 space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Titre" hint="50-60 chars idéalement">
                 <input
@@ -1123,28 +1115,9 @@ function EditModal({
                 {error}
               </div>
             )}
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-              <button
-                onClick={onClose}
-                disabled={saving}
-                className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={save}
-                disabled={saving}
-                className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-            </div>
           </div>
         )}
-      </div>
-    </div>
+    </AdminModal>
   );
 }
 
