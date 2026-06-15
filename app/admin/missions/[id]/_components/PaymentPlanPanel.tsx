@@ -31,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type PaymentMethod = 'virement' | 'cb_link' | 'revolut' | 'stripe' | 'especes' | 'cheque' | 'autre';
 
@@ -450,18 +451,28 @@ function MarkPaidModal({
   const valid = Number.isFinite(amt) && amt > 0 && !!method && !!paidAt;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
-      <div className="w-full max-w-md bg-[#0f0f10] border border-white/10 rounded-2xl p-5 space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold text-white">Marquer comme payée</h3>
-          <button onClick={onClose} disabled={busy} className="p-1 text-white/55 hover:text-white">
-            <X className="w-4 h-4" />
+    <AdminModal
+      title="Marquer comme payée"
+      subtitle={`Échéance du ${fmtDate(payment.dueDate)} — prévu : ${fmtEur(payment.amountEur)}`}
+      size="md"
+      onClose={onClose}
+      closeOnBackdrop={!busy}
+      footer={
+        <>
+          <button onClick={onClose} disabled={busy} className="px-3 py-1.5 text-sm rounded-lg border border-white/10 bg-white/5 text-white/85 hover:bg-white/10">
+            Annuler
           </button>
-        </div>
-        <div className="text-xs text-white/55">
-          Échéance du <strong className="text-white">{fmtDate(payment.dueDate)}</strong> — prévu : <strong className="text-white">{fmtEur(payment.amountEur)}</strong>
-        </div>
+          <button
+            onClick={() => onConfirm({ paidAmountEur: amt, paymentMethod: method, paymentReference: reference || undefined, paidAt })}
+            disabled={!valid || busy}
+            className="inline-flex items-center px-4 py-1.5 text-sm rounded-lg bg-emerald-400 text-emerald-950 font-medium hover:bg-emerald-300 disabled:opacity-50">
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />}
+            Confirmer le paiement
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1">Montant reçu (€)</span>
@@ -489,19 +500,7 @@ function MarkPaidModal({
             placeholder="n° virement, ID Stripe, etc."
             className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25" />
         </label>
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} disabled={busy} className="px-3 py-1.5 text-sm rounded-lg border border-white/10 bg-white/5 text-white/85 hover:bg-white/10">
-            Annuler
-          </button>
-          <button
-            onClick={() => onConfirm({ paidAmountEur: amt, paymentMethod: method, paymentReference: reference || undefined, paidAt })}
-            disabled={!valid || busy}
-            className="inline-flex items-center px-4 py-1.5 text-sm rounded-lg bg-emerald-400 text-emerald-950 font-medium hover:bg-emerald-300 disabled:opacity-50">
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />}
-            Confirmer le paiement
-          </button>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }
