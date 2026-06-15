@@ -15,6 +15,7 @@ import PaymentPlanPanel from './_components/PaymentPlanPanel';
 import ChefReplacementPanel from './_components/ChefReplacementPanel';
 import ChefPaidModal from './_components/ChefPaidModal';
 import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 import MissionEditor from './_components/MissionEditor';
 import type { ContractsData } from './_lib/contracts';
 import {
@@ -898,14 +899,25 @@ export default function AdminMissionDetailPage() {
         />
       </div>
 
-      {/* Modales plein écran — une seule à la fois */}
+      {/* Modales plein écran — une seule à la fois, rendues via portal
+          (cf AdminModal) pour échapper à tout containing block parent. */}
       {openLargeModal === 'payment-plan' && (
-        <LargeModal title="Plan de paiement" onClose={() => setOpenLargeModal(null)}>
+        <AdminModal
+          title="Plan de paiement"
+          subtitle="Échéances + cashflow + relances"
+          size="xl"
+          onClose={() => setOpenLargeModal(null)}
+        >
           <PaymentPlanPanel missionId={mission.id} />
-        </LargeModal>
+        </AdminModal>
       )}
       {openLargeModal === 'chef-replacement' && (
-        <LargeModal title="Remplacement chef" onClose={() => setOpenLargeModal(null)}>
+        <AdminModal
+          title="Remplacement chef"
+          subtitle="Swap pré-démarrage ou prorata en cours"
+          size="xl"
+          onClose={() => setOpenLargeModal(null)}
+        >
           <ChefReplacementPanel
             missionId={mission.id}
             currentChefName={mission.chef_name}
@@ -915,12 +927,17 @@ export default function AdminMissionDetailPage() {
             chefAmount={mission.chef_amount}
             onChefReplaced={() => refresh()}
           />
-        </LargeModal>
+        </AdminModal>
       )}
       {openLargeModal === 'contracts' && (
-        <LargeModal title="Contrats" onClose={() => setOpenLargeModal(null)}>
+        <AdminModal
+          title="Contrats"
+          subtitle="Variables éditables + preview + copy HTML"
+          size="xl"
+          onClose={() => setOpenLargeModal(null)}
+        >
           <ContractsPanel mission={mission} client={client} />
-        </LargeModal>
+        </AdminModal>
       )}
 
       {/* Modal Marquer encaissée — montant pré-rempli = prix client */}
@@ -1068,48 +1085,6 @@ function ModalLauncher({
         <span className="text-white/40 group-hover:text-white/85 transition">→</span>
       </div>
     </button>
-  );
-}
-
-// LargeModal — modale plein écran avec titre + bouton fermer + scroll.
-// Utilisé pour les panneaux qui ont besoin d'espace (formulaires longs,
-// historiques, éditeurs). max-w-5xl pour tenir confortablement sur
-// laptop tout en restant lisible en grand écran.
-function LargeModal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  // Échap pour fermer
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/75 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-5xl my-6 rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-3 border-b border-white/10 bg-[#0e1116] rounded-t-2xl">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
-          <button
-            onClick={onClose}
-            className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-white/65 hover:bg-white/10 hover:text-white transition"
-            aria-label="Fermer"
-          >
-            ✕
-          </button>
-        </header>
-        <div className="p-5">{children}</div>
-      </div>
-    </div>
   );
 }
 
