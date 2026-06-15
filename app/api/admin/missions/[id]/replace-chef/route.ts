@@ -113,9 +113,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       { status: 400 },
     );
   }
-  if (mission.chef_amount == null || Number(mission.chef_amount) <= 0) {
+  // chef_amount > 0 n'est requis QUE pour le mode "prorata en cours de
+  // mission". Pour un swap pré-démarrage (replacementDate < start_date),
+  // ancien chef = 0€ et nouveau = totalité — pas besoin d'un montant.
+  // On valide cette règle plus bas après détection isPreStart.
+  const replacementIsPreStart =
+    /^\d{4}-\d{2}-\d{2}$/.test(replacementDate) &&
+    !!mission.start_date &&
+    replacementDate < mission.start_date;
+  if (!replacementIsPreStart && (mission.chef_amount == null || Number(mission.chef_amount) <= 0)) {
     return NextResponse.json(
-      { ok: false, error: 'NO_AMOUNT', message: 'La mission doit avoir un chef_amount > 0 pour calculer le split.' },
+      { ok: false, error: 'NO_AMOUNT', message: 'Pour un remplacement en cours de mission, il faut un chef_amount > 0 (pour le calcul prorata). Pour un swap avant le début, mets une date < start_date.' },
       { status: 400 },
     );
   }
