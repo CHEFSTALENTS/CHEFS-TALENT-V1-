@@ -10,8 +10,9 @@
 //    négo a changé le montant accepté par rapport aux options initiales
 
 import { useState } from 'react';
-import { Loader2, X, CheckCircle2, Send, XCircle, Clock, Ban, FileText } from 'lucide-react';
+import { Loader2, CheckCircle2, Send, XCircle, Clock, Ban, FileText } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'cancelled';
 
@@ -106,21 +107,31 @@ export default function ChangeQuoteStatusModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl">
-        {/* Header */}
-        <header className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <h3 className="text-sm font-semibold text-white">Changer le statut du devis</h3>
+    <AdminModal
+      title="Changer le statut du devis"
+      size="md"
+      onClose={onClose}
+      footer={
+        <>
           <button
             onClick={onClose}
             disabled={saving}
-            className="p-1 rounded-lg hover:bg-white/10 text-white/55"
+            className="px-4 py-2.5 text-sm text-white/75 hover:text-white"
           >
-            <X className="w-4 h-4" />
+            Annuler
           </button>
-        </header>
-
-        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-sky-400 text-sky-950 text-sm font-medium hover:bg-sky-300 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
+            Enregistrer
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           {/* Choix du statut */}
           <div>
             <label className="block text-xs text-white/55 mb-2">Nouveau statut</label>
@@ -226,27 +237,7 @@ export default function ChangeQuoteStatusModal({
               {error}
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="px-4 py-2.5 text-sm text-white/75 hover:text-white"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-sky-400 text-sky-950 text-sm font-medium hover:bg-sky-300 disabled:opacity-50"
-          >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
-            Enregistrer
-          </button>
-        </footer>
       </div>
-    </div>
+    </AdminModal>
   );
 }
