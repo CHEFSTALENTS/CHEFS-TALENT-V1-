@@ -41,6 +41,10 @@ function rowToMission(m: any): Mission {
     clientPhone: null,
     notes: m.notes || '',
     contractUrl: m.contract_url || null,
+    // Mission "signée" = contract_signed_at non nul. À partir de ce
+    // moment, on affiche le brief + le contrat au chef.
+    contractSignedAt: m.contract_signed_at || null,
+    briefChef: m.brief_chef_content || null,
   } as any;
 }
 
@@ -222,7 +226,12 @@ const TabButton = ({
 
 /* ── MissionCard ── */
 interface MissionCardProps {
-  mission: Mission & { contractUrl?: string | null; notes?: string };
+  mission: Mission & {
+    contractUrl?: string | null;
+    notes?: string;
+    contractSignedAt?: string | null;
+    briefChef?: string | null;
+  };
   onAction: (id: string, action: 'accepted' | 'declined') => void;
   isActionLoading: boolean;
   t: Dictionary;
@@ -233,13 +242,23 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
   const isOffer = mission.status === 'offered';
   const isConfirmed = mission.status === 'confirmed';
   const contractUrl = (mission as any).contractUrl;
+  const contractSignedAt = (mission as any).contractSignedAt;
+  const briefChef = (mission as any).briefChef;
+  const isSigned = !!contractSignedAt;
+  const [briefOpen, setBriefOpen] = useState(false);
 
   return (
     <div className={`bg-white border p-6 transition-all ${isOffer ? 'border-stone-300 shadow-sm' : 'border-stone-100'}`}>
       <div className="flex flex-col md:flex-row justify-between md:items-start gap-6">
         <div className="space-y-4 flex-grow">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <MissionStatusBadge status={mission.status} t={t} />
+            {isSigned && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <Check className="w-3 h-3" />
+                Signée
+              </span>
+            )}
             <span className="text-xs text-stone-400 uppercase tracking-widest">
               {mission.createdAt ? new Date(mission.createdAt).toLocaleDateString(dateLocale) : ''}
             </span>
@@ -280,6 +299,47 @@ const MissionCard: React.FC<MissionCardProps> = ({ mission, onAction, isActionLo
             <p className="text-sm text-stone-500 font-light border-l-2 border-stone-200 pl-3">
               {(mission as any).notes}
             </p>
+          )}
+
+          {isSigned && (briefChef || contractUrl) && (
+            <div className="mt-3 border border-stone-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setBriefOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition"
+              >
+                <span className="inline-flex items-center gap-2 font-medium">
+                  <FileText className="w-4 h-4 text-stone-500" />
+                  Brief &amp; contrat
+                </span>
+                <span className={`text-xs text-stone-500 transition ${briefOpen ? 'rotate-180' : ''}`}>▾</span>
+              </button>
+              {briefOpen && (
+                <div className="px-3 py-3 space-y-3 border-t border-stone-200 bg-stone-50/40">
+                  {briefChef ? (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-1">Brief mission</div>
+                      <div className="text-sm text-stone-800 whitespace-pre-wrap leading-relaxed">{briefChef}</div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-stone-500 italic">Brief à venir — l'admin te le transmettra au plus tard la veille de la mission.</div>
+                  )}
+                  {contractUrl && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-stone-500 mb-1">Contrat signé</div>
+                      <a
+                        href={contractUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-stone-800 underline hover:text-stone-900"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Ouvrir le contrat
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

@@ -120,13 +120,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     );
   }
 
-  // ── Validations dates : replacementDate doit être ENTRE start_date et end_date strict
-  if (replacementDate < mission.start_date) {
-    return NextResponse.json(
-      { ok: false, error: 'DATE_BEFORE_START', message: `La date de remplacement doit être ≥ date de début (${mission.start_date}).` },
-      { status: 400 },
-    );
-  }
+  // ── Validations dates
+  // Cas spécial "pré-démarrage" : si replacementDate < start_date, on
+  // traite ça comme un swap pur (chef A n'a rien fait → 0€, chef B
+  // prend la totalité). Sinon, prorata classique entre start_date et
+  // end_date strict.
+  const isPreStart = replacementDate < mission.start_date;
   if (replacementDate >= mission.end_date) {
     return NextResponse.json(
       { ok: false, error: 'DATE_AFTER_END', message: `La date de remplacement doit être < date de fin (${mission.end_date}).` },
@@ -145,9 +144,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const totalDays = daysBetween(mission.start_date, mission.end_date);
   const dailyRate = Math.round((chefAmount / totalDays) * 100) / 100;
 
-  const oldChefDays = daysBetween(mission.start_date, replacementDate);
-  const newChefStart = addDays(replacementDate, 1);
-  const newChefDays = daysBetween(newChefStart, mission.end_date);
+  // Pré-démarrage : ancien chef = 0 jours, nouveau = totalité, start = mission.start_date.
+  // En cours : prorata sur la date de remplacement saisie.
+  const oldChefDays = isPreStart ? 0 : daysBetween(mission.start_date, replacementDate);
+  const oldChefEndDate = isPreStart ? mission.start_date : replacementDate;
+  const newChefStart = isPreStart ? mission.start_date : addDays(replacementDate, 1);
+  const newChefDays = isPreStart ? totalDays : daysBetween(newChefStart, mission.end_date);
 
   const oldChefAmount = Math.round(oldChefDays * dailyRate * 100) / 100;
   // Évite les pertes de centimes : le solde est attribué au nouveau chef
@@ -186,7 +188,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       chef_name: mission.chef_name,
       chef_email: mission.chef_email,
       start_date: mission.start_date,
-      end_date: replacementDate,
+      end_date: oldChefEndDate,
       days_worked: oldChefDays,
       daily_rate_eur: dailyRate,
       chef_amount_eur: oldChefAmount,
