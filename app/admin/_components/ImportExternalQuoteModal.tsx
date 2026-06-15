@@ -10,8 +10,9 @@
 // dans le pipeline /admin/quotes comme n'importe quel devis.
 
 import { useState } from 'react';
-import { Loader2, X, FileUp } from 'lucide-react';
+import { Loader2, FileUp } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Status = 'sent' | 'accepted' | 'declined' | 'expired' | 'cancelled';
 
@@ -112,19 +113,25 @@ export default function ImportExternalQuoteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl flex flex-col max-h-[92vh]">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Importer un devis traité hors plateforme</h3>
-            <p className="text-[11px] text-white/45">Pour le tracker dans les KPIs sans générer de PDF</p>
-          </div>
-          <button onClick={onClose} disabled={saving} className="p-1 rounded-lg hover:bg-white/10 text-white/55">
-            <X className="w-4 h-4" />
+    <AdminModal
+      title="Importer un devis traité hors plateforme"
+      subtitle="Pour le tracker dans les KPIs sans générer de PDF"
+      size="lg"
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
+            Annuler
           </button>
-        </header>
-
-        <div className="p-5 space-y-4 overflow-y-auto">
+          <button onClick={handleSave} disabled={!canSave}
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-amber-400 text-amber-950 text-sm font-medium hover:bg-amber-300 disabled:opacity-50">
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
+            Importer le devis
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           {/* Identité */}
           <Section title="Destinataire">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -252,25 +259,13 @@ export default function ImportExternalQuoteModal({
               {error}
             </div>
           )}
-        </div>
-
-        <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 shrink-0">
-          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
-            Annuler
-          </button>
-          <button onClick={handleSave} disabled={!canSave}
-            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-amber-400 text-amber-950 text-sm font-medium hover:bg-amber-300 disabled:opacity-50">
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
-            Importer le devis
-          </button>
-        </footer>
 
         <style jsx>{`
           .ct-input { width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 13px; }
           .ct-input::placeholder { color: rgba(255,255,255,0.3); }
         `}</style>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 
