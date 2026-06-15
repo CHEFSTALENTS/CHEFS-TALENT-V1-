@@ -144,6 +144,10 @@ export default function AdminMissionDetailPage() {
   const [showPaidModal, setShowPaidModal] = useState(false);
   const [showClientEditor, setShowClientEditor] = useState(false);
   const [showChefPaidModal, setShowChefPaidModal] = useState(false);
+  // Quel grand modal est ouvert : 'payment-plan' | 'chef-replacement' | 'contracts' | null
+  const [openLargeModal, setOpenLargeModal] = useState<
+    'payment-plan' | 'chef-replacement' | 'contracts' | null
+  >(null);
   const [showMissionEditor, setShowMissionEditor] = useState(false);
   const [showContractSignedModal, setShowContractSignedModal] = useState(false);
   const [showChefBriefModal, setShowChefBriefModal] = useState(false);
@@ -870,25 +874,38 @@ export default function AdminMissionDetailPage() {
         </div>
       </div>
 
-      {/* Panneaux pleine largeur — tous collapsibles, défaut fermé pour ne
-          pas surcharger la fiche au premier affichage. État mémorisé en
-          localStorage par CollapsiblePanel. */}
-      <div className="px-6 pb-6 space-y-5">
-        <CollapsiblePanel
+      {/* Panneaux pleine largeur — déclencheurs qui ouvrent une grande
+          modale plein écran. Évite le chevauchement et donne tout
+          l'espace nécessaire pour l'action. */}
+      <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <ModalLauncher
           title="Plan de paiement"
-          subtitle="Échéances multiples — visuel cashflow et suivi des relances"
-          defaultOpen={false}
-          persistKey="mission:payment-plan"
-        >
-          <PaymentPlanPanel missionId={mission.id} />
-        </CollapsiblePanel>
-
-        <CollapsiblePanel
+          subtitle="Échéances + cashflow + relances"
+          icon="💸"
+          onOpen={() => setOpenLargeModal('payment-plan')}
+        />
+        <ModalLauncher
           title="Remplacement chef"
-          subtitle="Swap pré-démarrage ou prorata en cours de mission"
-          defaultOpen={false}
-          persistKey="mission:chef-replacement"
-        >
+          subtitle="Swap pré-démarrage ou prorata en cours"
+          icon="🔄"
+          onOpen={() => setOpenLargeModal('chef-replacement')}
+        />
+        <ModalLauncher
+          title="Contrats"
+          subtitle="Variables + preview + copy HTML"
+          icon="📄"
+          onOpen={() => setOpenLargeModal('contracts')}
+        />
+      </div>
+
+      {/* Modales plein écran — une seule à la fois */}
+      {openLargeModal === 'payment-plan' && (
+        <LargeModal title="Plan de paiement" onClose={() => setOpenLargeModal(null)}>
+          <PaymentPlanPanel missionId={mission.id} />
+        </LargeModal>
+      )}
+      {openLargeModal === 'chef-replacement' && (
+        <LargeModal title="Remplacement chef" onClose={() => setOpenLargeModal(null)}>
           <ChefReplacementPanel
             missionId={mission.id}
             currentChefName={mission.chef_name}
@@ -898,20 +915,13 @@ export default function AdminMissionDetailPage() {
             chefAmount={mission.chef_amount}
             onChefReplaced={() => refresh()}
           />
-        </CollapsiblePanel>
-
-        <CollapsiblePanel
-          title="Contrats"
-          subtitle="Variables éditables + preview + copy HTML"
-          defaultOpen={false}
-          persistKey="mission:contracts"
-        >
-          <ContractsPanel
-            mission={mission}
-            client={client}
-          />
-        </CollapsiblePanel>
-      </div>
+        </LargeModal>
+      )}
+      {openLargeModal === 'contracts' && (
+        <LargeModal title="Contrats" onClose={() => setOpenLargeModal(null)}>
+          <ContractsPanel mission={mission} client={client} />
+        </LargeModal>
+      )}
 
       {/* Modal Marquer encaissée — montant pré-rempli = prix client */}
       {showPaidModal && (
@@ -1027,6 +1037,81 @@ export default function AdminMissionDetailPage() {
 /* ================================================================
    Subcomponents
    ================================================================ */
+
+// ModalLauncher — tuile cliquable qui sert de point d'entrée vers une
+// grande modale plein écran (plan de paiement, remplacement chef, contrats).
+// Évite d'inclure ces gros panneaux dans la grille principale et libère
+// de la place sur la fiche.
+function ModalLauncher({
+  title,
+  subtitle,
+  icon,
+  onOpen,
+}: {
+  title: string;
+  subtitle: string;
+  icon: string;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group text-left rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4 hover:bg-white/[0.08] hover:border-white/20 transition shadow-sm"
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-white">{title}</div>
+          <div className="text-xs text-white/55 mt-0.5">{subtitle}</div>
+        </div>
+        <span className="text-white/40 group-hover:text-white/85 transition">→</span>
+      </div>
+    </button>
+  );
+}
+
+// LargeModal — modale plein écran avec titre + bouton fermer + scroll.
+// Utilisé pour les panneaux qui ont besoin d'espace (formulaires longs,
+// historiques, éditeurs). max-w-5xl pour tenir confortablement sur
+// laptop tout en restant lisible en grand écran.
+function LargeModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  // Échap pour fermer
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/75 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-5xl my-6 rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl">
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-3 border-b border-white/10 bg-[#0e1116] rounded-t-2xl">
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <button
+            onClick={onClose}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-white/65 hover:bg-white/10 hover:text-white transition"
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
+        </header>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 // Wrapper vers CollapsiblePanel — chaque section devient pliable, état persisté
 // par titre (préfixe mission: pour isoler des autres fiches).
