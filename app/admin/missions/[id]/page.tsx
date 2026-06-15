@@ -870,28 +870,25 @@ export default function AdminMissionDetailPage() {
         </div>
       </div>
 
-      {/* Panneau Plan de paiement : échéances illimitées + cashflow par mission */}
-      <div className="px-6 pb-2">
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
-          <div className="mb-4">
-            <div className="text-sm font-semibold text-white">Plan de paiement</div>
-            <div className="text-xs text-white/45 mt-0.5">
-              Échéances multiples — visuel cashflow et suivi des relances en temps réel.
-            </div>
-          </div>
+      {/* Panneaux pleine largeur — tous collapsibles, défaut fermé pour ne
+          pas surcharger la fiche au premier affichage. État mémorisé en
+          localStorage par CollapsiblePanel. */}
+      <div className="px-6 pb-6 space-y-5">
+        <CollapsiblePanel
+          title="Plan de paiement"
+          subtitle="Échéances multiples — visuel cashflow et suivi des relances"
+          defaultOpen={false}
+          persistKey="mission:payment-plan"
+        >
           <PaymentPlanPanel missionId={mission.id} />
-        </div>
-      </div>
+        </CollapsiblePanel>
 
-      {/* Panneau Remplacement chef : historique + split tarifaire prorata */}
-      <div className="px-6 pb-2">
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
-          <div className="mb-4">
-            <div className="text-sm font-semibold text-white">Remplacement chef</div>
-            <div className="text-xs text-white/45 mt-0.5">
-              En cas d'indisponibilité du chef en cours de mission — calcul du split au prorata des jours travaillés.
-            </div>
-          </div>
+        <CollapsiblePanel
+          title="Remplacement chef"
+          subtitle="Swap pré-démarrage ou prorata en cours de mission"
+          defaultOpen={false}
+          persistKey="mission:chef-replacement"
+        >
           <ChefReplacementPanel
             missionId={mission.id}
             currentChefName={mission.chef_name}
@@ -901,15 +898,19 @@ export default function AdminMissionDetailPage() {
             chefAmount={mission.chef_amount}
             onChefReplaced={() => refresh()}
           />
-        </div>
-      </div>
+        </CollapsiblePanel>
 
-      {/* Panneau Contrats : variables éditables + preview + copy HTML */}
-      <div className="px-6 pb-6">
-        <ContractsPanel
-          mission={mission}
-          client={client}
-        />
+        <CollapsiblePanel
+          title="Contrats"
+          subtitle="Variables éditables + preview + copy HTML"
+          defaultOpen={false}
+          persistKey="mission:contracts"
+        >
+          <ContractsPanel
+            mission={mission}
+            client={client}
+          />
+        </CollapsiblePanel>
       </div>
 
       {/* Modal Marquer encaissée — montant pré-rempli = prix client */}

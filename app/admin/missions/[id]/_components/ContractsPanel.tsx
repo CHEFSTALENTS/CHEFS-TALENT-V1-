@@ -335,27 +335,23 @@ export default function ContractsPanel({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-4">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div>
-          <div className="text-sm font-semibold text-white">Contrats</div>
-          <div className="text-xs text-white/45 mt-0.5">
-            Édite les variables, préviens, copie le HTML pour ton mail/Word.
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {savedAt ? (
-            <span className="text-[11px] text-emerald-300/80">{savedAt}</span>
-          ) : null}
-          <button
-            onClick={save}
-            disabled={saving}
-            className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Enregistrer
-          </button>
-        </div>
+    <div>
+      {/* Le wrapper externe (bordure + titre) est désormais fourni par le
+          CollapsiblePanel parent dans page.tsx. On garde uniquement le
+          bouton Enregistrer en toolbar pour qu'il reste visible quand
+          le panneau est déplié. */}
+      <div className="flex items-center justify-end gap-2 mb-4">
+        {savedAt ? (
+          <span className="text-[11px] text-emerald-300/80">{savedAt}</span>
+        ) : null}
+        <button
+          onClick={save}
+          disabled={saving}
+          className="inline-flex items-center px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Enregistrer
+        </button>
       </div>
 
       {/* Tabs */}
