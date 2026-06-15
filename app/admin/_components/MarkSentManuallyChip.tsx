@@ -15,8 +15,9 @@
 // Flow : clic → popover avec 2 boutons (Email / WhatsApp) → POST → refresh.
 
 import { useState } from 'react';
-import { Check, ChevronDown, Loader2, Mail, MessageCircle, X } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 export default function MarkSentManuallyChip({
   endpoint,
@@ -58,9 +59,9 @@ export default function MarkSentManuallyChip({
   };
 
   return (
-    <div className="relative inline-block">
+    <>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(true)}
         className={
           buttonClassName ||
           'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-xs text-white/85 hover:bg-white/10 transition'
@@ -72,28 +73,19 @@ export default function MarkSentManuallyChip({
       </button>
 
       {open && (
-        <>
-          {/* Backdrop pour fermer au clic extérieur */}
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => !saving && setOpen(false)}
-          />
-          {/* Popover */}
-          <div className="absolute z-40 mt-1.5 right-0 min-w-[220px] rounded-xl border border-white/10 bg-[#0e1116] shadow-2xl p-2">
-            <div className="text-[10px] uppercase tracking-wider text-white/45 px-2 py-1.5 flex items-center justify-between">
-              Canal utilisé
-              <button
-                onClick={() => setOpen(false)}
-                disabled={saving}
-                className="p-0.5 rounded hover:bg-white/10 text-white/45"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
+        <AdminModal
+          title="Canal utilisé"
+          subtitle="Marquer l'envoi comme effectué manuellement hors plateforme."
+          size="sm"
+          onClose={() => { if (!saving) setOpen(false); }}
+          closeOnBackdrop={!saving}
+          closeOnEscape={!saving}
+        >
+          <div className="space-y-2">
             <button
               onClick={() => handleMark('email')}
               disabled={saving}
-              className="w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              className="w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white hover:bg-white/10 disabled:opacity-50"
             >
               <Mail className="w-3.5 h-3.5 text-sky-300" />
               Email
@@ -101,7 +93,7 @@ export default function MarkSentManuallyChip({
             <button
               onClick={() => handleMark('whatsapp')}
               disabled={saving}
-              className="w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              className="w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white hover:bg-white/10 disabled:opacity-50"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
               WhatsApp
@@ -118,8 +110,8 @@ export default function MarkSentManuallyChip({
               </div>
             )}
           </div>
-        </>
+        </AdminModal>
       )}
-    </div>
+    </>
   );
 }
