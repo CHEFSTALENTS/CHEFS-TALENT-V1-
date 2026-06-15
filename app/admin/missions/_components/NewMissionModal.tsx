@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, Loader2, Sparkles, Search } from 'lucide-react';
+import { Loader2, Sparkles, Search } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type ChefOption = {
   user_id: string;
@@ -156,35 +157,38 @@ export default function NewMissionModal({ onClose, onSuccess }: Props) {
     'text-xs text-white/50 uppercase tracking-widest mb-1.5 block';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-[#161616] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <h2 className="text-base font-semibold text-white">
-                Nouvelle mission spontanée
-              </h2>
-            </div>
-            <p className="text-xs text-white/50 mt-0.5">
-              Tracking d'une mission déjà négociée hors-app.
-              <br />
-              <span className="text-amber-200/80">
-                Le chef ne sera pas notifié automatiquement.
-              </span>
-            </p>
-          </div>
+    <AdminModal
+      title="Nouvelle mission spontanée"
+      subtitle="Tracking d'une mission déjà négociée hors-app. Le chef ne sera pas notifié automatiquement."
+      size="lg"
+      onClose={onClose}
+      footer={
+        <>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-white/10 transition"
+            disabled={submitting}
+            className="px-4 py-2 rounded-xl border border-white/10 text-white/70 text-sm hover:bg-white/5 transition disabled:opacity-40"
           >
-            <X className="w-4 h-4 text-white/60" />
+            Annuler
           </button>
-        </div>
-
-        <div className="p-5 space-y-4">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-white text-[#161616] text-sm font-semibold hover:bg-white/90 transition disabled:opacity-40"
+          >
+            {submitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            {submitting ? 'Création…' : 'Ajouter au tableau de bord'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
 
           {/* Sélection chef */}
           <div>
@@ -385,40 +389,13 @@ export default function NewMissionModal({ onClose, onSuccess }: Props) {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-[#161616] text-sm font-semibold hover:bg-white/90 transition disabled:opacity-40"
-            >
-              {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              {submitting ? 'Création…' : 'Ajouter au tableau de bord'}
-            </button>
-
-            <p className="text-[10px] text-white/40 text-center leading-relaxed">
-              La mission sera créée en statut <strong>offered</strong>.
-              Aucun email automatique au chef — c'est juste pour le suivi
-              interne. Tu pourras la passer en <strong>confirmed</strong>{' '}
-              depuis la page mission.
-            </p>
-
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="w-full px-5 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm hover:bg-white/5 transition disabled:opacity-40"
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
+          <p className="text-[10px] text-white/40 text-center leading-relaxed">
+            La mission sera créée en statut <strong>offered</strong>.
+            Aucun email automatique au chef — c'est juste pour le suivi
+            interne. Tu pourras la passer en <strong>confirmed</strong>{' '}
+            depuis la page mission.
+          </p>
       </div>
-    </div>
+    </AdminModal>
   );
 }

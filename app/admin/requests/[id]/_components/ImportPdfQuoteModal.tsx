@@ -10,8 +10,9 @@
 // pas un devis envoyé ou accepté.
 
 import { useState } from 'react';
-import { Loader2, FileUp, X, Sparkles, Check, AlertTriangle } from 'lucide-react';
+import { Loader2, FileUp, Sparkles, Check, AlertTriangle } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type TariffOption = {
   label: string | null;
@@ -164,26 +165,54 @@ export default function ImportPdfQuoteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl flex flex-col max-h-[92vh]">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-300" />
-            <div>
-              <h3 className="text-sm font-semibold text-white">Lire un PDF de devis</h3>
-              <p className="text-[11px] text-white/45">
-                {extracted
-                  ? 'Coche ce que tu veux appliquer au brouillon. Tu pourras encore éditer après.'
-                  : 'Le PDF sera lu par Claude et ses chiffres reportés sur ton devis en brouillon.'}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 transition">
-            <X className="w-4 h-4 text-white/60" />
+    <AdminModal
+      title="Lire un PDF de devis"
+      subtitle={extracted
+        ? 'Coche ce que tu veux appliquer au brouillon. Tu pourras encore éditer après.'
+        : 'Le PDF sera lu par Claude et ses chiffres reportés sur ton devis en brouillon.'}
+      size="lg"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            onClick={onClose}
+            disabled={extracting || applying}
+            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 disabled:opacity-50"
+          >
+            {extracted ? 'Annuler' : 'Fermer'}
           </button>
-        </header>
-
-        <div className="px-5 py-4 overflow-y-auto flex-1 space-y-4">
+          {!extracted ? (
+            <button
+              onClick={handleExtract}
+              disabled={!file || extracting}
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-400 text-indigo-950 text-sm font-medium hover:bg-indigo-300 disabled:opacity-50"
+            >
+              {extracting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Lecture en cours…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Lire le PDF
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={handleApply}
+              disabled={applying}
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-400 text-emerald-950 text-sm font-medium hover:bg-emerald-300 disabled:opacity-50"
+            >
+              {applying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+              Appliquer au devis
+            </button>
+          )}
+        </>
+      }
+    >
+      <div className="space-y-4">
           {!extracted ? (
             <div className="space-y-3">
               <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
@@ -319,46 +348,7 @@ export default function ImportPdfQuoteModal({
               {error}
             </div>
           )}
-        </div>
-
-        <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 shrink-0">
-          <button
-            onClick={onClose}
-            disabled={extracting || applying}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 disabled:opacity-50"
-          >
-            {extracted ? 'Annuler' : 'Fermer'}
-          </button>
-          {!extracted ? (
-            <button
-              onClick={handleExtract}
-              disabled={!file || extracting}
-              className="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-400 text-indigo-950 text-sm font-medium hover:bg-indigo-300 disabled:opacity-50"
-            >
-              {extracting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Lecture en cours…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Lire le PDF
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={handleApply}
-              disabled={applying}
-              className="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-400 text-emerald-950 text-sm font-medium hover:bg-emerald-300 disabled:opacity-50"
-            >
-              {applying ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-              Appliquer au devis
-            </button>
-          )}
-        </footer>
       </div>
-    </div>
+    </AdminModal>
   );
 }

@@ -21,9 +21,9 @@ import {
   ChevronDown,
   Loader2,
   UserCog,
-  X,
 } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Assignment = {
   id: string;
@@ -353,18 +353,25 @@ function ReplaceChefModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
-      <div className="w-full max-w-2xl bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
-          <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
-            <UserCog className="w-5 h-5 text-amber-400" />
-            Remplacer le chef
-          </h3>
-          <button onClick={onClose} disabled={submitting} className="p-1 rounded-lg hover:bg-white/10 text-white/55"><X className="w-4 h-4" /></button>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
+    <AdminModal
+      title="Remplacer le chef"
+      size="xl"
+      onClose={onClose}
+      closeOnBackdrop={!submitting}
+      footer={
+        <>
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10">
+            Annuler
+          </button>
+          <button onClick={submit} disabled={!valid || submitting}
+            className="inline-flex items-center px-5 py-2 rounded-xl bg-amber-400 text-amber-950 font-medium hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
+            Confirmer le remplacement
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/65 leading-relaxed">
             Chef actuel : <strong className="text-white">{currentChefName}</strong>
             <br />Période mission : <strong className="text-white">{fmtDate(missionStartDate)} → {fmtDate(missionEndDate)}</strong> ({totalDays} jours)
@@ -534,19 +541,7 @@ function ReplaceChefModal({
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {error}
             </div>
           )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/10 bg-white/[0.02]">
-          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10">
-            Annuler
-          </button>
-          <button onClick={submit} disabled={!valid || submitting}
-            className="inline-flex items-center px-5 py-2 rounded-xl bg-amber-400 text-amber-950 font-medium hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed">
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
-            Confirmer le remplacement
-          </button>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }

@@ -4,8 +4,9 @@
 // Si `partner` est fourni, on est en édition.
 
 import { useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type PartnerType = 'concierge' | 'villa_manager' | 'yacht_manager' | 'travel_planner' | 'apporteur_indep' | 'chef' | 'client_direct' | 'other';
 
@@ -114,18 +115,27 @@ export default function AddPartnerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl flex flex-col max-h-[92vh]">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 shrink-0">
-          <h3 className="text-sm font-semibold text-white">
-            {isEdit ? 'Éditer l\'apporteur' : 'Nouvel apporteur'}
-          </h3>
-          <button onClick={onClose} disabled={saving} className="p-1 rounded-lg hover:bg-white/10 text-white/55">
-            <X className="w-4 h-4" />
+    <AdminModal
+      title={isEdit ? "Éditer l'apporteur" : 'Nouvel apporteur'}
+      size="lg"
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
+            Annuler
           </button>
-        </header>
-
-        <div className="p-5 space-y-4 overflow-y-auto">
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-indigo-400 text-indigo-950 text-sm font-medium hover:bg-indigo-300 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
+            {isEdit ? 'Enregistrer' : 'Créer l\'apporteur'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           {/* Identité */}
           <Section title="Identité">
             <Field label="Nom de l'apporteur *">
@@ -212,28 +222,13 @@ export default function AddPartnerModal({
               {error}
             </div>
           )}
-        </div>
-
-        <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 shrink-0">
-          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
-            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-indigo-400 text-indigo-950 text-sm font-medium hover:bg-indigo-300 disabled:opacity-50"
-          >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
-            {isEdit ? 'Enregistrer' : 'Créer l\'apporteur'}
-          </button>
-        </footer>
 
         <style jsx>{`
           .ct-input { width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 13px; }
           .ct-input::placeholder { color: rgba(255,255,255,0.3); }
         `}</style>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 

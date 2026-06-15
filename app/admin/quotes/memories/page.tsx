@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Brain, Loader2, RefreshCw, Trash2, Edit3, ChevronLeft, Filter, Globe2, User, MapPin } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Memory = {
   id: string;
@@ -276,13 +277,32 @@ function EditMemoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0e1116] p-5 space-y-4">
-        <h3 className="text-base font-semibold text-white">Éditer la mémoire</h3>
-        <div className="text-xs text-white/55 font-mono">
-          {memory.scope}{memory.scope_key ? `:${memory.scope_key}` : ''} · {memory.memory_key}
-        </div>
-
+    <AdminModal
+      title="Éditer la mémoire"
+      subtitle={`${memory.scope}${memory.scope_key ? `:${memory.scope_key}` : ''} · ${memory.memory_key}`}
+      size="md"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-lg text-xs text-white/75 hover:text-white"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !value.trim()}
+            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-400/30 text-xs text-indigo-100 hover:bg-indigo-500/30 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="w-3 h-3 animate-spin mr-1.5" />}
+            Enregistrer
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
         <div className="space-y-2">
           <label className="block text-xs text-white/55">Valeur</label>
           <textarea
@@ -316,25 +336,7 @@ function EditMemoryModal({
             className="w-full"
           />
         </div>
-
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="px-3 py-1.5 rounded-lg text-xs text-white/75 hover:text-white"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !value.trim()}
-            className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-400/30 text-xs text-indigo-100 hover:bg-indigo-500/30 disabled:opacity-50"
-          >
-            {saving && <Loader2 className="w-3 h-3 animate-spin mr-1.5" />}
-            Enregistrer
-          </button>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }
