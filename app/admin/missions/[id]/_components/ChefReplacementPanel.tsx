@@ -95,7 +95,20 @@ export default function ChefReplacementPanel({
 
   useEffect(() => { load(); }, [load]);
 
-  const canReplace = !!missionStartDate && !!missionEndDate && chefAmount != null && chefAmount > 0 && !!currentChefName;
+  // Le bouton s'active dès qu'on a un chef actuel + des dates.
+  // Le chef_amount n'est plus bloquant : si null/0 et qu'on est en
+  // mode pré-démarrage, le swap est pur (0€ partagé), donc autorisé.
+  // Pour un remplacement en cours de mission avec prorata, il faudra
+  // chef_amount > 0 — c'est validé à l'intérieur du modal.
+  const canReplace = !!missionStartDate && !!missionEndDate && !!currentChefName;
+  // Raison précise de désactivation pour expliquer à l'utilisateur
+  const disabledReason = !currentChefName
+    ? 'Pas de chef assigné à cette mission.'
+    : !missionStartDate
+      ? 'La mission n\'a pas de date de début (start_date). Édite la mission pour la renseigner.'
+      : !missionEndDate
+        ? 'La mission n\'a pas de date de fin (end_date). Édite la mission pour la renseigner.'
+        : null;
 
   return (
     <div className="space-y-3">
@@ -121,12 +134,18 @@ export default function ChefReplacementPanel({
           onClick={() => setModalOpen(true)}
           disabled={!canReplace}
           className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-400/40 bg-amber-400/15 text-sm font-medium text-amber-100 hover:bg-amber-400/25 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          title={!canReplace ? 'Mission incomplète : il faut chef, montant et dates pour remplacer' : 'Ouvre le modal de remplacement'}
+          title={disabledReason || 'Ouvre le modal de remplacement'}
         >
           <UserCog className="w-4 h-4" />
           Remplacer le chef
         </button>
       </div>
+
+      {!canReplace && disabledReason && (
+        <div className="rounded-lg border border-amber-400/30 bg-amber-400/[0.06] px-3 py-2 text-xs text-amber-200">
+          ⚠ Bouton désactivé : {disabledReason}
+        </div>
+      )}
 
       {modalOpen && canReplace && (
         <ReplaceChefModal
@@ -134,7 +153,7 @@ export default function ChefReplacementPanel({
           currentChefName={currentChefName!}
           missionStartDate={missionStartDate!}
           missionEndDate={missionEndDate!}
-          chefAmount={chefAmount!}
+          chefAmount={chefAmount ?? 0}
           onClose={() => setModalOpen(false)}
           onSuccess={async () => {
             setModalOpen(false);
