@@ -14,6 +14,7 @@ import QuoteAgentChat from './QuoteAgentChat';
 import ImportPdfQuoteModal from './ImportPdfQuoteModal';
 import ChangeQuoteStatusModal from '@/app/admin/_components/ChangeQuoteStatusModal';
 import QuoteDocumentsPanel from '@/app/admin/_components/QuoteDocumentsPanel';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type TariffOption = {
   label: string;
@@ -543,22 +544,25 @@ function QuoteEditor({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
-    >
-      <div className="w-full max-w-3xl bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl max-h-[96vh] overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0f0f10]/95 backdrop-blur z-10">
-          <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
-            <FileText className="w-5 h-5 text-sky-300" />
-            Éditer le devis — {quote.reference}
-          </h3>
-          <button onClick={onClose} disabled={saving} className="px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-xs text-white/85 hover:bg-white/10">
-            Fermer
+    <AdminModal
+      title={`Éditer le devis — ${quote.reference}`}
+      size="lg"
+      onClose={onClose}
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
+      footer={
+        <>
+          <button onClick={onClose} disabled={saving} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10">
+            Annuler
           </button>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
+          <button onClick={save} disabled={saving} className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
+            Enregistrer
+          </button>
+        </>
+      }
+    >
+        <div className="space-y-4">
           <Section title="Statut & validité">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Statut">
@@ -715,18 +719,7 @@ function QuoteEditor({
             </div>
           )}
         </div>
-
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/10 bg-white/[0.02] sticky bottom-0">
-          <button onClick={onClose} disabled={saving} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10">
-            Annuler
-          </button>
-          <button onClick={save} disabled={saving} className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
-            Enregistrer
-          </button>
-        </div>
-      </div>
-    </div>
+    </AdminModal>
   );
 }
 
