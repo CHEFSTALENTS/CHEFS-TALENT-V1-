@@ -5,8 +5,9 @@
 // /api/admin/client-requests/[id].
 
 import { useEffect, useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type ClientLike = {
   id: string;
@@ -87,26 +88,39 @@ export default function ClientEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-neutral-950 p-5">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <div>
-            <div className="text-sm font-semibold text-white">Modifier le client</div>
-            <div className="text-xs text-white/45 mt-0.5">
-              Demande #{client.id.slice(0, 8)}
-            </div>
-          </div>
+    <AdminModal
+      title="Modifier le client"
+      subtitle={`Demande #${client.id.slice(0, 8)}`}
+      size="md"
+      onClose={onClose}
+      closeOnBackdrop={!saving}
+      closeOnEscape={!saving}
+      footer={
+        <>
           <button
             onClick={onClose}
             disabled={saving}
-            className="p-1 rounded-lg text-white/55 hover:bg-white/10 transition disabled:opacity-40"
-            aria-label="Fermer"
+            className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition disabled:opacity-40"
           >
-            <X className="h-4 w-4" />
+            Annuler
           </button>
-        </div>
-
-        <div className="mt-4 space-y-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center px-4 py-2 rounded-xl border border-white/10 bg-white text-sm font-medium text-[#161616] hover:bg-white/90 transition disabled:opacity-40"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement…
+              </>
+            ) : (
+              'Enregistrer'
+            )}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
           <Field label="Nom complet">
             <input
               value={form.fullName}
@@ -173,32 +187,8 @@ export default function ClientEditor({
               {error}
             </div>
           ) : null}
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition disabled:opacity-40"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center px-4 py-2 rounded-xl border border-white/10 bg-white text-sm font-medium text-[#161616] hover:bg-white/90 transition disabled:opacity-40"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement…
-                </>
-              ) : (
-                'Enregistrer'
-              )}
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 
