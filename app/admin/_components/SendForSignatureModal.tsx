@@ -23,10 +23,9 @@ import {
   FileText,
   Loader2,
   Send,
-  ShieldCheck,
-  X,
   XCircle,
 } from 'lucide-react';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 export type ModalSigner = {
   firstName: string;
@@ -87,16 +86,6 @@ export default function SendForSignatureModal(props: SendForSignatureModalProps)
     }
   }, [isOpen]);
 
-  // ESC ferme le modal
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !submitting) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, submitting, onClose]);
-
   if (!isOpen) return null;
 
   const hasBlockingMissing = missingFields.length > 0;
@@ -114,43 +103,57 @@ export default function SendForSignatureModal(props: SendForSignatureModalProps)
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
-    >
-      <div
-        className="relative w-full max-w-5xl max-h-[96vh] sm:max-h-[92vh] flex flex-col bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
-          <div className="flex items-center gap-2 min-w-0">
-            <ShieldCheck className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-            <h2 className="text-base font-semibold text-white truncate">{title}</h2>
-          </div>
+    <AdminModal
+      title={title}
+      size="xl"
+      onClose={onClose}
+      closeOnBackdrop={!submitting}
+      closeOnEscape={!submitting}
+      footer={
+        <div className="flex items-center justify-between gap-3 w-full">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 transition disabled:opacity-50"
-            aria-label="Fermer"
+            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition disabled:opacity-50"
           >
-            <X className="h-5 w-5" />
+            Modifier
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!canActuallySend}
+            className={[
+              'inline-flex items-center px-5 py-2 rounded-xl text-sm font-medium transition',
+              canActuallySend
+                ? 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300'
+                : 'bg-white/10 text-white/40 cursor-not-allowed',
+            ].join(' ')}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Envoi en cours…
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Confirmer l'envoi
+              </>
+            )}
           </button>
         </div>
-
+      }
+    >
+      <div className="space-y-4">
         {/* Blocker banner (ex: déjà en cours) */}
         {blockerMessage && (
-          <div className="px-5 py-3 bg-amber-500/15 border-b border-amber-500/30 text-sm text-amber-200 flex items-center gap-2">
+          <div className="px-4 py-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-sm text-amber-200 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
             <span>{blockerMessage}</span>
           </div>
         )}
 
         {/* Body */}
-        <div className="flex-1 overflow-auto p-4 sm:p-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
           {/* Colonne gauche : signataires + checkbox */}
           <div className="space-y-4 min-w-0">
             <div>
@@ -280,40 +283,7 @@ export default function SendForSignatureModal(props: SendForSignatureModalProps)
             </div>
           </div>
         </div>
-
-        {/* Footer actions */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-white/10 bg-white/[0.02]">
-          <button
-            onClick={onClose}
-            disabled={submitting}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition disabled:opacity-50"
-          >
-            Modifier
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!canActuallySend}
-            className={[
-              'inline-flex items-center px-5 py-2 rounded-xl text-sm font-medium transition',
-              canActuallySend
-                ? 'bg-emerald-400 text-emerald-950 hover:bg-emerald-300'
-                : 'bg-white/10 text-white/40 cursor-not-allowed',
-            ].join(' ')}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Envoi en cours…
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Confirmer l'envoi
-              </>
-            )}
-          </button>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }
