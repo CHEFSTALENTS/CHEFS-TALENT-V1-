@@ -10,8 +10,9 @@
 // Date personnalisable (par défaut aujourd'hui). Note libre.
 
 import { useState } from 'react';
-import { Loader2, X, FileSignature, Link as LinkIcon, FileUp, Check } from 'lucide-react';
+import { Loader2, FileSignature, Link as LinkIcon, FileUp, Check } from 'lucide-react';
 import { adminFetch, adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Method = 'external_link' | 'external_pdf' | 'manual';
 
@@ -80,22 +81,28 @@ export default function MarkContractSignedModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <div>
-            <h3 className="text-sm font-semibold text-white inline-flex items-center gap-2">
-              <FileSignature className="w-4 h-4 text-emerald-300" />
-              Marquer le contrat signé
-            </h3>
-            <p className="text-[11px] text-white/45">Pour les contrats signés hors YouSign</p>
-          </div>
-          <button onClick={onClose} disabled={saving} className="p-1 rounded-lg hover:bg-white/10 text-white/55">
-            <X className="w-4 h-4" />
+    <AdminModal
+      title="Marquer le contrat signé"
+      subtitle="Pour les contrats signés hors YouSign"
+      size="md"
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} disabled={saving} className="px-3 py-1.5 text-xs text-white/75 hover:text-white">
+            Annuler
           </button>
-        </header>
-
-        <div className="p-5 space-y-4">
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className="inline-flex items-center px-4 py-1.5 rounded-lg bg-emerald-400 text-emerald-950 text-xs font-medium hover:bg-emerald-300 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="w-3 h-3 animate-spin mr-1.5" />}
+            Confirmer signé
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           {/* Méthode */}
           <div>
             <label className="block text-xs text-white/55 mb-2">Méthode</label>
@@ -180,23 +187,8 @@ export default function MarkContractSignedModal({
               {error}
             </div>
           )}
-        </div>
-
-        <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10">
-          <button onClick={onClose} disabled={saving} className="px-3 py-1.5 text-xs text-white/75 hover:text-white">
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
-            className="inline-flex items-center px-4 py-1.5 rounded-lg bg-emerald-400 text-emerald-950 text-xs font-medium hover:bg-emerald-300 disabled:opacity-50"
-          >
-            {saving && <Loader2 className="w-3 h-3 animate-spin mr-1.5" />}
-            Confirmer signé
-          </button>
-        </footer>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 
