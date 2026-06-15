@@ -272,27 +272,39 @@ function ReplaceChefModal({
   }
 
   // Calcul preview du split (côté client, miroir du serveur)
+  // Cas "pré-démarrage" : si replacementDate < missionStartDate, on
+  // traite comme un swap pur (ancien chef = 0€, nouveau = totalité).
   const totalDays = daysBetween(missionStartDate, missionEndDate);
   const dailyRate = totalDays > 0 ? Math.round((chefAmount / totalDays) * 100) / 100 : 0;
-  const oldDays = replacementDate && replacementDate >= missionStartDate && replacementDate < missionEndDate
-    ? daysBetween(missionStartDate, replacementDate)
-    : 0;
+  const isPreStart =
+    replacementDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(replacementDate) &&
+    replacementDate < missionStartDate;
+  const oldDays = isPreStart
+    ? 0
+    : replacementDate && replacementDate >= missionStartDate && replacementDate < missionEndDate
+      ? daysBetween(missionStartDate, replacementDate)
+      : 0;
   const newStart = (() => {
     if (!replacementDate) return '';
+    if (isPreStart) return missionStartDate;
     const d = new Date(replacementDate);
     d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10);
   })();
-  const newDays = newStart && newStart <= missionEndDate ? daysBetween(newStart, missionEndDate) : 0;
-  const oldAmount = Math.round(oldDays * dailyRate * 100) / 100;
+  const newDays = newStart && newStart <= missionEndDate
+    ? (isPreStart ? totalDays : daysBetween(newStart, missionEndDate))
+    : 0;
+  const oldAmount = isPreStart ? 0 : Math.round(oldDays * dailyRate * 100) / 100;
   const newAmount = Math.round((chefAmount - oldAmount) * 100) / 100;
 
   const valid =
     !!newChefId.trim() && !!newChefName.trim() && !!newChefEmail.trim() &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newChefEmail.trim()) &&
     /^\d{4}-\d{2}-\d{2}$/.test(replacementDate) &&
-    replacementDate >= missionStartDate && replacementDate < missionEndDate &&
-    oldDays > 0 && newDays > 0;
+    replacementDate < missionEndDate &&
+    newDays > 0 &&
+    (isPreStart || oldDays > 0);
 
   async function submit() {
     if (!valid) return;
@@ -328,7 +340,7 @@ function ReplaceChefModal({
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
           <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
             <UserCog className="w-5 h-5 text-amber-400" />
-            Remplacer le chef en cours de mission
+            Remplacer le chef
           </h3>
           <button onClick={onClose} disabled={submitting} className="p-1 rounded-lg hover:bg-white/10 text-white/55"><X className="w-4 h-4" /></button>
         </div>
@@ -441,9 +453,13 @@ function ReplaceChefModal({
                 Dernier jour travaillé par l'ancien chef *
               </span>
               <input type="date" value={replacementDate} onChange={(e) => setReplacementDate(e.target.value)}
-                min={missionStartDate} max={missionEndDate}
+                max={missionEndDate}
                 className="w-full px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white" />
-              <span className="block text-[10px] text-white/40 mt-1">Le nouveau chef prend la suite à partir du lendemain.</span>
+              <span className="block text-[10px] text-white/40 mt-1">
+                {isPreStart
+                  ? '✓ Remplacement AVANT le début de la mission — l\'ancien chef ne reçoit rien, le nouveau prend la totalité.'
+                  : 'Le nouveau chef prend la suite à partir du lendemain. Pour un remplacement avant le début, mets une date < ' + missionStartDate + '.'}
+              </span>
             </label>
             <label className="block">
               <span className="block text-[10px] uppercase tracking-wider text-white/45 mb-1">Raison (optionnel)</span>
@@ -458,13 +474,22 @@ function ReplaceChefModal({
             <div className="border border-emerald-400/30 bg-emerald-400/[0.05] rounded-xl p-4 space-y-3">
               <div className="text-xs uppercase tracking-wider text-emerald-200/85 font-semibold flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Aperçu du split tarifaire (au prorata)
+                {isPreStart ? 'Swap avant le début de mission' : 'Aperçu du split tarifaire (au prorata)'}
               </div>
               <div className="space-y-2 text-sm">
                 <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
                   <div>
-                    <div className="text-white"><strong>{currentChefName}</strong> · {fmtDate(missionStartDate)} → {fmtDate(replacementDate)}</div>
-                    <div className="text-[11px] text-white/45">{oldDays} jour{oldDays > 1 ? 's' : ''} × {fmtEur(dailyRate)}/j</div>
+                    {isPreStart ? (
+                      <>
+                        <div className="text-white"><strong>{currentChefName}</strong> · <em className="text-white/55">retiré avant démarrage</em></div>
+                        <div className="text-[11px] text-white/45">0 jour travaillé</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-white"><strong>{currentChefName}</strong> · {fmtDate(missionStartDate)} → {fmtDate(replacementDate)}</div>
+                        <div className="text-[11px] text-white/45">{oldDays} jour{oldDays > 1 ? 's' : ''} × {fmtEur(dailyRate)}/j</div>
+                      </>
+                    )}
                   </div>
                   <div className="text-emerald-200 font-semibold">{fmtEur(oldAmount)}</div>
                 </div>
