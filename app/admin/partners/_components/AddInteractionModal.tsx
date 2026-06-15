@@ -5,8 +5,9 @@
 // rétroactivement.
 
 import { useState } from 'react';
-import { Loader2, X, Phone, MessageCircle, Mail, Coffee, Gift, Share2, ArrowRightLeft, StickyNote } from 'lucide-react';
+import { Loader2, Phone, MessageCircle, Mail, Coffee, Gift, Share2, ArrowRightLeft, StickyNote } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Kind = 'call' | 'whatsapp' | 'email' | 'meeting_irl' | 'gift' | 'social' | 'lead_received' | 'note';
 
@@ -66,19 +67,28 @@ export default function AddInteractionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0e1116] shadow-2xl">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Logger une interaction</h3>
-            <p className="text-[11px] text-white/45">Avec {partnerName}. Peut être saisi rétroactivement.</p>
-          </div>
-          <button onClick={onClose} disabled={saving} className="p-1 rounded-lg hover:bg-white/10 text-white/55">
-            <X className="w-4 h-4" />
+    <AdminModal
+      title="Logger une interaction"
+      subtitle={`Avec ${partnerName}. Peut être saisi rétroactivement.`}
+      size="md"
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
+            Annuler
           </button>
-        </header>
-
-        <div className="p-5 space-y-4">
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-indigo-400 text-indigo-950 text-sm font-medium hover:bg-indigo-300 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
+            Enregistrer
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
           <div>
             <label className="block text-xs text-white/55 mb-2">Type d'interaction</label>
             <div className="grid grid-cols-2 gap-2">
@@ -132,22 +142,7 @@ export default function AddInteractionModal({
               {error}
             </div>
           )}
-        </div>
-
-        <footer className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10">
-          <button onClick={onClose} disabled={saving} className="px-4 py-2.5 text-sm text-white/75 hover:text-white">
-            Annuler
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
-            className="inline-flex items-center px-4 py-2.5 rounded-lg bg-indigo-400 text-indigo-950 text-sm font-medium hover:bg-indigo-300 disabled:opacity-50"
-          >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
-            Enregistrer
-          </button>
-        </footer>
       </div>
-    </div>
+    </AdminModal>
   );
 }
