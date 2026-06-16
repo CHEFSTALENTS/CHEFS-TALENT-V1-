@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import VipAdminControl from './_components/VipAdminControl';
 import { adminFetchRaw } from '@/lib/adminFetch';
 import { CollapsiblePanel } from '@/app/admin/_components/CollapsiblePanel';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type MissionRow = {
   id: string;
@@ -199,48 +200,41 @@ function AdminActions({
 
       {/* Modal status */}
       {open ? (
-        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-white">Changer le statut</div>
-                <div className="text-xs text-white/45 mt-0.5">Chef: {name}</div>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
-              >
-                Fermer ✕
-              </button>
-            </div>
+        <AdminModal
+          title="Changer le statut"
+          subtitle={`Chef: ${name}`}
+          size="sm"
+          onClose={() => { if (!saving) setOpen(false); }}
+          closeOnBackdrop={!saving}
+          closeOnEscape={!saving}
+          footer={
+            <button
+              onClick={() => saveStatus(nextStatus)}
+              disabled={saving}
+              className="px-4 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          }
+        >
+          <div className="space-y-2">
+            <label className="text-xs text-white/50">Statut</label>
+            <select
+              value={nextStatus}
+              onChange={(e) => setNextStatus(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white focus:outline-none"
+            >
+              <option value="pending_validation">pending_validation</option>
+              <option value="approved">approved</option>
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+            </select>
 
-            <div className="mt-4 space-y-2">
-              <label className="text-xs text-white/50">Statut</label>
-              <select
-                value={nextStatus}
-                onChange={(e) => setNextStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white focus:outline-none"
-              >
-                <option value="pending_validation">pending_validation</option>
-                <option value="approved">approved</option>
-                <option value="active">active</option>
-                <option value="paused">paused</option>
-              </select>
-
-              <button
-                onClick={() => saveStatus(nextStatus)}
-                disabled={saving}
-                className="w-full mt-3 px-3 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
-              >
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-
-              <div className="text-[11px] text-white/40 mt-2">
-                Endpoint attendu : <span className="font-mono">POST /api/admin/chefs/[id]/status</span>
-              </div>
+            <div className="text-[11px] text-white/40 mt-2">
+              Endpoint attendu : <span className="font-mono">POST /api/admin/chefs/[id]/status</span>
             </div>
           </div>
-        </div>
+        </AdminModal>
       ) : null}
     </div>
   );
@@ -350,21 +344,23 @@ function AdminProfileEditor({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl rounded-2xl border border-white/10 bg-neutral-950 p-4 max-h-[90vh] overflow-auto">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <div className="text-sm font-semibold text-white">Édition admin du profil</div>
-                <div className="text-xs text-white/45 mt-0.5">Chef ID: {chefId}</div>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10 transition"
-              >
-                Fermer ✕
-              </button>
-            </div>
-
+        <AdminModal
+          title="Édition admin du profil"
+          subtitle={`Chef ID: ${chefId}`}
+          size="lg"
+          onClose={() => { if (!saving) setOpen(false); }}
+          closeOnBackdrop={!saving}
+          closeOnEscape={!saving}
+          footer={
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          }
+        >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Base city">
                 <input
@@ -484,18 +480,7 @@ function AdminProfileEditor({
                 />
               </Field>
             </div>
-
-            <div className="mt-5 flex justify-end">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 rounded-xl border border-white/10 bg-white/10 text-sm text-white hover:bg-white/15 transition disabled:opacity-50"
-              >
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
-        </div>
+        </AdminModal>
       ) : null}
     </>
   );

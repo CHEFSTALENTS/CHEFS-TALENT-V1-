@@ -8,8 +8,9 @@
 // restent gérés via leurs UIs dédiées (boutons header, ContractsPanel, etc.).
 
 import { useState } from 'react';
-import { Loader2, PenSquare, X } from 'lucide-react';
+import { Loader2, PenSquare } from 'lucide-react';
 import { adminFetchRaw } from '@/lib/adminFetch';
+import { AdminModal } from '@/app/admin/_components/AdminModal';
 
 type Props = {
   missionId: string;
@@ -81,23 +82,30 @@ export default function MissionEditor({ missionId, initial, onClose, onSuccess }
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}
-    >
-      <div className="w-full max-w-2xl bg-[#0f0f10] border border-white/10 rounded-2xl shadow-2xl max-h-[96vh] overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
-          <h3 className="text-base font-semibold text-white inline-flex items-center gap-2">
-            <PenSquare className="w-5 h-5 text-sky-300" />
-            Modifier la mission
-          </h3>
-          <button onClick={onClose} disabled={submitting} className="p-1 rounded-lg hover:bg-white/10 text-white/55">
-            <X className="w-4 h-4" />
+    <AdminModal
+      title="Modifier la mission"
+      size="lg"
+      onClose={onClose}
+      closeOnBackdrop={!submitting}
+      closeOnEscape={!submitting}
+      footer={
+        <>
+          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10">
+            Annuler
           </button>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            onClick={save}
+            disabled={submitting}
+            className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50"
+          >
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
+            Enregistrer
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="Titre" hint="ex: Villa Mirage — Ibiza 2026">
               <input
                 type="text"
@@ -202,23 +210,8 @@ export default function MissionEditor({ missionId, initial, onClose, onSuccess }
           {error && (
             <div className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>
           )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/10 bg-white/[0.02]">
-          <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white/85 hover:bg-white/10">
-            Annuler
-          </button>
-          <button
-            onClick={save}
-            disabled={submitting}
-            className="inline-flex items-center px-5 py-2 rounded-xl bg-sky-400 text-sky-950 font-medium hover:bg-sky-300 disabled:opacity-50"
-          >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <PenSquare className="w-4 h-4 mr-2" />}
-            Enregistrer
-          </button>
-        </div>
       </div>
-    </div>
+    </AdminModal>
   );
 }
 
